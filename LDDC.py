@@ -16,6 +16,8 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBo
 from main_ui import Ui_MainWindow
 from decryptor import QRCDecrypt
 
+current_directory = os.path.dirname(os.path.abspath(__file__))
+
 
 def escape_filename(filename):
     replacement_dict = {
@@ -84,7 +86,7 @@ class Search(QObject):
         }
 
         try:
-            response = requests.get(url, headers=headers, params=params)
+            response = requests.get(url, headers=headers, params=params, timeout=10)
             response.raise_for_status()  # 引发 HTTP 错误异常
             orig_lyric_infos = response.json()['data']['song']['list']
         except requests.exceptions.RequestException as e:
@@ -174,7 +176,7 @@ class LyricProcessing(QObject):
             'musicid': songid,
         }
         try:
-            response = requests.get('https://c.y.qq.com/qqmusic/fcgi-bin/lyric_download.fcg', params=params)
+            response = requests.get('https://c.y.qq.com/qqmusic/fcgi-bin/lyric_download.fcg', params=params, timeout=10)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             logging.error(e)
@@ -323,6 +325,7 @@ class LyricProcessing(QObject):
                         continue
                     logging.error(f"未知类型的行: {line}")
 
+        ts, roma = None, None
         if "ts" in lyric_times:
             ts = self.find_closest_match(lyric_times["orig"], lyric_times["ts"])
         if "roma" in lyric_times:
@@ -529,17 +532,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
 if __name__ == "__main__":
-    current_directory = os.path.dirname(os.path.abspath(__file__))
-
     if not os.path.exists("log"):
         os.mkdir("log")
     if not os.path.exists("lyrics"):
         os.mkdir("lyrics")
 
-    logging.basicConfig(filename=f'log\\{time.strftime("%Y.%m.%d",time.localtime())}.log', encoding='utf-8', format='[%(levelname)s]%(asctime)s - %(module)s(%(lineno)d) - %(funcName)s:%(message)s', level=logging.DEBUG)
+    logging.basicConfig(filename=f'log\\{time.strftime("%Y.%m.%d",time.localtime())}.log',
+                        encoding='utf-8', format='[%(levelname)s]%(asctime)s - %(module)s(%(lineno)d) - %(funcName)s:%(message)s',
+                        level=logging.DEBUG)
 
     app = QApplication(sys.argv)
 
-    mainWindow = MainWindow()
-    mainWindow.show()
+    main_window = MainWindow()
+    main_window.show()
     sys.exit(app.exec())
