@@ -11,7 +11,7 @@
 
 ## 预览
 
-![image](img\1.png)
+![image](img/1.png)
 
 ## 感谢
 
