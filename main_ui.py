@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.setWindowModality(Qt.NonModal)
-        MainWindow.resize(1088, 565)
+        MainWindow.resize(1050, 600)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -175,8 +175,11 @@ class Ui_MainWindow(object):
 
         self.path_lineEdit = QLineEdit(self.centralwidget)
         self.path_lineEdit.setObjectName(u"path_lineEdit")
-        sizePolicy.setHeightForWidth(self.path_lineEdit.sizePolicy().hasHeightForWidth())
-        self.path_lineEdit.setSizePolicy(sizePolicy)
+        sizePolicy4 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.path_lineEdit.sizePolicy().hasHeightForWidth())
+        self.path_lineEdit.setSizePolicy(sizePolicy4)
 
         self.horizontalLayout_4.addWidget(self.path_lineEdit)
 
@@ -209,9 +212,19 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_7.addLayout(self.horizontalLayout_2)
 
+        self.lyric_info_label = QLabel(self.centralwidget)
+        self.lyric_info_label.setObjectName(u"lyric_info_label")
+
+        self.verticalLayout_7.addWidget(self.lyric_info_label)
+
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Preferred)
 
         self.verticalLayout_7.addItem(self.verticalSpacer)
+
+        self.program_info_label = QLabel(self.centralwidget)
+        self.program_info_label.setObjectName(u"program_info_label")
+
+        self.verticalLayout_7.addWidget(self.program_info_label)
 
 
         self.horizontalLayout_3.addLayout(self.verticalLayout_7)
@@ -222,11 +235,11 @@ class Ui_MainWindow(object):
 
         self.Save_pushButton = QPushButton(self.centralwidget)
         self.Save_pushButton.setObjectName(u"Save_pushButton")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.Save_pushButton.sizePolicy().hasHeightForWidth())
-        self.Save_pushButton.setSizePolicy(sizePolicy4)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.Save_pushButton.sizePolicy().hasHeightForWidth())
+        self.Save_pushButton.setSizePolicy(sizePolicy5)
         self.Save_pushButton.setMinimumSize(QSize(92, 85))
 
         self.horizontalLayout_3.addWidget(self.Save_pushButton)
@@ -237,12 +250,12 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1088, 21))
-        sizePolicy5 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
-        sizePolicy5.setHorizontalStretch(0)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.menubar.sizePolicy().hasHeightForWidth())
-        self.menubar.setSizePolicy(sizePolicy5)
+        self.menubar.setGeometry(QRect(0, 0, 1050, 21))
+        sizePolicy6 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        sizePolicy6.setHorizontalStretch(0)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.menubar.sizePolicy().hasHeightForWidth())
+        self.menubar.setSizePolicy(sizePolicy6)
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -274,6 +287,8 @@ class Ui_MainWindow(object):
         self.Selectpath_pushButton.setText(QCoreApplication.translate("MainWindow", u"\u9009\u62e9\u4fdd\u5b58\u8def\u5f84", None))
         self.Translate_checkBox.setText(QCoreApplication.translate("MainWindow", u"\u8bd1\u6587", None))
         self.Romanized_checkBox.setText(QCoreApplication.translate("MainWindow", u"\u7f57\u9a6c\u97f3", None))
+        self.lyric_info_label.setText(QCoreApplication.translate("MainWindow", u"\u6b4c\u8bcd\u4fe1\u606f\uff1a\u65e0", None))
+        self.program_info_label.setText(QCoreApplication.translate("MainWindow", u"\u00a9 2024 \u6c89\u9ed8\u306e\u91d1 \u7248\u672c\uff1a", None))
         self.Save_pushButton.setText(QCoreApplication.translate("MainWindow", u"\u4fdd\u5b58", None))
     # retranslateUi
 

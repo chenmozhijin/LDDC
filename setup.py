@@ -1,17 +1,17 @@
 import LDDC
 import subprocess
 import time
+import shutil
+import os
 version = LDDC.__version__.replace('v', '')
 year = time.strftime("%Y")
 if not year == "2024":
     year = "2024-" + year
 
-
 subprocess.check_call(
     [
         "python", "-m", "nuitka",
         "--standalone",
-        "--follow-imports",
         "--lto=yes",
         "--report=report.xml",
         "--mingw64",
@@ -27,3 +27,19 @@ subprocess.check_call(
         "LDDC.py"
     ]
 )
+
+if os.path.exists(r".\dist\LDDC.dist.upx"):
+    shutil.rmtree(r".\dist\LDDC.dist.upx")
+shutil.copytree(r".\dist\LDDC.dist", r".\dist\LDDC.dist.upx")
+file_list = []
+for foldername, subfolders, filenames in os.walk(r".\dist\LDDC.dist.upx"):
+    for filename in filenames:
+        file_path = os.path.join(foldername, filename)
+        file_list.append(file_path)
+
+for file in file_list:
+    if "LDDC.exe" not in file:
+        try:
+            subprocess.check_call(["upx", "-9", "--lzma", file])
+        except Exception as e:
+            print(f"Upx failed to compress {file}: {e}")

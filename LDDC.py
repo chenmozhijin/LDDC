@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-__version__ = "0.0.1"
+__version__ = "v0.0.1"
 import os
 import sys
 import re
@@ -10,151 +10,34 @@ import logging
 
 import requests
 from bs4 import BeautifulSoup as bs
-from PySide6.QtCore import QObject, Signal, QThread
+from PySide6.QtCore import QObject, Signal, QThread, Slot
 from PySide6.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox, QTableWidgetItem, QPushButton
 
 from main_ui import Ui_MainWindow
 from decryptor import QRCDecrypt
 
 
-class MainWindow(QMainWindow, Ui_MainWindow):
-    lyricprocessing_get_lyric = Signal(dict, list)
-    search_music = Signal(str, int)
+def escape_filename(filename):
+    replacement_dict = {
+        '/': '／',
+        '\\': '＼',
+        ':': '：',
+        '*': '＊',
+        '?': '？',
+        '"': '＂',
+        '<': '＜',
+        '>': '＞',
+        '|': '｜'
+    }
 
-    def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
-        self.resize(700, 560)
-        self.setupUi(self)
-        self.Connect_signals_and_slot_functions()
+    for char, replacement in replacement_dict.items():
+        filename = filename.replace(char, replacement)
 
-        self.LyricProcessing = LyricProcessing()
-        self.LyricProcessingthread = QThread()
-        self.LyricProcessing.moveToThread(self.LyricProcessingthread)
-        self.LyricProcessing.result.connect(self.update_lyric_preview)
-        self.LyricProcessing.message.connect(self.show_message)
-        self.lyricprocessing_get_lyric.connect(self.LyricProcessing.get_lyric)
-        self.LyricProcessing.finished.connect(self.LyricProcessingthread.quit)
-
-        self.Search = Search()
-        self.Searchthread = QThread()
-        self.Search.moveToThread(self.Searchthread)
-        self.Search.result.connect(self.update_search_result)
-        self.Search.message.connect(self.show_message)
-        self.search_music.connect(self.Search.search_music)
-        self.Search.finished.connect(self.Searchthread.quit)
-
-        self.lyric_preview_info = None
-        self.lyric_info_dict = None
-        self.preview_Lyric = {}
-
-        self.path_lineEdit.setText(current_directory + "\\lyrics")
-
-    def Connect_signals_and_slot_functions(self):
-        self.Search_pushButton.clicked.connect(self.SearchSong)
-        self.Selectpath_pushButton.clicked.connect(self.SelectSavepath)
-        self.Translate_checkBox.stateChanged.connect(self.PreviewLyric)
-        self.Romanized_checkBox.stateChanged.connect(self.PreviewLyric)
-        self.Save_pushButton.clicked.connect(self.SaveLyric)
-
-    def SaveLyric(self):
-        if self.lyric_info_dict is None or self.lyric_preview_info is None or self.path_lineEdit.text() == '':
-            return QMessageBox.warning(self, '警告', '请先搜索歌曲并选择保存路径')
-        if self.LyricProcessingthread.isRunning():
-            return QMessageBox.warning(self, '警告', '正在处理歌词，请稍等')
-        songname = self.preview_Lyric["info"]["name"]
-        singer = self.preview_Lyric["info"]["singer"]
-        songid = self.preview_Lyric["info"]["songid"]
-
-        save_path = os.path.normpath(self.path_lineEdit.text() + '\\' + singer + ' - ' + songname + f"({songid})" + '.lrc')
-        if os.path.exists(save_path):
-            try:
-                with open(save_path, 'w', encoding='utf-8') as f:
-                    f.write(self.preview_Lyric["lyric"])
-                QMessageBox.information(self, '提示', '歌词保存成功')
-            except Exception as e:
-                QMessageBox.warning(self, '警告', f'歌词保存失败：{e}')
-        else:
-            QMessageBox.warning(self, '警告', '保存路径不存在')
-
-    def SelectSavepath(self):
-        save_path = QFileDialog.getExistingDirectory(self, "选择保存路径", dir=self.path_lineEdit.text())
-        self.path_lineEdit.setText(save_path)
-
-    def SearchSong(self):
-        song_name = self.Songname_lineEdit.text()
-        if not song_name:
-            QMessageBox.warning(self, "警告", "请输入歌曲名")
-            return
-
-        if self.Searchthread.isRunning():
-            self.Searchthread.quit()
-            self.Searchthread.wait()
-
-        self.Searchthread.start()
-        self.search_music.emit(song_name, 20)
-
-    def update_search_result(self, lyric_infos):
-
-        table = self.Searchresults_tableWidget
-        table.setRowCount(0)
-
-        index = 0
-        self.lyric_info_dict = {}
-        for lyric_info in lyric_infos:
-            table.insertRow(table.rowCount())
-            table.setItem(table.rowCount() - 1, 1, QTableWidgetItem(lyric_info["name"]))
-            table.setItem(table.rowCount() - 1, 2, QTableWidgetItem(lyric_info["singer"]))
-            table.setItem(table.rowCount() - 1, 3, QTableWidgetItem(lyric_info["album"]))
-            table.setItem(table.rowCount() - 1, 4, QTableWidgetItem(str(lyric_info["songid"])))
-
-            # 添加预览按钮
-            preview_button = QPushButton("下载&&预览")
-            ObjectName = "PreviewButton" + str(index)
-            preview_button.setObjectName(ObjectName)
-            table.setCellWidget(table.rowCount() - 1, 0, preview_button)
-            index += 1
-            self.lyric_info_dict.update({ObjectName: lyric_info})
-
-            # 使用默认参数来捕获循环变量的当前值
-            preview_button.clicked.connect(self.PreviewLyric)
-
-        table.resizeColumnsToContents()
-
-    def show_message(self, type_, message):
-        if type_ == "error":
-            QMessageBox.critical(self, "错误", message)
-        return
-
-    def update_lyric_preview(self, song_info, lyric_text):
-        self.preview_plainTextEdit.setPlainText(lyric_text)
-        self.preview_Lyric = {"info": song_info, "lyric": lyric_text}
-
-    def PreviewLyric(self):
-        sender_button = self.sender()
-        if self.lyric_info_dict and sender_button.objectName() in self.lyric_info_dict:
-            lyric_info_dict = self.lyric_info_dict[sender_button.objectName()]
-        elif self.lyric_preview_info:
-            lyric_info_dict = self.lyric_preview_info
-        else:
-            return
-        self.lyric_preview_info = lyric_info_dict
-
-        lyric_type = ['orig']
-        if self.Translate_checkBox.isChecked():
-            lyric_type.append('ts')
-        if self.Romanized_checkBox.isChecked():
-            lyric_type.append("roma")
-
-        if self.LyricProcessingthread.isRunning():
-            self.LyricProcessingthread.quit()
-            self.LyricProcessingthread.wait()
-
-        self.LyricProcessingthread.start()
-        self.lyricprocessing_get_lyric.emit(lyric_info_dict, lyric_type)
+    return filename
 
 
 class Search(QObject):
-    message = Signal(str, str)
+    error = Signal(str)
     result = Signal(list)
     finished = Signal()
 
@@ -206,18 +89,18 @@ class Search(QObject):
             orig_lyric_infos = response.json()['data']['song']['list']
         except requests.exceptions.RequestException as e:
             logging.error(f"搜索请求错误: {e}")
-            self.message.emit("error", f"搜索请求错误{e}")
+            self.error.emit(f"搜索请求错误{e}")
             self.finished.emit()
             return
         except (KeyError, IndexError, json.JSONDecodeError) as e:
             logging.error(f"搜索结果解析错误: {e}")
-            self.message.emit("error", f"搜索结果解析错误{e}")
+            self.error.emit(f"搜索结果解析错误{e}")
             self.finished.emit()
             return
 
         if len(orig_lyric_infos) == 0:
             logging.error(f"找不到歌曲: {name}")
-            self.message.emit("error", f"找不到歌曲: {name}")
+            self.error.emit(f"找不到歌曲: {name}")
             self.finished.emit()
             return
 
@@ -227,7 +110,7 @@ class Search(QObject):
             songer = ""
             for songer_info in lyric_info['singer']:
                 if songer != "":
-                    songer += ("\\" + songer_info['name'])
+                    songer += ("/" + songer_info['name'])
                 else:
                     songer = songer_info['name']
             lyric_infos.append({"name": lyric_info['songname'], "singer": songer, "album": lyric_info['albumname'], "songid": str(lyric_info['songid'])})
@@ -238,8 +121,8 @@ class Search(QObject):
 
 
 class LyricProcessing(QObject):
-    message = Signal(str, str)
-    result = Signal(dict, str)
+    result = Signal(dict, list, str)
+    error = Signal(str)
     finished = Signal()
 
     def __init__(self):
@@ -257,8 +140,7 @@ class LyricProcessing(QObject):
                 return
             if 'orig' not in lyrics:
                 logging.error(f"无法获取歌词：{song_info['songid']}")
-                self.message.emit("error", "无法获取歌词")
-                self.finished.emit()
+                self.error.emit("无法获取歌词")
                 return
             lyric_text = ""
             lyrics_dicts = {}
@@ -275,7 +157,7 @@ class LyricProcessing(QObject):
 
         lyric_text = self.merge_lyrics({key: lyrics_dict for key, lyrics_dict in lyrics_dicts.items() if key in lyric_type})
         logging.info(f"合并歌词成功：{song_info['songid']}")
-        self.result.emit(song_info, lyric_text)
+        self.result.emit(song_info, list(lyrics_dicts.keys()), lyric_text)
         self.finished.emit()
 
     def download(self, songid):
@@ -295,7 +177,7 @@ class LyricProcessing(QObject):
             response = requests.get('https://c.y.qq.com/qqmusic/fcgi-bin/lyric_download.fcg', params=params)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            print(e)
+            logging.error(e)
             return None
         logging.debug(f"获取歌词请求成功：{songid}, {response.text.strip()}")
         qrc_xml = re.sub(r"^<!--|-->$", "", response.text.strip())
@@ -305,10 +187,13 @@ class LyricProcessing(QObject):
             find_result = qrc_suop.find(value)
             if find_result is not None and find_result['timetag'] != "0":
                 encrypted_lyric = find_result.get_text()
-                if encrypted_lyric[0:14] == "789C014800B7FF":
-                    self.message.emit("error", "没有获取到可解密的歌词(encrypted_lyric starts with 789C014800B7FF)")
-                    self.finished.emit()
-                    return None
+
+                cannot_decrypt = ["789C014000BFFF", "789C014800B7FF"]
+                for c in cannot_decrypt:
+                    if encrypted_lyric.startswith(c):
+                        self.error.emit(f"没有获取到可解密的歌词\n(encrypted_lyric starts with {c})")
+                        return None
+
                 lyric, error = self.decrypt(encrypted_lyric)
 
                 if lyric is not None:
@@ -317,12 +202,10 @@ class LyricProcessing(QObject):
                         lyric = re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', lyric, re.DOTALL)[0]
                     lyrics[key] = (lyric, type_)
                 elif error is not None:
-                    self.message.emit("error", "解密歌词失败, 错误: " + error)
-                    self.finished.emit()
+                    self.error.emit("解密歌词失败, 错误: " + error)
                     return None
             elif find_result['timetag'] == "0" and key == "orig":
-                self.message.emit("error", "没有获取到可解密的歌词(timetag=0)")
-                self.finished.emit()
+                self.error.emit("没有获取到可解密的歌词(timetag=0)")
                 return None
 
         return lyrics
@@ -399,7 +282,7 @@ class LyricProcessing(QObject):
                     closest_timestamp2, closest_lyrics2 = min(available_items, key=lambda x: abs(x[0] - timestamp1))
                     merged_dict[(closest_timestamp2, closest_lyrics2)] = (timestamp1, lyrics1)
                 else:
-                    print(f"{timestamp1, lyrics1}无法匹配")
+                    logging.warning(f"{timestamp1, lyrics1}无法匹配")
 
             i += 1
 
@@ -468,6 +351,181 @@ class LyricProcessing(QObject):
                     line = f"{orig_start_formattime}{roma_line}\n" + line
             lyric_lines.append(line)
         return "\n".join(lyric_lines)
+
+
+class MainWindow(QMainWindow, Ui_MainWindow):
+    lyricprocessing_get_lyric = Signal(dict, list)
+    search_music = Signal(str, int)
+
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
+        self.setupUi(self)
+        self.program_info_label.setText(f"© {time.strftime('%Y')} 沉默の金 版本：{__version__}")
+        self.Connect_signals_and_slot_functions()
+
+        self.LyricProcessing = LyricProcessing()
+        self.LyricProcessingthread = QThread()
+        self.LyricProcessing.moveToThread(self.LyricProcessingthread)
+        self.LyricProcessing.result.connect(self.update_lyric_preview)
+        self.LyricProcessing.error.connect(self.LyricProcessingError)
+        self.lyricprocessing_get_lyric.connect(self.LyricProcessing.get_lyric)
+        self.LyricProcessing.finished.connect(self.LyricProcessingthread.quit)
+
+        self.Search = Search()
+        self.Searchthread = QThread()
+        self.Search.moveToThread(self.Searchthread)
+        self.Search.result.connect(self.update_search_result)
+        self.Search.error.connect(self.show_message)
+        self.search_music.connect(self.Search.search_music)
+        self.Search.finished.connect(self.Searchthread.quit)
+
+        self.lyric_preview_info = None
+        self.lyric_info_dict = None
+        self.preview_Lyric = {}
+
+        self.path_lineEdit.setText(current_directory + "\\lyrics")
+
+    def Connect_signals_and_slot_functions(self):
+        self.Search_pushButton.clicked.connect(self.SearchSong)
+        self.Selectpath_pushButton.clicked.connect(self.SelectSavepath)
+        self.Translate_checkBox.stateChanged.connect(self.PreviewLyric)
+        self.Romanized_checkBox.stateChanged.connect(self.PreviewLyric)
+        self.Save_pushButton.clicked.connect(self.SaveLyric)
+
+    @Slot()
+    def SearchError(self, error):
+        self.Search_pushButton.setEnabled()
+        self.Search_pushButton.setText('搜索')
+        self.show_message("error", error)
+        self.Searchthread.quit()
+
+    @Slot()
+    def LyricProcessingError(self, error):
+        self.preview_plainTextEdit.setPlainText("")
+        self.preview_Lyric = {}
+        self.show_message("error", error)
+        self.LyricProcessingthread.quit()
+
+    @Slot()
+    def SaveLyric(self):
+        if self.lyric_info_dict is None or self.lyric_preview_info is None or not self.preview_Lyric:
+            return QMessageBox.warning(self, '警告', '请先下载并预览歌词并选择保存路径')
+        if self.LyricProcessingthread.isRunning():
+            return QMessageBox.warning(self, '警告', '正在处理歌词，请稍等')
+        songname = self.preview_Lyric["info"]["name"]
+        singer = self.preview_Lyric["info"]["singer"]
+        songid = self.preview_Lyric["info"]["songid"]
+
+        save_path = os.path.normpath(self.path_lineEdit.text() + '\\' + escape_filename(singer + ' - ' + songname + f"({songid})" + '.lrc'))
+        if os.path.exists(self.path_lineEdit.text()):
+            try:
+                with open(save_path, 'w', encoding='utf-8') as f:
+                    f.write(self.preview_Lyric["lyric"])
+                QMessageBox.information(self, '提示', '歌词保存成功')
+            except Exception as e:
+                QMessageBox.warning(self, '警告', f'歌词保存失败：{e}')
+        else:
+            QMessageBox.warning(self, '警告', '保存路径不存在')
+
+    @Slot()
+    def SelectSavepath(self):
+        save_path = QFileDialog.getExistingDirectory(self, "选择保存路径", dir=self.path_lineEdit.text())
+        self.path_lineEdit.setText(save_path)
+
+    @Slot()
+    def SearchSong(self):
+        song_name = self.Songname_lineEdit.text()
+        if not song_name:
+            QMessageBox.warning(self, "警告", "请输入歌曲名")
+            return
+
+        self.Search_pushButton.setDisabled(True)
+        self.Search_pushButton.setText('正在搜索...')
+        self.Searchresults_tableWidget.setRowCount(0)
+        if self.Searchthread.isRunning():
+            self.Searchthread.quit()
+            self.Searchthread.wait()
+
+        self.Searchthread.start()
+        self.search_music.emit(song_name, 20)
+
+    @Slot()
+    def update_search_result(self, lyric_infos):
+        self.Search_pushButton.setEnabled(True)
+        self.Search_pushButton.setText('搜索')
+        table = self.Searchresults_tableWidget
+        table.setRowCount(0)
+
+        index = 0
+        self.lyric_info_dict = {}
+        for lyric_info in lyric_infos:
+            table.insertRow(table.rowCount())
+            table.setItem(table.rowCount() - 1, 1, QTableWidgetItem(lyric_info["name"]))
+            table.setItem(table.rowCount() - 1, 2, QTableWidgetItem(lyric_info["singer"]))
+            table.setItem(table.rowCount() - 1, 3, QTableWidgetItem(lyric_info["album"]))
+            table.setItem(table.rowCount() - 1, 4, QTableWidgetItem(str(lyric_info["songid"])))
+
+            # 添加预览按钮
+            preview_button = QPushButton("下载&&预览")
+            ObjectName = "PreviewButton" + str(index)
+            preview_button.setObjectName(ObjectName)
+            table.setCellWidget(table.rowCount() - 1, 0, preview_button)
+            index += 1
+            self.lyric_info_dict.update({ObjectName: lyric_info})
+
+            # 使用默认参数来捕获循环变量的当前值
+            preview_button.clicked.connect(self.PreviewLyric)
+
+        table.resizeColumnsToContents()
+
+    @Slot()
+    def show_message(self, type_, message):
+        if type_ == "error":
+            QMessageBox.critical(self, "错误", message)
+        return
+
+    @Slot()
+    def update_lyric_preview(self, song_info, lyric_types, lyric_text):
+        lyric_info_label_text = "歌词信息："
+        if 'ts' in lyric_types:
+            lyric_info_label_text += "翻译:有"
+        else:
+            lyric_info_label_text += "翻译:无"
+        if 'roma' in lyric_types:
+            lyric_info_label_text += " 罗马音:有"
+        else:
+            lyric_info_label_text += " 罗马音:无"
+        self.lyric_info_label.setText(lyric_info_label_text)
+        self.preview_plainTextEdit.setPlainText(lyric_text)
+        self.preview_Lyric = {"info": song_info, "lyric": lyric_text}
+
+    @Slot()
+    def PreviewLyric(self):
+        sender_button = self.sender()  # 获取发送信号的按钮
+        if self.lyric_info_dict and sender_button.objectName() in self.lyric_info_dict:  # 如果信号来自搜索结果的按钮
+            lyric_info_dict = self.lyric_info_dict[sender_button.objectName()]  # 获取对应的信息
+        elif self.lyric_preview_info:  # 如果信号来自 译文/罗马音 的选择框且已经 下载&预览 过歌词
+            lyric_info_dict = self.lyric_preview_info
+        else:
+            return
+        self.lyric_preview_info = lyric_info_dict
+
+        self.lyric_info_label.setText("歌词信息：无")
+        self.preview_plainTextEdit.setPlainText("处理中...")
+        self.preview_Lyric = {}
+
+        lyric_type = ['orig']
+        if self.Translate_checkBox.isChecked():
+            lyric_type.append('ts')
+        if self.Romanized_checkBox.isChecked():
+            lyric_type.append("roma")
+
+        if self.LyricProcessingthread.isRunning():
+            self.LyricProcessingthread.quit()
+            self.LyricProcessingthread.wait()
+
+        self.LyricProcessingthread.start()
+        self.lyricprocessing_get_lyric.emit(lyric_info_dict, lyric_type)
 
 
 if __name__ == "__main__":
