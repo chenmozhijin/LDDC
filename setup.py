@@ -1,11 +1,13 @@
-import LDDC
+import os
+import shutil
 import subprocess
 import time
-import shutil
-import os
+
+import LDDC
+
 version = LDDC.__version__.replace('v', '')
 year = time.strftime("%Y")
-if not year == "2024":
+if year != '2024':
     year = "2024-" + year
 
 subprocess.check_call(
@@ -24,15 +26,15 @@ subprocess.check_call(
         "--product-name=LDDC",
         "--product-version=" + version,
         f"--copyright=Copyright (C) {year}  沉默の金",
-        "LDDC.py"
-    ]
+        "LDDC.py",
+    ],
 )
 
 if os.path.exists(r".\dist\LDDC.dist.upx"):
     shutil.rmtree(r".\dist\LDDC.dist.upx")
 shutil.copytree(r".\dist\LDDC.dist", r".\dist\LDDC.dist.upx")
 file_list = []
-for foldername, subfolders, filenames in os.walk(r".\dist\LDDC.dist.upx"):
+for foldername, _subfolders, filenames in os.walk(r".\dist\LDDC.dist.upx"):
     for filename in filenames:
         file_path = os.path.join(foldername, filename)
         file_list.append(file_path)
