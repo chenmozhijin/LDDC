@@ -55,7 +55,7 @@ class Search(QObject):
 
         self.cache = {}
 
-    def search_music(self, name:str, limit:int=20) -> None:
+    def search_music(self, name:str, limit:int = 20) -> None:
         if (name, limit) in self.cache:
             self.result.emit(self.cache[(name, limit)])
             self.finished.emit()
@@ -187,7 +187,7 @@ class LyricProcessing(QObject):
                                      timeout=10)
             response.raise_for_status()
         except requests.exceptions.RequestException:
-            logging.exception()
+            logging.exception("获取歌词请求错误")
             return None
         logging.debug(f"获取歌词请求成功：{songid}, {response.text.strip()}")
         qrc_xml = re.sub(r"^<!--|-->$", "", response.text.strip())
