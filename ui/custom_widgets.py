@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 class LyricOrderListWidget(QListWidget):
     droped = Signal()
 
-    def __init__(self, parent:QWidget|None=None) -> None:
+    def __init__(self, parent:QWidget|None = None) -> None:
         super().__init__(parent)
 
     def dropEvent(self, event:QDropEvent) -> None:
@@ -22,7 +22,7 @@ class LyricOrderListWidget(QListWidget):
 
 class ProportionallyStretchedTableWidget(QTableWidget):
 
-    def __init__(self, parent:QWidget|None=None) -> None:
+    def __init__(self, parent:QWidget|None = None) -> None:
         super().__init__(parent)
         self.prop = []
 

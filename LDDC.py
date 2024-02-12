@@ -208,7 +208,7 @@ class MainWindow(SidebarWindow):
         threadpool.start(worker)
 
     @Slot(str, str, str)
-    def show_message(self, message_type: str, title:str="", message: str="") -> None:
+    def show_message(self, message_type: str, title:str = "", message: str = "") -> None:
         match message_type:
             case "info":
                 QMessageBox.information(self, title, message)
@@ -349,7 +349,7 @@ class SingleSearchWidget(QWidget, Ui_single_search):
         logging.debug("结束update_lyric_preview")
 
     @Slot()
-    def preview_lyric(self, index: QModelIndex|None=None) -> None:
+    def preview_lyric(self, index: QModelIndex|None = None) -> None:
         sender = self.sender()  # 获取发送信号的按钮
 
         if isinstance(sender, QTableWidget):  # 如果信号来自搜索结果的按钮

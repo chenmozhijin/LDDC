@@ -52,7 +52,7 @@ def qm_search(keyword:str, search_type:QMSearchType) -> list|str:
         "Accept-Language": "zh-CN",
         "User-Agent": "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)",
     }
-    data = {
+    data = json.dumps({
         "comm": {
                 "g_tk": 997034911,
                 "uin": ''.join(random.sample(string.digits, 10)),
@@ -75,9 +75,9 @@ def qm_search(keyword:str, search_type:QMSearchType) -> list|str:
                 "search_type": search_type,
                 },
             },
-        }
+        }, ensure_ascii=False).encode("utf-8")
     try:
-        response = requests.post('https://u.y.qq.com/cgi-bin/musicu.fcg', headers=headers, data=json.dumps(data, ensure_ascii=False).encode("utf-8"), timeout=3)
+        response = requests.post('https://u.y.qq.com/cgi-bin/musicu.fcg', headers=headers, data=data, timeout=3)
         response.raise_for_status()
         infos = response.json()['req_0']['data']['body']
         results = []
