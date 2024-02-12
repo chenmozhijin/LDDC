@@ -2,6 +2,8 @@
 
 > 精准歌词下载解密转换
 
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/chenmozhijin/LDDC/total)
+
 ## 功能
 
 - [x] 根据歌曲名搜索歌词

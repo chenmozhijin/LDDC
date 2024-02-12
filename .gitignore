@@ -133,3 +133,5 @@ log/
 lyrics/
 output
 report.xml
+result.json
+data.db

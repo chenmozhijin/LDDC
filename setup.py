@@ -1,5 +1,3 @@
-import os
-import shutil
 import subprocess
 import time
 
@@ -13,6 +11,7 @@ if year != '2024':
 subprocess.check_call(
     [
         "python", "-m", "nuitka",
+        "--windows-icon-from-ico=resource\\img\\icon\\logo.png",
         "--standalone",
         "--lto=yes",
         "--report=report.xml",
@@ -29,19 +28,3 @@ subprocess.check_call(
         "LDDC.py",
     ],
 )
-
-if os.path.exists(r".\dist\LDDC.dist.upx"):
-    shutil.rmtree(r".\dist\LDDC.dist.upx")
-shutil.copytree(r".\dist\LDDC.dist", r".\dist\LDDC.dist.upx")
-file_list = []
-for foldername, _subfolders, filenames in os.walk(r".\dist\LDDC.dist.upx"):
-    for filename in filenames:
-        file_path = os.path.join(foldername, filename)
-        file_list.append(file_path)
-
-for file in file_list:
-    if "LDDC.exe" not in file:
-        try:
-            subprocess.check_call(["upx", "-9", "--lzma", file])
-        except Exception as e:
-            print(f"Upx failed to compress {file}: {e}")
