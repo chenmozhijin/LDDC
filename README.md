@@ -4,6 +4,9 @@
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/015f636391584ffc82790ff7038da5ca)](https://app.codacy.com/gh/chenmozhijin/LDDC/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/chenmozhijin/LDDC/total)
+[![Static Badge](https://img.shields.io/badge/Python-3.10%2B-brightgreen)](https://www.python.org/downloads/)
+[![Static Badge](https://img.shields.io/badge/License-GPLv3-blue)](https://github.com/chenmozhijin/LDDC/blob/main/LICENSE)
+[![release](https://img.shields.io/github/v/release/chenmozhijin/LDDC?color=blue)](https://github.com/chenmozhijin/LDDC/releases/latest)
 
 ## 功能
 
@@ -17,10 +20,6 @@
 ![image](img/1.png)
 ![image](img/2.png)
 
-### 在Ubuntu(wsl)上测试
-
-![image](img/3.png)
-
 ## 使用方法
 
 ### 1.运行
@@ -29,7 +28,7 @@
 
 > [release](https://github.com/chenmozhijin/LDDC/releases)中的版本是通过[nuitka](https://github.com/Nuitka/Nuitka)编译并用[Enigma Virtual Box](https://enigmaprotector.com/en/aboutvb.html)打包的exe
 
-1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中的最新版本的zip压缩包
+1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中最新版本的zip压缩包
 2. 解压zip包
 3. 运行`LDDC.exe`
 
@@ -67,6 +66,12 @@
 
 ## 感谢
 
-部分功能实现参考借鉴了以下仓库:  
-歌词解密: [WXRIW/Lyricify-Lyrics-Helper](https://github.com/WXRIW/Lyricify-Lyrics-Helper)  
-搜索api：[MCQTSS/MCQTSS_QQMusic](https://github.com/MCQTSS/MCQTSS_QQMusic)
+部分功能实现参考了以下项目:  
+
+### 歌词解密
+
+[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=Lyricify-Lyrics-Helper)](https://github.com/WXRIW/Lyricify-Lyrics-Helper)
+
+### 搜索api
+
+[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=MCQTSS&repo=MCQTSS_QQMusic)](https://github.com/MCQTSS/MCQTSS_QQMusic)

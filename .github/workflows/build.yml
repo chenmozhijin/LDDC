@@ -1,0 +1,67 @@
+name: build LDDC
+
+on:
+    push:
+        branches: main
+        paths:
+            - "**.py"
+    workflow_dispatch:
+        
+
+
+jobs:
+
+    build:
+        strategy:
+            matrix:
+                os: [macos-latest, ubuntu-latest, windows-latest]
+                arch: ['x64', 'x86']
+
+    
+        runs-on: ${{ matrix.os }}
+        
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                python-version: 3.11
+                architecture: ${{ matrix.arch }}
+
+            - name: Install dependencies
+              run: |
+                pip install -r requirements.txt
+            
+            - name: Get Information
+              id: info
+              run: |
+                echo "copyright=Copyright (C) $(python setup.py --task get_year) 沉默の金" >> $GITHUB_OUTPUT
+                echo "version=$(python setup.py --task get_version)" >> $GITHUB_OUTPUT
+
+            - name: Build Executable
+              uses: Nuitka/Nuitka-Action@main
+              with:
+                nuitka-version: main
+                script-name: LDDC.py
+                standalone: true
+                enable-plugins: pyside6
+                disable-console: true
+                product-name: "LDDC"
+                file-version: ${{ steps.info.outputs.version }}
+                product-version: ${{ steps.info.outputs.version }}
+                copyright: ${{ steps.info.outputs.copyright }}
+
+                windows-icon-from-ico: "resource/img/icon/logo.png"
+                mingw64: true
+
+                macos-app-icon: "resource/img/icon/logo.png"
+                macos-app-version: ${{ steps.info.outputs.version }}
+            
+            - name: Upload Executable
+              uses: actions/upload-artifact@v4
+              with:
+                name: ${{ runner.os }} - ${{ matrix.arch }} Build
+                path: |
+                    build/
+
+

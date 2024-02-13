@@ -170,13 +170,16 @@ class Lyrics(dict):
             case 1:
                 return self[lyrics_order[0]]
 
+        lyrics = [(key, lyric) for key, lyric in self.items() if key in lyrics_order]
+        if len(lyrics) == 1:
+            return lyrics[0][1]
+
         time_text_split_pattern = re.compile(r'^\[(\d+):(\d+)\.(\d+)\](.*)$')
         tag_split_pattern = re.compile(r"^\[([A-Za-z]+):(.*)\]\r?$")
         end_time_pattern = re.compile(r"(\[\d+:\d+\.\d+\])$")
 
-        lyrics = [(key, lyric) for key, lyric in self.items() if key in lyrics_order]
         lyric_tagkeys = []
-        lyric_times = {}  # key 包含 'orig' 'ts' 'roma'
+        lyric_times = {}  # key 可能包含 'orig' 'ts' 'roma'
         mapping_tables = {}
         lyric_lines = []
 
