@@ -52,6 +52,7 @@ jobs:
                 nuitka-version: main
                 script-name: LDDC.py
                 standalone: true
+                onefile: false
                 enable-plugins: pyside6
                 disable-console: true
                 product-name: "LDDC"
