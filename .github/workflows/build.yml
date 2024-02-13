@@ -31,7 +31,7 @@ jobs:
             - name: Install dependencies
               run: |
                 pip install -r requirements.txt
-                pip install -r imageio
+                pip install imageio
             
             - name: Get Information
               id: info
