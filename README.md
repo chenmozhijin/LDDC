@@ -17,6 +17,54 @@
 ![image](img/1.png)
 ![image](img/2.png)
 
+### 在Ubuntu(wsl)上测试
+
+![image](img/3.png)
+
+## 使用方法
+
+### 1.运行
+
+#### 方式一:从[release](https://github.com/chenmozhijin/LDDC/releases)下载
+
+> [release](https://github.com/chenmozhijin/LDDC/releases)中的版本是通过[nuitka](https://github.com/Nuitka/Nuitka)编译并用[Enigma Virtual Box](https://enigmaprotector.com/en/aboutvb.html)打包的exe
+
+1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中的最新版本的zip压缩包
+2. 解压zip包
+3. 运行`LDDC.exe`
+
+#### 方式二:直接运行LDDC.py
+
+> 你需要安装python3.10+环境
+
+1. 下载源代码
+2. 安装依赖库
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. 运行`LDDC.py`
+
+### 2.使用
+
+#### 搜索歌词
+
+1. 输入歌曲名,点击搜索
+2. 双击预览歌词
+
+#### 合并歌词
+
+0. 设置中修改合并顺序（直接拖动）
+1. 左下角选择需要的歌词类型
+2. 预览歌词时将显示合并后的歌词
+
+#### 保存歌词
+
+0. 设置中修改保存文件名格式
+1. 选择保存路径,可输入占位符
+2. 点击保存
+
 ## 感谢
 
 部分功能实现参考借鉴了以下仓库:  
