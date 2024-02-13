@@ -33,11 +33,17 @@ jobs:
                 pip install -r requirements.txt
                 pip install imageio
             
+            - name: Install EGL
+              if: ${{ matrix.os == 'ubuntu-latest' }}
+              run: |
+                sudo apt-get install libegl1
+            
             - name: Get Information
               id: info
               run: |
                 echo "copyright=Copyright (C) $(python setup.py --task get_year) 沉默の金" >> $GITHUB_OUTPUT
                 echo "version=$(python setup.py --task get_version)" >> $GITHUB_OUTPUT
+                cat $GITHUB_OUTPUT
 
             - name: Build Executable
               uses: Nuitka/Nuitka-Action@main
