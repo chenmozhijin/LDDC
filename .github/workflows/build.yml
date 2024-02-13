@@ -57,6 +57,7 @@ jobs:
 
                 macos-app-icon: "res/img/icon/logo.png"
                 macos-app-version: ${{ steps.info.outputs.version }}
+                macos-create-app-bundle: true
             
             - name: Upload Executable
               uses: actions/upload-artifact@v4
