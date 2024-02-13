@@ -130,8 +130,8 @@ class Lyrics(dict):
                 qrc_xml = re.sub(r"^<!--|-->$", "", response.text.strip())
                 qrc_suop = BeautifulSoup(qrc_xml, 'xml')
                 for key, value in [("orig", 'content'),
-                           ("ts", 'contentts'),
-                           ("roma", 'contentroma')]:
+                                   ("ts", 'contentts'),
+                                   ("roma", 'contentroma')]:
                     find_result = qrc_suop.find(value)
                     if find_result is not None and find_result['timetag'] != "0":
                         encrypted_lyric = find_result.get_text()

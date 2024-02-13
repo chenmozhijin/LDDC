@@ -405,8 +405,9 @@ class SettingWidget(QWidget, Ui_settings):
 
     def connect_signals(self) -> None:
         self.lyrics_order_listWidget.droped.connect(lambda: data.write_config(
-                "lyrics_order",
-                [self.lyrics_order_listWidget.item(i).text() for i in range(self.lyrics_order_listWidget.count())]))
+                                                    "lyrics_order",
+                                                    [self.lyrics_order_listWidget.item(i).text()
+                                                     for i in range(self.lyrics_order_listWidget.count())]))
 
         self.lyrics_file_name_format_lineEdit.textChanged.connect(
             lambda: data.write_config("lyrics_file_name_format", self.lyrics_file_name_format_lineEdit.text()))

@@ -16,7 +16,7 @@ class QMSearchType:
     LYRIC = 7
 
 
-def get_qrc(songid:str) -> str|requests.Response:
+def get_qrc(songid: str) -> str | requests.Response:
     params = {
         'version': '15',
         'miniversion': '82',
@@ -25,8 +25,8 @@ def get_qrc(songid:str) -> str|requests.Response:
     }
     try:
         response = requests.get('https://c.y.qq.com/qqmusic/fcgi-bin/lyric_download.fcg',
-                                 params=params,
-                                 timeout=10)
+                                params=params,
+                                timeout=10)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         logging.exception("请求qrc 歌词时错误")
@@ -36,7 +36,7 @@ def get_qrc(songid:str) -> str|requests.Response:
     return response
 
 
-def qm_search(keyword:str, search_type:QMSearchType) -> list|str:
+def qm_search(keyword: str, search_type: QMSearchType) -> list | str:
     """
     搜索
     :param keyword:关键字
@@ -54,17 +54,17 @@ def qm_search(keyword:str, search_type:QMSearchType) -> list|str:
     }
     data = json.dumps({
         "comm": {
-                "g_tk": 997034911,
-                "uin": ''.join(random.sample(string.digits, 10)),
-                "format": "json",
-                "inCharset": "utf-8",
-                "outCharset": "utf-8",
-                "notice": 0,
-                "platform": "h5",
-                "needNewCode": 1,
-                "ct": 23,
-                "cv": 0,
-                },
+            "g_tk": 997034911,
+            "uin": ''.join(random.sample(string.digits, 10)),
+            "format": "json",
+            "inCharset": "utf-8",
+            "outCharset": "utf-8",
+            "notice": 0,
+            "platform": "h5",
+            "needNewCode": 1,
+            "ct": 23,
+            "cv": 0,
+        },
         "req_0": {
             "method": "DoSearchForQQMusicDesktop",
             "module": "music.search.SearchCgiService",
@@ -73,9 +73,9 @@ def qm_search(keyword:str, search_type:QMSearchType) -> list|str:
                 "page_num": "1",
                 "query": keyword,
                 "search_type": search_type,
-                },
             },
-        }, ensure_ascii=False).encode("utf-8")
+        },
+    }, ensure_ascii=False).encode("utf-8")
     try:
         response = requests.post('https://u.y.qq.com/cgi-bin/musicu.fcg', headers=headers, data=data, timeout=3)
         response.raise_for_status()

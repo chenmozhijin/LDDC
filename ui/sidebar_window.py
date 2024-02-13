@@ -21,6 +21,7 @@ class Position:
 
 class SidebarWindow(QMainWindow):
     widget_changed = Signal(int)
+
     def __init__(self) -> None:
         super().__init__()
         self.setup_ui()
@@ -59,7 +60,7 @@ class SidebarWindow(QMainWindow):
             if item != sender and isinstance(item, QPushButton):
                 item.setChecked(False)
 
-    def add_widget(self, name: str, widget: QWidget, position:Position = Position.TOP) -> None:
+    def add_widget(self, name: str, widget: QWidget, position: Position = Position.TOP) -> None:
         '''
         添加一个新页面到侧边栏中
         :param name: 页面的名称
