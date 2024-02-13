@@ -5,7 +5,6 @@ from __future__ import annotations
 __version__ = "v0.1.0"
 import logging
 import os
-import resource.resource_rc
 import sys
 import time
 
@@ -32,6 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import res.resource_rc
 from api import QMSearchType, get_latest_version, qm_search
 from data import Data
 from lyrics import Lyrics
@@ -66,7 +66,7 @@ cache = {
 }
 cache_mutex = QMutex()
 
-resource.resource_rc.qInitResources()
+res.resource_rc.qInitResources()
 
 class SearchSignal(QObject):
     error = Signal(str)
