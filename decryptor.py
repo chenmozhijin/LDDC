@@ -63,7 +63,7 @@ sbox = [
 ]
 
 
-def bitnum(a:bytearray, b:int, c:int) -> int:
+def bitnum(a: bytearray, b: int, c: int) -> int:
     """
     从字节串中提取指定位置的位,并左移指定偏移量。
     :param a: 字节串
@@ -74,7 +74,7 @@ def bitnum(a:bytearray, b:int, c:int) -> int:
     return ((a[(b // 32) * 4 + 3 - (b % 32 // 8)] >> (7 - (b % 8))) & 0x01) << c
 
 
-def bitnum_intr(a:int, b:int, c:int) -> int:
+def bitnum_intr(a: int, b: int, c: int) -> int:
     """
     从整数中提取指定位置的位,并左移指定偏移量。
     :param a: 整数
@@ -85,7 +85,7 @@ def bitnum_intr(a:int, b:int, c:int) -> int:
     return (((a >> (31 - b)) & 0x00000001) << c)
 
 
-def bitnum_intl(a:int, b:int, c:int) -> int:
+def bitnum_intl(a: int, b: int, c: int) -> int:
     """
     从整数中提取指定位置的位,并右移指定偏移量。
     :param a: 整数
@@ -96,7 +96,7 @@ def bitnum_intl(a:int, b:int, c:int) -> int:
     return (((a << b) & 0x80000000) >> c)
 
 
-def sbox_bit(a:int) -> int:
+def sbox_bit(a: int) -> int:
     """
     对输入整数进行位运算,重新组合位。
     :param a: 整数
@@ -105,7 +105,7 @@ def sbox_bit(a:int) -> int:
     return ((a & 0x20) | ((a & 0x1f) >> 1) | ((a & 0x01) << 4))
 
 
-def initial_permutation(state:list, input_data:bytearray) -> None:
+def initial_permutation(state: list, input_data: bytearray) -> None:
     state[0] = (bitnum(input_data, 57, 31) | bitnum(input_data, 49, 30) | bitnum(input_data, 41, 29) | bitnum(input_data, 33, 28) |
                 bitnum(input_data, 25, 27) | bitnum(input_data, 17, 26) | bitnum(input_data, 9, 25) | bitnum(input_data, 1, 24) |
                 bitnum(input_data, 59, 23) | bitnum(input_data, 51, 22) | bitnum(input_data, 43, 21) | bitnum(input_data, 35, 20) |
@@ -125,7 +125,7 @@ def initial_permutation(state:list, input_data:bytearray) -> None:
                 bitnum(input_data, 30, 3) | bitnum(input_data, 22, 2) | bitnum(input_data, 14, 1) | bitnum(input_data, 6, 0))
 
 
-def inverse_permutation(state:list, input_data:bytearray) -> None:
+def inverse_permutation(state: list, input_data: bytearray) -> None:
     input_data[3] = (bitnum_intr(state[1], 7, 7) | bitnum_intr(state[0], 7, 6) | bitnum_intr(state[1], 15, 5) |
                      bitnum_intr(state[0], 15, 4) | bitnum_intr(state[1], 23, 3) | bitnum_intr(state[0], 23, 2) |
                      bitnum_intr(state[1], 31, 1) | bitnum_intr(state[0], 31, 0))
@@ -159,7 +159,7 @@ def inverse_permutation(state:list, input_data:bytearray) -> None:
                      bitnum_intr(state[1], 24, 1) | bitnum_intr(state[0], 24, 0))
 
 
-def f(state:list, key:list) -> int:
+def f(state: list, key: list) -> int:
     # 提取位并左移
     t1 = (bitnum_intl(state, 31, 0) | ((state & 0xf0000000) >> 1) | bitnum_intl(state, 4, 5) |
           bitnum_intl(state, 3, 6) | ((state & 0x0f000000) >> 3) | bitnum_intl(state, 8, 11) |
@@ -191,20 +191,20 @@ def f(state:list, key:list) -> int:
              sbox[7][sbox_bit(lrgstate[5] & 0x3f)])
 
     # 位运算
-    return  (bitnum_intl(state, 15, 0) | bitnum_intl(state, 6, 1) | bitnum_intl(state, 19, 2) |
-             bitnum_intl(state, 20, 3) | bitnum_intl(state, 28, 4) | bitnum_intl(state, 11, 5) |
-             bitnum_intl(state, 27, 6) | bitnum_intl(state, 16, 7) | bitnum_intl(state, 0, 8) |
-             bitnum_intl(state, 14, 9) | bitnum_intl(state, 22, 10) | bitnum_intl(state, 25, 11) |
-             bitnum_intl(state, 4, 12) | bitnum_intl(state, 17, 13) | bitnum_intl(state, 30, 14) |
-             bitnum_intl(state, 9, 15) | bitnum_intl(state, 1, 16) | bitnum_intl(state, 7, 17) |
-             bitnum_intl(state, 23, 18) | bitnum_intl(state, 13, 19) | bitnum_intl(state, 31, 20) |
-             bitnum_intl(state, 26, 21) | bitnum_intl(state, 2, 22) | bitnum_intl(state, 8, 23) |
-             bitnum_intl(state, 18, 24) | bitnum_intl(state, 12, 25) | bitnum_intl(state, 29, 26) |
-             bitnum_intl(state, 5, 27) | bitnum_intl(state, 21, 28) | bitnum_intl(state, 10, 29) |
-             bitnum_intl(state, 3, 30) | bitnum_intl(state, 24, 31))
+    return (bitnum_intl(state, 15, 0) | bitnum_intl(state, 6, 1) | bitnum_intl(state, 19, 2) |
+            bitnum_intl(state, 20, 3) | bitnum_intl(state, 28, 4) | bitnum_intl(state, 11, 5) |
+            bitnum_intl(state, 27, 6) | bitnum_intl(state, 16, 7) | bitnum_intl(state, 0, 8) |
+            bitnum_intl(state, 14, 9) | bitnum_intl(state, 22, 10) | bitnum_intl(state, 25, 11) |
+            bitnum_intl(state, 4, 12) | bitnum_intl(state, 17, 13) | bitnum_intl(state, 30, 14) |
+            bitnum_intl(state, 9, 15) | bitnum_intl(state, 1, 16) | bitnum_intl(state, 7, 17) |
+            bitnum_intl(state, 23, 18) | bitnum_intl(state, 13, 19) | bitnum_intl(state, 31, 20) |
+            bitnum_intl(state, 26, 21) | bitnum_intl(state, 2, 22) | bitnum_intl(state, 8, 23) |
+            bitnum_intl(state, 18, 24) | bitnum_intl(state, 12, 25) | bitnum_intl(state, 29, 26) |
+            bitnum_intl(state, 5, 27) | bitnum_intl(state, 21, 28) | bitnum_intl(state, 10, 29) |
+            bitnum_intl(state, 3, 30) | bitnum_intl(state, 24, 31))
 
 
-def crypt(input_data:bytearray, output:bytearray, key:list) -> None:
+def crypt(input_data: bytearray, output: bytearray, key: list) -> None:
     state = [0, 0]
     idx, temp = 0, 0
 
@@ -219,7 +219,7 @@ def crypt(input_data:bytearray, output:bytearray, key:list) -> None:
     inverse_permutation(state, output)  # 逆置换
 
 
-def key_schedule(key:bytearray, schedule:list, mode:int) -> None:
+def key_schedule(key: bytearray, schedule: list, mode: int) -> None:
     key_rnd_shift = [1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1]
     key_perm_c = [56, 48, 40, 32, 24, 16, 8, 0, 57, 49, 41, 33, 25, 17, 9, 1, 58, 50, 42, 34, 26, 18, 10, 2, 59, 51, 43, 35]
     key_perm_d = [62, 54, 46, 38, 30, 22, 14, 6, 61, 53, 45, 37, 29, 21, 13, 5, 60, 52, 44, 36, 28, 20, 12, 4, 27, 19, 11, 3]
@@ -245,7 +245,7 @@ def key_schedule(key:bytearray, schedule:list, mode:int) -> None:
             schedule[togen][j // 8] |= bitnum_intr(d, key_compression[j] - 27, 7 - (j % 8))
 
 
-def tripledes_key_setup(key:bytearray, schedule:list, mode:int) -> None:
+def tripledes_key_setup(key: bytearray, schedule: list, mode: int) -> None:
     if mode == ENCRYPT:
         key_schedule(key[0:], schedule[0], ENCRYPT)
         key_schedule(key[8:], schedule[1], DECRYPT)
@@ -256,13 +256,13 @@ def tripledes_key_setup(key:bytearray, schedule:list, mode:int) -> None:
         key_schedule(key[16:], schedule[0], DECRYPT)
 
 
-def tripledes_crypt(input_data:bytearray, output:bytearray, key:list) -> None:
+def tripledes_crypt(input_data: bytearray, output: bytearray, key: list) -> None:
     crypt(input_data, output, key[0])
     crypt(output, output, key[1])
     crypt(output, output, key[2])
 
 
-def qrc_decrypt(encrypted_qrc: str) -> tuple[str|None,str|None]:
+def qrc_decrypt(encrypted_qrc: str) -> tuple[str | None, str | None]:
     if encrypted_qrc is None or encrypted_qrc.strip() == "":
         logging.error("没有可解密的数据")
         return None, None

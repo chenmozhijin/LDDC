@@ -17,13 +17,13 @@ class LyricType:
     QRC = 1
 
 
-def judge_lyric_type(text:str) -> LyricType:
+def judge_lyric_type(text: str) -> LyricType:
     if "<?xml " in text[:10] or "<QrcInfos>" in text[:10]:
         return LyricType.QRC
     return LyricType.LRC
 
 
-def has_content(line:str) -> bool:
+def has_content(line: str) -> bool:
     """检查是否有实际内容"""
     content = re.sub(r"\[\d+:\d+\.\d+\]|\[\d+,\d+\]", "", line).strip()
     if content in ("", "//"):
@@ -106,16 +106,15 @@ def find_closest_match(list1: list, list2: list) -> dict:
     return {(item[0], item[1]): (item[2], item[3]) for item in sorted_items}
 
 
-
 class Lyrics(dict):
-    def __init__(self, info:dict) -> None:
+    def __init__(self, info: dict) -> None:
         self.source = info["source"]
         self.name = info["name"]
         self.artist = info["artist"]
         self.album = info["album"]
         self.id = info["id"]
 
-    def download_and_decrypt(self) -> None|str:
+    def download_and_decrypt(self) -> None | str:
         """
         下载与解密歌词
         :return: 错误
@@ -158,8 +157,7 @@ class Lyrics(dict):
             return "没有获取到可解密的歌词(orig=None)"
         return None
 
-
-    def merge(self, lyrics_order:list) -> str:
+    def merge(self, lyrics_order: list) -> str:
         """
         合并歌词
         :param lyrics_order:歌词顺序,同时决定需要合并的类型
@@ -205,7 +203,7 @@ class Lyrics(dict):
         if "roma" in lyric_times:
             mapping_tables["roma"] = find_closest_match(lyric_times["orig"], lyric_times["roma"])
 
-        def get_full_line(mapping_table:dict, orig_time:int, orig_line:str) ->  str:
+        def get_full_line(mapping_table: dict, orig_time: int, orig_line: str) -> str:
             line = mapping_table[(orig_time, orig_line)][1]  # 无第一个时间戳
             if not has_content(line):
                 return ""
@@ -214,7 +212,6 @@ class Lyrics(dict):
             end_time_matched = re.findall(end_time_pattern, orig_line)
             orig_end_formattime = end_time_matched[0] if end_time_matched else ""
             return f"[{ms2formattime(orig_time)}]{line}{orig_end_formattime}"
-
 
         for orig_time, orig_line in lyric_times["orig"]:  # orig_line无第一个时间戳,orig_time为第一个时间戳(ms类型)
             lines = ""
@@ -228,7 +225,7 @@ class Lyrics(dict):
                 else:
                     continue
 
-                if lines != "" and  line != "":
+                if lines != "" and line != "":
                     lines += "\n" + line
                 else:
                     lines += line

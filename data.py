@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 class Data:
 
-    def __init__(self, current_directory: str, mutex:QMutex) -> None:
+    def __init__(self, current_directory: str, mutex: QMutex) -> None:
         self.mutex = mutex
         self.db_path = os.path.join(current_directory, "data.db")
         self.db_version = 1
@@ -33,13 +33,13 @@ class Data:
             self.init_db()
             self.read_config()
 
-    def save_version(self, version:int) -> None:
+    def save_version(self, version: int) -> None:
         c = self.conn.cursor()  # 清空表格,确保只存储一个版本信息
         c.execute("DELETE FROM version")
         c.execute("INSERT INTO version (version) VALUES (?)", (version,))  # 插入版本信息
-        self.conn.commit() # 提交更改
+        self.conn.commit()  # 提交更改
 
-    def read_version(self) -> int|None:
+    def read_version(self) -> int | None:
         c = self.conn.cursor()
         c.execute("SELECT version FROM version")  # 选择版本信息
         version = c.fetchone()  # 读取结果

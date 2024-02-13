@@ -68,13 +68,15 @@ cache_mutex = QMutex()
 
 res.resource_rc.qInitResources()
 
+
 class SearchSignal(QObject):
     error = Signal(str)
     result = Signal(list)
 
+
 class SearchWorker(QRunnable):
 
-    def __init__(self, keyword:str, search_type:QMSearchType) -> None:
+    def __init__(self, keyword: str, search_type: QMSearchType) -> None:
         super().__init__()
         self.keyword = keyword
         self.search_type = search_type
@@ -105,9 +107,10 @@ class LyricProcessingSignal(QObject):
     result = Signal(dict, list, str)
     error = Signal(str)
 
+
 class LyricProcessingWorker(QRunnable):
 
-    def __init__(self, task:dict) -> None:
+    def __init__(self, task: dict) -> None:
         super().__init__()
         self.task = task
         self.signals = LyricProcessingSignal()
@@ -116,8 +119,7 @@ class LyricProcessingWorker(QRunnable):
         if self.task["type"] == "get_merged_lyric":
             self.get_merged_lyric(self.task["song_info"], self.task["lyric_type"])
 
-
-    def get_lyrics(self, song_info:dict) -> None|Lyrics:
+    def get_lyrics(self, song_info: dict) -> None | Lyrics:
         logging.debug(f"开始获取歌词：{song_info['id']}")
         cache_mutex.lock()
         if (song_info["source"], song_info['id']) in cache["lyrics"]:
@@ -137,7 +139,7 @@ class LyricProcessingWorker(QRunnable):
             cache_mutex.unlock()
         return lyrics
 
-    def get_merged_lyric(self, song_info:dict, lyric_type:list) -> None:
+    def get_merged_lyric(self, song_info: dict, lyric_type: list) -> None:
         logging.debug(f"开始获取合并歌词：{song_info['id']}")
         lyrics = self.get_lyrics(song_info)
         if lyrics is None:
@@ -153,7 +155,7 @@ class LyricProcessingWorker(QRunnable):
 
 
 class CheckUpdate(QRunnable):
-    def __init__(self, is_auto:bool, windows:SidebarWindow) -> None:
+    def __init__(self, is_auto: bool, windows: SidebarWindow) -> None:
         super().__init__()
         self.isAuto = is_auto
         self.windows = windows
@@ -162,7 +164,7 @@ class CheckUpdate(QRunnable):
         is_success, last_version = get_latest_version()
         if is_success:
 
-            def compare_version_numbers(current_version:str, last_version:str) -> bool:
+            def compare_version_numbers(current_version: str, last_version: str) -> bool:
                 last_version = [int(i) for i in last_version.replace("v", "").split(".")]
                 current_version = [int(i) for i in current_version.replace("v", "").split(".")]
                 return current_version < last_version
@@ -196,19 +198,18 @@ class MainWindow(SidebarWindow):
         self.connect_signals()
         self.check_update(True)
 
-
     def connect_signals(self) -> None:
         self.settings_widget.lyrics_order_listWidget.droped.connect(
             self.single_search_weidget.preview_lyric)  # 修改歌词顺序时更新预览
 
         self.about_widget.checkupdate_pushButton.clicked.connect(lambda: self.check_update(False))
 
-    def check_update(self, is_auto:bool) -> None:
+    def check_update(self, is_auto: bool) -> None:
         worker = CheckUpdate(is_auto, self)
         threadpool.start(worker)
 
     @Slot(str, str, str)
-    def show_message(self, message_type: str, title:str = "", message: str = "") -> None:
+    def show_message(self, message_type: str, title: str = "", message: str = "") -> None:
         match message_type:
             case "info":
                 QMessageBox.information(self, title, message)
@@ -221,6 +222,7 @@ class MainWindow(SidebarWindow):
                 message = "发现新版本,是否前往GitHub下载？"
                 if QMessageBox.question(self, title, message) == QMessageBox.Yes:
                     QDesktopServices.openUrl(QUrl("https://github.com/chenmozhijin/LDDC/releases/latest"))
+
 
 class SingleSearchWidget(QWidget, Ui_single_search):
 
@@ -246,13 +248,13 @@ class SingleSearchWidget(QWidget, Ui_single_search):
         self.Searchresults_tableWidget.doubleClicked.connect(self.preview_lyric)
 
     @Slot()
-    def search_error(self, error:str) -> None:
+    def search_error(self, error: str) -> None:
         self.Search_pushButton.setEnabled(True)
         self.Search_pushButton.setText('搜索')
         self.show_message("error", error)
 
     @Slot()
-    def lyric_processing_error(self, error:str) -> None:
+    def lyric_processing_error(self, error: str) -> None:
         self.preview_plainTextEdit.setPlainText("")
         self.search_result_buttons_set_enabled(isenabled=True)
         self.preview_Lyric = {}
@@ -300,12 +302,11 @@ class SingleSearchWidget(QWidget, Ui_single_search):
         threadpool.start(worker)
 
     @Slot()
-    def update_search_result(self, lyric_infos:list) -> None:
+    def update_search_result(self, lyric_infos: list) -> None:
         self.Search_pushButton.setEnabled(True)
         self.Search_pushButton.setText('搜索')
         table = self.Searchresults_tableWidget
         table.setRowCount(0)
-
 
         for lyric_info in lyric_infos:
             table.insertRow(table.rowCount())
@@ -319,7 +320,7 @@ class SingleSearchWidget(QWidget, Ui_single_search):
 
         table.setProperty("lyric_infos", lyric_infos)
 
-    def search_result_buttons_set_enabled(self, *, isenabled:bool) -> None:
+    def search_result_buttons_set_enabled(self, *, isenabled: bool) -> None:
         self.Searchresults_tableWidget.setEnabled(isenabled)
         self.Translate_checkBox.setEnabled(isenabled)
         self.Romanized_checkBox.setEnabled(isenabled)
@@ -331,7 +332,7 @@ class SingleSearchWidget(QWidget, Ui_single_search):
             QMessageBox.critical(self, "错误", message)
 
     @Slot()
-    def update_lyric_preview(self, song_info:dict, lyric_types:list, lyric_text:str) -> None:
+    def update_lyric_preview(self, song_info: dict, lyric_types: list, lyric_text: str) -> None:
         logging.debug("开始update_lyric_preview")
         lyric_info_label_text = "歌词信息:"
         if 'ts' in lyric_types:
@@ -349,7 +350,7 @@ class SingleSearchWidget(QWidget, Ui_single_search):
         logging.debug("结束update_lyric_preview")
 
     @Slot()
-    def preview_lyric(self, index: QModelIndex|None = None) -> None:
+    def preview_lyric(self, index: QModelIndex | None = None) -> None:
         sender = self.sender()  # 获取发送信号的按钮
 
         if isinstance(sender, QTableWidget):  # 如果信号来自搜索结果的按钮
@@ -380,6 +381,7 @@ class SingleSearchWidget(QWidget, Ui_single_search):
         worker.signals.result.connect(self.update_lyric_preview)
         worker.signals.error.connect(self.lyric_processing_error)
         threadpool.start(worker)
+
 
 class SettingWidget(QWidget, Ui_settings):
 
