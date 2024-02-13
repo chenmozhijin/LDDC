@@ -17,7 +17,7 @@ match arg.task:
         subprocess.check_call(
             [
                 "python", "-m", "nuitka",
-                "--windows-icon-from-ico=resource\\img\\icon\\logo.png",
+                "--windows-icon-from-ico=res\\img\\icon\\logo.png",
                 "--standalone",
                 "--lto=yes",
                 "--report=report.xml",

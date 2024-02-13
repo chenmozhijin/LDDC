@@ -15,15 +15,9 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                include:
-                    - arch: 'x64'
-                      os: [macos-latest, ubuntu-latest, windows-latest]
-                    - arch: 'x86'
-                      os: windows-latest
-                    - arch: 'arm64'
-                      os: macos-latest
-                    
-    
+                os: [macos-latest, ubuntu-latest, windows-latest]
+                arch: [x64]
+
         runs-on: ${{ matrix.os }}
         
         steps:
@@ -57,10 +51,10 @@ jobs:
                 product-version: ${{ steps.info.outputs.version }}
                 copyright: ${{ steps.info.outputs.copyright }}
 
-                windows-icon-from-ico: "resource/img/icon/logo.png"
+                windows-icon-from-ico: "res/img/icon/logo.png"
                 mingw64: true
 
-                macos-app-icon: "resource/img/icon/logo.png"
+                macos-app-icon: "res/img/icon/logo.png"
                 macos-app-version: ${{ steps.info.outputs.version }}
             
             - name: Upload Executable
