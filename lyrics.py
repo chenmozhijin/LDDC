@@ -1,14 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-
-from __future__ import annotations
-
 import logging
 import re
 
 from bs4 import BeautifulSoup
 
-from api import get_qrc
+from api import get_qrc, qm_get_lyric
 from decryptor import qrc_decrypt
 
 
@@ -29,6 +26,15 @@ def has_content(line: str) -> bool:
     if content in ("", "//"):
         return False
     return True
+
+
+def get_clear_lyric(lyric: str) -> str:
+    # 为保证find_closest_match的准确性不可直接用于原歌词
+    result = []
+    for line in lyric.splitlines():
+        if has_content(line):
+            result.append(line)
+    return "\n".join(result)
 
 
 def ms2formattime(ms: int) -> str:
@@ -109,10 +115,12 @@ def find_closest_match(list1: list, list2: list) -> dict:
 class Lyrics(dict):
     def __init__(self, info: dict) -> None:
         self.source = info["source"]
-        self.name = info["name"]
+        self.orig_type = None
+        self.title = info['title']
         self.artist = info["artist"]
         self.album = info["album"]
         self.id = info["id"]
+        self.mid = info["mid"]
 
     def download_and_decrypt(self) -> None | str:
         """
@@ -148,6 +156,7 @@ class Lyrics(dict):
                             if type_ == LyricType.QRC:
                                 lyric = qrc2lrc(re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', lyric, re.DOTALL)[0])
                             self[key] = lyric
+                            self.orig_type = "qrc"
                         elif error is not None:
                             return "解密歌词失败, 错误: " + error
                     elif (find_result['timetag'] == "0" and key == "orig"):
@@ -157,7 +166,22 @@ class Lyrics(dict):
             return "没有获取到可解密的歌词(orig=None)"
         return None
 
-    def merge(self, lyrics_order: list) -> str:
+    def download_normal_lyrics(self) -> None | str:
+        result = qm_get_lyric(self.mid)
+        if isinstance(result, str):
+            return f"请求普通歌词时错误: {result}"
+        orig, ts = result
+        if orig is not None:
+            self["orig"] = orig
+            self.orig_type = "lrc"
+        if ts is not None:
+            self["ts"] = ts
+            self.orig_type = "lrc"
+        if self["orig"] is None and self["ts"] is None:
+            return "没有获取到可用的歌词(orig=None and ts=None)"
+        return None
+
+    def merge(self: dict[str: str], lyrics_order: list) -> str:
         """
         合并歌词
         :param lyrics_order:歌词顺序,同时决定需要合并的类型
@@ -168,11 +192,14 @@ class Lyrics(dict):
                 logging.warning("没有需要合并的歌词")
                 return ""
             case 1:
-                return self[lyrics_order[0]]
+                return get_clear_lyric(self[lyrics_order[0]])
 
         lyrics = [(key, lyric) for key, lyric in self.items() if key in lyrics_order]
         if len(lyrics) == 1:
-            return lyrics[0][1]
+            return get_clear_lyric(lyrics[0][1])
+
+        if 'orig' not in lyrics:  # 确保只勾选译文与罗马音时正常合并时
+            lyrics.append(('orig', self['orig']))
 
         time_text_split_pattern = re.compile(r'^\[(\d+):(\d+)\.(\d+)\](.*)$')
         tag_split_pattern = re.compile(r"^\[([A-Za-z]+):(.*)\]\r?$")
@@ -185,7 +212,7 @@ class Lyrics(dict):
 
         for key, lyric in lyrics:
             lyric_times[key] = []
-            for line in lyric.split('\n'):
+            for line in lyric.splitlines():
                 if line.startswith('['):
                     lyric_line = time_text_split_pattern.match(line)
                     if lyric_line:  # 歌词行

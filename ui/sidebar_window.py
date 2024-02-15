@@ -39,9 +39,10 @@ class SidebarWindow(QMainWindow):
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)  # 设置外边距为0
         self.horizontalLayout.setSpacing(0)
 
-        self.sidebar = QVBoxLayout()
+        self.sidebar_widget = QWidget()
+        self.sidebar = QVBoxLayout(self.sidebar_widget)
         self.Widgets = QTabWidget()
-        self.horizontalLayout.addLayout(self.sidebar)
+        self.horizontalLayout.addWidget(self.sidebar_widget)
         self.horizontalLayout.addWidget(self.Widgets)
         self.sidebar.setContentsMargins(0, 10, 0, 10)
         self.Widgets.setStyleSheet("QTabBar::tab {height: 0px;}")
@@ -59,6 +60,9 @@ class SidebarWindow(QMainWindow):
             item = self.sidebar.itemAt(i).widget()
             if item != sender and isinstance(item, QPushButton):
                 item.setChecked(False)
+
+    def set_sidebar_width(self, width: int) -> None:
+        self.sidebar_widget.setFixedWidth(width)
 
     def add_widget(self, name: str, widget: QWidget, position: Position = Position.TOP) -> None:
         '''

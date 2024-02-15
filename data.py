@@ -1,15 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-from __future__ import annotations
-
 import ast
 import logging
 import os
 import sqlite3
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from PySide6.QtCore import QMutex
+from PySide6.QtCore import QMutex
 
 
 class Data:
@@ -26,9 +22,11 @@ class Data:
         else:
             self.cfg = {
                 "log_level": "INFO",
-                "lyrics_file_name_format": "%<artist> - %<name> (%<id>)",
+                "lyrics_file_name_format": "%<artist> - %<title> (%<id>)",
                 "default_save_path": os.path.join(current_directory, "lyrics"),
                 "lyrics_order": ["罗马音", "原文", "译文"],
+                "skip_inst_lyrics": True,
+                "get_normal_lyrics": True,
             }
             self.init_db()
             self.read_config()
@@ -69,7 +67,7 @@ class Data:
             if isinstance(self.cfg[setting[1]], str):
                 self.cfg[setting[1]] = setting[2]
             elif isinstance(self.cfg[setting[1]], bool):
-                if setting[2] == 'True':
+                if setting[2] == '1':
                     self.cfg[setting[1]] = True
                 else:
                     self.cfg[setting[1]] = False

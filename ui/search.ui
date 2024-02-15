@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>single_search</class>
- <widget class="QWidget" name="single_search">
+ <class>search</class>
+ <widget class="QWidget" name="search">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -34,27 +34,40 @@
       </font>
      </property>
      <property name="text">
-      <string>单曲搜索</string>
+      <string>搜索</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>从云端搜索并下载歌词</string>
      </property>
     </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
-      <widget class="QLabel" name="label_3">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="text">
-        <string>歌曲名：</string>
-       </property>
+      <widget class="QComboBox" name="search_type_comboBox">
+       <item>
+        <property name="text">
+         <string>单曲</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>专辑</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>歌单</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="Songname_lineEdit">
+      <widget class="QLineEdit" name="search_keyword_lineEdit">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -80,7 +93,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="Search_pushButton">
+      <widget class="QPushButton" name="search_pushButton">
        <property name="text">
         <string>搜索</string>
        </property>
@@ -124,7 +137,7 @@
      <widget class="QWidget" name="layoutWidget_2">
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <widget class="QLabel" name="label_7">
+        <widget class="QLabel" name="result_label">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -142,7 +155,23 @@
         </widget>
        </item>
        <item>
-        <widget class="ProportionallyStretchedTableWidget" name="Searchresults_tableWidget">
+        <widget class="QToolButton" name="return_toolButton">
+         <property name="text">
+          <string>返回</string>
+         </property>
+         <property name="toolButtonStyle">
+          <enum>Qt::ToolButtonTextBesideIcon</enum>
+         </property>
+         <property name="autoRaise">
+          <bool>false</bool>
+         </property>
+         <property name="arrowType">
+          <enum>Qt::LeftArrow</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="ProportionallyStretchedTableWidget" name="results_tableWidget">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -194,30 +223,6 @@
          <attribute name="verticalHeaderVisible">
           <bool>false</bool>
          </attribute>
-         <column>
-          <property name="text">
-           <string>歌曲名</string>
-          </property>
-          <property name="textAlignment">
-           <set>AlignLeading|AlignVCenter</set>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>艺术家</string>
-          </property>
-          <property name="textAlignment">
-           <set>AlignLeading|AlignVCenter</set>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>专辑</string>
-          </property>
-          <property name="textAlignment">
-           <set>AlignLeading|AlignVCenter</set>
-          </property>
-         </column>
         </widget>
        </item>
       </layout>
@@ -241,6 +246,41 @@
           <string>歌词预览</string>
          </property>
         </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <item>
+          <widget class="QLabel" name="label_2">
+           <property name="text">
+            <string>歌词类型</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lyric_types_lineEdit">
+           <property name="text">
+            <string/>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_3">
+           <property name="text">
+            <string>歌曲id</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="songid_lineEdit">
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
         <widget class="QPlainTextEdit" name="preview_plainTextEdit">
@@ -282,7 +322,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="path_lineEdit">
+          <widget class="QLineEdit" name="save_path_lineEdit">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -292,7 +332,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="Selectpath_pushButton">
+          <widget class="QPushButton" name="select_path_pushButton">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -308,8 +348,18 @@
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QCheckBox" name="original_checkBox">
+           <property name="text">
+            <string>原文</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
          <item alignment="Qt::AlignLeft">
-          <widget class="QCheckBox" name="Translate_checkBox">
+          <widget class="QCheckBox" name="translate_checkBox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -319,10 +369,13 @@
            <property name="text">
             <string>译文</string>
            </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
           </widget>
          </item>
          <item alignment="Qt::AlignLeft">
-          <widget class="QCheckBox" name="Romanized_checkBox">
+          <widget class="QCheckBox" name="romanized_checkBox">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -335,13 +388,6 @@
           </widget>
          </item>
         </layout>
-       </item>
-       <item>
-        <widget class="QLabel" name="lyric_info_label">
-         <property name="text">
-          <string>歌词信息：无</string>
-         </property>
-        </widget>
        </item>
        <item>
         <spacer name="verticalSpacer">
@@ -378,7 +424,20 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="Save_pushButton">
+      <widget class="QPushButton" name="save_list_lyrics_pushButton">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>保存专辑/歌单的歌词</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="save_preview_lyric_pushButton">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
          <horstretch>0</horstretch>
@@ -392,7 +451,7 @@
         </size>
        </property>
        <property name="text">
-        <string>保存</string>
+        <string>保存预览的歌词</string>
        </property>
       </widget>
      </item>

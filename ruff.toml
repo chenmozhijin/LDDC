@@ -1,0 +1,82 @@
+
+target-version = "py310"
+
+[lint]
+select = [
+    "E", 
+    "F", 
+    "W", 
+    "I", 
+    "N", 
+    "UP", 
+    "YTT", 
+    "ANN", 
+    "ASYNC", 
+    "TRIO", 
+    "S", 
+    "BLE", 
+    "FBT", 
+    "B", 
+    "A", 
+    "COM", 
+    "CPY", 
+    "C4", 
+    "DTZ", 
+    "T10", 
+    "DJ", 
+    "EM", 
+    "EXE", 
+    "FA", 
+    "ISC", 
+    "ICN", 
+    "G", 
+    "INP", 
+    "PIE", 
+    "PYI", 
+    "PT", 
+    "RSE", 
+    "RET", 
+    "SLF", 
+    "SLOT", 
+    "SIM", 
+    "TID", 
+    "TCH", 
+    "INT", 
+    "ARG", 
+    "TD", 
+    "FIX", 
+    "ERA", 
+    "PD", 
+    "PGH", 
+    "PL", 
+    "TRY", 
+    "FLY", 
+    "NPY", 
+    "AIR", 
+    "PERF", 
+    "FURB", 
+    "LOG", 
+    "RUF",
+]
+
+ignore = [
+    "ANN101", 
+    "G004", 
+    "S603", 
+    "S607", 
+    "ERA001", 
+    "RUF001", 
+    "BLE001", 
+    "PLR0912", 
+    "N802", 
+    "PLR0911", 
+    "PERF401", 
+    "FBT001", 
+    "FBT003",
+]
+
+[lint.pylint]
+max-statements = 60
+
+[lint.pycodestyle]
+max-line-length = 160

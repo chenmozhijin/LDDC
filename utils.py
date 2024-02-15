@@ -1,6 +1,5 @@
-from __future__ import annotations
-
-
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 def ms2formattime(ms: int) -> str:
     m, ms = divmod(ms, 60000)
     s, ms = divmod(ms, 1000)
@@ -70,18 +69,19 @@ def escape_filename(filename: str) -> str:
     return replace_placeholders(filename, replacement_dict)
 
 
-def replace_info_placeholders(text: str, info: dict) -> str:
+def replace_info_placeholders(text: str, info: dict, available_types: list) -> str:
     """替换路径中的歌曲信息占位符"""
     mapping_table = {
-        "%<name>": escape_filename(info["name"]),
+        "%<title>": escape_filename(info['title']),
         "%<artist>": escape_filename(info["artist"]),
         "%<id>": escape_filename(str(info["id"])),
         "%<album>": escape_filename(info["album"]),
+        "%<types>": escape_filename("-".join(available_types)),
     }
     return replace_placeholders(text, mapping_table)
 
 
-def get_save_path(folder: str, file_name_format: str, info: dict) -> tuple[str, str]:
-    folder = escape_path(replace_info_placeholders(folder, info))
-    file_name = escape_path(replace_info_placeholders(file_name_format, info))
+def get_save_path(folder: str, file_name_format: str, info: dict, available_types: list) -> tuple[str, str]:
+    folder = escape_path(replace_info_placeholders(folder, info, available_types))
+    file_name = escape_path(replace_info_placeholders(file_name_format, info, available_types))
     return folder, file_name
