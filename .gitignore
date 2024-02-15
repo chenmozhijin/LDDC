@@ -135,3 +135,4 @@ output
 report.xml
 result.json
 data.db
+*.psd

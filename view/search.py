@@ -92,7 +92,7 @@ class SearchWidget(QWidget, Ui_search):
             if result is None:
                 error = count[:]
                 count = self.get_list_lyrics_box.progressBar.value() + 1
-                self.get_list_lyrics_box.plainTextEdit.setPlainText(f"{text}\n{error}")
+                self.get_list_lyrics_box.plainTextEdit.appendPlainText(f"{text}\n{error}")
             else:
                 save_path = result['save_path']
                 save_folder = os.path.dirname(save_path)
