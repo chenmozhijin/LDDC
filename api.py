@@ -38,6 +38,29 @@ QMD_headers = {
 }
 
 
+def songlist2result(songlist: list, list_type: str | None = None) -> list:
+    results = []
+    for song in songlist:
+        info = song["songInfo"] if list_type == "album" else song
+        # 处理艺术家
+        artist = ""
+        for singer in info['singer']:
+            if artist != "":
+                artist += "/"
+            artist += singer['name']
+        results.append({
+            'id': info['id'],
+            'mid': info['mid'],
+            'title': info['title'],
+            'subtitle': info['subtitle'],
+            'artist': artist,
+            'album': info['album']['name'],
+            'interval': info['interval'],
+            'source': 'qm',
+        })
+    return results
+
+
 def get_qrc(songid: str) -> str | requests.Response:
     params = {
         'version': '15',
@@ -141,24 +164,7 @@ def qm_search(keyword: str, search_type: int) -> list | str:
         match search_type:
 
             case QMSearchType.SONG:
-                for song in infos['song']['list']:
-                    # 处理艺术家
-                    artist = ""
-                    for singer in song['singer']:
-                        if artist != "":
-                            artist += "/"
-                        artist += singer['name']
-                    # 添加结果
-                    results.append({
-                        'id': song['id'],
-                        'mid': song['mid'],
-                        'title': song['title'],
-                        'subtitle': song['subtitle'],
-                        'artist': artist,
-                        'album': song['album']['name'],
-                        'interval': song['interval'],
-                        'source': 'qm',
-                    })
+                results = songlist2result(infos['song']['list'])
 
             case QMSearchType.ALBUM:
                 for album in infos['album']['list']:
@@ -238,25 +244,7 @@ def qm_get_album_song_list(album_mid: str) -> list | str:
         response.raise_for_status()
         response_json = response.json()
         album_song_list = response_json["req_1"]["data"]["songList"]
-        results = []
-        for song in album_song_list:
-            info = song['songInfo']
-            # 处理艺术家
-            artist = ""
-            for singer in info['singer']:
-                if artist != "":
-                    artist += "/"
-                artist += singer['name']
-            results.append({
-                'id': info['id'],
-                'mid': info['mid'],
-                'title': info['title'],
-                'subtitle': info['subtitle'],
-                'artist': artist,
-                'album': info['album']['name'],
-                'interval': info['interval'],
-                'source': 'qm',
-            })
+        results = songlist2result(album_song_list, "album")
         if response_json['req_1']['data']['totalNum'] != len(results):
             logging.error("获取到的歌曲数量与实际数量不一致")
             return "专辑歌曲获取不完整"
@@ -316,24 +304,7 @@ def qm_get_songlist_song_list(songlist_id: str) -> str | list:
         response.raise_for_status()
         response_json = response.json()
         songlist = response_json['req_0']['data']['songlist']
-        results = []
-        for song in songlist:
-            # 处理艺术家
-            artist = ""
-            for singer in song['singer']:
-                if artist != "":
-                    artist += "/"
-                artist += singer['name']
-            results.append({
-                'id': song['id'],
-                'mid': song['mid'],
-                'title': song['title'],
-                'subtitle': song['subtitle'],
-                'artist': artist,
-                'album': song['album']['name'],
-                'interval': song['interval'],
-                'source': 'qm',
-            })
+        results = songlist2result(songlist)
         if response_json['req_0']['data']['total_song_num'] != len(results):
             return "获取歌曲列表失败, 返回的歌曲数量与实际数量不一致"
     except requests.exceptions.RequestException as e:

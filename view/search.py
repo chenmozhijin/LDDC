@@ -165,8 +165,13 @@ class SearchWidget(QWidget, Ui_search):
 
         self.data_mutex.lock()
         save_folder, file_name = get_save_path(
-            self.save_path_lineEdit.text().strip(), self.data.cfg["lyrics_file_name_format"] + ".lrc", self.preview_info["info"], self.preview_info['available_types'])
+            self.save_path_lineEdit.text().strip(),
+            self.data.cfg["lyrics_file_name_format"] + ".lrc",
+            self.preview_info["info"],
+            self.preview_info['available_types'])
+
         self.data_mutex.unlock()
+
         save_path = os.path.join(save_folder, file_name)
         try:
             if not os.path.exists(save_folder):
@@ -209,9 +214,6 @@ class SearchWidget(QWidget, Ui_search):
         self.update_result_table(("search", search_type), result)
 
         self.search_result = {"type": search_type, "result": result}
-
-    def error_slot(self, error: str) -> None:
-        QMessageBox.critical(self, "错误", error)
 
     def search_error_slot(self, error: str) -> None:
         self.search_pushButton.setText('搜索')
@@ -313,6 +315,10 @@ class SearchWidget(QWidget, Ui_search):
 
                 table.setProperty("result_type", (result_type[0], "songlist"))
 
+    def get_songlist_error(self, error: str) -> None:
+        QMessageBox.warning(self, "警告", error)
+        self.return_search_result()
+
     def show_songlist_result(self, result_type: str, result: list) -> None:
         """
         :param result_type: album或songlist
@@ -334,7 +340,7 @@ class SearchWidget(QWidget, Ui_search):
         elif result_type == "songlist":
             worker = GetSongListWorker(result_type, info['id'])
         worker.signals.result.connect(self.show_songlist_result)
-        worker.signals.error.connect(self.error_slot)
+        worker.signals.error.connect(self.get_songlist_error)
         self.threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
 
