@@ -45,12 +45,6 @@ logger = logging.getLogger()
 threadpool = QThreadPool()
 logging.debug(f"最大线程数: {threadpool.maxThreadCount()}")
 
-cache = {
-    "serach": {},
-    "lyrics": {},
-}
-cache_mutex = QMutex()
-
 res.resource_rc.qInitResources()
 
 
