@@ -21,7 +21,7 @@ from api import (
     qm_search,
 )
 from data import Data
-from lyrics import Lyrics
+from lyrics import LyricProcessingError, Lyrics
 from ui.sidebar_window import SidebarWindow
 from utils import (
     get_save_path,
@@ -142,12 +142,16 @@ class LyricProcessingWorker(QRunnable):
         if (song_info["source"], song_info['id']) in cache["lyrics"]:
             lyrics = cache["lyrics"][(song_info["source"], song_info['id'])]
             logging.info(f"从缓存中获取歌词：源:{song_info['source']}, id:{song_info['id']}")
-            cache_mutex.unlock()
             from_cache = True
-        else:
+        cache_mutex.unlock()
+        if not from_cache:
             cache_mutex.unlock()
             lyrics = Lyrics(song_info)
-            error1 = lyrics.download_and_decrypt()
+
+            for _i in range(3):  # 重试3次
+                error1, error1_type = lyrics.download_and_decrypt()
+                if error1_type != LyricProcessingError.REQUEST:  # 如果正常或不是请求错误不重试
+                    break
             if error1 is not None:
                 logging.error(f"获取歌词失败：源:{song_info['source']}, 歌名:{song_info['title']}, id: {song_info['id']},错误：{error1}")
 
@@ -157,7 +161,11 @@ class LyricProcessingWorker(QRunnable):
                 if get_normal_lyrics:
                     logging.info(f"尝试获取普通歌词：源:{song_info['source']}, 歌名:{song_info['title']}, id: {song_info['id']}")
 
-                    error2 = lyrics.download_normal_lyrics()
+                    for _i in range(3):  # 重试3次
+                        error2, error2_type = lyrics.download_normal_lyrics()
+                        if error2_type != LyricProcessingError.REQUEST:  # 如果正常或不是请求错误不重试
+                            break
+
                     if error2 is not None:
                         self.signals.error.emit(f"歌名:{song_info['title']}的歌词获取失败:\n错误1：{error1}\n错误2:{error2}")
                         return None, False
@@ -165,9 +173,10 @@ class LyricProcessingWorker(QRunnable):
                     self.signals.error.emit(f"获取歌名:{song_info['title']}的加密歌词失败:{error1}")
                     return None, False
 
-            cache_mutex.lock()
-            cache["lyrics"][(song_info["source"], song_info['id'])] = lyrics
-            cache_mutex.unlock()
+            if error1_type != LyricProcessingError.REQUEST:  # 如果不是请求错误则缓存
+                cache_mutex.lock()
+                cache["lyrics"][(song_info["source"], song_info['id'])] = lyrics
+                cache_mutex.unlock()
         return lyrics, from_cache
 
     def get_merged_lyric(self, song_info: dict, lyric_type: list) -> bool:
