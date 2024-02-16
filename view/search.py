@@ -92,11 +92,11 @@ class SearchWidget(QWidget, Ui_search):
             if result is None:
                 error = count[:]
                 count = self.get_list_lyrics_box.progressBar.value() + 1
-                self.get_list_lyrics_box.plainTextEdit.appendPlainText(f"{text}\n{error}")
+                self.get_list_lyrics_box.plainTextEdit.appendPlainText(error)
             else:
                 save_path = result['save_path']
                 save_folder = os.path.dirname(save_path)
-                text += f"\n 获取{result['info']['title']} - {result['info']['artist']}({result['info']['id']})歌词成功"
+                text += f"获取{result['info']['title']} - {result['info']['artist']}({result['info']['id']})歌词成功"
                 if result['inst']:  # 检查是否为纯音乐,并且设置跳过纯音乐
                     text += "但歌曲为纯音乐,已跳过"
                 else:
