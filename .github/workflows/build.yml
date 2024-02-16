@@ -36,6 +36,7 @@ jobs:
             - name: Install EGL
               if: ${{ matrix.os == 'ubuntu-latest' }}
               run: |
+                sudo apt-get update
                 sudo apt-get install libegl1
             
             - name: Get Information
