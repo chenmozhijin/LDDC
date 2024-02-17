@@ -6,7 +6,7 @@ import re
 from bs4 import BeautifulSoup
 
 from api import get_qrc, qm_get_lyric
-from decryptor import qrc_decrypt
+from decryptor import QrcType, qrc_decrypt
 
 
 class LyricType:
@@ -56,6 +56,7 @@ def time2ms(m: int, s: int, ms: int) -> int:
 
 def qrc2lrc(qrc: str) -> str:
     """将明文qrc转换为lrc"""
+    qrc = re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', qrc, re.DOTALL)[0]
     qrc_lines = qrc.split('\n')
     lrc_lines = []
     wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?((?:(?!\(\d+,\d+\)).)+)\((\d+),(\d+)\)')  # 逐字匹配
@@ -155,12 +156,12 @@ class Lyrics(dict):
                             if encrypted_lyric.startswith(c):
                                 return f"没有获取到可解密的歌词(encrypted_lyric starts with {c})", LyricProcessingError.NOT_FOUND
 
-                        lyric, error = qrc_decrypt(encrypted_lyric)
+                        lyric, error = qrc_decrypt(encrypted_lyric, QrcType.CLOUD)
 
                         if lyric is not None:
                             type_ = judge_lyric_type(lyric)
                             if type_ == LyricType.QRC:
-                                lyric = qrc2lrc(re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', lyric, re.DOTALL)[0])
+                                lyric = qrc2lrc(lyric)
                             self[key] = lyric
                             self.orig_type = "qrc"
                         elif error is not None:

@@ -70,6 +70,7 @@ def get_qrc(songid: str) -> str | requests.Response:
     }
     try:
         response = requests.get('https://c.y.qq.com/qqmusic/fcgi-bin/lyric_download.fcg',
+                                headers=QMD_headers,
                                 params=params,
                                 timeout=10)
         response.raise_for_status()

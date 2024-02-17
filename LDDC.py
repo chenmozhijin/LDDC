@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-__version__ = "v0.2.1"
+__version__ = "v0.2.2"
 import logging
 import os
 import sys
@@ -26,6 +26,7 @@ from utils import (
     str2log_level,
 )
 from view.about import AboutWidget
+from view.encrypted_lyrics import EncryptedLyricsWidget
 from view.search import SearchWidget
 from view.setting import SettingWidget
 from worker import CheckUpdate
@@ -55,13 +56,15 @@ class MainWindow(SidebarWindow):
         self.setWindowTitle("LDDC")
         self.resize(1050, 600)
         self.setWindowIcon(QIcon(":/LDDC/img/icon/logo.png"))
-        self.set_sidebar_width(70)
+        self.set_sidebar_width(80)
 
         self.search_widget = SearchWidget(self, data, data_mutex, threadpool)
         self.settings_widget = SettingWidget(data, logger)
         self.about_widget = AboutWidget(__version__)
+        self.encrypted_lyrics_widget = EncryptedLyricsWidget()
 
         self.add_widget("搜索", self.search_widget)
+        self.add_widget("打开\n加密歌词", self.encrypted_lyrics_widget)
         self.add_widget("关于", self.about_widget, SBPosition.BOTTOM)
         self.add_widget("设置", self.settings_widget, SBPosition.BOTTOM)
         self.connect_signals()

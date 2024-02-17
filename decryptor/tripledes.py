@@ -4,8 +4,6 @@
 
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-import logging
-from zlib import decompress
 
 ENCRYPT = 1
 DECRYPT = 0
@@ -258,32 +256,3 @@ def tripledes_crypt(input_data: bytearray, output: bytearray, key: list) -> None
     crypt(input_data, output, key[0])
     crypt(output, output, key[1])
     crypt(output, output, key[2])
-
-
-def qrc_decrypt(encrypted_qrc: str) -> tuple[str | None, str | None]:
-    if encrypted_qrc is None or encrypted_qrc.strip() == "":
-        logging.error("没有可解密的数据")
-        return None, None
-    try:
-        key = bytearray(b"!@#)(*$%123ZXC!@!@#)(NHL")
-        encrypted_text_byte = bytearray.fromhex(encrypted_qrc)  # 将文本解析为字节数组
-
-        data = bytearray(len(encrypted_text_byte))
-        schedule = [[[0] * 6 for _ in range(16)] for _ in range(3)]
-        tripledes_key_setup(key, schedule, DECRYPT)
-
-        # 以 8 字节为单位迭代 encrypted_text_byte
-        for i in range(0, len(encrypted_text_byte), 8):
-            temp = bytearray(8)
-
-            tripledes_crypt(encrypted_text_byte[i:], temp, schedule)
-
-            # 将结果复制到数据数组
-            for j in range(8):
-                data[i + j] = temp[j]
-
-        decrypted_qrc = decompress(data).decode("utf-8")
-    except Exception as e:
-        logging.exception("解密失败")
-        return None, str(e)
-    return decrypted_qrc, None
