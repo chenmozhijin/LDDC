@@ -40,6 +40,7 @@
 
 1. 下载源代码
 2. 安装依赖库
+   进入源代码目录执行:
 
    ```bash
    pip install -r requirements.txt
