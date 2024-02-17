@@ -86,13 +86,22 @@ def qrc2lrc(qrc: str) -> str:
     return '\n'.join(lrc_lines)
 
 
-def find_closest_match(list1: list, list2: list) -> dict:
+def find_closest_match(list1: list, list2: list, source: str | None = None) -> dict:
     list1 = list1[:]
     list2 = list2[:]
-    logging.debug(f"list1: {list1}, list2: {list2}")
     # 存储合并结果的列表
     merged_dict = {}
+    if source == "qm":
+        list12 = [item for item in list1 if item[1] != ""]
+        list22 = [item for item in list2 if item[1] != ""]
+        if len(list12) == len(list22):
+            logging.info("qm 匹配方法")
+            for i in range(len(list1)):
+                merged_dict[list1[i]] = list2[i]
+            return merged_dict
+        list12, list22 = None, None
 
+    logging.info("other 匹配方法")
     # 遍历第一个列表中的每个时间戳和歌词
     i = 0
     while len(list1) > i:
@@ -119,7 +128,7 @@ def find_closest_match(list1: list, list2: list) -> dict:
                 else:
                     merged_dict[(closest_timestamp22, closest_lyrics22)] = (timestamp1, lyrics1)
                     if abs(closest_timestamp22 - timestamp1) > 1000:  # noqa: PLR2004
-                        logging.warning(f"{timestamp1, lyrics1}匹配可能错误")
+                        logging.warning(f"{timestamp1, lyrics1}, {closest_timestamp22, closest_lyrics22}匹配可能错误")
             else:
                 logging.warning(f"{timestamp1, lyrics1}无法匹配")
 
@@ -199,7 +208,7 @@ class Lyrics(dict):
             return "没有获取到可用的歌词(orig=None and ts=None)", LyricProcessingError.NOT_FOUND
         return None, None
 
-    def merge(self: dict[str: str], lyrics_order: list) -> str:
+    def merge(self, lyrics_order: list) -> str:
         """
         合并歌词
         :param lyrics_order:歌词顺序,同时决定需要合并的类型
@@ -247,10 +256,9 @@ class Lyrics(dict):
                     logging.error(f"未知类型的行: {line}")
 
         if "ts" in lyric_times:
-            mapping_tables["ts"] = find_closest_match(lyric_times["orig"], lyric_times["ts"])
-            logging.debug(f"ts 表: {mapping_tables['ts']}")
+            mapping_tables["ts"] = find_closest_match(lyric_times["orig"], lyric_times["ts"], self.source)
         if "roma" in lyric_times:
-            mapping_tables["roma"] = find_closest_match(lyric_times["orig"], lyric_times["roma"])
+            mapping_tables["roma"] = find_closest_match(lyric_times["orig"], lyric_times["roma"], self.source)
 
         def get_full_line(mapping_table: dict, orig_time: int, orig_line: str) -> str:
             line = mapping_table[(orig_time, orig_line)][1]  # 无第一个时间戳
