@@ -89,6 +89,7 @@ def qrc2lrc(qrc: str) -> str:
 def find_closest_match(list1: list, list2: list) -> dict:
     list1 = list1[:]
     list2 = list2[:]
+    logging.debug(f"list1: {list1}, list2: {list2}")
     # 存储合并结果的列表
     merged_dict = {}
 
@@ -100,15 +101,25 @@ def find_closest_match(list1: list, list2: list) -> dict:
         closest_timestamp2, closest_lyrics2 = min(list2, key=lambda x: abs(x[0] - timestamp1))
 
         if (closest_timestamp2, closest_lyrics2) not in merged_dict:
+            # 如果(closest_timestamp2, closest_lyrics2)还没有匹配
             merged_dict.update({(closest_timestamp2, closest_lyrics2): (timestamp1, lyrics1)})
         elif abs(timestamp1 - closest_timestamp2) < abs(merged_dict[(closest_timestamp2, closest_lyrics2)][0] - closest_timestamp2):
+            # 如果新的匹配比旧的更近
             list1.append(merged_dict[(closest_timestamp2, closest_lyrics2)])
             merged_dict[(closest_timestamp2, closest_lyrics2)] = (timestamp1, lyrics1)
         else:
+            # 如果新的匹配比旧的更远
             available_items = [(item[0], item[1]) for item in list2 if item not in merged_dict]
             if available_items:
-                closest_timestamp2, closest_lyrics2 = min(available_items, key=lambda x: abs(x[0] - timestamp1))
-                merged_dict[(closest_timestamp2, closest_lyrics2)] = (timestamp1, lyrics1)
+                closest_timestamp22, closest_lyrics22 = min(available_items, key=lambda x: abs(x[0] - timestamp1))
+                if merged_dict[(closest_timestamp2, closest_lyrics2)][0] < timestamp1 and closest_timestamp22 < closest_timestamp2:
+                    # 如果匹配顺序错误
+                    merged_dict[(closest_timestamp22, closest_lyrics22)] = merged_dict[(closest_timestamp2, closest_lyrics2)]
+                    merged_dict[(closest_timestamp2, closest_lyrics2)] = (timestamp1, lyrics1)
+                else:
+                    merged_dict[(closest_timestamp22, closest_lyrics22)] = (timestamp1, lyrics1)
+                    if abs(closest_timestamp22 - timestamp1) > 1000:  # noqa: PLR2004
+                        logging.warning(f"{timestamp1, lyrics1}匹配可能错误")
             else:
                 logging.warning(f"{timestamp1, lyrics1}无法匹配")
 
@@ -237,6 +248,7 @@ class Lyrics(dict):
 
         if "ts" in lyric_times:
             mapping_tables["ts"] = find_closest_match(lyric_times["orig"], lyric_times["ts"])
+            logging.debug(f"ts 表: {mapping_tables['ts']}")
         if "roma" in lyric_times:
             mapping_tables["roma"] = find_closest_match(lyric_times["orig"], lyric_times["roma"])
 
