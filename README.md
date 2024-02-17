@@ -21,6 +21,7 @@
 ## 预览
 
 ![image](img/1.webp)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fchenmozhijin%2FLDDC.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fchenmozhijin%2FLDDC?ref=badge_shield)
 
 ## 使用方法
 
@@ -78,3 +79,7 @@
 ### QQ音乐api
 
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=MCQTSS&repo=MCQTSS_QQMusic)](https://github.com/MCQTSS/MCQTSS_QQMusic)
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fchenmozhijin%2FLDDC.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fchenmozhijin%2FLDDC?ref=badge_large)
