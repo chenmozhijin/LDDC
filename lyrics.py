@@ -97,8 +97,8 @@ def find_closest_match(list1: list, list2: list, source: str | None = None) -> d
         list22 = [item for item in list2 if item[1] != ""]
         if len(list12) == len(list22):
             logging.info("qm 匹配方法")
-            for i, value in enumerate(list1):
-                merged_dict[value] = list2[i]
+            for i, value in enumerate(list12):
+                merged_dict[value] = list22[i]
             return merged_dict
         list12, list22 = None, None
 
@@ -142,6 +142,7 @@ def find_closest_match(list1: list, list2: list, source: str | None = None) -> d
 
 class Lyrics(dict):
     def __init__(self, info: dict) -> None:
+        logging.info(f"初始化{info}")
         self.source = info["source"]
         self.orig_type = None
         self.title = info['title']
