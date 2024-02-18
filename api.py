@@ -5,6 +5,7 @@ import json
 import logging
 import random
 import time
+from enum import Enum
 
 import requests
 
@@ -22,7 +23,7 @@ def get_latest_version() -> tuple[bool, str]:
         return False, "获取最新版本信息失败"
 
 
-class QMSearchType:
+class QMSearchType(Enum):
     SONG = 0
     ARTIST = 1
     ALBUM = 2
@@ -123,7 +124,7 @@ def qm_get_lyric(mid: str) -> tuple[str | None, str | None] | str:
         return orig, ts
 
 
-def qm_search(keyword: str, search_type: int) -> list | str:
+def qm_search(keyword: str, search_type: QMSearchType) -> list | str:
     """
     搜索
     :param keyword:关键字
@@ -153,7 +154,7 @@ def qm_search(keyword: str, search_type: int) -> list | str:
                 "num_per_page": "20",
                 "page_num": "1",
                 "query": keyword,
-                "search_type": search_type,
+                "search_type": search_type.value,
             },
         },
     }, ensure_ascii=False).encode("utf-8")

@@ -11,7 +11,7 @@ class QrcType(Enum):
     CLOUD = 1
 
 
-def qrc_decrypt(encrypted_qrc: str | bytearray | bytes, qrc_type: int) -> tuple[str | None, str | None]:
+def qrc_decrypt(encrypted_qrc: str | bytearray | bytes, qrc_type: QrcType) -> tuple[str | None, str | None]:
     if encrypted_qrc is None or encrypted_qrc.strip() == "":
         logging.error("没有可解密的数据")
         return None, None

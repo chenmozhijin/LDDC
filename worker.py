@@ -15,6 +15,7 @@ from PySide6.QtCore import (
 )
 
 from api import (
+    QMSearchType,
     get_latest_version,
     qm_get_album_song_list,
     qm_get_songlist_song_list,
@@ -69,7 +70,7 @@ class SearchSignal(QObject):
 
 class SearchWorker(QRunnable):
 
-    def __init__(self, taskid: int, keyword: str, search_type: int) -> None:
+    def __init__(self, taskid: int, keyword: str, search_type: QMSearchType) -> None:
         super().__init__()
         self.taskid = taskid
         self.keyword = keyword
@@ -96,7 +97,7 @@ class SearchWorker(QRunnable):
             cache["serach"][(self.keyword, self.search_type)] = search_return
             cache_mutex.unlock()
 
-        self.signals.result.emit(self.taskid, self.search_type, search_return)
+        self.signals.result.emit(self.taskid, self.search_type.value, search_return)
         logging.debug("发送结果信号")
 
 
@@ -232,10 +233,14 @@ class GetSongListWorker(QRunnable):
         elif self.list_type == "songlist":
             song_list = qm_get_songlist_song_list(self.id)
 
-        if isinstance(song_list, list):
+        if isinstance(song_list, list) and song_list:
             self.signals.result.emit(self.list_type, song_list)
             cache_mutex.lock()
             cache["songlist"][(self.list_type, self.id)] = song_list
             cache_mutex.unlock()
-        else:
+        elif song_list == []:
+            self.signals.error.emit("获取歌曲列表失败, 列表数据为空")
+        elif isinstance(song_list, str):
             self.signals.error.emit(f"获取歌曲列表失败：{song_list}")
+        else:
+            self.signals.error.emit("获取歌曲列表失败, 未知错误")

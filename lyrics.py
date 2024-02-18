@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import logging
 import re
+from enum import Enum
 
 from bs4 import BeautifulSoup
 
@@ -9,12 +10,12 @@ from api import get_qrc, qm_get_lyric
 from decryptor import QrcType, qrc_decrypt
 
 
-class LyricType:
+class LyricType(Enum):
     LRC = 0
     QRC = 1
 
 
-class LyricProcessingError:
+class LyricProcessingError(Enum):
     REQUEST = 0
     DECRYPT = 1
     NOT_FOUND = 2
@@ -96,8 +97,8 @@ def find_closest_match(list1: list, list2: list, source: str | None = None) -> d
         list22 = [item for item in list2 if item[1] != ""]
         if len(list12) == len(list22):
             logging.info("qm 匹配方法")
-            for i in range(len(list1)):
-                merged_dict[list1[i]] = list2[i]
+            for i, value in enumerate(list1):
+                merged_dict[value] = list2[i]
             return merged_dict
         list12, list22 = None, None
 
@@ -149,7 +150,7 @@ class Lyrics(dict):
         self.id = info["id"]
         self.mid = info["mid"]
 
-    def download_and_decrypt(self) -> tuple[str | None, int | None]:
+    def download_and_decrypt(self) -> tuple[str | None, LyricProcessingError | None]:
         """
         下载与解密歌词
         :return: 错误
@@ -193,7 +194,7 @@ class Lyrics(dict):
             return "没有获取到可解密的歌词(orig=None)", LyricProcessingError.NOT_FOUND
         return None, None
 
-    def download_normal_lyrics(self) -> tuple[str | None, int | None]:
+    def download_normal_lyrics(self) -> tuple[str | None, LyricProcessingError | None]:
         result = qm_get_lyric(self.mid)
         if isinstance(result, str):
             return f"请求普通歌词时错误: {result}", LyricProcessingError.REQUEST

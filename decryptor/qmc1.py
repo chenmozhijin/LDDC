@@ -32,5 +32,5 @@ PRIVKey = [
 
 
 def qmc1_decrypt(data: bytearray) -> None:
-    for i in range(len(data)):
+    for i, _value in enumerate(data):
         data[i] ^= PRIVKey[(i % 0x7FFF) & 0x7F] if i > 0x7FFF else PRIVKey[i & 0x7F]  # noqa: PLR2004

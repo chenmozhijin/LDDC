@@ -206,6 +206,7 @@ class SearchWidget(QWidget, Ui_search):
 
     @Slot(int, int, list)
     def search_result_slot(self, taskid: int, search_type: int, result: list) -> None:
+        search_type = QMSearchType(search_type)
         if taskid != self.taskid["search"]:
             return
         self.search_pushButton.setText('搜索')

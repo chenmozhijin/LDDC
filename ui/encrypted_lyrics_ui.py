@@ -8,18 +8,15 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QMetaObject,
-)
-from PySide6.QtWidgets import (
-    QHBoxLayout,
-    QPlainTextEdit,
-    QPushButton,
-    QSizePolicy,
-    QVBoxLayout,
-)
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QPlainTextEdit, QPushButton,
+    QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_encrypted_lyrics(object):
     def setupUi(self, encrypted_lyrics):
@@ -30,6 +27,7 @@ class Ui_encrypted_lyrics(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.plainTextEdit = QPlainTextEdit(encrypted_lyrics)
         self.plainTextEdit.setObjectName(u"plainTextEdit")
+        self.plainTextEdit.setLineWrapMode(QPlainTextEdit.NoWrap)
 
         self.verticalLayout.addWidget(self.plainTextEdit)
 
