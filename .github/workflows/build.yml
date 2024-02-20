@@ -39,6 +39,7 @@ jobs:
                   echo "arch=arm64" >> $GITHUB_OUTPUT
                 elif [[ ${{ matrix.arch }} == 'win32' ]]; then
                   echo "arch=x86" >> $GITHUB_OUTPUT
+                fi
 
             - name: Install dependencies
               run: |
