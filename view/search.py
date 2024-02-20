@@ -69,6 +69,7 @@ class SearchWidget(QWidget, Ui_search):
         self.return_toolButton.clicked.connect(self.result_return)
 
     def get_lyric_type(self) -> list:
+        """返回选择了的歌词类型的列表"""
         lyric_type = []
         if self.original_checkBox.isChecked():
             lyric_type.append('orig')
@@ -79,6 +80,7 @@ class SearchWidget(QWidget, Ui_search):
         return lyric_type
 
     def get_source(self) -> Source:
+        """返回选择了的源"""
         match self.source_comboBox.currentText():
             case "QQ音乐":
                 return Source.QM
@@ -86,6 +88,7 @@ class SearchWidget(QWidget, Ui_search):
                 return Source.KG
 
     def save_list_lyrics(self) -> None:
+        """保存专辑、歌单中的所有歌词"""
         result_type = self.results_tableWidget.property("result_type")
         if (result_type is None or
                 result_type[0] not in ["album", "songlist"]):
@@ -165,6 +168,7 @@ class SearchWidget(QWidget, Ui_search):
 
     @Slot()
     def save_preview_lyric(self) -> None:
+        """保存预览的歌词"""
         if self.preview_info is None or self.save_path_lineEdit.text() == "":
             QMessageBox.warning(self, '警告', '请先下载并预览歌词并选择保存路径')
             return
@@ -176,6 +180,7 @@ class SearchWidget(QWidget, Ui_search):
         self.data_mutex.lock()
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
         lyrics_types = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+        # 获取已选择的歌词(用于替换占位符)
         save_folder, file_name = get_save_path(
             self.save_path_lineEdit.text(),
             self.data.cfg["lyrics_file_name_format"] + ".lrc",
@@ -200,7 +205,9 @@ class SearchWidget(QWidget, Ui_search):
         if save_path:
             self.save_path_lineEdit.setText(os.path.normpath(save_path))
 
+    @Slot(str)
     def search_type_changed(self, text: str) -> None:
+        """搜索类型改变"""
         match text:
             case "单曲":
                 self.search_type = SearchType.SONG
@@ -214,10 +221,12 @@ class SearchWidget(QWidget, Ui_search):
     def result_return(self) -> None:
         """返回"""
         if self.search_result is not None and len(self.result_path) == 2 and self.result_path[0] == "search":
+            self.taskid["results_table"] += 1
             self.result_path = self.result_path[:-2]  # 删两个,因为还要加一个
             search_type, result = self.search_result.values()
             self.search_result_slot(self.taskid["results_table"], search_type, result)
         elif self.songlist_result is not None and len(self.result_path) == 3 and self.result_path[1] == "songlist":
+            self.taskid["results_table"] += 1
             self.result_path = self.result_path[:-1]  # 删一个
             result_type, result = self.songlist_result.values()
             self.show_songlist_result(self.taskid["results_table"], result_type, result)
@@ -229,6 +238,7 @@ class SearchWidget(QWidget, Ui_search):
 
     @Slot(int, int, list)
     def search_result_slot(self, taskid: int, search_type: int, result: list) -> None:
+        """搜索结果槽函数"""
         search_type = SearchType(search_type)
         if taskid != self.taskid["results_table"]:
             return
@@ -240,12 +250,16 @@ class SearchWidget(QWidget, Ui_search):
         self.search_result = {"type": search_type, "result": result}
         self.result_path = ["search"]
 
+    @Slot(str)
     def search_error_slot(self, error: str) -> None:
+        """搜索错误时调用"""
         self.search_pushButton.setText('搜索')
         self.search_pushButton.setEnabled(True)
         QMessageBox.critical(self, "搜索错误", error)
 
+    @Slot()
     def search_button_clicked(self) -> None:
+        """搜索按钮被点击"""
         self.search_pushButton.setText('正在搜索...')
         self.search_pushButton.setEnabled(False)
         keyword = self.search_keyword_lineEdit.text()
@@ -256,11 +270,15 @@ class SearchWidget(QWidget, Ui_search):
         self.threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
 
+    @Slot(str)
     def update_preview_lyric_error_slot(self, error: str) -> None:
+        """更新预览歌词错误时调用"""
         QMessageBox.critical(self, "获取预览歌词错误", error)
         self.preview_plainTextEdit.setPlainText("")
 
+    @Slot(int, dict)
     def update_preview_lyric_result_slot(self, taskid: int, result: dict) -> None:
+        """更新预览歌词结果时调用"""
         if taskid != self.taskid["update_preview_lyric"]:
             return
         self.preview_info = {"info": result["info"], 'available_types': result['available_types']}
@@ -277,6 +295,7 @@ class SearchWidget(QWidget, Ui_search):
         self.preview_plainTextEdit.setPlainText(result['merged_lyric'])
 
     def update_preview_lyric(self, info: dict | None = None) -> None:
+        """开始更新预览歌词"""
         if not isinstance(info, dict) and self.preview_info is not None:
             info = self.preview_info["info"]
         elif not isinstance(info, dict) and self.preview_info is None:
@@ -294,6 +313,11 @@ class SearchWidget(QWidget, Ui_search):
         self.preview_plainTextEdit.setPlainText("处理中...")
 
     def update_result_table(self, result_type: tuple, result: list | None = None) -> None:
+        """
+        更新结果表格
+        :param result_type: 结果类型(结果类型, 搜索类型)
+        :param result: 结果(列表)
+        """
         table = self.results_tableWidget
         table.setRowCount(0)
 
@@ -353,10 +377,13 @@ class SearchWidget(QWidget, Ui_search):
 
                 table.setProperty("result_type", (result_type[0], "lyrics"))
 
-    def result_error(self, error: str) -> None:
-        QMessageBox.warning(self, "警告", error)
+    @Slot(str)
+    def get_songlist__error(self, error: str) -> None:
+        """获取歌单、专辑中的歌曲错误时调用"""
+        QMessageBox.critical(self, "错误", error)
         self.result_return()
 
+    @Slot(int, str, list)
     def show_songlist_result(self, taskid: int, result_type: str, result: list) -> None:
         """
         :param result_type: album或songlist
@@ -372,6 +399,7 @@ class SearchWidget(QWidget, Ui_search):
 
     def get_songlist_result(self, result_type: str, info: dict) -> None:
         """
+        获取歌单、专辑中的歌曲
         :param result_type: album或songlist
         """
         self.return_toolButton.setEnabled(True)
@@ -385,15 +413,22 @@ class SearchWidget(QWidget, Ui_search):
         elif result_type == "songlist":
             worker = GetSongListWorker(self.taskid["results_table"], result_type, info['id'], info['source'])
         worker.signals.result.connect(self.show_songlist_result)
-        worker.signals.error.connect(self.result_error)
+        worker.signals.error.connect(self.get_songlist__error)
         self.threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
         self.result_path.append("songlist")
 
+    @Slot(str)
+    def search_lyrics_error_slot(self, error: str) -> None:
+        """搜索歌词错误时调用"""
+        QMessageBox.critical(self, "错误", error)
+
+    @Slot(int, int, list)
     def search_lyrics_result_slot(self, taskid: int, _type: int, result: list) -> None:
         if taskid != self.taskid["results_table"]:
             return
         if not result:
+            # never
             QMessageBox.information(self, "提示", "没有找到歌词")
         elif len(result) == 1:
             self.update_preview_lyric(result[0])
@@ -419,7 +454,7 @@ class SearchWidget(QWidget, Ui_search):
                               info,
                               SearchType.LYRICS, info['source'])
         worker.signals.result.connect(self.search_lyrics_result_slot)
-        worker.signals.error.connect(self.result_error)
+        worker.signals.error.connect(self.search_lyrics_error_slot)
         self.threadpool.start(worker)
 
     def select_results(self, index: QModelIndex) -> None:
@@ -432,7 +467,7 @@ class SearchWidget(QWidget, Ui_search):
                 info = self.search_result["result"][row]
             case "album" | "songlist":  # 如果结果表格显示的是专辑、歌单的列表
                 info = self.songlist_result["result"][row]
-            case "lyrics":
+            case "lyrics":  # 如果结果表格显示的是歌词的搜索结果
                 info = self.search_lyrics_result[row]
             case _:
                 return
