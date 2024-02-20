@@ -139,6 +139,47 @@ jobs:
                 sudo dpkg -b deb LDDC_${{ steps.info.outputs.version }}_amd64.deb
                 sudo apt install ./LDDC_${{ steps.info.outputs.version }}_amd64.deb
 
+            - name: prepare create exe
+              if: ${{ matrix.os == 'windows-latest' }} 
+              run: |
+                mkdir -p dist/exe/main/
+                mkdir -p dist/exe/main/other/
+                cp -f dist/dist/LDDC/LDDC.exe dist/exe/main/LDDC.exe
+                cp -RT dist/dist/LDDC/_internal dist/exe/other/_internal
+
+            - name: Generate evb
+              if: ${{ matrix.os == 'windows-latest' }}
+              uses: chenmozhijin/generate-evb@master
+              with:
+                inputExe: "dist/exe/main/LDDC.exe"
+                outputExe: "dist/exe/output/LDDC.exe"
+                path2Pack: "dist/exe/other/"
+                evbFilePath: "dist/exe/LDDC.evb"
+                deleteExtractedOnExit: false
+                compressFiles: false
+
+            - name: create exe
+              if: ${{ matrix.os == 'windows-latest' }}
+              run: |
+                New-Item -Path "dist\exe\chen" -ItemType Directory -Force
+                New-Item -Path "dist\exe\tools" -ItemType Directory -Force
+                cd dist/exe/chen
+
+                $latest_release = Invoke-RestMethod -Uri "https://api.github.com/repos/dscharrer/innoextract/releases/latest"
+                $download_url = ($latest_release.assets | Where-Object { $_.browser_download_url -like "*windows.zip" }).browser_download_url
+                Invoke-WebRequest -Uri $download_url -OutFile "innoextract_windows.zip"
+                Expand-Archive -Path "innoextract_windows.zip" -DestinationPath "../tools" -Force
+
+                $enigmavb_url = "http://enigmaprotector.com/assets/files/enigmavb.exe"
+                Invoke-WebRequest -Uri $enigmavb_url -OutFile "../tools/enigmavb.exe"
+
+                cd ../tools
+                .\innoextract.exe enigmavb.exe
+
+                cd ../../..
+                dist/exe/tools/app/enigmavbconsole.exe dist/exe/LDDC.evb
+
+
             - name: Upload Executable
               if: success() || failure()
               uses: actions/upload-artifact@v4
