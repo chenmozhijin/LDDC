@@ -91,7 +91,7 @@ jobs:
                 then
                   icon_filename="logo.icns"
                 fi
-                pyinstaller --onedir --clean --windowed --name LDDC --specpath dist/spec --distpath dist/dist --workpath dist/build --icon $(pwd)/res/img/icon/$icon_filename LDDC.py
+                pyinstaller --onedir --contents-directory . --clean --windowed --name LDDC --specpath dist/spec --distpath dist/dist --workpath dist/build --icon $(pwd)/res/img/icon/$icon_filename LDDC.py
 
             - name: create dmg
               if: ${{ matrix.os == 'macos-latest' }}
@@ -145,7 +145,8 @@ jobs:
                 New-Item -ItemType Directory -Force -Path dist/exe/main/
                 New-Item -ItemType Directory -Force -Path dist/exe/main/other/
                 Copy-Item -Path dist/dist/LDDC/LDDC.exe -Destination dist/exe/main/LDDC.exe -Force
-                Copy-Item -Path dist/dist/LDDC/_internal -Destination dist/exe/other/_internal -Recurse -Force
+                Copy-Item -Path dist/dist/LDDC/ -Destination dist/exe/other/ -Recurse -Force
+                Remove-Item -Path dist/exe/other/LDDC.exe -Force
 
             - name: Generate evb
               if: ${{ matrix.os == 'windows-latest' }}
