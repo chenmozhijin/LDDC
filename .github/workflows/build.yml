@@ -28,6 +28,17 @@ jobs:
               with:
                 python-version: 3.11
                 architecture: ${{ matrix.arch }}
+            
+            - name: Get arch
+              id: arch
+              shell: bash
+              run: |
+                if [[ ${{ matrix.arch }} == 'x64' ]]; then
+                  echo "arch=amd64" >> $GITHUB_OUTPUT
+                elif [[ ${{ matrix.arch }} == 'arm64' ]]; then
+                  echo "arch=arm64" >> $GITHUB_OUTPUT
+                elif [[ ${{ matrix.arch }} == 'win32' ]]; then
+                  echo "arch=x86" >> $GITHUB_OUTPUT
 
             - name: Install dependencies
               run: |
@@ -47,10 +58,10 @@ jobs:
               run: |
                 brew install create-dmg upx 
 
-            - name: Install upx
+            - name: Install upx/7zip
               if: ${{ matrix.os == 'windows-latest' }}
               run: |
-                choco install upx -y
+                choco install upx 7zip -y
             
             - name: Get Information
               id: info
@@ -107,6 +118,9 @@ jobs:
                   dist/LDDC.dmg \
                   dist/dist/LDDC.app
 
+                mkdir -p upload
+                mv dist/LDDC.dmg upload/LDDC-${{ steps.info.outputs.version }}-${{ steps.arch.outputs.arch }}.dmg
+
             - name: create deb package
               if: ${{ matrix.os == 'ubuntu-latest' }}
               run: |
@@ -121,7 +135,7 @@ jobs:
 
                 echo "Package: LDDC" >> deb/DEBIAN/control
                 echo "Version: ${{ steps.info.outputs.version }}" >> deb/DEBIAN/control
-                echo "Architecture: amd64" >> deb/DEBIAN/control
+                echo "Architecture: ${{ steps.arch.outputs.arch }}" >> deb/DEBIAN/control
                 echo "Maintainer: chenmozhijin" >> deb/DEBIAN/control
                 echo "Description: lyrics tool" >> deb/DEBIAN/control
 
@@ -136,8 +150,12 @@ jobs:
                 echo "Categories=Application" >> deb/usr/share/applications/LDDC.desktop
                 chmod +x deb/usr/share/applications/LDDC.desktop
 
-                sudo dpkg -b deb LDDC_${{ steps.info.outputs.version }}_amd64.deb
-                sudo apt install ./LDDC_${{ steps.info.outputs.version }}_amd64.deb
+                sudo dpkg -b deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                sudo apt install ./LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+
+                cd ..
+                mkdir upload
+                mv dist/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb upload/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
 
             - name: prepare create exe
               if: ${{ matrix.os == 'windows-latest' }} 
@@ -153,7 +171,7 @@ jobs:
               uses: chenmozhijin/generate-evb@master
               with:
                 inputExe: "dist/exe/main/LDDC.exe"
-                outputExe: "dist/exe/output/LDDC.exe"
+                outputExe: "dist/exe/output/LDDC/LDDC.exe"
                 path2Pack: "dist/exe/other/"
                 evbFilePath: "dist/exe/LDDC.evb"
                 deleteExtractedOnExit: false
@@ -181,12 +199,27 @@ jobs:
                 dist/exe/tools/app/enigmavbconsole.exe dist/exe/LDDC.evb
 
 
-            - name: Upload Executable
+            - name: Upload dist
               if: success() || failure()
               uses: actions/upload-artifact@v4
               with:
                 name: ${{ runner.os }} - ${{ matrix.arch }} Build
                 path: |
                     dist/
+
+            - name: Compress exe
+              if: ${{ matrix.os == 'windows-latest' }}
+              run: |
+                New-Item -Path upload -ItemType Directory
+                7z a -tzip -r -m0=LZMA2 -mx=9 -ms=on upload/LDDC-${{ steps.info.outputs.version }}-${{ steps.arch.outputs.arch }}.zip dist/exe/output/LDDC
+
+            - name: Upload
+              uses: actions/upload-artifact@v4
+              with:
+                name: ${{ runner.os }} - ${{ matrix.arch }} artifacts
+                path: |
+                    upload/
+
+
 
 
