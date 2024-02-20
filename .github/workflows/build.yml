@@ -36,16 +36,21 @@ jobs:
                 pip install Pillow pyinstaller
                 # pip install imageio
             
-            - name: Install EGL
+            - name: Install EGL/upx
               if: ${{ matrix.os == 'ubuntu-latest' }}
               run: |
                 sudo apt-get update
-                sudo apt-get install libegl1
+                sudo apt-get install libegl1 upx
 
-            - name: Install create-dmg
+            - name: Install create-dmg/upx
               if: ${{ matrix.os == 'macos-latest' }}
               run: |
-                brew install create-dmg
+                brew install create-dmg upx 
+
+            - name: Install upx
+              if: ${{ matrix.os == 'windows-latest' }}
+              run: |
+                choco install upx -y
             
             - name: Get Information
               id: info
