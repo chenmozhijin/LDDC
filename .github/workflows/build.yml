@@ -142,10 +142,10 @@ jobs:
             - name: prepare create exe
               if: ${{ matrix.os == 'windows-latest' }} 
               run: |
-                mkdir -p dist/exe/main/
-                mkdir -p dist/exe/main/other/
-                cp -f dist/dist/LDDC/LDDC.exe dist/exe/main/LDDC.exe
-                cp -RT dist/dist/LDDC/_internal dist/exe/other/_internal
+                New-Item -ItemType Directory -Force -Path dist/exe/main/
+                New-Item -ItemType Directory -Force -Path dist/exe/main/other/
+                Copy-Item -Path dist/dist/LDDC/LDDC.exe -Destination dist/exe/main/LDDC.exe -Force
+                Copy-Item -Path dist/dist/LDDC/_internal -Destination dist/exe/other/_internal -Recurse -Force
 
             - name: Generate evb
               if: ${{ matrix.os == 'windows-latest' }}
