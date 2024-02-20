@@ -128,11 +128,13 @@ jobs:
                 cd dist
                 mkdir -p deb/DEBIAN
                 mkdir -p deb/usr/lib
+                mkdir -p deb/usr/bin
                 mkdir -p deb/usr/share/applications
                 mkdir -p deb/usr/share/icons/
                 cp -r ../res/img/icon/logo.ico deb/usr/share/icons/LDDC.ico
                 cp -RT dist/LDDC deb/usr/lib/LDDC
                 chmod +x deb/usr/lib/LDDC/LDDC
+                ln -s ../lib/LDDC/LDDC deb/usr/bin/LDDC
 
                 echo "Package: LDDC" >> deb/DEBIAN/control
                 echo "Version: ${{ steps.info.outputs.version }}" >> deb/DEBIAN/control
