@@ -35,9 +35,15 @@ data_mutex = QMutex()
 current_directory = os.path.dirname(os.path.abspath(__file__))
 data = Data(current_directory, data_mutex)
 
-if not os.path.exists("log"):
-    os.mkdir("log")
-logging.basicConfig(filename=f'log\\{time.strftime("%Y.%m.%d",time.localtime())}.log',
+match sys.platform:
+    case "linux" | "darwin":
+        log_dir = os.path.expanduser("~/.config/LDDC/log")
+    case _:
+        log_dir = os.path.join(current_directory, "log")
+
+if not os.path.exists(log_dir):
+    os.mkdir(log_dir)
+logging.basicConfig(filename=os.path.join(log_dir, f'{time.strftime("%Y.%m.%d",time.localtime())}.log'),
                     encoding="utf-8", format="[%(levelname)s]%(asctime)s\
                           - %(module)s(%(lineno)d) - %(funcName)s:%(message)s",
                     level=str2log_level(data.cfg["log_level"]))
@@ -104,8 +110,6 @@ class MainWindow(SidebarWindow):
 
 
 if __name__ == "__main__":
-    if not os.path.exists("lyrics"):
-        os.mkdir("lyrics")
 
     app = QApplication(sys.argv)
 

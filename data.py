@@ -18,8 +18,10 @@ class Data:
             case "linux" | "darwin":
                 home_dir = os.getenv('HOME')
                 self.db_path = os.path.join(home_dir, ".config/LDDC/data.db")
+                default_save_path = os.path.join(home_dir, "Documents/lyrics")
             case "win32":
                 self.db_path = os.path.join(current_directory, "data.db")
+                default_save_path = os.path.join(current_directory, "lyrics")
 
         if not os.path.exists(os.path.dirname(self.db_path)):
             os.makedirs(os.path.dirname(self.db_path))
@@ -34,7 +36,7 @@ class Data:
             self.cfg = {
                 "log_level": "INFO",
                 "lyrics_file_name_format": "%<artist> - %<title> (%<id>)",
-                "default_save_path": os.path.join(current_directory, "lyrics"),
+                "default_save_path": default_save_path,
                 "lyrics_order": ["罗马音", "原文", "译文"],
                 "skip_inst_lyrics": True,
                 "get_normal_lyrics": True,
