@@ -138,6 +138,7 @@ jobs:
                 echo "Version: ${{ steps.info.outputs.version }}" >> deb/DEBIAN/control
                 echo "Architecture: ${{ steps.arch.outputs.arch }}" >> deb/DEBIAN/control
                 echo "Maintainer: chenmozhijin" >> deb/DEBIAN/control
+                echo "Depends: libxcb-cursor-dev"
                 echo "Description: lyrics tool" >> deb/DEBIAN/control
 
                 echo "[Desktop Entry]" >> deb/usr/share/applications/LDDC.desktop

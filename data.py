@@ -4,6 +4,7 @@ import ast
 import logging
 import os
 import sqlite3
+import sys
 
 from PySide6.QtCore import QMutex
 
@@ -12,7 +13,13 @@ class Data:
 
     def __init__(self, current_directory: str, mutex: QMutex) -> None:
         self.mutex = mutex
-        self.db_path = os.path.join(current_directory, "data.db")
+
+        match sys.platform:
+            case "linux" | "darwin":
+                self.db_path = os.path.join(os.path.expanduser("~"), ".config/lddc/data.db")
+            case "win32":
+                self.db_path = os.path.join(current_directory, "data.db")
+
         self.db_version = 1
         try:
             self.conn = sqlite3.connect(self.db_path)
