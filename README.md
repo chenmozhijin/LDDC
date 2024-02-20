@@ -30,8 +30,6 @@
 
 #### 方式一:从[release](https://github.com/chenmozhijin/LDDC/releases)下载
 
-> [release](https://github.com/chenmozhijin/LDDC/releases)中的版本是通过[nuitka](https://github.com/Nuitka/Nuitka)编译并用[Enigma Virtual Box](https://enigmaprotector.com/en/aboutvb.html)打包的exe
-
 1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中最新版本的zip压缩包
 2. 解压zip包
 3. 运行`LDDC.exe`

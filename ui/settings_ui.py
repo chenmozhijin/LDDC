@@ -79,7 +79,7 @@ class Ui_settings(object):
         self.lyrics_order_listWidget.setSizePolicy(sizePolicy)
         self.lyrics_order_listWidget.setMinimumSize(QSize(0, 0))
         self.lyrics_order_listWidget.setMaximumSize(QSize(118, 96))
-        self.lyrics_order_listWidget.setFrameShape(QFrame.StyledPanel)
+        self.lyrics_order_listWidget.setFrameShape(QFrame.Box)
         self.lyrics_order_listWidget.setFrameShadow(QFrame.Sunken)
         self.lyrics_order_listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.lyrics_order_listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)

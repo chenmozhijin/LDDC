@@ -30,14 +30,21 @@ jobs:
 
             - name: Install dependencies
               run: |
+                python -m pip install --upgrade pip
                 pip install -r requirements.txt
-                pip install imageio
+                pip install Pillow
+                # pip install imageio
             
             - name: Install EGL
               if: ${{ matrix.os == 'ubuntu-latest' }}
               run: |
                 sudo apt-get update
                 sudo apt-get install libegl1
+
+            - name: Install create-dmg
+              if: ${{ matrix.os == 'macos-latest' }}
+              run: |
+                brew install create-dmg
             
             - name: Get Information
               id: info
@@ -47,32 +54,91 @@ jobs:
                 echo "version=$(python setup.py --task get_version)" >> $GITHUB_OUTPUT
                 cat $GITHUB_OUTPUT
 
+            #- name: Build Executable
+            #  uses: Nuitka/Nuitka-Action@main
+            #  with:
+            #    nuitka-version: main
+            #    script-name: LDDC.py
+            #    standalone: true
+            #    onefile: false
+            #    enable-plugins: pyside6
+            #    disable-console: true
+            #    product-name: "LDDC"
+            #    file-version: ${{ steps.info.outputs.version }}
+            #    product-version: ${{ steps.info.outputs.version }}
+            #    copyright: ${{ steps.info.outputs.copyright }}
+
+            #    windows-icon-from-ico: "res/img/icon/logo.png"
+            #    mingw64: true
+
+            #    macos-app-icon: "res/img/icon/logo.png"
+            #    macos-app-version: ${{ steps.info.outputs.version }}
+            #    macos-create-app-bundle: true
+
             - name: Build Executable
-              uses: Nuitka/Nuitka-Action@main
-              with:
-                nuitka-version: main
-                script-name: LDDC.py
-                standalone: true
-                onefile: false
-                enable-plugins: pyside6
-                disable-console: true
-                product-name: "LDDC"
-                file-version: ${{ steps.info.outputs.version }}
-                product-version: ${{ steps.info.outputs.version }}
-                copyright: ${{ steps.info.outputs.copyright }}
+              shell: bash
+              run: |
+                if [ ${{ matrix.os == 'ubuntu-latest' }}] || [ ${{ matrix.os == 'windows-latest' }}]
+                then
+                  icon_filename="logo.ico"
+                elif [ ${{ matrix.os == 'macos-latest' }}]
+                then
+                  icon_filename="logo.icns"
+                fi
+                pyinstaller --onedir --clean --windowed --name LDDC --specpath dist/spec --distpath dist/dist --workpath dist/build --icon $(pwd)/res/img/icon/$icon_filename LDDC.py
 
-                windows-icon-from-ico: "res/img/icon/logo.png"
-                mingw64: true
+            - name: create dmg
+              if: ${{ matrix.os == 'macos-latest' }}
+              run: |
+                create-dmg \
+                  --volname "LDDC" \
+                  --volicon "res/img/icon/logo.icns" \
+                  --window-pos 200 120 \
+                  --window-size 800 400 \
+                  --icon-size 100 \
+                  --icon "LDDC.app" 200 190 \
+                  --app-drop-link  600 185 \
+                  dist/LDDC.dmg \
+                  dist/dist/LDDC.app
 
-                macos-app-icon: "res/img/icon/logo.png"
-                macos-app-version: ${{ steps.info.outputs.version }}
-                macos-create-app-bundle: true
-            
+            - name: create deb package
+              if: ${{ matrix.os == 'ubuntu-latest' }}
+              run: |
+                cd dist
+                mkdir -p deb/DEBIAN
+                mkdir -p deb/usr/lib
+                mkdir -p deb/usr/share/applications
+                mkdir -p deb/usr/share/icons/
+                cp -r ../res/img/icon/logo.ico deb/usr/share/icons/LDDC.ico
+                cp -RT dist/LDDC deb/usr/lib/LDDC
+                chmod +x deb/usr/lib/LDDC/LDDC
+
+                echo "Package: LDDC" >> deb/DEBIAN/control
+                echo "Version: ${{ steps.info.outputs.version }}" >> deb/DEBIAN/control
+                echo "Architecture: amd64" >> deb/DEBIAN/control
+                echo "Maintainer: chenmozhijin" >> deb/DEBIAN/control
+                echo "Description: lyrics tool" >> deb/DEBIAN/control
+
+                echo "[Desktop Entry]" >> deb/usr/share/applications/LDDC.desktop
+                echo "Name=LDDC" >> deb/usr/share/applications/LDDC.desktop
+                echo "Comment=lyrics tool" >> deb/usr/share/applications/LDDC.desktop
+                echo "Exec=/usr/lib/LDDC/LDDC" >> deb/usr/share/applications/LDDC.desktop
+                echo "Icon=/usr/share/icons/LDDC.ico" >> deb/usr/share/applications/LDDC.desktop
+                echo "Terminal=false" >> deb/usr/share/applications/LDDC.desktop
+                echo "Type=Application" >> deb/usr/share/applications/LDDC.desktop
+                echo "X-Ubuntu-Touch=true" >> deb/usr/share/applications/LDDC.desktop
+                echo "Categories=Application" >> deb/usr/share/applications/LDDC.desktop
+                chmod +x deb/usr/share/applications/LDDC.desktop
+
+                sudo dpkg -b deb LDDC_${{ steps.info.outputs.version }}_amd64.deb
+                sudo apt install ./LDDC_${{ steps.info.outputs.version }}_amd64.deb
+
             - name: Upload Executable
+              if: success() || failure()
               uses: actions/upload-artifact@v4
               with:
                 name: ${{ runner.os }} - ${{ matrix.arch }} Build
                 path: |
-                    build/
+                    dist/
 
 
