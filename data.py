@@ -16,15 +16,19 @@ class Data:
 
         match sys.platform:
             case "linux" | "darwin":
-                self.db_path = os.path.join(os.path.expanduser("~"), ".config/lddc/data.db")
+                home_dir = os.getenv('HOME')
+                self.db_path = os.path.join(home_dir, ".config/LDDC/data.db")
             case "win32":
                 self.db_path = os.path.join(current_directory, "data.db")
+
+        if not os.path.exists(os.path.dirname(self.db_path)):
+            os.makedirs(os.path.dirname(self.db_path))
 
         self.db_version = 1
         try:
             self.conn = sqlite3.connect(self.db_path)
         except Exception:
-            logging.exception("连接数据库失败")
+            logging.exception(f"连接数据库失败, 数据库路径:{self.db_path}")
             raise
         else:
             self.cfg = {
