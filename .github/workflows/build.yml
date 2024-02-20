@@ -33,7 +33,7 @@ jobs:
                 python -m pip install --upgrade pip
                 pip install -r requirements.txt
                 pip install Pillow
-                # pip install imageio
+                # pip install imageio pyinstaller
             
             - name: Install EGL
               if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -78,10 +78,10 @@ jobs:
             - name: Build Executable
               shell: bash
               run: |
-                if [ ${{ matrix.os == 'ubuntu-latest' }}] || [ ${{ matrix.os == 'windows-latest' }}]
+                if ${{ matrix.os == 'ubuntu-latest' }} || ${{ matrix.os == 'windows-latest' }}
                 then
                   icon_filename="logo.ico"
-                elif [ ${{ matrix.os == 'macos-latest' }}]
+                elif ${{ matrix.os == 'macos-latest' }}
                 then
                   icon_filename="logo.icns"
                 fi
