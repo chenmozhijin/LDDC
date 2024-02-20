@@ -212,7 +212,7 @@ jobs:
               if: ${{ matrix.os == 'windows-latest' }}
               run: |
                 New-Item -Path upload -ItemType Directory
-                7z a -tzip -r -m0=LZMA2 -mx=9 -ms=on upload/LDDC-${{ steps.info.outputs.version }}-${{ steps.arch.outputs.arch }}.zip dist/exe/output/LDDC
+                7z a -tzip -mx=9 -m0=LZMA -ms=on upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}.zip dist/exe/output/LDDC
 
             - name: Upload
               uses: actions/upload-artifact@v4
