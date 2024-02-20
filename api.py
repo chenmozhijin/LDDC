@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-import base64
 import json
 import logging
 import random
+import re
 import time
+from base64 import b64decode
 from enum import Enum
 
 import requests
+from bs4 import BeautifulSoup
 
 
 def get_latest_version() -> tuple[bool, str]:
@@ -23,12 +25,27 @@ def get_latest_version() -> tuple[bool, str]:
         return False, "获取最新版本信息失败"
 
 
-class QMSearchType(Enum):
+class SearchType(Enum):
     SONG = 0
     ARTIST = 1
     ALBUM = 2
     SONGLIST = 3
-    LYRIC = 7
+    LYRICS = 7
+
+
+class Source(Enum):
+    QM = 0
+    KG = 1
+
+    # 定义 Source 类的序列化方法
+    def __json__(self, obj: any) -> str:
+        if isinstance(obj, Source):
+            return str(obj.name)
+        msg = f"Object of type {obj.__class__.__name__} is not JSON serializable"
+        raise TypeError(msg)
+
+
+json.JSONEncoder.default = Source.__json__
 
 
 QMD_headers = {
@@ -39,7 +56,7 @@ QMD_headers = {
 }
 
 
-def songlist2result(songlist: list, list_type: str | None = None) -> list:
+def qmsonglist2result(songlist: list, list_type: str | None = None) -> list:
     results = []
     for song in songlist:
         info = song["songInfo"] if list_type == "album" else song
@@ -56,8 +73,34 @@ def songlist2result(songlist: list, list_type: str | None = None) -> list:
             'subtitle': info['subtitle'],
             'artist': artist,
             'album': info['album']['name'],
-            'interval': info['interval'],
-            'source': 'qm',
+            'duration': info['interval'],
+            'source': Source.QM,
+        })
+    return results
+
+
+def kgsonglist2result(songlist: list, list_type: str = "search") -> list:
+    results = []
+
+    for song in songlist:
+        match list_type:
+            case "songlist":
+                title = song['filename'].split("-")[1].strip()
+                artist = song['filename'].split("-")[0].strip()
+                album = ""
+            case "search":
+                title = song['songname']
+                album = song['album_name']
+                artist = song['singername']
+        results.append({
+            'hash': song['hash'],
+            'title': title,
+            'subtitle': "",
+            'duration': song['duration'],
+            'artist': artist,
+            'album': album,
+            'language': song['trans_param'].get('language', ''),
+            'source': Source.KG,
         })
     return results
 
@@ -114,8 +157,8 @@ def qm_get_lyric(mid: str) -> tuple[str | None, str | None] | str:
             return f'获取歌词失败, code: {response_json["code"]}'
         orig_base64 = response_json['lyric']
         ts_base64 = response_json['trans']
-        orig = base64.b64decode(orig_base64).decode("utf-8") if orig_base64 else None
-        ts = base64.b64decode(ts_base64).decode("utf-8") if ts_base64 else None
+        orig = b64decode(orig_base64).decode("utf-8") if orig_base64 else None
+        ts = b64decode(ts_base64).decode("utf-8") if ts_base64 else None
     except Exception as e:
         logging.exception("请求歌词时错误")
         return str(e)
@@ -124,7 +167,7 @@ def qm_get_lyric(mid: str) -> tuple[str | None, str | None] | str:
         return orig, ts
 
 
-def qm_search(keyword: str, search_type: QMSearchType) -> list | str:
+def qm_search(keyword: str, search_type: SearchType) -> list | str:
     """
     搜索
     :param keyword:关键字
@@ -132,7 +175,7 @@ def qm_search(keyword: str, search_type: QMSearchType) -> list | str:
     :return: 搜索结果(list)或错误(str)
     """
     logging.debug(f"开始搜索：{keyword}, 类型为{search_type}")
-    if search_type not in (QMSearchType.SONG, QMSearchType.ARTIST, QMSearchType.ALBUM, QMSearchType.SONGLIST):
+    if search_type not in (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM, SearchType.SONGLIST):
         return f"搜索类型错误,类型为{search_type}"
     data = json.dumps({
         "comm": {
@@ -165,10 +208,10 @@ def qm_search(keyword: str, search_type: QMSearchType) -> list | str:
         results = []
         match search_type:
 
-            case QMSearchType.SONG:
-                results = songlist2result(infos['song']['list'])
+            case SearchType.SONG:
+                results = qmsonglist2result(infos['song']['list'])
 
-            case QMSearchType.ALBUM:
+            case SearchType.ALBUM:
                 for album in infos['album']['list']:
                     results.append({
                         'id': album['albumID'],
@@ -178,10 +221,10 @@ def qm_search(keyword: str, search_type: QMSearchType) -> list | str:
                         'count': album['song_count'],  # 歌曲数量
                         'time': album['publicTime'],
                         'artist': album['singerName'],
-                        'source': 'qm',
+                        'source': Source.QM,
                     })
 
-            case QMSearchType.SONGLIST:
+            case SearchType.SONGLIST:
                 for songlist in infos['songlist']['list']:
                     results.append({
                         'id': songlist['dissid'],
@@ -190,17 +233,17 @@ def qm_search(keyword: str, search_type: QMSearchType) -> list | str:
                         'count': songlist['song_count'],  # 歌曲数量
                         'time': songlist['createtime'],
                         'creator': songlist['creator']['name'],
-                        'source': 'qm',
+                        'source': Source.QM,
                     })
 
-            case QMSearchType.ARTIST:
+            case SearchType.ARTIST:
                 for artist in infos['singer']['list']:
                     results.append({
                         'id': artist['singerID'],
                         'name': artist['singerName'],
                         'pic': artist['singerPic'],  # 艺术家图片
                         'count': artist['songNum'],  # 歌曲数量
-                        'source': 'qm',
+                        'source': Source.QM,
                     })
     except requests.HTTPError as e:
         logging.exception("请求搜索数据时错误")
@@ -246,7 +289,7 @@ def qm_get_album_song_list(album_mid: str) -> list | str:
         response.raise_for_status()
         response_json = response.json()
         album_song_list = response_json["req_1"]["data"]["songList"]
-        results = songlist2result(album_song_list, "album")
+        results = qmsonglist2result(album_song_list, "album")
         if response_json['req_1']['data']['totalNum'] != len(results):
             logging.error("获取到的歌曲数量与实际数量不一致")
             return "专辑歌曲获取不完整"
@@ -306,7 +349,7 @@ def qm_get_songlist_song_list(songlist_id: str) -> str | list:
         response.raise_for_status()
         response_json = response.json()
         songlist = response_json['req_0']['data']['songlist']
-        results = songlist2result(songlist)
+        results = qmsonglist2result(songlist)
         if response_json['req_0']['data']['total_song_num'] != len(results):
             return "获取歌曲列表失败, 返回的歌曲数量与实际数量不一致"
     except requests.exceptions.RequestException as e:
@@ -316,3 +359,183 @@ def qm_get_songlist_song_list(songlist_id: str) -> str | list:
         logging.info(f"获取歌单成功, 数量: {len(results)}")
         logging.debug(f"获取歌单成功,获取结果: {results}")
         return results
+
+
+def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str | list:
+    if isinstance(info, str):
+        keyword = info
+    elif isinstance(info, dict):
+        keyword = info.get("keyword")
+        duration = info.get("duration")
+        hash_ = info.get("hash")
+    match search_type:
+        case SearchType.SONG:
+            url = "http://msearchcdn.kugou.com/api/v3/search/song"
+            params = {
+                "showtype": "14",
+                "highlight": "",
+                "pagesize": "30",
+                "tag_aggr": "1",
+                "tagtype": "全部",
+                "plat": "0",
+                "sver": "5",
+                "keyword": keyword,
+                "correct": "1",
+                "api_ver": "1",
+                "version": "9108",
+                "page": page,
+                "area_code": "1",
+                "tag": "1",
+                "with_res_tag": "1",
+            }
+        case SearchType.SONGLIST:
+            url = "http://mobilecdnbj.kugou.com/api/v3/search/special"
+            params = {
+                "version": "9108",
+                "highlight": "",
+                "keyword": keyword,
+                "pagesize": "20",
+                "filter": "0",
+                "page": page,
+                "sver": "2",
+                "with_res_tag": "1",
+            }
+        case SearchType.ALBUM:
+            url = "http://msearch.kugou.com/api/v3/search/album"
+            params = {
+                "version": "9108",
+                "iscorrection": "1",
+                "highlight": "",
+                "plat": "0",
+                "keyword": keyword,
+                "pagesize": "20",
+                "page": "1",
+                "sver": "2",
+                "with_res_tag": "1",
+            }
+        case SearchType.LYRICS:
+            url = "http://lyrics.kugou.com/search"
+            params = {
+                "ver": 1,
+                "man": "yes",
+                "client": "pc",
+                "keyword": keyword,
+                "duration": duration,
+                "hash": hash_,
+            }
+    try:
+        response = requests.get(url, params=params, timeout=3)
+        response.raise_for_status()
+        if search_type == SearchType.LYRICS:
+            response_json = response.json()
+        else:
+            response_json = json.loads(re.findall(r"<!--KG_TAG_RES_START-->(.*)<!--KG_TAG_RES_END-->", response.text, re.DOTALL)[0])
+        match search_type:
+            case SearchType.SONG:
+                results = kgsonglist2result(response_json['data']['info'])
+            case SearchType.SONGLIST:
+                results = []
+                for songlist in response_json['data']['info']:
+                    name_soup = BeautifulSoup(songlist['specialname'], 'html.parser')
+                    results.append({
+                        'id': songlist['specialid'],
+                        'name': name_soup.get_text(),
+                        'pic': songlist['imgurl'],  # 歌单封面
+                        'count': songlist['songcount'],  # 歌曲数量
+                        'time': songlist['publishtime'],
+                        'creator': songlist['nickname'],
+                        'source': Source.KG,
+                    })
+            case SearchType.ALBUM:
+                results = []
+                for album in response_json['data']['info']:
+                    results.append({
+                        'id': album['albumid'],
+                        'name': album['albumname'],
+                        'pic': album['imgurl'],  # 专辑封面
+                        'count': album['songcount'],  # 歌曲数量
+                        'time': album['publishtime'],
+                        'artist': album['singername'],
+                        'source': Source.KG,
+                    })
+            case SearchType.LYRICS:
+                results = []
+                for lyric in response_json['candidates']:
+                    results.append({
+                        "id": lyric['id'],
+                        "accesskey": lyric['accesskey'],
+                        "duration": lyric['duration'],
+                        "creator": lyric['nickname'],
+                        "score": lyric['score'],
+                        "source": Source.KG,
+                    })
+    except Exception as e:
+        logging.exception("搜索时错误")
+        return str(e)
+    else:
+        logging.debug(f"搜索结果：{json.dumps(results, ensure_ascii=False, indent=4)}")
+        return results
+
+
+def kg_get_songlist(listid: str | int, list_type: str) -> str | list:
+    if list_type not in ["album", "songlist"]:
+        return "错误的list_type"
+
+    match list_type:
+        case "album":
+            url = "http://mobilecdn.kugou.com/api/v3/album/song"
+            params = {
+                "version": "9108",
+                "albumid": listid,
+                "plat": "0",
+                "pagesize": "-1",
+                "area_code": "1",
+                "page": "1",
+                "with_res_tag": "1",
+            }
+
+        case "songlist":
+            url = "http://mobilecdn.kugou.com/api/v3/special/song"
+            params = {
+                "version": "9108",
+                "specialid": listid,
+                "plat": "0",
+                "pagesize": "-1",
+                "area_code": "1",
+                "page": "1",
+                "with_res_tag": "1",
+            }
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        response_json = json.loads(re.findall(r"<!--KG_TAG_RES_START-->(.*)<!--KG_TAG_RES_END-->", response.text, re.DOTALL)[0])
+        results = kgsonglist2result(response_json['data']['info'], "songlist")
+    except Exception as e:
+        logging.exception("获取歌曲列表数据时错误")
+        return str(e)
+    else:
+        logging.info("获取歌曲列表数据成功")
+        return results
+
+
+def get_krc(lyrsicid: str | int, access_key: str) -> str | list:
+    url = "https://lyrics.kugou.com/download"
+    params = {
+        "ver": 1,
+        "client": "pc",
+        "id": lyrsicid,
+        "accesskey": access_key,
+        "fmt": "krc",
+        "charset": "utf8",
+    }
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        response_json = response.json()
+        krc = b64decode(response_json['content'])
+    except Exception as e:
+        logging.exception("获取歌词数据时错误")
+        return str(e)
+    else:
+        logging.info("获取歌词数据成功")
+        return krc

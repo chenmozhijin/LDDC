@@ -51,3 +51,25 @@ def qrc_decrypt(encrypted_qrc: str | bytearray | bytes, qrc_type: QrcType) -> tu
         logging.exception("解密失败")
         return None, str(e)
     return decrypted_qrc, None
+
+
+KRC_KEY = bytearray([0x40, 0x47, 0x61, 0x77, 0x5e, 0x32, 0x74, 0x47, 0x51, 0x36, 0x31, 0x2d, 0xce, 0xd2, 0x6e, 0x69])
+
+
+def krc_decrypt(encrypted_lyrics: bytearray | bytes) -> tuple[str | None, str | None]:
+    if isinstance(encrypted_lyrics, bytes):
+        encrypted_data = bytearray(encrypted_lyrics)[4:]
+    elif isinstance(encrypted_lyrics, bytearray):
+        encrypted_data = encrypted_lyrics[4:]
+    else:
+        return None, "无效的加密数据类型"
+
+    try:
+        decrypted_data = bytearray()
+        for i in range(len(encrypted_data)):
+            decrypted_data.append(encrypted_data[i] ^ KRC_KEY[i % len(KRC_KEY)])
+
+        return decompress(decrypted_data).decode('utf-8'), None
+    except Exception as e:
+        logging.exception("解密失败")
+        return None, str(e)

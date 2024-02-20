@@ -4,7 +4,6 @@ import os
 
 from PySide6.QtCore import (
     QModelIndex,
-    QMutex,
     QThreadPool,
     Slot,
 )
@@ -16,37 +15,41 @@ from PySide6.QtWidgets import (
 )
 
 from api import (
-    QMSearchType,
+    SearchType,
+    Source,
 )
 from data import Data
 from ui.search_ui import Ui_search
-from utils import get_save_path
+from utils import get_save_path, ms2formattime
 from view.get_list_lyrics import GetListLyrics
 from worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
 
 
 class SearchWidget(QWidget, Ui_search):
-    def __init__(self, main_window: QWidget, data: Data, data_mutex: QMutex, threadpool: QThreadPool) -> None:
+    def __init__(self, main_window: QWidget, data: Data, threadpool: QThreadPool) -> None:
         super().__init__()
         self.setupUi(self)
         self.return_toolButton.setEnabled(False)
         self.main_window = main_window
         self.data = data
-        self.data_mutex = data_mutex
+        self.data_mutex = data.mutex
         self.threadpool = threadpool
         self.connect_signals()
-        self.search_type = QMSearchType.SONG
+        self.search_type = SearchType.SONG
 
         self.songlist_result = None
         self.search_result = None
+        self.search_lyrics_result = None
         self.preview_info = None
+
+        self.result_path = []  # 值为"search": 搜索、"songlist":歌曲列表(歌单、专辑),"l"
 
         self.save_path_lineEdit.setText(self.data.cfg["default_save_path"])
 
         self.get_list_lyrics_box = GetListLyrics(self)
 
         self.taskid = {
-            "search": 0,
+            "results_table": 0,
             "update_preview_lyric": 0,
         }  # 用于防止旧任务的结果覆盖新任务的结果
 
@@ -63,7 +66,7 @@ class SearchWidget(QWidget, Ui_search):
         self.romanized_checkBox.stateChanged.connect(self.update_preview_lyric)
         self.original_checkBox.stateChanged.connect(self.update_preview_lyric)
 
-        self.return_toolButton.clicked.connect(self.return_search_result)
+        self.return_toolButton.clicked.connect(self.result_return)
 
     def get_lyric_type(self) -> list:
         lyric_type = []
@@ -74,6 +77,13 @@ class SearchWidget(QWidget, Ui_search):
         if self.romanized_checkBox.isChecked():
             lyric_type.append("roma")
         return lyric_type
+
+    def get_source(self) -> Source:
+        match self.source_comboBox.currentText():
+            case "QQ音乐":
+                return Source.QM
+            case "酷狗音乐":
+                return Source.KG
 
     def save_list_lyrics(self) -> None:
         result_type = self.results_tableWidget.property("result_type")
@@ -96,7 +106,7 @@ class SearchWidget(QWidget, Ui_search):
             else:
                 save_path = result['save_path']
                 save_folder = os.path.dirname(save_path)
-                text += f"获取{result['info']['title']} - {result['info']['artist']}({result['info']['id']})歌词成功"
+                text += f"获取 {result['info']['title']} - {result['info']['artist']} 歌词成功"
                 if result['inst']:  # 检查是否为纯音乐,并且设置跳过纯音乐
                     text += "但歌曲为纯音乐,已跳过"
                 else:
@@ -137,7 +147,7 @@ class SearchWidget(QWidget, Ui_search):
                                         "save_folder": save_folder,
                                         "lyrics_file_name_format": lyrics_file_name_format,
                                         },
-                                       self.data_mutex, self.data)
+                                       self.data)
         worker.signals.result.connect(get_list_lyrics_update)
         worker.signals.error.connect(get_list_lyrics_update)
         self.threadpool.start(worker)
@@ -164,11 +174,13 @@ class SearchWidget(QWidget, Ui_search):
             return
 
         self.data_mutex.lock()
+        type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
+        lyrics_types = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
         save_folder, file_name = get_save_path(
-            self.save_path_lineEdit.text().strip(),
+            self.save_path_lineEdit.text(),
             self.data.cfg["lyrics_file_name_format"] + ".lrc",
             self.preview_info["info"],
-            self.preview_info['available_types'])
+            lyrics_types)
 
         self.data_mutex.unlock()
 
@@ -191,23 +203,34 @@ class SearchWidget(QWidget, Ui_search):
     def search_type_changed(self, text: str) -> None:
         match text:
             case "单曲":
-                self.search_type = QMSearchType.SONG
+                self.search_type = SearchType.SONG
             case "专辑":
-                self.search_type = QMSearchType.ALBUM
+                self.search_type = SearchType.ALBUM
             case "歌手":
-                self.search_type = QMSearchType.ARTIST
+                self.search_type = SearchType.ARTIST
             case "歌单":
-                self.search_type = QMSearchType.SONGLIST
+                self.search_type = SearchType.SONGLIST
 
-    def return_search_result(self) -> None:
-        if self.search_result is not None:
+    def result_return(self) -> None:
+        """返回"""
+        if self.search_result is not None and len(self.result_path) == 2 and self.result_path[0] == "search":
+            self.result_path = self.result_path[:-2]  # 删两个,因为还要加一个
             search_type, result = self.search_result.values()
-            self.search_result_slot(self.taskid["search"], search_type, result)
+            self.search_result_slot(self.taskid["results_table"], search_type, result)
+        elif self.songlist_result is not None and len(self.result_path) == 3 and self.result_path[1] == "songlist":
+            self.result_path = self.result_path[:-1]  # 删一个
+            result_type, result = self.songlist_result.values()
+            self.show_songlist_result(self.taskid["results_table"], result_type, result)
+
+        if len(self.result_path) <= 1:
+            self.return_toolButton.setEnabled(False)
+        else:
+            self.return_toolButton.setEnabled(True)
 
     @Slot(int, int, list)
     def search_result_slot(self, taskid: int, search_type: int, result: list) -> None:
-        search_type = QMSearchType(search_type)
-        if taskid != self.taskid["search"]:
+        search_type = SearchType(search_type)
+        if taskid != self.taskid["results_table"]:
             return
         self.search_pushButton.setText('搜索')
         self.search_pushButton.setEnabled(True)
@@ -215,6 +238,7 @@ class SearchWidget(QWidget, Ui_search):
         self.update_result_table(("search", search_type), result)
 
         self.search_result = {"type": search_type, "result": result}
+        self.result_path = ["search"]
 
     def search_error_slot(self, error: str) -> None:
         self.search_pushButton.setText('搜索')
@@ -225,8 +249,8 @@ class SearchWidget(QWidget, Ui_search):
         self.search_pushButton.setText('正在搜索...')
         self.search_pushButton.setEnabled(False)
         keyword = self.search_keyword_lineEdit.text()
-        self.taskid["search"] += 1
-        worker = SearchWorker(self.taskid["search"], keyword, self.search_type)
+        self.taskid["results_table"] += 1
+        worker = SearchWorker(self.taskid["results_table"], keyword, self.search_type, self.get_source())
         worker.signals.result.connect(self.search_result_slot)
         worker.signals.error.connect(self.search_error_slot)
         self.threadpool.start(worker)
@@ -261,7 +285,7 @@ class SearchWidget(QWidget, Ui_search):
         self.taskid["update_preview_lyric"] += 1
         worker = LyricProcessingWorker(
             {"type": "get_merged_lyric", "song_info": info, "lyric_type": self.get_lyric_type(), "id": self.taskid["update_preview_lyric"]},
-            self.data_mutex, self.data)
+            self.data)
         worker.signals.result.connect(self.update_preview_lyric_result_slot)
         worker.signals.error.connect(self.update_preview_lyric_error_slot)
         self.threadpool.start(worker)
@@ -274,7 +298,7 @@ class SearchWidget(QWidget, Ui_search):
         table.setRowCount(0)
 
         match result_type[1]:
-            case QMSearchType.SONG:
+            case SearchType.SONG:
                 table.setColumnCount(4)
                 table.setHorizontalHeaderLabels(["歌曲", "艺术家", "专辑", "时长"])
                 table.set_proportions([0.4, 0.2, 0.4, 2])
@@ -286,11 +310,11 @@ class SearchWidget(QWidget, Ui_search):
                     table.setItem(table.rowCount() - 1, 0, QTableWidgetItem(name))
                     table.setItem(table.rowCount() - 1, 1, QTableWidgetItem(song["artist"]))
                     table.setItem(table.rowCount() - 1, 2, QTableWidgetItem(song["album"]))
-                    table.setItem(table.rowCount() - 1, 3, QTableWidgetItem('{:02d}:{:02d}'.format(*divmod(song['interval'], 60))))
+                    table.setItem(table.rowCount() - 1, 3, QTableWidgetItem('{:02d}:{:02d}'.format(*divmod(song['duration'], 60))))
 
                 table.setProperty("result_type", (result_type[0], "songs"))
 
-            case QMSearchType.ALBUM:
+            case SearchType.ALBUM:
                 table.setColumnCount(4)
                 table.setHorizontalHeaderLabels(["专辑", "艺术家", "发行日期", "歌曲数量"])
                 table.set_proportions([0.6, 0.4, 2, 2])
@@ -303,7 +327,7 @@ class SearchWidget(QWidget, Ui_search):
 
                 table.setProperty("result_type", (result_type[0], "album"))
 
-            case QMSearchType.SONGLIST:
+            case SearchType.SONGLIST:
                 table.setColumnCount(4)
                 table.setHorizontalHeaderLabels(["歌单", "创建者", "创建时间", "歌曲数量"])
                 table.set_proportions([0.6, 0.4, 2, 2])
@@ -316,19 +340,33 @@ class SearchWidget(QWidget, Ui_search):
 
                 table.setProperty("result_type", (result_type[0], "songlist"))
 
-    def get_songlist_error(self, error: str) -> None:
-        QMessageBox.warning(self, "警告", error)
-        self.return_search_result()
+            case SearchType.LYRICS:
+                table.setColumnCount(4)
+                table.setHorizontalHeaderLabels(["id", "上传者", "时长", "分数"])
+                table.set_proportions([2, 1, 2, 2])
+                for lyric in result:
+                    table.insertRow(table.rowCount())
+                    table.setItem(table.rowCount() - 1, 0, QTableWidgetItem(str(lyric["id"])))
+                    table.setItem(table.rowCount() - 1, 1, QTableWidgetItem(lyric["creator"]))
+                    table.setItem(table.rowCount() - 1, 2, QTableWidgetItem(ms2formattime(int(lyric["duration"]))))
+                    table.setItem(table.rowCount() - 1, 3, QTableWidgetItem(str(lyric["score"])))
 
-    def show_songlist_result(self, result_type: str, result: list) -> None:
+                table.setProperty("result_type", (result_type[0], "lyrics"))
+
+    def result_error(self, error: str) -> None:
+        QMessageBox.warning(self, "警告", error)
+        self.result_return()
+
+    def show_songlist_result(self, taskid: int, result_type: str, result: list) -> None:
         """
         :param result_type: album或songlist
         """
-        self.return_toolButton.setEnabled(True)
+        if taskid != self.taskid["results_table"]:
+            return
         if result_type == "album":
-            self.update_result_table(("album", QMSearchType.SONG), result)
+            self.update_result_table(("album", SearchType.SONG), result)
         elif result_type == "songlist":
-            self.update_result_table(("songlist", QMSearchType.SONG), result)
+            self.update_result_table(("songlist", SearchType.SONG), result)
 
         self.songlist_result = {"type": result_type, "result": result}
 
@@ -336,28 +374,79 @@ class SearchWidget(QWidget, Ui_search):
         """
         :param result_type: album或songlist
         """
+        self.return_toolButton.setEnabled(True)
+        self.taskid["results_table"] += 1
         if result_type == "album":
-            worker = GetSongListWorker(result_type, info['mid'])
+            match info['source']:
+                case Source.QM:
+                    worker = GetSongListWorker(self.taskid["results_table"], result_type, info['mid'], info['source'])
+                case Source.KG:
+                    worker = GetSongListWorker(self.taskid["results_table"], result_type, info['id'], info['source'])
         elif result_type == "songlist":
-            worker = GetSongListWorker(result_type, info['id'])
+            worker = GetSongListWorker(self.taskid["results_table"], result_type, info['id'], info['source'])
         worker.signals.result.connect(self.show_songlist_result)
-        worker.signals.error.connect(self.get_songlist_error)
+        worker.signals.error.connect(self.result_error)
         self.threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
+        self.result_path.append("songlist")
+
+    def search_lyrics_result_slot(self, taskid: int, _type: int, result: list) -> None:
+        if taskid != self.taskid["results_table"]:
+            return
+        if not result:
+            QMessageBox.information(self, "提示", "没有找到歌词")
+        elif len(result) == 1:
+            self.update_preview_lyric(result[0])
+        else:
+            self.data_mutex.lock()
+            auto_select = self.data.cfg['auto_select']
+            self.data_mutex.unlock()
+            if auto_select:
+                self.update_preview_lyric(result[0])
+            else:
+                self.update_result_table(("lyrics", SearchType.LYRICS), result)
+                self.search_lyrics_result = result
+                self.result_path.append("lyrics")
+                self.return_toolButton.setEnabled(True)
+
+    def search_lyrics(self, info: dict) -> None:
+        """搜索歌词(已经搜索了歌曲)"""
+        if (info['source'] == Source.KG and info['language'] in ["纯音乐", '伴奏'] and
+           QMessageBox.question(self, "提示", "是否为纯音乐搜索歌词", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)) == QMessageBox.No:
+            return
+        self.taskid["results_table"] += 1
+        worker = SearchWorker(self.taskid["results_table"],
+                              info,
+                              SearchType.LYRICS, info['source'])
+        worker.signals.result.connect(self.search_lyrics_result_slot)
+        worker.signals.error.connect(self.result_error)
+        self.threadpool.start(worker)
 
     def select_results(self, index: QModelIndex) -> None:
         """结果表格元素被双击时调用"""
         row = index.row()  # 获取被双击的行
         table = self.results_tableWidget
-        if table.property("result_type")[0] == "search":  # 如果结果表格显示的是搜索结果
-            info = self.search_result["result"][row]
-        elif table.property("result_type")[0] in ["album", "songlist"]:  # 如果结果表格显示的是专辑、歌单的列表
-            info = self.songlist_result["result"][row]
-        else:
-            return
+        result_type = table.property("result_type")
+        match result_type[0]:
+            case "search":  # 如果结果表格显示的是搜索结果
+                info = self.search_result["result"][row]
+            case "album" | "songlist":  # 如果结果表格显示的是专辑、歌单的列表
+                info = self.songlist_result["result"][row]
+            case "lyrics":
+                info = self.search_lyrics_result[row]
+            case _:
+                return
 
-        if table.property("result_type")[1] == "songs":  # 如果结果表格显示的是歌曲
-            self.update_preview_lyric(info)
+        match result_type[1]:  # 如果结果表格显示的是歌曲
+            case "songs":
+                match info["source"]:
+                    case Source.QM:
+                        self.update_preview_lyric(info)
+                    case Source.KG:
+                        self.search_lyrics(info)
 
-        if table.property("result_type")[1] in ["album", "songlist"]:  # 如果结果表格显的是搜索结果的专辑、歌单
-            self.get_songlist_result(table.property("result_type")[1], info)
+            case "lyrics":
+                self.update_preview_lyric(info)
+
+            case "album" | "songlist":  # 如果结果表格显的是搜索结果的专辑、歌单
+                self.get_songlist_result(result_type[1], info)

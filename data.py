@@ -27,6 +27,7 @@ class Data:
                 "lyrics_order": ["罗马音", "原文", "译文"],
                 "skip_inst_lyrics": True,
                 "get_normal_lyrics": True,
+                "auto_select": True,
             }
             self.init_db()
             self.read_config()
@@ -77,7 +78,7 @@ class Data:
                 self.cfg[setting[1]] = ast.literal_eval(setting[2])
         self.mutex.unlock()
 
-    def write_config(self, item: str, value: any) -> None:
+    def write_config(self, item: str, value: str | bool | int | list) -> None:
         self.mutex.lock()
         self.cfg[item] = value
         if value in [True, False]:

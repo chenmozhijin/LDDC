@@ -28,6 +28,7 @@ class SettingWidget(QWidget, Ui_settings):
         self.log_level_comboBox.setCurrentText(self.data.cfg["log_level"])
         self.skip_inst_lyrics_checkBox.setChecked(self.data.cfg["skip_inst_lyrics"])
         self.get_normal_lyrics_checkBox.setChecked(self.data.cfg["get_normal_lyrics"])
+        self.auto_select_checkBox.setChecked(self.data.cfg["auto_select"])
 
     def select_default_save_path(self) -> None:
         path = QFileDialog.getExistingDirectory(self, "选择默认保存路径")
@@ -58,3 +59,6 @@ class SettingWidget(QWidget, Ui_settings):
 
         self.get_normal_lyrics_checkBox.stateChanged.connect(
             lambda: self.data.write_config("get_normal_lyrics", self.get_normal_lyrics_checkBox.isChecked()))
+
+        self.auto_select_checkBox.stateChanged.connect(
+            lambda: self.data.write_config("auto_select", self.auto_select_checkBox.isChecked()))

@@ -66,6 +66,13 @@ class Ui_search(object):
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
+        self.source_comboBox = QComboBox(search)
+        self.source_comboBox.addItem("")
+        self.source_comboBox.addItem("")
+        self.source_comboBox.setObjectName(u"source_comboBox")
+
+        self.horizontalLayout.addWidget(self.source_comboBox)
+
         self.search_type_comboBox = QComboBox(search)
         self.search_type_comboBox.addItem("")
         self.search_type_comboBox.addItem("")
@@ -317,6 +324,9 @@ class Ui_search(object):
         search.setWindowTitle(QCoreApplication.translate("search", u"Form", None))
         self.label.setText(QCoreApplication.translate("search", u"\u641c\u7d22", None))
         self.label_4.setText(QCoreApplication.translate("search", u"\u4ece\u4e91\u7aef\u641c\u7d22\u5e76\u4e0b\u8f7d\u6b4c\u8bcd", None))
+        self.source_comboBox.setItemText(0, QCoreApplication.translate("search", u"QQ\u97f3\u4e50", None))
+        self.source_comboBox.setItemText(1, QCoreApplication.translate("search", u"\u9177\u72d7\u97f3\u4e50", None))
+
         self.search_type_comboBox.setItemText(0, QCoreApplication.translate("search", u"\u5355\u66f2", None))
         self.search_type_comboBox.setItemText(1, QCoreApplication.translate("search", u"\u4e13\u8f91", None))
         self.search_type_comboBox.setItemText(2, QCoreApplication.translate("search", u"\u6b4c\u5355", None))
@@ -327,7 +337,7 @@ class Ui_search(object):
         self.label_8.setText(QCoreApplication.translate("search", u"\u6b4c\u8bcd\u9884\u89c8", None))
         self.label_2.setText(QCoreApplication.translate("search", u"\u6b4c\u8bcd\u7c7b\u578b", None))
         self.lyric_types_lineEdit.setText("")
-        self.label_3.setText(QCoreApplication.translate("search", u"\u6b4c\u66f2id", None))
+        self.label_3.setText(QCoreApplication.translate("search", u"\u6b4c\u66f2/\u6b4c\u8bcdid", None))
         self.label_6.setText(QCoreApplication.translate("search", u"\u4fdd\u5b58\u5230:", None))
         self.select_path_pushButton.setText(QCoreApplication.translate("search", u"\u9009\u62e9\u4fdd\u5b58\u8def\u5f84", None))
         self.original_checkBox.setText(QCoreApplication.translate("search", u"\u539f\u6587", None))

@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
+import json
 import logging
 import re
+from base64 import b64decode
 from enum import Enum
 
 from bs4 import BeautifulSoup
 
-from api import get_qrc, qm_get_lyric
-from decryptor import QrcType, qrc_decrypt
+from api import Source, get_krc, get_qrc, qm_get_lyric
+from decryptor import QrcType, krc_decrypt, qrc_decrypt
 
 
 class LyricType(Enum):
@@ -19,6 +21,7 @@ class LyricProcessingError(Enum):
     REQUEST = 0
     DECRYPT = 1
     NOT_FOUND = 2
+    UNSUPPORTED = 3
 
 
 def judge_lyric_type(text: str) -> LyricType:
@@ -61,13 +64,13 @@ def qrc2lrc(qrc: str) -> str:
     qrc_lines = qrc.split('\n')
     lrc_lines = []
     wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?((?:(?!\(\d+,\d+\)).)+)\((\d+),(\d+)\)')  # 逐字匹配
-    lines_split_pattern = re.compile(r'\[(\d+),(\d+)\](.*)$')  # 逐行匹配
+    line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
 
-    for line in qrc_lines:
-        line = line.strip()  # noqa: PLW2901
-        lines_split_content = re.findall(lines_split_pattern, line)
-        if lines_split_content:  # 判断是否为歌词行
-            line_start_time, line_duration, line_content = lines_split_content[0]
+    for i in qrc_lines:
+        line = i.strip()
+        line_split_content = re.findall(line_split_pattern, line)
+        if line_split_content:  # 判断是否为歌词行
+            line_start_time, line_duration, line_content = line_split_content[0]
             wrods_split_content = re.findall(wrods_split_pattern, line)
             if wrods_split_content:  # 判断是否为逐字歌词
                 lrc_line, last_time = "", None
@@ -87,16 +90,97 @@ def qrc2lrc(qrc: str) -> str:
     return '\n'.join(lrc_lines)
 
 
+def krc2lrc(krc: str) -> dict:
+    """将明文krc转换为lrc(字典)"""
+    tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
+    tags = {}
+
+    line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
+    wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?<(\d+),(\d+),\d+>((?:.(?!\d+,\d+,\d+>))*)')  # 逐字匹配
+    orig_lines = []  # 原文歌词
+    roma_lines = []
+    ts_lines = []
+
+    for i in krc.splitlines():
+        line = i.strip()
+        if not line.startswith("["):
+            continue
+
+        tag_split_content = re.findall(tag_split_pattern, line)
+        if tag_split_content:  # 标签行
+            tags.update({tag_split_content[0][0]: tag_split_content[0][1]})
+            continue
+
+        line_split_content = re.findall(line_split_pattern, line)
+        if not line_split_content:
+            continue
+        line_start_time, line_duration, line_content = line_split_content[0]
+
+        wrods_split_content = re.findall(wrods_split_pattern, line_content)
+        if not wrods_split_content:
+            orig_lines.append([[int(line_start_time), int(line_duration), line_content]])
+            continue
+
+        orig_line = []
+        for word_start_time, word_duration, word_content in wrods_split_content:
+            orig_line.append([int(line_start_time) + int(word_start_time), int(word_duration), word_content])
+        orig_lines.append(orig_line)
+
+    if "language" in tags and tags["language"].strip() != "":
+        languages = json.loads(b64decode(tags["language"].strip()))
+        for language in languages["content"]:
+            if language["type"] == 0:  # 逐字(罗马音)
+                for i, line in enumerate(orig_lines):
+                    roma_line = []
+                    for j, word in enumerate(line):
+                        roma_line.append([word[0], word[1], language["lyricContent"][i][j]])
+                    roma_lines.append(roma_line)
+            elif language["type"] == 1:  # 逐行(翻译)
+                for i, line in enumerate(orig_lines):
+                    ts_lines.append([[line[0][0], line[0][1], language["lyricContent"][i][0]]])
+
+    tags_str = ""
+    for key, value in tags.items():
+        if key in ["al", "ar", "au", "by", "offset", "ti"]:
+            tags_str += f"[{key}:{value}]\n"
+
+    lrc_dict = {}
+    for key, lines in {"orig": orig_lines, "ts": ts_lines, "roma": roma_lines}.items():
+        if lines == []:
+            continue
+        lrc_dict[key] = tags_str
+        for line in lines:
+            if len(line) == 1 and line[0][2][0].isupper() and line[0][2][1] == "：":
+                # 不添加歌手标签行
+                continue
+            text = ""
+            word_end_time = -1
+            for word in line:
+                word_start_time, word_duration = word[0], word[1]
+                if word_start_time != word_end_time:  # 判断开始时间是否等于上一个结束时间
+                    text += f"[{ms2formattime(word_start_time)}]"
+                word_end_time = word_start_time + word_duration
+                text += f"{word[2]}[{ms2formattime(word_end_time)}]"
+
+            lrc_dict[key] += text + "\n"
+
+    return lrc_dict
+
+
 def find_closest_match(list1: list, list2: list, source: str | None = None) -> dict:
     list1 = list1[:]
     list2 = list2[:]
     # 存储合并结果的列表
     merged_dict = {}
-    if source == "qm":
-        list12 = [item for item in list1 if item[1] != ""]
-        list22 = [item for item in list2 if item[1] != ""]
+    if source in (Source.QM, Source.KG):
+        if source == Source.QM:
+            list12 = [item for item in list1 if item[1] != ""]
+            list22 = [item for item in list2 if item[1] != ""]
+        elif source == Source.KG:
+            list12 = list1
+            list22 = list2
         if len(list12) == len(list22):
-            logging.info("qm 匹配方法")
+            logging.info("qm/kg 匹配方法")
             for i, value in enumerate(list12):
                 merged_dict[value] = list22[i]
             return merged_dict
@@ -128,7 +212,7 @@ def find_closest_match(list1: list, list2: list, source: str | None = None) -> d
                     merged_dict[(closest_timestamp2, closest_lyrics2)] = (timestamp1, lyrics1)
                 else:
                     merged_dict[(closest_timestamp22, closest_lyrics22)] = (timestamp1, lyrics1)
-                    if abs(closest_timestamp22 - timestamp1) > 1000:  # noqa: PLR2004
+                    if abs(closest_timestamp22 - timestamp1) > 1000:
                         logging.warning(f"{timestamp1, lyrics1}, {closest_timestamp22, closest_lyrics22}匹配可能错误")
             else:
                 logging.warning(f"{timestamp1, lyrics1}无法匹配")
@@ -141,26 +225,30 @@ def find_closest_match(list1: list, list2: list, source: str | None = None) -> d
 
 
 class Lyrics(dict):
-    def __init__(self, info: dict) -> None:
+    def __init__(self, info: dict | None = None) -> None:
+        if info is None:
+            info = {}
         logging.info(f"初始化{info}")
-        self.source = info["source"]
+        self.source = info.get("source", None)
+        self.title = info.get('title', None)
+        self.artist = info.get("artist", None)
+        self.album = info.get("album", None)
+        self.id = info.get("id", None)
+        self.mid = info.get("mid", None)
+        self.accesskey = info.get("accesskey", None)
+
         self.orig_type = None
-        self.title = info['title']
-        self.artist = info["artist"]
-        self.album = info["album"]
-        self.id = info["id"]
-        self.mid = info["mid"]
 
     def download_and_decrypt(self) -> tuple[str | None, LyricProcessingError | None]:
         """
         下载与解密歌词
         :return: 错误
         """
-        if self.source not in ["qm"]:
-            return "不支持的源"
+        if self.source not in [Source.QM, Source.KG]:
+            return "不支持的源", LyricProcessingError.UNSUPPORTED
 
         match self.source:
-            case "qm":
+            case Source.QM:
                 response = get_qrc(self.id)
                 if isinstance(response, str):
                     return f"请求qrc歌词失败,错误:{response}", LyricProcessingError.REQUEST
@@ -190,6 +278,16 @@ class Lyrics(dict):
                             return "解密歌词失败, 错误: " + error, LyricProcessingError.DECRYPT
                     elif (find_result['timetag'] == "0" and key == "orig"):
                         return "没有获取到可解密的歌词(timetag=0)", LyricProcessingError.NOT_FOUND
+
+            case Source.KG:
+                encrypted_krc = get_krc(self.id, self.accesskey)
+                if isinstance(encrypted_krc, str):
+                    return f"请求krc歌词失败,错误:{response}", LyricProcessingError.REQUEST
+                krc, error = krc_decrypt(encrypted_krc)
+                if krc is None:
+                    error = f"错误:{error}" if error is not None else ""
+                    return f"解密krc歌词失败,错误:{error}", LyricProcessingError.DECRYPT
+                self.update(krc2lrc(krc))
 
         if self["orig"] is None:
             return "没有获取到可解密的歌词(orig=None)", LyricProcessingError.NOT_FOUND

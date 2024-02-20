@@ -69,19 +69,19 @@ def escape_filename(filename: str) -> str:
     return replace_placeholders(filename, replacement_dict)
 
 
-def replace_info_placeholders(text: str, info: dict, available_types: list) -> str:
+def replace_info_placeholders(text: str, info: dict, lyrics_types: list) -> str:
     """替换路径中的歌曲信息占位符"""
     mapping_table = {
         "%<title>": escape_filename(info['title']),
         "%<artist>": escape_filename(info["artist"]),
         "%<id>": escape_filename(str(info["id"])),
         "%<album>": escape_filename(info["album"]),
-        "%<types>": escape_filename("-".join(available_types)),
+        "%<types>": escape_filename("-".join(lyrics_types)),
     }
     return replace_placeholders(text, mapping_table)
 
 
-def get_save_path(folder: str, file_name_format: str, info: dict, available_types: list) -> tuple[str, str]:
-    folder = escape_path(replace_info_placeholders(folder, info, available_types))
-    file_name = escape_path(replace_info_placeholders(file_name_format, info, available_types))
+def get_save_path(folder: str, file_name_format: str, info: dict, lyrics_types: list) -> tuple[str, str]:
+    folder = escape_path(replace_info_placeholders(folder, info, lyrics_types)).strip()
+    file_name = escape_path(replace_info_placeholders(file_name_format, info, lyrics_types))
     return folder, file_name

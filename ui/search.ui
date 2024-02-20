@@ -48,6 +48,20 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
+      <widget class="QComboBox" name="source_comboBox">
+       <item>
+        <property name="text">
+         <string>QQ音乐</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>酷狗音乐</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
       <widget class="QComboBox" name="search_type_comboBox">
        <item>
         <property name="text">
@@ -269,7 +283,7 @@
          <item>
           <widget class="QLabel" name="label_3">
            <property name="text">
-            <string>歌曲id</string>
+            <string>歌曲/歌词id</string>
            </property>
           </widget>
          </item>
