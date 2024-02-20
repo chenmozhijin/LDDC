@@ -150,7 +150,7 @@ def krc2lrc(krc: str) -> dict:
             continue
         lrc_dict[key] = tags_str
         for line in lines:
-            if len(line) == 1 and line[0][2][0].isupper() and line[0][2][1] == "：":
+            if len(line) == 1 and len(line[0][2]) == 2 and line[0][2][0].isupper() and line[0][2][1] == "：":
                 # 不添加歌手标签行
                 continue
             text = ""
