@@ -18,6 +18,7 @@
 - [x] 保存路径多种占位符随意组合
 - [x] 无可用加密歌词时尝试获取普通歌词
 - [x] 支持打开本地的加密歌词
+- [x] 多平台支持
 
 ## 预览
 
@@ -30,9 +31,17 @@
 
 #### 方式一:从[release](https://github.com/chenmozhijin/LDDC/releases)下载
 
-1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中最新版本的zip压缩包
+##### windows
+
+1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中最新版本的zip
 2. 解压zip包
 3. 运行`LDDC.exe`
+
+##### linux(Debian, Ubuntu)
+
+1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中最新版本的deb包
+2. 执行`sudo apt install ./LDDC_x.x.x_amd64.deb`
+3. 运行`LDDC`
 
 #### 方式二:直接运行LDDC.py
 
