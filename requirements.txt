@@ -4,3 +4,4 @@ PySide6
 lxml
 mutagen
 diskcache
+chardet
