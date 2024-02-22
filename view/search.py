@@ -14,15 +14,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from api import (
+from ui.search_ui import Ui_search
+from utils.api import (
     SearchType,
     Source,
 )
-from data import Data
-from ui.search_ui import Ui_search
-from utils import get_save_path, ms2formattime
+from utils.data import Data
+from utils.utils import get_save_path, ms2formattime
+from utils.worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
 from view.get_list_lyrics import GetListLyrics
-from worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
 
 
 class SearchWidget(QWidget, Ui_search):

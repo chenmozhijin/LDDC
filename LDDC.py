@@ -1,13 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-__version__ = "v0.3.1"
+__version__ = "v0.4.0"
 import logging
 import os
 import sys
 import time
 
 from PySide6.QtCore import (
-    QMutex,
     QThreadPool,
     QUrl,
     Slot,
@@ -19,22 +18,20 @@ from PySide6.QtWidgets import (
 )
 
 import res.resource_rc
-from data import Data
 from ui.sidebar_window import Position as SBPosition
 from ui.sidebar_window import SidebarWindow
-from utils import (
+from utils.data import Data
+from utils.utils import (
     str2log_level,
 )
+from utils.worker import CheckUpdate
 from view.about import AboutWidget
 from view.encrypted_lyrics import EncryptedLyricsWidget
+from view.local_match import LocalMatchWidget
 from view.search import SearchWidget
 from view.setting import SettingWidget
-from worker import CheckUpdate
 
-data_mutex = QMutex()
 current_directory = os.path.dirname(os.path.abspath(__file__))
-data = Data(current_directory, data_mutex)
-
 match sys.platform:
     case "linux" | "darwin":
         log_dir = os.path.expanduser("~/.config/LDDC/log")
@@ -45,9 +42,11 @@ if not os.path.exists(log_dir):
     os.mkdir(log_dir)
 logging.basicConfig(filename=os.path.join(log_dir, f'{time.strftime("%Y.%m.%d",time.localtime())}.log'),
                     encoding="utf-8", format="[%(levelname)s]%(asctime)s\
-                          - %(module)s(%(lineno)d) - %(funcName)s:%(message)s",
-                    level=str2log_level(data.cfg["log_level"]))
+                          - %(module)s(%(lineno)d) - %(funcName)s:%(message)s")
 logger = logging.getLogger()
+data = Data(current_directory)
+data_mutex = data.mutex
+logger.setLevel(str2log_level(data.cfg["log_level"]))
 
 threadpool = QThreadPool()
 logging.debug(f"最大线程数: {threadpool.maxThreadCount()}")
@@ -65,11 +64,13 @@ class MainWindow(SidebarWindow):
         self.set_sidebar_width(80)
 
         self.search_widget = SearchWidget(self, data, threadpool)
+        self.local_match_widget = LocalMatchWidget(data, threadpool)
         self.settings_widget = SettingWidget(data, logger)
         self.about_widget = AboutWidget(__version__)
         self.encrypted_lyrics_widget = EncryptedLyricsWidget(data)
 
         self.add_widget("搜索", self.search_widget)
+        self.add_widget("本地匹配", self.local_match_widget)
         self.add_widget("打开\n加密歌词", self.encrypted_lyrics_widget)
         self.add_widget("关于", self.about_widget, SBPosition.BOTTOM)
         self.add_widget("设置", self.settings_widget, SBPosition.BOTTOM)
@@ -110,7 +111,6 @@ class MainWindow(SidebarWindow):
 
 
 if __name__ == "__main__":
-
     app = QApplication(sys.argv)
 
     main_window = MainWindow()

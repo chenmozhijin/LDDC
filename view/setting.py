@@ -5,9 +5,9 @@ from logging import Logger
 
 from PySide6.QtWidgets import QFileDialog, QWidget
 
-from data import Data
 from ui.settings_ui import Ui_settings
-from utils import str2log_level
+from utils.data import Data
+from utils.utils import str2log_level
 
 
 class SettingWidget(QWidget, Ui_settings):

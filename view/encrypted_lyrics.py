@@ -3,11 +3,11 @@ import os
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
-from api import Source
-from data import Data
 from decryptor import QrcType, krc_decrypt, qrc_decrypt
-from lyrics import Lyrics, get_clear_lyric, krc2lrc, qrc2lrc
 from ui.encrypted_lyrics_ui import Ui_encrypted_lyrics
+from utils.api import Source
+from utils.data import Data
+from utils.lyrics import Lyrics, get_clear_lyric, krc2lrc, qrc2lrc
 
 
 class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):

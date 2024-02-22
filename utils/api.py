@@ -34,8 +34,8 @@ class SearchType(Enum):
 
 
 class Source(Enum):
-    QM = 0
-    KG = 1
+    QM = 1
+    KG = 2
 
     # 定义 Source 类的序列化方法
     def __json__(self, obj: any) -> str:
@@ -368,6 +368,9 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
         keyword = info.get("keyword")
         duration = info.get("duration")
         hash_ = info.get("hash")
+    else:
+        logging.error(f"输入参数类型错误,类型:{type(info)}")
+        return f"输入参数类型错误,类型:{type(info)}"
     match search_type:
         case SearchType.SONG:
             url = "http://msearchcdn.kugou.com/api/v3/search/song"

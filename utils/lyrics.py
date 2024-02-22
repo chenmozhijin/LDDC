@@ -8,8 +8,9 @@ from enum import Enum
 
 from bs4 import BeautifulSoup
 
-from api import Source, get_krc, get_qrc, qm_get_lyric
 from decryptor import QrcType, krc_decrypt, qrc_decrypt
+from utils.api import Source, get_krc, get_qrc, qm_get_lyric
+from utils.utils import ms2formattime
 
 
 class LyricType(Enum):
@@ -45,12 +46,6 @@ def get_clear_lyric(lyric: str) -> str:
         if has_content(line):
             result.append(line)
     return "\n".join(result)
-
-
-def ms2formattime(ms: int) -> str:
-    m, ms = divmod(ms, 60000)
-    s, ms = divmod(ms, 1000)
-    return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"
 
 
 def time2ms(m: int, s: int, ms: int) -> int:

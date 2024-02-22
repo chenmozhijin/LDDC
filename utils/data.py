@@ -11,8 +11,8 @@ from PySide6.QtCore import QMutex
 
 class Data:
 
-    def __init__(self, current_directory: str, mutex: QMutex) -> None:
-        self.mutex = mutex
+    def __init__(self, current_directory: str) -> None:
+        self.mutex = QMutex()
 
         match sys.platform:
             case "linux" | "darwin":

@@ -6,9 +6,9 @@ def ms2formattime(ms: int) -> str:
     return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"
 
 
-def time2ms(m: int, s: int, ms: int) -> int:
+def time2ms(m: int | str, s: int | str, ms: int | str) -> int:
     """时间转毫秒"""
-    return int((m * 60 + s) * 1000 + ms)
+    return (int(m) * 60 + int(s)) * 1000 + int(ms)
 
 
 def str2log_level(level: str) -> int:
@@ -83,5 +83,5 @@ def replace_info_placeholders(text: str, info: dict, lyrics_types: list) -> str:
 
 def get_save_path(folder: str, file_name_format: str, info: dict, lyrics_types: list) -> tuple[str, str]:
     folder = escape_path(replace_info_placeholders(folder, info, lyrics_types)).strip()
-    file_name = escape_path(replace_info_placeholders(file_name_format, info, lyrics_types))
+    file_name = escape_filename(replace_info_placeholders(file_name_format, info, lyrics_types))
     return folder, file_name
