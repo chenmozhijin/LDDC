@@ -33,6 +33,9 @@ class LocalMatchWidget(QWidget, Ui_local_match):
 
         self.worker = None
 
+        self.save_mode_changed(self.save_mode_comboBox.currentIndex())
+        self.source_mode_changed(self.source_comboBox.currentIndex())
+
     def connect_signals(self) -> None:
         self.song_path_pushButton.clicked.connect(lambda: self.select_path(self.song_path_lineEdit))
         self.save_path_pushButton.clicked.connect(lambda: self.select_path(self.save_path_lineEdit))
