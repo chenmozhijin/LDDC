@@ -45,7 +45,7 @@ class SidebarWindow(QMainWindow):
         self.horizontalLayout.addWidget(self.sidebar_widget)
         self.horizontalLayout.addWidget(self.Widgets)
         self.sidebar.setContentsMargins(0, 10, 0, 10)
-        self.Widgets.setStyleSheet("QTabBar::tab {height: 0px;}")
+        self.Widgets.tabBar().hide()
 
         sidebar_spacer = QSpacerItem(40, 20, QSizePolicy.Fixed, QSizePolicy.Expanding)
         self.sidebar.addItem(sidebar_spacer)
