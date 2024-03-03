@@ -27,6 +27,12 @@ def str2log_level(level: str) -> int:
             return 50
 
 
+def tuple_to_list(obj: any) -> any:
+    if isinstance(obj, list | tuple):
+        return [tuple_to_list(item) for item in obj]
+    return obj
+
+
 def replace_placeholders(text: str, mapping_table: dict) -> str:
     for placeholder, value in mapping_table.items():
         text = text.replace(placeholder, str(value))

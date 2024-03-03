@@ -137,3 +137,4 @@ result.json
 data.db
 *.psd
 cache/
+test.py

@@ -8,15 +8,8 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QMetaObject,
-    QSize,
-    Qt,
-)
-from PySide6.QtGui import (
-    QFont,
-)
+from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -189,6 +182,7 @@ class Ui_local_match(object):
         self.source_comboBox.addItem("")
         self.source_comboBox.addItem("")
         self.source_comboBox.addItem("")
+        self.source_comboBox.addItem("")
         self.source_comboBox.setObjectName(u"source_comboBox")
 
         self.horizontalLayout_5.addWidget(self.source_comboBox)
@@ -209,6 +203,7 @@ class Ui_local_match(object):
         self.horizontalLayout_4.addLayout(self.verticalLayout_2)
 
         self.source_listWidget = QListWidget(self.groupBox_2)
+        QListWidgetItem(self.source_listWidget)
         QListWidgetItem(self.source_listWidget)
         QListWidgetItem(self.source_listWidget)
         self.source_listWidget.setObjectName(u"source_listWidget")
@@ -320,8 +315,9 @@ class Ui_local_match(object):
         self.groupBox_2.setTitle(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd", None))
         self.label_7.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6765\u6e90:", None))
         self.source_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"QQ\u97f3\u4e50", None))
-        self.source_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"\u7efc\u5408", None))
-        self.source_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"\u9177\u6211\u97f3\u4e50", None))
+        self.source_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"\u7f51\u6613\u4e91\u97f3\u4e50", None))
+        self.source_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"\u7efc\u5408", None))
+        self.source_comboBox.setItemText(3, QCoreApplication.translate("local_match", u"\u9177\u6211\u97f3\u4e50", None))
 
         self.label_2.setText(QCoreApplication.translate("local_match", u"\u4f18\u5148\u987a\u5e8f:", None))
 
@@ -331,6 +327,8 @@ class Ui_local_match(object):
         ___qlistwidgetitem.setText(QCoreApplication.translate("local_match", u"QQ\u97f3\u4e50", None));
         ___qlistwidgetitem1 = self.source_listWidget.item(1)
         ___qlistwidgetitem1.setText(QCoreApplication.translate("local_match", u"\u9177\u72d7\u97f3\u4e50", None));
+        ___qlistwidgetitem2 = self.source_listWidget.item(2)
+        ___qlistwidgetitem2.setText(QCoreApplication.translate("local_match", u"\u7f51\u6613\u4e91\u97f3\u4e50", None));
         self.source_listWidget.setSortingEnabled(__sortingEnabled)
 
         self.label_9.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u7c7b\u578b:", None))

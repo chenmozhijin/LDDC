@@ -66,7 +66,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 self.save_path_pushButton.setText("选择文件夹")
 
     def source_mode_changed(self, index: int) -> None:
-        if index == 1:
+        if index == 2:
             self.source_listWidget.setEnabled(True)
         else:
             self.source_listWidget.setEnabled(False)
@@ -121,10 +121,12 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             case 0:
                 source.append(Source.QM)
             case 1:
-                source_mapping = {"QQ音乐": Source.QM, "酷狗音乐": Source.KG}
+                source.append(Source.NE)
+            case 2:
+                source_mapping = {"QQ音乐": Source.QM, "酷狗音乐": Source.KG, "网易云音乐": Source.NE}
                 source = [source_mapping[type_] for type_ in
                           [self.source_listWidget.item(i).text() for i in range(self.source_listWidget.count())]]
-            case 2:
+            case 3:
                 source.append(Source.KG)
 
         self.running = True

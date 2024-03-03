@@ -26,6 +26,8 @@ from utils.api import (
     get_latest_version,
     kg_get_songlist,
     kg_search,
+    ne_get_songlist,
+    ne_search,
     qm_get_album_song_list,
     qm_get_songlist_song_list,
     qm_search,
@@ -46,6 +48,10 @@ match sys.platform:
     case _:
         cache_dir = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "cache")
 cache = Cache(cache_dir)
+cache_version = 1
+if "version" not in cache or cache["version"] != cache_version:
+    cache.clear()
+cache["version"] = cache_version
 
 
 class CheckUpdate(QRunnable):
@@ -109,6 +115,8 @@ class SearchWorker(QRunnable):
                         search_return = kg_search(keyword, SearchType.LYRICS)
                     else:
                         search_return = kg_search(keyword, self.search_type)
+                case Source.NE:
+                    search_return = ne_search(keyword, self.search_type)
             if isinstance(search_return, str):
                 self.signals.error.emit(search_return)
                 return
@@ -158,7 +166,7 @@ class LyricProcessingWorker(QRunnable):
                     break
                 self.count = count + 1
                 match song_info['source']:
-                    case Source.QM:
+                    case Source.QM | Source.NE:
                         info = song_info
                     case Source.KG:
                         if self.skip_inst_lyrics and song_info['language'] in ["纯音乐", '伴奏']:
@@ -203,7 +211,7 @@ class LyricProcessingWorker(QRunnable):
                 logging.error(f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']},错误：{error1}")
 
                 self.data_mutex.lock()
-                get_normal_lyrics = self.data.cfg["get_normal_lyrics"]
+                get_normal_lyrics = bool(self.data.cfg["get_normal_lyrics"] and song_info['source'] == Source.QM)
                 self.data_mutex.unlock()
                 if get_normal_lyrics:
                     logging.info(f"尝试获取普通歌词：{song_name_str},源:{song_info['source']}, id: {song_info['id']}")
@@ -250,7 +258,7 @@ class LyricProcessingWorker(QRunnable):
         elif self.task["type"] == "get_list_lyrics":
             save_folder, file_name = get_save_path(self.task["save_folder"], self.task["lyrics_file_name_format"] + ".lrc", song_info, lyrics_order)
             save_path = os.path.join(save_folder, file_name)  # 获取保存路径
-            inst = bool(self.skip_inst_lyrics and lyrics["orig"].startswith("[00:00:00]此歌曲为没有填词的纯音乐，请您欣赏"))
+            inst = bool(self.skip_inst_lyrics and len(lyrics["orig"]) != 0 and (lyrics["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or lyrics["orig"][0][2][0][2] == "纯音乐，请欣赏"))
             self.signals.result.emit(self.count, {'info': song_info, 'save_path': save_path, 'merged_lyric': merged_lyric, 'inst': inst})
         logging.debug("发送结果信号")
         return from_cache
@@ -273,16 +281,21 @@ class GetSongListWorker(QRunnable):
 
     def run(self) -> None:
         if ("songlist", self.list_type, self.id) in cache:
-            self.signals.result.emit(self.taskid, self.list_type, cache["songlist"][("songlist", self.list_type, self.id)])
+            self.signals.result.emit(self.taskid, self.list_type, cache[("songlist", self.list_type, self.id)])
             return
-        match self.source:
-            case Source.QM:
-                if self.list_type == "album":
-                    song_list = qm_get_album_song_list(self.id)
-                elif self.list_type == "songlist":
-                    song_list = qm_get_songlist_song_list(self.id)
-            case Source.KG:
-                song_list = kg_get_songlist(self.id, self.list_type)
+        for _i in range(3):
+            match self.source:
+                case Source.QM:
+                    if self.list_type == "album":
+                        song_list = qm_get_album_song_list(self.id)
+                    elif self.list_type == "songlist":
+                        song_list = qm_get_songlist_song_list(self.id)
+                case Source.NE:
+                    song_list = ne_get_songlist(self.id, self.list_type)
+                case Source.KG:
+                    song_list = kg_get_songlist(self.id, self.list_type)
+            if isinstance(song_list, list):
+                break
 
         if isinstance(song_list, list) and song_list:
             self.signals.result.emit(self.taskid, self.list_type, song_list)
@@ -383,6 +396,8 @@ class LocalMatchWorker(QRunnable):
             match source:
                 case Source.QM:
                     search_api = qm_search
+                case Source.NE:
+                    search_api = ne_search
                 case Source.KG:
                     search_api = kg_search
             for keyword in keywords:
@@ -404,7 +419,7 @@ class LocalMatchWorker(QRunnable):
                 if isinstance(search_return, str):
                     self.signals.error.emit(search_return, 0)
                     continue
-                elif not search_return:
+                if not search_return:
                     continue
 
                 if not from_cache:
@@ -478,14 +493,12 @@ class LocalMatchWorker(QRunnable):
                 if isinstance(search_return, str):
                     self.signals.error.emit(search_return, 0)
                     continue
-                elif not search_return:
+                if not search_return:
                     scores.remove(data)
                     continue
-                else:
 
-                    cache[("serach", str(keyword), SearchType.LYRICS, Source.KG)] = search_return
-
-                    scores[index][0].update(search_return[0])
+                cache[("serach", str(keyword), SearchType.LYRICS, Source.KG)] = search_return
+                scores[index][0].update(search_return[0])
 
         # Step 3 获取歌词
         from_cache = False
@@ -495,7 +508,8 @@ class LocalMatchWorker(QRunnable):
                 return None, None
             lyrics, from_cache = self.LyricProcessingWorker.get_lyrics(song_info)
             if lyrics is not None:
-                if self.skip_inst_lyrics and lyrics["orig"].startswith("[00:00:00]此歌曲为没有填词的纯音乐，请您欣赏"):
+                logging.debug(f"lyrics['orig']:{lyrics['orig']}")
+                if self.skip_inst_lyrics and len(lyrics["orig"]) != 0 and (lyrics["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or lyrics["orig"][0][2][0][2] == "纯音乐，请欣赏"):
                     if 'artist' in info:
                         msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 跳过纯音乐"
                     else:
@@ -571,7 +585,7 @@ class LocalMatchWorker(QRunnable):
                 if isinstance(song_info, str):
                     self.signals.error.emit(song_info, 0)
                     continue
-                elif isinstance(song_info, dict):
+                if isinstance(song_info, dict):
                     song_infos.append(song_info)
 
             # Step 3 根据信息搜索并获取歌词

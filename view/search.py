@@ -86,6 +86,8 @@ class SearchWidget(QWidget, Ui_search):
                 return Source.QM
             case "酷狗音乐":
                 return Source.KG
+            case "网易云音乐":
+                return Source.NE
 
     def save_list_lyrics(self) -> None:
         """保存专辑、歌单中的所有歌词"""
@@ -260,9 +262,12 @@ class SearchWidget(QWidget, Ui_search):
     @Slot()
     def search_button_clicked(self) -> None:
         """搜索按钮被点击"""
+        keyword = self.search_keyword_lineEdit.text()
+        if keyword == "":
+            QMessageBox.warning(self, "搜索错误", "请输入搜索关键字")
+            return
         self.search_pushButton.setText('正在搜索...')
         self.search_pushButton.setEnabled(False)
-        keyword = self.search_keyword_lineEdit.text()
         self.taskid["results_table"] += 1
         worker = SearchWorker(self.taskid["results_table"], keyword, self.search_type, self.get_source())
         worker.signals.result.connect(self.search_result_slot)
@@ -408,7 +413,7 @@ class SearchWidget(QWidget, Ui_search):
             match info['source']:
                 case Source.QM:
                     worker = GetSongListWorker(self.taskid["results_table"], result_type, info['mid'], info['source'])
-                case Source.KG:
+                case Source.KG | Source.NE:
                     worker = GetSongListWorker(self.taskid["results_table"], result_type, info['id'], info['source'])
         elif result_type == "songlist":
             worker = GetSongListWorker(self.taskid["results_table"], result_type, info['id'], info['source'])
@@ -475,7 +480,7 @@ class SearchWidget(QWidget, Ui_search):
         match result_type[1]:  # 如果结果表格显示的是歌曲
             case "songs":
                 match info["source"]:
-                    case Source.QM:
+                    case Source.QM | Source.NE:
                         self.update_preview_lyric(info)
                     case Source.KG:
                         self.search_lyrics(info)

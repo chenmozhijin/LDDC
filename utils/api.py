@@ -11,6 +11,8 @@ from enum import Enum
 import requests
 from bs4 import BeautifulSoup
 
+from decryptor.eapi import eapi_params_encrypt, eapi_response_decrypt, get_cache_key
+
 
 def get_latest_version() -> tuple[bool, str]:
     try:
@@ -36,6 +38,7 @@ class SearchType(Enum):
 class Source(Enum):
     QM = 1
     KG = 2
+    NE = 3
 
     # 定义 Source 类的序列化方法
     def __json__(self, obj: any) -> str:
@@ -54,6 +57,210 @@ QMD_headers = {
     "Accept-Language": "zh-CN",
     "User-Agent": "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)",
 }
+
+
+NeteaseCloudMusic_headers = {
+    "Accept": "*/*",
+    "Content-Type": "application/x-www-form-urlencoded",
+    "MG-Product-Name": "music",
+    "Nm-GCore-Status": "1",
+    "Origin": "orpheus://orpheus",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.157 NeteaseMusicDesktop/2.9.7.199711 Safari/537.36",
+    "Accept-Encoding": "gzip,deflate",
+    "Accept-Language": "en-us,en;q=0.8",
+    "Cookie": "os=pc; osver=Microsoft-Windows-10--build-22621-64bit; appver=2.9.7.199711; channel=netease; WEVNSM=1.0.0; WNMCID=slodmo.1709434129796.01.0;",
+}
+
+
+def nesonglist2result(songlist: list) -> list:
+    results = []
+    for song in songlist:
+        info = song
+        # 处理艺术家
+        artist = ""
+        for singer in info['ar']:
+            if artist != "":
+                artist += "/"
+            artist += singer['name']
+        results.append({
+            'id': info['id'],
+            'title': info['name'],
+            'subtitle': info['alia'][0] if info['alia'] else "",
+            'artist': artist,
+            'album': info['al']['name'],
+            'duration': round(info['dt'] / 1000),
+            'source': Source.NE,
+        })
+    return results
+
+
+def _eapi_request(path: str, params: dict) -> dict:
+    """
+    eapi接口请求
+    :param path: 请求的路径
+    :param params: 请求参数
+    :param method: 请求方法
+    :return dict: 请求结果
+    """
+    params = eapi_params_encrypt(path.replace("eapi", "api").encode(), params)
+    headers = NeteaseCloudMusic_headers.copy()
+    # headers.update({"Content-Length": str(len(params))})
+    url = "https://music.163.com" + path
+    response = requests.post(url, headers=headers, data=params, timeout=4)
+    response.raise_for_status()
+    data = eapi_response_decrypt(response.content)
+    return json.loads(data)
+
+
+def eapi_get_params_header() -> str:
+    return json.dumps({
+        "os": "pc",
+        "appver": "2.9.7.199711",
+        "deviceId": "",
+        "requestId": str(random.randint(10000000, 99999999)),  # noqa: S311
+        "clientSign": "",
+        "osver": "Microsoft-Windows-10--build-22621-64bit",
+        "Nm-GCore-Status": "1",
+    }, ensure_ascii=False, separators=(',', ':'))
+
+
+def ne_search(keyword: str, search_type: SearchType) -> dict:
+    match search_type:
+        case SearchType.SONG:
+            param_type = "1"
+        case SearchType.ALBUM:
+            param_type = "10"
+        case SearchType.ARTIST:
+            param_type = "100"
+        case SearchType.SONGLIST:
+            param_type = "1000"
+        case SearchType.LYRICS:
+            param_type = "1006"
+
+    params = {
+        "hlpretag": "<span class=\"s-fc2\">",
+        "hlposttag": "</span>",
+        "type": param_type,
+        "queryCorrect": "true",
+        "s": keyword,
+        "offset": "0",
+        "total": "true",
+        "limit": "100",
+        "e_r": True,
+        "header": eapi_get_params_header(),
+    }
+    try:
+        data = _eapi_request("/eapi/cloudsearch/pc", params)
+        match search_type:
+            case SearchType.SONG:
+                results = nesonglist2result(data['result']['songs'])
+            case SearchType.ALBUM:
+                results = []
+                for album in data['result']['albums']:
+                    results.append({
+                        'id': album['id'],
+                        'name': album['name'],
+                        'pic': album['picUrl'],  # 专辑封面
+                        'count': album['size'],  # 歌曲数量
+                        'time': time.strftime('%Y-%m-%d', time.localtime(album['publishTime'] // 1000)),
+                        'artist': album['artists'][0]["name"] if album['artists'] else "",
+                        'source': Source.NE,
+                    })
+            case SearchType.SONGLIST:
+                results = []
+                for songlist in data['result']['playlists']:
+                    results.append({
+                        'id': songlist['id'],
+                        'name': songlist['name'],
+                        'pic': songlist['coverImgUrl'],  # 歌单封面
+                        'count': songlist['trackCount'],  # 歌曲数量
+                        'time': "",
+                        'creator': songlist['creator']['nickname'],
+                        'source': Source.NE,
+                    })
+    except Exception as e:
+        logging.exception("网易云音乐搜索接口请求失败")
+        return str(e)
+    else:
+        logging.info("搜索成功")
+        logging.debug(f"搜索结果：{json.dumps(results, ensure_ascii=False, indent=4)}")
+        return results
+
+
+def ne_get_lyric(songid: str | int) -> str | dict:
+    params = {
+        "os": "pc",
+        "id": str(songid),
+        "lv": "-1",
+        "kv": "-1",
+        "tv": "-1",
+        "rv": "-1",
+        "yv": "1",
+        "showRole": "true",
+        "cp": "true",
+        "e_r": True,
+    }
+    try:
+        data = _eapi_request("/eapi/song/lyric", params)
+    except Exception as e:
+        logging.exception("网易云音乐歌词接口请求失败")
+        return str(e)
+    return data
+
+
+def ne_get_songlist(listid: str | int, list_type: str) -> str | list:
+    if list_type not in ["album", "songlist"]:
+        return "错误的list_type"
+
+    params = {
+        'id': str(listid),
+        'e_r': True,
+        'header': eapi_get_params_header(),
+    }
+    match list_type:
+        case "album":
+            path = "/eapi/album/v3/detail"
+            params.update({'cache_key': get_cache_key(f"id={listid!s}")})
+        case "songlist":
+            path = "/eapi/playlist/v4/detail"
+            params.update({"n": '500', 's': '0'})
+
+    try:
+        data = _eapi_request(path, params)
+        match list_type:
+            case "album":
+                count = data['album']['size']
+                results = nesonglist2result(data['songs'])
+            case "songlist":
+                count = data['playlist']['trackCount']
+                results = nesonglist2result(data['playlist']['tracks'])
+        if count > 500 and list_type == "songlist":
+            path = "/eapi/v3/song/detail"
+            songidss = [info["id"] for i, info in enumerate(data['playlist']['trackIds']) if i >= 500]
+            chunked_songidss = [songidss[i:i + 500] for i in range(0, len(songidss), 500)]
+            for songids in chunked_songidss:
+                params = {
+                    'c': json.dumps([{"id": songid, "v": 0} for songid in songids], ensure_ascii=False, separators=(',', ':')),
+                    'e_r': True,
+                    'header': eapi_get_params_header(),
+                }
+                for _i in range(3):
+                    try:
+                        data = _eapi_request(path, params)
+                        results.extend(nesonglist2result(data['songs']))
+                    except Exception:
+                        logging.exception("网易云音乐接口请求失败")
+                        continue
+                    break
+
+        if count != len(results):
+            logging.error(f"获取到的歌曲数量与实际数量不一致,预期:{count}, 实际: {len(results)}")
+            return "歌曲列表获取不完整"
+
+    except Exception as e:
+        logging.exception("网易云音乐接口请求失败")
+        return str(e)
+    return results
 
 
 def qmsonglist2result(songlist: list, list_type: str | None = None) -> list:
@@ -75,32 +282,6 @@ def qmsonglist2result(songlist: list, list_type: str | None = None) -> list:
             'album': info['album']['name'],
             'duration': info['interval'],
             'source': Source.QM,
-        })
-    return results
-
-
-def kgsonglist2result(songlist: list, list_type: str = "search") -> list:
-    results = []
-
-    for song in songlist:
-        match list_type:
-            case "songlist":
-                title = song['filename'].split("-")[1].strip()
-                artist = song['filename'].split("-")[0].strip()
-                album = ""
-            case "search":
-                title = song['songname']
-                album = song['album_name']
-                artist = song['singername']
-        results.append({
-            'hash': song['hash'],
-            'title': title,
-            'subtitle': "",
-            'duration': song['duration'],
-            'artist': artist,
-            'album': album,
-            'language': song['trans_param'].get('language', ''),
-            'source': Source.KG,
         })
     return results
 
@@ -359,6 +540,32 @@ def qm_get_songlist_song_list(songlist_id: str) -> str | list:
         logging.info(f"获取歌单成功, 数量: {len(results)}")
         logging.debug(f"获取歌单成功,获取结果: {results}")
         return results
+
+
+def kgsonglist2result(songlist: list, list_type: str = "search") -> list:
+    results = []
+
+    for song in songlist:
+        match list_type:
+            case "songlist":
+                title = song['filename'].split("-")[1].strip()
+                artist = song['filename'].split("-")[0].strip()
+                album = ""
+            case "search":
+                title = song['songname']
+                album = song['album_name']
+                artist = song['singername']
+        results.append({
+            'hash': song['hash'],
+            'title': title,
+            'subtitle': "",
+            'duration': song['duration'],
+            'artist': artist,
+            'album': album,
+            'language': song['trans_param'].get('language', ''),
+            'source': Source.KG,
+        })
+    return results
 
 
 def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str | list:

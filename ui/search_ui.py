@@ -69,6 +69,7 @@ class Ui_search(object):
         self.source_comboBox = QComboBox(search)
         self.source_comboBox.addItem("")
         self.source_comboBox.addItem("")
+        self.source_comboBox.addItem("")
         self.source_comboBox.setObjectName(u"source_comboBox")
 
         self.horizontalLayout.addWidget(self.source_comboBox)
@@ -326,6 +327,7 @@ class Ui_search(object):
         self.label_4.setText(QCoreApplication.translate("search", u"\u4ece\u4e91\u7aef\u641c\u7d22\u5e76\u4e0b\u8f7d\u6b4c\u8bcd", None))
         self.source_comboBox.setItemText(0, QCoreApplication.translate("search", u"QQ\u97f3\u4e50", None))
         self.source_comboBox.setItemText(1, QCoreApplication.translate("search", u"\u9177\u72d7\u97f3\u4e50", None))
+        self.source_comboBox.setItemText(2, QCoreApplication.translate("search", u"\u7f51\u6613\u4e91\u97f3\u4e50", None))
 
         self.search_type_comboBox.setItemText(0, QCoreApplication.translate("search", u"\u5355\u66f2", None))
         self.search_type_comboBox.setItemText(1, QCoreApplication.translate("search", u"\u4e13\u8f91", None))

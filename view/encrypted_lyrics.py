@@ -7,7 +7,7 @@ from decryptor import QrcType, krc_decrypt, qrc_decrypt
 from ui.encrypted_lyrics_ui import Ui_encrypted_lyrics
 from utils.api import Source
 from utils.data import Data
-from utils.lyrics import Lyrics, get_clear_lyric, krc2lrc, qrc2lrc
+from utils.lyrics import Lyrics, krc2dict, qrc2list
 
 
 class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
@@ -82,15 +82,19 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
             return
         try:
             if self.lyrics_type == "qrc":
-                lrc = get_clear_lyric(qrc2lrc(lyrics))
-                self.lyrics = None
+                self.lyrics = Lyrics({"source": Source.QM})
+                self.lyrics.tags, lyric = qrc2list(lyrics)
+                self.lyrics["orig"] = lyric
+                lrc = self.lyrics.merge(["orig"])
             elif self.lyrics_type == "krc":
                 self.data_mutex.lock()
                 type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
                 lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
                 self.data_mutex.unlock()
                 self.lyrics = Lyrics({"source": Source.KG})
-                self.lyrics.update(krc2lrc(lyrics))
+
+                self.lyrics.tags, lyric = krc2dict(lyrics)
+                self.lyrics.update(lyric)
                 lrc = self.lyrics.merge(lyrics_order)
         except Exception as e:
             logging.exception("转换失败")
@@ -100,7 +104,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         self.lyrics_type = "lrc"
 
     def change_lyrics_type(self) -> None:
-        if self.lyrics_type == "lrc" and isinstance(self.lyrics, Lyrics):
+        if self.lyrics_type == "lrc" and isinstance(self.lyrics, Lyrics) and self.lyrics.source == Source.KG:
             type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
             self.data_mutex.lock()
             lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]

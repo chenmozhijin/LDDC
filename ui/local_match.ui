@@ -247,6 +247,11 @@
                     </item>
                     <item>
                      <property name="text">
+                      <string>网易云音乐</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
                       <string>综合</string>
                      </property>
                     </item>
@@ -318,6 +323,11 @@
                 <item>
                  <property name="text">
                   <string>酷狗音乐</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>网易云音乐</string>
                  </property>
                 </item>
                </widget>
