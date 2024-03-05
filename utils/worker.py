@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-import difflib
 import logging
 import os
 import re
@@ -33,13 +32,14 @@ from utils.api import (
     qm_search,
 )
 from utils.data import Data
-from utils.lyrics import LyricProcessingError, Lyrics
+from utils.lyrics import LyricProcessingError, Lyrics, LyricType
 from utils.song_info import get_audio_file_info, parse_cue
 from utils.utils import (
     escape_filename,
     escape_path,
     get_save_path,
     replace_info_placeholders,
+    text_difference,
 )
 
 match sys.platform:
@@ -374,11 +374,6 @@ class LocalMatchWorker(QRunnable):
     def stop(self) -> None:
         self.is_running = False
 
-    def text_difference(self, text1: str, text2: str) -> float:
-        # 计算编辑距离
-        differ = difflib.SequenceMatcher(None, text1, text2)
-        return differ.ratio()
-
     def search_and_get(self, info: dict) -> list:
 
         # Step 1 搜索歌曲
@@ -443,18 +438,18 @@ class LocalMatchWorker(QRunnable):
                     if info['duration'] is not None:
                         score += (10 - abs(int(song_info['duration']) - info['duration'])) * 3.5
                     if song_info['subtitle'] != "":
-                        title_score1 = self.text_difference(song_info["title"] + f"({song_info['subtitle']})", info["title"]) * 35
-                        title_score2 = self.text_difference(song_info["title"], info["title"]) * 35
+                        title_score1 = text_difference(song_info["title"] + f"({song_info['subtitle']})", info["title"]) * 35
+                        title_score2 = text_difference(song_info["title"], info["title"]) * 35
                         if title_score1 > title_score2:
                             score += title_score1
                         else:
                             score += title_score2
                     else:
-                        score += self.text_difference(song_info["title"], info["title"]) * 35
+                        score += text_difference(song_info["title"], info["title"]) * 35
                     if info["artist"] is not None:
-                        score += self.text_difference(song_info["artist"], info["artist"]) * 20
+                        score += text_difference(song_info["artist"], info["artist"]) * 20
                     if info["album"] is not None:
-                        score += self.text_difference(song_info["album"], info["album"]) * 10
+                        score += text_difference(song_info["album"], info["album"]) * 10
                     logging.debug(f"本地: {info}\n搜索结果:{song_info}\n分数:{score}")
                     scores.append((song_info, score))
 
@@ -502,24 +497,34 @@ class LocalMatchWorker(QRunnable):
 
         # Step 3 获取歌词
         from_cache = False
-        lyrics = None
-        for song_info, _score in scores:
+        obtained_sources = []
+        lyrics: list[tuple[Lyrics, int, dict]] = []
+        for song_info, score in scores:
             if not self.is_running:
                 return None, None
-            lyrics, from_cache = self.LyricProcessingWorker.get_lyrics(song_info)
-            if lyrics is not None:
-                logging.debug(f"lyrics['orig']:{lyrics['orig']}")
-                if self.skip_inst_lyrics and len(lyrics["orig"]) != 0 and (lyrics["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or lyrics["orig"][0][2][0][2] == "纯音乐，请欣赏"):
-                    if 'artist' in info:
-                        msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 跳过纯音乐"
-                    else:
-                        msg = f"[{self.current_index}/{self.total_index}]本地: {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 跳过纯音乐"
-                    self.signals.massage.emit(msg)
-                    return None, None
-                break
+            if song_info['source'] in obtained_sources:
+                continue
+            lyric = None
+            lyric, from_cache = self.LyricProcessingWorker.get_lyrics(song_info)
+            if lyric is not None:
+                logging.debug(f"lyric['orig']:{lyric['orig']}")
+                if self.skip_inst_lyrics and len(lyric["orig"]) != 0 and (lyric["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or lyric["orig"][0][2][0][2] == "纯音乐，请欣赏"):
+                    continue
+                lyrics.append((lyric, score, song_info))
+                obtained_sources.append(song_info['source'])
             if not from_cache:
                 time.sleep(0.5)
 
+        verbatim_lyrics_formats = [LyricType.QRC, LyricType.KRC, LyricType.YRC]
+        if len(lyrics) == 1:
+            lyrics = lyrics[0][0]
+        elif len(lyrics) > 1:
+            if lyrics[0][0].orig_type in verbatim_lyrics_formats:
+                lyrics = lyrics[0][0]
+            elif lyrics[1][0].orig_type in verbatim_lyrics_formats and abs(lyrics[0][1] - lyrics[1][1]) < 15:
+                lyrics = lyrics[1][0]
+            elif len(lyrics) > 2 and lyrics[2][0].orig_type in verbatim_lyrics_formats and abs(lyrics[0][1] - lyrics[2][1]) < 15:
+                lyrics = lyrics[2][0]
         # Step 4 合并歌词
         if isinstance(lyrics, Lyrics):
             merged_lyric = lyrics.merge(self.lyrics_order)

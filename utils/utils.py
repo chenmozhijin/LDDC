@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
+from difflib import SequenceMatcher
+
+
 def ms2formattime(ms: int) -> str:
     m, ms = divmod(ms, 60000)
     s, ms = divmod(ms, 1000)
@@ -91,3 +94,9 @@ def get_save_path(folder: str, file_name_format: str, info: dict, lyrics_types: 
     folder = escape_path(replace_info_placeholders(folder, info, lyrics_types)).strip()
     file_name = escape_filename(replace_info_placeholders(file_name_format, info, lyrics_types))
     return folder, file_name
+
+
+def text_difference(text1: str, text2: str) -> float:
+    # 计算编辑距离
+    differ = SequenceMatcher(None, text1, text2)
+    return differ.ratio()

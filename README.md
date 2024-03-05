@@ -31,6 +31,8 @@
 
 #### 方式一:从[release](https://github.com/chenmozhijin/LDDC/releases)下载
 
+> 未发布的预览版本可以在[Actions](https://github.com/chenmozhijin/LDDC/actions)中下载
+
 ##### windows
 
 1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中最新版本的zip

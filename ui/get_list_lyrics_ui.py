@@ -3,13 +3,21 @@
 ################################################################################
 ## Form generated from reading UI file 'get_list_lyrics.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.6.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import QCoreApplication, QMetaObject
-from PySide6.QtWidgets import QPlainTextEdit, QProgressBar, QPushButton, QVBoxLayout
+from PySide6.QtCore import (
+    QCoreApplication,
+    QMetaObject,
+)
+from PySide6.QtWidgets import (
+    QPlainTextEdit,
+    QProgressBar,
+    QPushButton,
+    QVBoxLayout,
+)
 
 
 class Ui_get_list_lyrics(object):

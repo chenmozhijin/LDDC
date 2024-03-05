@@ -34,14 +34,16 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.worker = None
 
         self.save_mode_changed(self.save_mode_comboBox.currentIndex())
-        self.source_mode_changed(self.source_comboBox.currentIndex())
+
+        self.data_mutex.lock()
+        self.save_path_lineEdit.setText(self.data.cfg["default_save_path"])
+        self.data_mutex.unlock()
 
     def connect_signals(self) -> None:
         self.song_path_pushButton.clicked.connect(lambda: self.select_path(self.song_path_lineEdit))
         self.save_path_pushButton.clicked.connect(lambda: self.select_path(self.save_path_lineEdit))
 
         self.save_mode_comboBox.currentIndexChanged.connect(self.save_mode_changed)
-        self.source_comboBox.currentIndexChanged.connect(self.source_mode_changed)
 
         self.start_cancel_pushButton.clicked.connect(self.start_cancel_button_clicked)
 
@@ -64,12 +66,6 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 self.save_path_lineEdit.setEnabled(True)
                 self.save_path_pushButton.setEnabled(True)
                 self.save_path_pushButton.setText("选择文件夹")
-
-    def source_mode_changed(self, index: int) -> None:
-        if index == 2:
-            self.source_listWidget.setEnabled(True)
-        else:
-            self.source_listWidget.setEnabled(False)
 
     def start_cancel_button_clicked(self) -> None:
         if self.running:
@@ -117,17 +113,16 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 flienmae_mode = LocalMatchFileNameMode.SONG
 
         source = []
-        match self.source_comboBox.currentIndex():
-            case 0:
+        for source_type in [self.source_listWidget.item(i).text() for i in range(self.source_listWidget.count())]:
+            if source_type == "QQ音乐" and self.qm_checkBox.isChecked():
                 source.append(Source.QM)
-            case 1:
-                source.append(Source.NE)
-            case 2:
-                source_mapping = {"QQ音乐": Source.QM, "酷狗音乐": Source.KG, "网易云音乐": Source.NE}
-                source = [source_mapping[type_] for type_ in
-                          [self.source_listWidget.item(i).text() for i in range(self.source_listWidget.count())]]
-            case 3:
+            elif source_type == "酷狗音乐" and self.kg_checkBox.isChecked():
                 source.append(Source.KG)
+            elif source_type == "网易云音乐" and self.ne_checkBox.isChecked():
+                source.append(Source.NE)
+        if len(source) == 0:
+            QMessageBox.warning(self, "警告", "请选择至少一个源！")
+            return
 
         self.running = True
         self.plainTextEdit.setPlainText("")
@@ -161,7 +156,6 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             if isinstance(item, QLineEdit | QPushButton | QComboBox | QCheckBox | QListWidget):
                 item.setEnabled(True)
         self.save_mode_changed(self.save_mode_comboBox.currentIndex())
-        self.source_mode_changed(self.source_comboBox.currentIndex())
 
     def worker_error(self, error: str, level: int) -> None:
         if level == 0:

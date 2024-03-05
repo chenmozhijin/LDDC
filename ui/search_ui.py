@@ -3,20 +3,13 @@
 ################################################################################
 ## Form generated from reading UI file 'search.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.6.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QMetaObject,
-    QSize,
-    Qt,
-)
-from PySide6.QtGui import (
-    QFont,
-)
+from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractScrollArea,
@@ -47,7 +40,7 @@ class Ui_search(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.label = QLabel(search)
         self.label.setObjectName(u"label")
-        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
@@ -89,7 +82,7 @@ class Ui_search(object):
 
         self.horizontalLayout.addWidget(self.search_keyword_lineEdit)
 
-        self.horizontalSpacer_2 = QSpacerItem(20, 20, QSizePolicy.Fixed, QSizePolicy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(20, 20, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer_2)
 
@@ -98,7 +91,7 @@ class Ui_search(object):
 
         self.horizontalLayout.addWidget(self.search_pushButton)
 
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
@@ -107,7 +100,7 @@ class Ui_search(object):
 
         self.splitter = QSplitter(search)
         self.splitter.setObjectName(u"splitter")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.splitter.sizePolicy().hasHeightForWidth())
@@ -204,7 +197,7 @@ class Ui_search(object):
 
         self.preview_plainTextEdit = QPlainTextEdit(self.layoutWidget_3)
         self.preview_plainTextEdit.setObjectName(u"preview_plainTextEdit")
-        sizePolicy2 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Expanding)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Expanding)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.preview_plainTextEdit.sizePolicy().hasHeightForWidth())
@@ -226,7 +219,7 @@ class Ui_search(object):
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.label_6 = QLabel(search)
         self.label_6.setObjectName(u"label_6")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         sizePolicy3.setHorizontalStretch(0)
         sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
@@ -236,7 +229,7 @@ class Ui_search(object):
 
         self.save_path_lineEdit = QLineEdit(search)
         self.save_path_lineEdit.setObjectName(u"save_path_lineEdit")
-        sizePolicy4 = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Fixed)
         sizePolicy4.setHorizontalStretch(0)
         sizePolicy4.setVerticalStretch(0)
         sizePolicy4.setHeightForWidth(self.save_path_lineEdit.sizePolicy().hasHeightForWidth())
@@ -280,20 +273,20 @@ class Ui_search(object):
 
         self.verticalLayout_7.addLayout(self.horizontalLayout_2)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Preferred)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
 
         self.verticalLayout_7.addItem(self.verticalSpacer)
 
 
         self.horizontalLayout_3.addLayout(self.verticalLayout_7)
 
-        self.horizontalSpacer_3 = QSpacerItem(97, 20, QSizePolicy.Maximum, QSizePolicy.Minimum)
+        self.horizontalSpacer_3 = QSpacerItem(97, 20, QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
 
         self.save_list_lyrics_pushButton = QPushButton(search)
         self.save_list_lyrics_pushButton.setObjectName(u"save_list_lyrics_pushButton")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         sizePolicy5.setHorizontalStretch(0)
         sizePolicy5.setVerticalStretch(0)
         sizePolicy5.setHeightForWidth(self.save_list_lyrics_pushButton.sizePolicy().hasHeightForWidth())
@@ -303,7 +296,7 @@ class Ui_search(object):
 
         self.save_preview_lyric_pushButton = QPushButton(search)
         self.save_preview_lyric_pushButton.setObjectName(u"save_preview_lyric_pushButton")
-        sizePolicy6 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         sizePolicy6.setHorizontalStretch(0)
         sizePolicy6.setVerticalStretch(0)
         sizePolicy6.setHeightForWidth(self.save_preview_lyric_pushButton.sizePolicy().hasHeightForWidth())

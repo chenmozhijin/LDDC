@@ -14,10 +14,11 @@ from utils.utils import ms2formattime, time2ms, tuple_to_list
 
 
 class LyricType(Enum):
-    LRC = 0
-    QRC = 1
-    KRC = 2
-    PlainText = 3
+    PlainText = 0
+    LRC = 1
+    QRC = 2
+    KRC = 3
+    YRC = 4
 
 
 class LyricProcessingError(Enum):
@@ -298,12 +299,14 @@ def find_closest_match(list1: list, list2: list, list3: list | None = None, sour
     # 存储合并结果的列表
     merged_dict = {}
     merged_list = []
+
     if source == Source.NE and list3:
         matchs1 = find_closest_match(list2, list3, source=Source.NE)
         for list1_line in list1:
-            line_str = "".join([word[2]for word in list1_line[2] if word[2] != ""])
+            list1_line_str = "".join([word[2]for word in list1_line[2] if word[2] != ""])
             for match in matchs1:
-                if line_str == "".join([word[2]for word in match[1][2] if word[2] != ""]):
+                list2_line_str = "".join([word[2]for word in match[1][2] if word[2] != ""])
+                if list1_line_str == list2_line_str or list1_line_str == list2_line_str.replace("\u3000", ""):
                     merged_list.append([list1_line, match[0]])
                     matchs1.remove(match)
                     break
@@ -430,17 +433,22 @@ class Lyrics(dict):
                             type_ = judge_lyric_type(lyric)
                             if type_ == LyricType.QRC:
                                 tags, lyric = qrc2list(lyric)
+                                if key == "orig":
+                                    self.orig_type = LyricType.QRC
                             elif LyricType.LRC:
                                 tags, lyric = lrc2list(lyric)
+                                if key == "orig":
+                                    self.orig_type = LyricType.LRC
                             elif LyricType.PlainText:
                                 tags = {}
                                 lyric = plaintext2list(lyric)
+                                if key == "orig":
+                                    self.orig_type = LyricType.PlainText
 
                             if key == "orig":
                                 self.tags = tags
 
                             self[key] = lyric
-                            self.orig_type = "qrc"
                         elif error is not None:
                             return "解密歌词失败, 错误: " + error, LyricProcessingError.DECRYPT
                     elif (find_result['timetag'] == "0" and key == "orig"):
@@ -456,6 +464,7 @@ class Lyrics(dict):
                     return f"解密krc歌词失败,错误:{error}", LyricProcessingError.DECRYPT
                 self.tags, lyric = krc2dict(krc)
                 self.update(lyric)
+                self.orig_type = LyricType.KRC
 
             case Source.NE:
                 lyrics = ne_get_lyric(self.id)
@@ -474,7 +483,7 @@ class Lyrics(dict):
                                      ("ts", 'tlyric'),
                                      ("roma", 'romalrc'),
                                      ("orig_lrc", 'lrc')]
-                    self.orig_type = "yrc"
+                    self.orig_type = LyricType.YRC
                 else:
                     mapping_table = [("orig", 'lrc'),
                                      ("ts", 'tlyric'),
@@ -506,7 +515,7 @@ class Lyrics(dict):
                 self.tags, self["orig"] = lrc2list(orig)
             else:
                 self["orig"] = plaintext2list(orig)
-            self.orig_type = "lrc"
+            self.orig_type = LyricType.LRC
         if ts is not None:
             if judge_lyric_type(ts) == LyricType.LRC:
                 tags, self["ts"] = lrc2list(ts)
@@ -568,7 +577,7 @@ class Lyrics(dict):
                     return f"[{ms2formattime(orig_linelist[0])}]{line_str}[{ms2formattime(orig_linelist[1])}]"
             return line_str
 
-        for orig_linelist in self["orig"]:  # orig_line无第一个时间戳,orig_time为第一个时间戳(ms类型)
+        for orig_linelist in self["orig"]:
             lines = ""
             full_orig_line = linelist2str(orig_linelist)  # 此时line为完整的原文歌词行
 

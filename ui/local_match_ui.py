@@ -3,13 +3,20 @@
 ################################################################################
 ## Form generated from reading UI file 'local_match.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.6.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtCore import (
+    QCoreApplication,
+    QMetaObject,
+    QSize,
+    Qt,
+)
+from PySide6.QtGui import (
+    QFont,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -40,7 +47,7 @@ class Ui_local_match(object):
         self.horizontalLayout_6.setObjectName(u"horizontalLayout_6")
         self.splitter = QSplitter(local_match)
         self.splitter.setObjectName(u"splitter")
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.splitter.sizePolicy().hasHeightForWidth())
@@ -58,7 +65,7 @@ class Ui_local_match(object):
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.label = QLabel(self.layoutWidget_2)
         self.label.setObjectName(u"label")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
@@ -98,7 +105,7 @@ class Ui_local_match(object):
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.label_5 = QLabel(self.groupBox)
         self.label_5.setObjectName(u"label_5")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.label_5.sizePolicy().hasHeightForWidth())
@@ -117,7 +124,7 @@ class Ui_local_match(object):
 
         self.horizontalLayout.addWidget(self.save_mode_comboBox)
 
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
@@ -153,7 +160,7 @@ class Ui_local_match(object):
 
         self.horizontalLayout_2.addWidget(self.lyrics_filename_mode_comboBox)
 
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
 
@@ -176,28 +183,36 @@ class Ui_local_match(object):
         self.label_7 = QLabel(self.groupBox_2)
         self.label_7.setObjectName(u"label_7")
 
-        self.horizontalLayout_5.addWidget(self.label_7)
+        self.horizontalLayout_5.addWidget(self.label_7, 0, Qt.AlignTop)
 
-        self.source_comboBox = QComboBox(self.groupBox_2)
-        self.source_comboBox.addItem("")
-        self.source_comboBox.addItem("")
-        self.source_comboBox.addItem("")
-        self.source_comboBox.addItem("")
-        self.source_comboBox.setObjectName(u"source_comboBox")
+        self.verticalLayout_4 = QVBoxLayout()
+        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
+        self.qm_checkBox = QCheckBox(self.groupBox_2)
+        self.qm_checkBox.setObjectName(u"qm_checkBox")
+        self.qm_checkBox.setChecked(True)
 
-        self.horizontalLayout_5.addWidget(self.source_comboBox)
+        self.verticalLayout_4.addWidget(self.qm_checkBox)
+
+        self.ne_checkBox = QCheckBox(self.groupBox_2)
+        self.ne_checkBox.setObjectName(u"ne_checkBox")
+
+        self.verticalLayout_4.addWidget(self.ne_checkBox)
+
+        self.kg_checkBox = QCheckBox(self.groupBox_2)
+        self.kg_checkBox.setObjectName(u"kg_checkBox")
+
+        self.verticalLayout_4.addWidget(self.kg_checkBox)
+
+
+        self.horizontalLayout_5.addLayout(self.verticalLayout_4)
 
         self.label_2 = QLabel(self.groupBox_2)
         self.label_2.setObjectName(u"label_2")
 
-        self.horizontalLayout_5.addWidget(self.label_2)
+        self.horizontalLayout_5.addWidget(self.label_2, 0, Qt.AlignTop)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_5)
-
-        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Fixed)
-
-        self.verticalLayout_2.addItem(self.verticalSpacer_2)
 
 
         self.horizontalLayout_4.addLayout(self.verticalLayout_2)
@@ -207,7 +222,7 @@ class Ui_local_match(object):
         QListWidgetItem(self.source_listWidget)
         QListWidgetItem(self.source_listWidget)
         self.source_listWidget.setObjectName(u"source_listWidget")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         sizePolicy3.setHorizontalStretch(0)
         sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.source_listWidget.sizePolicy().hasHeightForWidth())
@@ -219,7 +234,7 @@ class Ui_local_match(object):
 
         self.horizontalLayout_4.addWidget(self.source_listWidget)
 
-        self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout_4.addItem(self.horizontalSpacer_4)
 
@@ -265,7 +280,7 @@ class Ui_local_match(object):
 
         self.verticalLayout.addWidget(self.start_cancel_pushButton)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout.addItem(self.verticalSpacer)
 
@@ -314,11 +329,9 @@ class Ui_local_match(object):
 
         self.groupBox_2.setTitle(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd", None))
         self.label_7.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6765\u6e90:", None))
-        self.source_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"QQ\u97f3\u4e50", None))
-        self.source_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"\u7f51\u6613\u4e91\u97f3\u4e50", None))
-        self.source_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"\u7efc\u5408", None))
-        self.source_comboBox.setItemText(3, QCoreApplication.translate("local_match", u"\u9177\u6211\u97f3\u4e50", None))
-
+        self.qm_checkBox.setText(QCoreApplication.translate("local_match", u"QQ\u97f3\u4e50", None))
+        self.ne_checkBox.setText(QCoreApplication.translate("local_match", u"\u7f51\u6613\u4e91\u97f3\u4e50", None))
+        self.kg_checkBox.setText(QCoreApplication.translate("local_match", u"\u9177\u72d7\u97f3\u4e50", None))
         self.label_2.setText(QCoreApplication.translate("local_match", u"\u4f18\u5148\u987a\u5e8f:", None))
 
         __sortingEnabled = self.source_listWidget.isSortingEnabled()

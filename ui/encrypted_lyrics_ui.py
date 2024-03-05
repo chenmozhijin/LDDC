@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'encrypted_lyrics.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.1
+## Created by: Qt User Interface Compiler version 6.6.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -52,7 +52,7 @@ class Ui_encrypted_lyrics(object):
 
         self.translate_checkBox = QCheckBox(encrypted_lyrics)
         self.translate_checkBox.setObjectName(u"translate_checkBox")
-        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.translate_checkBox.sizePolicy().hasHeightForWidth())
@@ -75,7 +75,7 @@ class Ui_encrypted_lyrics(object):
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.open_pushButton = QPushButton(encrypted_lyrics)
         self.open_pushButton.setObjectName(u"open_pushButton")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.open_pushButton.sizePolicy().hasHeightForWidth())
