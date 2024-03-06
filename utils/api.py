@@ -151,6 +151,8 @@ def ne_search(keyword: str, search_type: SearchType) -> dict:
     }
     try:
         data = _eapi_request("/eapi/cloudsearch/pc", params)
+        if 'result' not in data:
+            return []
         match search_type:
             case SearchType.SONG:
                 results = nesonglist2result(data['result']['songs'])
