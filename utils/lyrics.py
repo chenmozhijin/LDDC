@@ -61,11 +61,11 @@ def get_clear_lyric(lyric: str) -> str:
 
 
 def qrc2list(qrc: str) -> tuple[dict, list]:
-    """将qrc转换为列表[[行起始时间, 行结束时间, [字起始时间, 字结束时间, 字内容]]]"""
+    """将qrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
     qrc = re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', qrc, re.DOTALL)[0]
     qrc_lines = qrc.split('\n')
     tags = {}
-    lrc_list = []
+    lrc_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []
     wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?((?:(?!\(\d+,\d+\)).)+)\((\d+),(\d+)\)')  # 逐字匹配
     line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
     tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
@@ -75,14 +75,14 @@ def qrc2list(qrc: str) -> tuple[dict, list]:
         line_split_content = re.findall(line_split_pattern, line)
         if line_split_content:  # 判断是否为歌词行
             line_start_time, line_duration, line_content = line_split_content[0]
-            lrc_list.append([int(line_start_time), int(line_start_time) + int(line_duration), []])
+            lrc_list.append((int(line_start_time), int(line_start_time) + int(line_duration), []))
             wrods_split_content = re.findall(wrods_split_pattern, line)
             if wrods_split_content:  # 判断是否为逐字歌词
                 for text, starttime, duration in wrods_split_content:
                     if text != "\r":
-                        lrc_list[-1][2].append([int(starttime), int(starttime) + int(duration), text])
+                        lrc_list[-1][2].append((int(starttime), int(starttime) + int(duration), text))
             else:  # 如果不是逐字歌词
-                lrc_list[-1][2].append([int(line_start_time), int(line_start_time) + int(line_duration), line_content])
+                lrc_list[-1][2].append((int(line_start_time), int(line_start_time) + int(line_duration), line_content))
         else:
             tag_split_content = re.findall(tag_split_pattern, line)
             if tag_split_content:
@@ -92,8 +92,8 @@ def qrc2list(qrc: str) -> tuple[dict, list]:
 
 
 def yrc2list(yrc: str) -> list:
-    """将yrc转换为列表[[行起始时间, 行结束时间, [字起始时间, 字结束时间, 字内容]]]"""
-    lrc_list = []
+    """将yrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
+    lrc_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []
 
     line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
     wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?\((\d+),(\d+),\d+\)((?:.(?!\d+,\d+,\d+\)))*)')  # 逐字匹配
@@ -106,22 +106,22 @@ def yrc2list(yrc: str) -> list:
         if not line_split_content:
             continue
         line_start_time, line_duration, line_content = line_split_content[0]
-        lrc_list.append([int(line_start_time), int(line_start_time) + int(line_duration), []])
+        lrc_list.append((int(line_start_time), int(line_start_time) + int(line_duration), []))
 
         wrods_split_content = re.findall(wrods_split_pattern, line_content)
         if not wrods_split_content:
-            lrc_list[-1][2].append([int(line_start_time), int(line_start_time) + int(line_duration), line_content])
+            lrc_list[-1][2].append((int(line_start_time), int(line_start_time) + int(line_duration), line_content))
             continue
 
         for word_start_time, word_duration, word_content in wrods_split_content:
-            lrc_list[-1][2].append([int(word_start_time), int(word_start_time) + int(word_duration), word_content])
+            lrc_list[-1][2].append((int(word_start_time), int(word_start_time) + int(word_duration), word_content))
 
     return lrc_list
 
 
 def lrc2list(lrc: str) -> tuple[dict, list]:
-    """将lrc转换为列表[[行起始时间, 行结束时间, [字起始时间, 字结束时间, 字内容]]]"""
-    lrc_list = []
+    """将lrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
+    lrc_list: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = []
     tags = {}
 
     tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
@@ -150,11 +150,11 @@ def lrc2list(lrc: str) -> tuple[dict, list]:
             m, s, ms, line_content, m2, s2, ms2 = line_split_withend_content[0]
             line_start_time = time2ms(m, s, ms)
             line_end_time = time2ms(m2, s2, ms2)
-        lrc_list.append([line_start_time, line_end_time, []])
+        lrc_list.append((line_start_time, line_end_time, []))
 
         wrods_split_contents = re.findall(wrods_split_pattern, line_content)
         if not wrods_split_contents:
-            lrc_list[-1][2].append([line_start_time, line_end_time, line_content])
+            lrc_list[-1][2].append((line_start_time, line_end_time, line_content))
             continue
 
         line = []
@@ -163,30 +163,30 @@ def lrc2list(lrc: str) -> tuple[dict, list]:
             word_start_time = time2ms(m, s, ms)
             if line:
                 line[-1][1] = word_start_time
-            lrc_list.append([word_start_time, None, word_content])
+            lrc_list.append((word_start_time, None, word_content))
 
         lrc_list.append(line)
     return tags, lrc_list
 
 
 def plaintext2list(plaintext: str) -> list[list[None, None, list[None, None, str]]]:
-    lrc_list = []
+    lrc_list: list[tuple[None, None, list[tuple[None, None, str]]]] = []
     for line in plaintext.splitlines():
-        lrc_list.append([None, None, [[None, None, line]]])
+        lrc_list.append((None, None, [(None, None, line)]))
     return lrc_list
 
 
 def krc2dict(krc: str) -> tuple[dict, dict]:
-    """将明文krc转换为字典{歌词类型: [[行起始时间, 行结束时间, [字起始时间, 字结束时间, 字内容]]]}"""
-    lrc_dict: dict[str: list[list[int, int, list[list[int, int, str]]]]] = {}
+    """将明文krc转换为字典{歌词类型: [(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]}"""
+    lrc_dict: dict[str: list[tuple[int, int, list[tuple[int, int, str]]]]] = {}
     tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
     tags: dict[str: str] = {}
 
     line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
     wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?<(\d+),(\d+),\d+>((?:.(?!\d+,\d+,\d+>))*)')  # 逐字匹配
-    orig_list: list[list[int, int, list[list[int, int, str]]]] = []  # 原文歌词
-    roma_list: list[list[int, int, list[list[int, int, str]]]] = []
-    ts_list: list[list[int, int, list[list[int, int, str]]]] = []
+    orig_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []  # 原文歌词
+    roma_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []
+    ts_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []
 
     for i in krc.splitlines():
         line = i.strip()
@@ -202,28 +202,28 @@ def krc2dict(krc: str) -> tuple[dict, dict]:
         if not line_split_content:
             continue
         line_start_time, line_duration, line_content = line_split_content[0]
-        orig_list.append([int(line_start_time), int(line_start_time) + int(line_duration), []])
+        orig_list.append((int(line_start_time), int(line_start_time) + int(line_duration), []))
 
         wrods_split_content = re.findall(wrods_split_pattern, line_content)
         if not wrods_split_content:
-            orig_list[-1][2].append([int(line_start_time), int(line_start_time) + int(line_duration), line_content])
+            orig_list[-1][2].append((int(line_start_time), int(line_start_time) + int(line_duration), line_content))
             continue
 
         for word_start_time, word_duration, word_content in wrods_split_content:
-            orig_list[-1][2].append([int(line_start_time) + int(word_start_time), int(line_start_time) + int(word_start_time) + int(word_duration), word_content])
+            orig_list[-1][2].append((int(line_start_time) + int(word_start_time), int(line_start_time) + int(word_start_time) + int(word_duration), word_content))
 
     if "language" in tags and tags["language"].strip() != "":
         languages = json.loads(b64decode(tags["language"].strip()))
         for language in languages["content"]:
             if language["type"] == 0:  # 逐字(罗马音)
                 for i, line in enumerate(orig_list):
-                    roma_line = [line[0], line[1], []]
+                    roma_line = (line[0], line[1], [])
                     for j, word in enumerate(line[2]):
-                        roma_line[2].append([word[0], word[1], language["lyricContent"][i][j]])
+                        roma_line[2].append((word[0], word[1], language["lyricContent"][i][j]))
                     roma_list.append(roma_line)
             elif language["type"] == 1:  # 逐行(翻译)
                 for i, line in enumerate(orig_list):
-                    ts_list.append([line[0], line[1], [[line[0], line[1], language["lyricContent"][i][0]]]])
+                    ts_list.append((line[0], line[1], [(line[0], line[1], language["lyricContent"][i][0])]))
 
     tags_str = ""
     for key, value in tags.items():
@@ -262,7 +262,7 @@ def lrclist2str(lrc_list: list) -> str:
     return lrc_str
 
 
-def linelist2str(line_list: list[int | None, int | None, list[int | None, int | None, str]]) -> str:
+def linelist2str(line_list: list[tuple[int, int | None, list[tuple[int, int | None, str]]]]) -> str:
     lrc_str = ""
     if line_list[0] is None and line_list[1] is None:
         lrc_str += line_list[2][0][2]
@@ -291,11 +291,11 @@ def linelist2str(line_list: list[int | None, int | None, list[int | None, int | 
     return lrc_str
 
 
-def find_closest_match(list1: list, list2: list, list3: list | None = None, source: Source | None = None) -> list:
-    list1: list[list[int | None, int | None, list[int | None, int | None, str]]] = list1[:]
-    list2: list[list[int | None, int | None, list[int | None, int | None, str]]] = list2[:]
+def find_closest_match(list1: list, list2: list, list3: list | None = None, source: Source | None = None) -> list[tuple[list, list]]:
+    list1: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list1[:]
+    list2: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list2[:]
     if list3:
-        list3: list[list[int | None, int | None, list[int | None, int | None, str]]] = list3[:]
+        list3: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list3[:]
     # 存储合并结果的列表
     merged_dict = {}
     merged_list = []
@@ -307,7 +307,7 @@ def find_closest_match(list1: list, list2: list, list3: list | None = None, sour
             for match in matchs1:
                 list2_line_str = "".join([word[2]for word in match[1][2] if word[2] != ""])
                 if list1_line_str == list2_line_str or list1_line_str == list2_line_str.replace("\u3000", ""):
-                    merged_list.append([list1_line, match[0]])
+                    merged_list.append((list1_line, match[0]))
                     matchs1.remove(match)
                     break
         if len(merged_list) == 0:
@@ -325,22 +325,18 @@ def find_closest_match(list1: list, list2: list, list3: list | None = None, sour
         if len(list12) == len(list22):
             logging.info("qm/kg 匹配方法")
             for i, value in enumerate(list12):
-                merged_list.append([value, list22[i]])
+                merged_list.append((value, list22[i]))
             return merged_list
         list12, list22 = None, None
 
     logging.info("other 匹配方法")
 
     for i, value in enumerate(list1):
-        for index, word in enumerate(value[2]):
-            value[2][index] = tuple(word)
-
         list1[i] = (value[0], value[1], tuple(value[2]))
 
     for i, value in enumerate(list2):
-        for index, word in enumerate(value[2]):
-            value[2][index] = tuple(word)
         list2[i] = (value[0], value[1], tuple(value[2]))
+
     # 遍历第一个列表中的每个时间戳和歌词
     i = 0
     while len(list1) > i:
@@ -381,10 +377,16 @@ def find_closest_match(list1: list, list2: list, list3: list | None = None, sour
 
     sorted_items = sorted(((key, value) for key, value in merged_dict.items()), key=lambda x: x[0])
 
-    return tuple_to_list([[item[1], item[0]] for item in sorted_items])
+    merged_list = []
+    for items in sorted_items:
+        item1 = (items[0][0], items[0][1], list(items[0][2]))
+        item2 = (items[1][0], items[1][1], list(items[1][2]))
+        merged_list.append((item2, item1))
+
+    return merged_list
 
 
-class Lyrics(dict):
+class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None, int | None, str]]]]]):
     def __init__(self, info: dict | None = None) -> None:
         if info is None:
             info = {}
@@ -570,7 +572,7 @@ class Lyrics(dict):
 
             if not has_content(line_str):
                 return ""
-            if orig_linelist[0]:
+            if orig_linelist[0] is not None:
                 if re.search(end_time_pattern, line_str):    # 检查是否有结束时间
                     return f"[{ms2formattime(orig_linelist[0])}]{line_str}"
                 if orig_linelist[1]:
