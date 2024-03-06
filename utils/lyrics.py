@@ -573,10 +573,9 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
             if not has_content(line_str):
                 return ""
             if orig_linelist[0] is not None:
-                if re.search(end_time_pattern, line_str):    # 检查是否有结束时间
+                if re.search(end_time_pattern, line_str) or orig_linelist[1] is None:    # 检查是否有结束时间
                     return f"[{ms2formattime(orig_linelist[0])}]{line_str}"
-                if orig_linelist[1]:
-                    return f"[{ms2formattime(orig_linelist[0])}]{line_str}[{ms2formattime(orig_linelist[1])}]"
+                return f"[{ms2formattime(orig_linelist[0])}]{line_str}[{ms2formattime(orig_linelist[1])}]"
             return line_str
 
         for orig_linelist in self["orig"]:
