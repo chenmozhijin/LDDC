@@ -277,12 +277,6 @@
          </item>
          <item>
           <widget class="QLineEdit" name="lyric_types_lineEdit">
-           <property name="minimumSize">
-            <size>
-             <width>300</width>
-             <height>0</height>
-            </size>
-           </property>
            <property name="text">
             <string/>
            </property>
@@ -300,6 +294,12 @@
          </item>
          <item>
           <widget class="QLineEdit" name="songid_lineEdit">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="readOnly">
             <bool>true</bool>
            </property>

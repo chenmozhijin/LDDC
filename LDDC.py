@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-__version__ = "v0.4.1"
+__version__ = "v0.5.0"
 import logging
 import os
 import sys

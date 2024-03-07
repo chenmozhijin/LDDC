@@ -184,7 +184,6 @@ class Ui_search(object):
 
         self.lyric_types_lineEdit = QLineEdit(self.layoutWidget_3)
         self.lyric_types_lineEdit.setObjectName(u"lyric_types_lineEdit")
-        self.lyric_types_lineEdit.setMinimumSize(QSize(300, 0))
         self.lyric_types_lineEdit.setReadOnly(True)
 
         self.horizontalLayout_5.addWidget(self.lyric_types_lineEdit)
@@ -196,6 +195,8 @@ class Ui_search(object):
 
         self.songid_lineEdit = QLineEdit(self.layoutWidget_3)
         self.songid_lineEdit.setObjectName(u"songid_lineEdit")
+        sizePolicy.setHeightForWidth(self.songid_lineEdit.sizePolicy().hasHeightForWidth())
+        self.songid_lineEdit.setSizePolicy(sizePolicy)
         self.songid_lineEdit.setReadOnly(True)
 
         self.horizontalLayout_5.addWidget(self.songid_lineEdit)
