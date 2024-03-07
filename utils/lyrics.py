@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 from decryptor import QrcType, krc_decrypt, qrc_decrypt
 from utils.api import Source, get_krc, get_qrc, ne_get_lyric, qm_get_lyric
-from utils.utils import ms2formattime, time2ms, tuple_to_list
+from utils.utils import ms2formattime, time2ms
 
 
 class LyricType(Enum):
@@ -291,6 +291,23 @@ def linelist2str(line_list: list[tuple[int, int | None, list[tuple[int, int | No
     return lrc_str
 
 
+def is_same_line(line1: tuple[int, int | None, list[tuple[int, int | None, str]]], line2: tuple[int, int | None, list[tuple[int, int | None, str]]]) -> bool:
+    """检查行是否近似相同"""
+    line1_str = "".join([word[2]for word in line1[2] if word[2] != ""])
+    line2_str = "".join([word[2]for word in line2[2] if word[2] != ""])
+    if line1_str == line2_str:
+        return True
+    clean1_line1 = re.sub(r'\s+', '', line1_str)
+    clean1_line2 = re.sub(r'\s+', '', line2_str)
+    if clean1_line1 == clean1_line2:
+        return True
+    clean2_line1 = re.sub(r'[(（][^）)]*[）)]', '', clean1_line1)
+    clean2_line2 = re.sub(r'[(（][^）)]*[）)]', '', clean1_line2)
+    if clean2_line1 == clean2_line2 != "":
+        return True
+    return False
+
+
 def find_closest_match(list1: list, list2: list, list3: list | None = None, source: Source | None = None) -> list[tuple[list, list]]:
     list1: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list1[:]
     list2: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list2[:]
@@ -303,10 +320,8 @@ def find_closest_match(list1: list, list2: list, list3: list | None = None, sour
     if source == Source.NE and list3:
         matchs1 = find_closest_match(list2, list3, source=Source.NE)
         for list1_line in list1:
-            list1_line_str = "".join([word[2]for word in list1_line[2] if word[2] != ""])
             for match in matchs1:
-                list2_line_str = "".join([word[2]for word in match[1][2] if word[2] != ""])
-                if list1_line_str == list2_line_str or list1_line_str == list2_line_str.replace("\u3000", ""):
+                if is_same_line(list1_line, match[1]):
                     merged_list.append((list1_line, match[0]))
                     matchs1.remove(match)
                     break
@@ -480,6 +495,14 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                     tags.update({"al": self.album})
                 if self.title:
                     tags.update({"ti": self.title})
+                if 'lyricUser' in lyrics and 'nickname' in lyrics['lyricUser']:
+                    tags.update({"by": lyrics['lyricUser']['nickname']})
+                if 'transUser' in lyrics and 'nickname' in lyrics['transUser']:
+                    if 'by' in tags:
+                        tags['by'] += f" & {lyrics['transUser']['nickname']}"
+                    else:
+                        tags.update({"by": lyrics['transUser']['nickname']})
+                self.tags = tags
                 if 'yrc' in lyrics and len(lyrics['yrc']['lyric']) != 0:
                     mapping_table = [("orig", 'yrc'),
                                      ("ts", 'tlyric'),
