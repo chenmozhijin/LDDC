@@ -253,7 +253,7 @@ class LyricProcessingWorker(QRunnable):
             return from_cache
 
         if self.task["type"] == "get_merged_lyric":
-            self.signals.result.emit(self.taskid, {'info': song_info, 'available_types': list(lyrics.keys()), 'merged_lyric': merged_lyric})
+            self.signals.result.emit(self.taskid, {'info': song_info, 'lrc_types': lyrics.lrc_types, 'merged_lyric': merged_lyric})
 
         elif self.task["type"] == "get_list_lyrics":
             save_folder, file_name = get_save_path(self.task["save_folder"], self.task["lyrics_file_name_format"] + ".lrc", song_info, lyrics_order)
@@ -382,10 +382,10 @@ class LocalMatchWorker(QRunnable):
             keywords = [info["title"]]
         else:
             keywords = [f"{info['artist']} - {info['title']}", info["title"]]
-        from_cache = False
         min_title = re.sub(self.min_title_pattern1, "", info["title"].strip())
         min_title = re.sub(self.min_title_pattern2, "", min_title.strip())
         for source in self.sources:
+            from_cache = False
             if not self.is_running:
                 return None, None
             match source:
@@ -423,6 +423,7 @@ class LocalMatchWorker(QRunnable):
                 if (info["artist"] is not None and
                     keyword == f"{info['artist']} - {info['title']}" and
                         (info['duration'] is None or abs(int(search_return[0]['duration']) - info['duration']) < 5)):
+                    logging.debug(f"本地: {info}\n搜索结果:{search_return[0]}\n分数:1000")
                     scores.append((search_return[0], 1000))
 
                 for song_info in search_return:
@@ -458,9 +459,9 @@ class LocalMatchWorker(QRunnable):
             return None, None
         if self.skip_inst_lyrics and scores[0][0]['source'] == Source.KG and scores[0][0]['language'] in ["纯音乐", '伴奏']:
             if 'artist' in info:
-                msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 跳过纯音乐"
+                msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐"
             else:
-                msg = f"[{self.current_index}/{self.total_index}]本地: {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 跳过纯音乐"
+                msg = f"[{self.current_index}/{self.total_index}]本地: {info['title']} 搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐"
             self.signals.massage.emit(msg)
             return None, None
 
@@ -497,6 +498,7 @@ class LocalMatchWorker(QRunnable):
 
         # Step 3 获取歌词
         from_cache = False
+        inst = False
         obtained_sources = []
         lyrics: list[tuple[Lyrics, int, dict]] = []
         for song_info, score in scores:
@@ -507,36 +509,51 @@ class LocalMatchWorker(QRunnable):
             lyric = None
             lyric, from_cache = self.LyricProcessingWorker.get_lyrics(song_info)
             if lyric is not None:
+                obtained_sources.append(song_info['source'])
                 logging.debug(f"lyric['orig']:{lyric['orig']}")
                 if self.skip_inst_lyrics and len(lyric["orig"]) != 0 and (lyric["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or lyric["orig"][0][2][0][2] == "纯音乐，请欣赏"):
+                    inst = True
                     continue
                 lyrics.append((lyric, score, song_info))
-                obtained_sources.append(song_info['source'])
+                inst = False
             if not from_cache:
                 time.sleep(0.5)
 
-        verbatim_lyrics_formats = [LyricType.QRC, LyricType.KRC, LyricType.YRC]
+        verbatim_lyrics_formats = [LyricType.QRC, LyricType.KRC, LyricType.YRC, LyricType.JSONVERBATIM]
         if len(lyrics) == 1:
+            song_info = lyrics[0][2]
             lyrics = lyrics[0][0]
         elif len(lyrics) > 1:
-            if lyrics[0][0].orig_type in verbatim_lyrics_formats:
+            if lyrics[0][0].lrc_types['orig'] in verbatim_lyrics_formats:
+                song_info = lyrics[0][2]
                 lyrics = lyrics[0][0]
-            elif lyrics[1][0].orig_type in verbatim_lyrics_formats and abs(lyrics[0][1] - lyrics[1][1]) < 15:
+            elif lyrics[1][0].lrc_types['orig'] in verbatim_lyrics_formats and abs(lyrics[0][1] - lyrics[1][1]) < 15:
+                song_info = lyrics[1][2]
                 lyrics = lyrics[1][0]
-            elif len(lyrics) > 2 and lyrics[2][0].orig_type in verbatim_lyrics_formats and abs(lyrics[0][1] - lyrics[2][1]) < 15:
+            elif len(lyrics) > 2 and lyrics[2][0].lrc_types['orig'] in verbatim_lyrics_formats and abs(lyrics[0][1] - lyrics[2][1]) < 15:
+                song_info = lyrics[2][2]
                 lyrics = lyrics[2][0]
+            else:
+                song_info = lyrics[0][2]
+                lyrics = lyrics[0][0]
         # Step 4 合并歌词
         if isinstance(lyrics, Lyrics):
             merged_lyric = lyrics.merge(self.lyrics_order)
             return merged_lyric, song_info
         if 'artist' in info:
-            msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 歌词获取失败"
+            if inst:
+                msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐"
+            else:
+                msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 歌词获取失败"
+        elif inst:
+            msg = f"[{self.current_index}/{self.total_index}]本地: {info['title']} 搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐"
         else:
             msg = f"[{self.current_index}/{self.total_index}]本地: {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 歌词获取失败"
         self.signals.massage.emit(msg)
         return None, None
 
     def run(self) -> None:
+        logging.info(f"开始本地匹配歌词,源:{self.sources}")
         try:
             start_time = time.time()
             # Setp 1 处理cue 与 遍历歌曲文件

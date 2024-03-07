@@ -15,10 +15,12 @@ from utils.utils import ms2formattime, time2ms
 
 class LyricType(Enum):
     PlainText = 0
-    LRC = 1
-    QRC = 2
-    KRC = 3
-    YRC = 4
+    JSONVERBATIM = 1
+    JSONLINE = 2
+    LRC = 3
+    QRC = 4
+    KRC = 5
+    YRC = 6
 
 
 class LyricProcessingError(Enum):
@@ -414,7 +416,7 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
         self.mid = info.get("mid", None)
         self.accesskey = info.get("accesskey", None)
 
-        self.orig_type = None
+        self.lrc_types = {}
         self.tags = {}
 
     def download_and_decrypt(self) -> tuple[str | None, LyricProcessingError | None]:
@@ -447,20 +449,15 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                         lyric, error = qrc_decrypt(encrypted_lyric, QrcType.CLOUD)
 
                         if lyric is not None:
-                            type_ = judge_lyric_type(lyric)
-                            if type_ == LyricType.QRC:
+                            lrc_type = judge_lyric_type(lyric)
+                            if lrc_type == LyricType.QRC:
                                 tags, lyric = qrc2list(lyric)
-                                if key == "orig":
-                                    self.orig_type = LyricType.QRC
                             elif LyricType.LRC:
                                 tags, lyric = lrc2list(lyric)
-                                if key == "orig":
-                                    self.orig_type = LyricType.LRC
                             elif LyricType.PlainText:
                                 tags = {}
                                 lyric = plaintext2list(lyric)
-                                if key == "orig":
-                                    self.orig_type = LyricType.PlainText
+                            self.lrc_types[key] = lrc_type
 
                             if key == "orig":
                                 self.tags = tags
@@ -481,7 +478,12 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                     return f"解密krc歌词失败,错误:{error}", LyricProcessingError.DECRYPT
                 self.tags, lyric = krc2dict(krc)
                 self.update(lyric)
-                self.orig_type = LyricType.KRC
+                if 'orig' in lyric:
+                    self.lrc_types['orig'] = LyricType.KRC
+                if 'ts' in lyric:
+                    self.lrc_types['ts'] = LyricType.JSONLINE
+                if 'roma' in lyric:
+                    self.lrc_types['roma'] = LyricType.JSONVERBATIM
 
             case Source.NE:
                 lyrics = ne_get_lyric(self.id)
@@ -508,7 +510,6 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                                      ("ts", 'tlyric'),
                                      ("roma", 'romalrc'),
                                      ("orig_lrc", 'lrc')]
-                    self.orig_type = LyricType.YRC
                 else:
                     mapping_table = [("orig", 'lrc'),
                                      ("ts", 'tlyric'),
@@ -520,10 +521,13 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                         lyric_type = judge_lyric_type(lyrics[value]['lyric'])
                         if value == 'yrc':
                             self[key] = yrc2list(lyrics[value]['lyric'])
+                            self.lrc_types[key] = LyricType.YRC
                         elif lyric_type == LyricType.LRC:
                             self[key] = lrc2list(lyrics[value]['lyric'])[1]
+                            self.lrc_types[key] = LyricType.LRC
                         elif lyric_type == LyricType.PlainText:
                             self[key] = plaintext2list(lyrics[value]['lyric'])
+                            self.lrc_types[key] = LyricType.PlainText
 
         if "orig" not in self or self["orig"] is None:
             logging.error("没有获取到的歌词(orig=None)")
@@ -538,14 +542,17 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
         if orig is not None:
             if judge_lyric_type(orig) == LyricType.LRC:
                 self.tags, self["orig"] = lrc2list(orig)
+                self.lrc_types["orig"] = LyricType.LRC
             else:
                 self["orig"] = plaintext2list(orig)
-            self.orig_type = LyricType.LRC
+                self.lrc_types["orig"] = LyricType.PlainText
         if ts is not None:
             if judge_lyric_type(ts) == LyricType.LRC:
                 tags, self["ts"] = lrc2list(ts)
+                self.lrc_types["ts"] = LyricType.LRC
             else:
                 self["ts"] = plaintext2list(ts)
+                self.lrc_types["ts"] = LyricType.PlainText
             if not self.tags:
                 self.tags = tags
         if self["orig"] is None and self["ts"] is None:

@@ -8,8 +8,15 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtCore import (
+    QCoreApplication,
+    QMetaObject,
+    QSize,
+    Qt,
+)
+from PySide6.QtGui import (
+    QFont,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractScrollArea,
@@ -177,6 +184,7 @@ class Ui_search(object):
 
         self.lyric_types_lineEdit = QLineEdit(self.layoutWidget_3)
         self.lyric_types_lineEdit.setObjectName(u"lyric_types_lineEdit")
+        self.lyric_types_lineEdit.setMinimumSize(QSize(300, 0))
         self.lyric_types_lineEdit.setReadOnly(True)
 
         self.horizontalLayout_5.addWidget(self.lyric_types_lineEdit)
