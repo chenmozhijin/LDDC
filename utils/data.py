@@ -39,7 +39,6 @@ class Data:
                 "default_save_path": default_save_path,
                 "lyrics_order": ["罗马音", "原文", "译文"],
                 "skip_inst_lyrics": True,
-                "get_normal_lyrics": True,
                 "auto_select": True,
             }
             self.init_db()
@@ -77,7 +76,12 @@ class Data:
         self.mutex.lock()
         c = self.conn.cursor()
         c.execute("SELECT * FROM config")
-        for setting in c.fetchall():
+        settings = c.fetchall().copy()
+        for setting in settings:
+            if setting[1] not in self.cfg:
+                c.execute("DELETE FROM config WHERE item=?", (setting[1],))
+                self.conn.commit()  # 提交更改
+                continue
             if isinstance(self.cfg[setting[1]], str):
                 self.cfg[setting[1]] = setting[2]
             elif isinstance(self.cfg[setting[1]], bool):

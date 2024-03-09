@@ -1,7 +1,5 @@
 requests
-bs4
 PySide6
-lxml
 mutagen
 diskcache
 chardet

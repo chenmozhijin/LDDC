@@ -145,13 +145,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="get_normal_lyrics_checkBox">
-              <property name="text">
-               <string>没有可用的加密歌词时尝试获取普通歌词</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QCheckBox" name="auto_select_checkBox">
               <property name="text">
                <string>歌曲搜索歌词时自动选择(酷狗音乐)</string>

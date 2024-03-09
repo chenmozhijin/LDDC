@@ -5,7 +5,7 @@ import logging
 import random
 import re
 import time
-from base64 import b64decode
+from base64 import b64decode, b64encode
 from enum import Enum
 
 import requests
@@ -289,66 +289,68 @@ def qmsonglist2result(songlist: list, list_type: str | None = None) -> list:
     return results
 
 
-def get_qrc(songid: str) -> str | requests.Response:
-    params = {
-        'version': '15',
-        'miniversion': '82',
-        'lrctype': '4',
-        'musicid': songid,
-    }
-    try:
-        response = requests.get('https://c.y.qq.com/qqmusic/fcgi-bin/lyric_download.fcg',
-                                headers=QMD_headers,
-                                params=params,
-                                timeout=10)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        logging.exception("请求qrc 歌词时错误")
-        return str(e)
-    else:
-        logging.debug(f"请求qrc 歌词成功：{songid}, {response.text.strip()}")
-    return response
+def qm_get_lyric(info: dict[str: str]) -> dict:
+    """
+    获取歌词
+    :param info:歌曲信息
+    :return: 歌词信息
+    """
+    if 'album' not in info or 'artist' not in info or 'title' not in info or 'id' not in info or 'duration' not in info:
+        return "缺少必要参数"
+    base64_album_name = b64encode(info['album'].encode()).decode()
+    base64_singer_name = b64encode(info['artist'].split("/")[0].encode()).decode() if "/" in info["artist"] else b64encode(info["artist"].encode()).decode()
+    base64_song_name = b64encode(info["title"].encode()).decode()
 
-
-def qm_get_lyric(mid: str) -> tuple[str | None, str | None] | str:
-    url = 'https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg'
-    headers = {
-        'Accept': '*/*',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
-        'Referer': 'https://y.qq.com/',
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_3_1 like Mac OS X; zh-CN) AppleWebKit/537.51.1 ('
-        'KHTML, like Gecko) Mobile/17D50 UCBrowser/12.8.2.1268 Mobile AliApp(TUnionSDK/0.1.20.3) ',
-    }
-    params = {
-        '_': int(time.time()),
-        'cv': '4747474',
-        'ct': '24',
-        'format': 'json',
-        'inCharset': 'utf-8',
-        'outCharset': 'utf-8',
-        'notice': '0',
-        'platform': 'yqq.json',
-        'needNewCode': '1',
-        'g_tk': '5381',
-        'songmid': mid,
-    }
+    data = json.dumps({
+        "comm": {
+            "_channelid": "0",
+            "_os_version": "6.2.9200-2",
+            "authst": "",
+            "ct": "19",
+            "cv": "1942",
+            "patch": "118",
+            "psrf_access_token_expiresAt": 0,
+            "psrf_qqaccess_token": "",
+            "psrf_qqopenid": "",
+            "psrf_qqunionid": "",
+            "tmeAppID": "qqmusic",
+            "tmeLoginType": 0,
+            "uin": "0",
+            "wid": "0",
+        },
+        "music.musichallSong.PlayLyricInfo.GetPlayLyricInfo": {
+            "method": "GetPlayLyricInfo",
+            "module": "music.musichallSong.PlayLyricInfo",
+            "param": {
+                "albumName": base64_album_name,
+                "crypt": 1,
+                "ct": 19,
+                "cv": 1942,
+                "interval": info['duration'],
+                "lrc_t": 0,
+                "qrc": 1,
+                "qrc_t": 0,
+                "roma": 1,
+                "roma_t": 0,
+                "singerName": base64_singer_name,
+                "songID": int(info['id']),
+                "songName": base64_song_name,
+                "trans": 1,
+                "trans_t": 0,
+                "type": 0,
+            },
+        },
+    }, ensure_ascii=False).encode("utf-8")
     try:
-        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response = requests.post('https://u.y.qq.com/cgi-bin/musicu.fcg', headers=QMD_headers, data=data, timeout=10)
         response.raise_for_status()
-        response_json = response.json()
-        if 'lyric' not in response_json or 'trans' not in response_json:
-            return f'获取歌词失败, code: {response_json["code"]}'
-        orig_base64 = response_json['lyric']
-        ts_base64 = response_json['trans']
-        orig = b64decode(orig_base64).decode("utf-8") if orig_base64 else None
-        ts = b64decode(ts_base64).decode("utf-8") if ts_base64 else None
+        data: dict = response.json()['music.musichallSong.PlayLyricInfo.GetPlayLyricInfo']['data']
     except Exception as e:
-        logging.exception("请求歌词时错误")
-        return str(e)
+        logging.exception("获取歌词失败")
+        return f"获取歌词失败：{e}"
     else:
-        logging.debug(f"请求歌词成功, orig: {orig}, ts: {ts}")
-        return orig, ts
+        logging.debug(f"请求qm歌词成功：{info['id']}, {json.dumps(data, ensure_ascii=False, indent=4)}")
+        return data
 
 
 def qm_search(keyword: str, search_type: SearchType) -> list | str:

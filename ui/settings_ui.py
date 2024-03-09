@@ -104,11 +104,6 @@ class Ui_settings(object):
 
         self.verticalLayout_6.addWidget(self.skip_inst_lyrics_checkBox)
 
-        self.get_normal_lyrics_checkBox = QCheckBox(self.groupBox_2)
-        self.get_normal_lyrics_checkBox.setObjectName(u"get_normal_lyrics_checkBox")
-
-        self.verticalLayout_6.addWidget(self.get_normal_lyrics_checkBox)
-
         self.auto_select_checkBox = QCheckBox(self.groupBox_2)
         self.auto_select_checkBox.setObjectName(u"auto_select_checkBox")
 
@@ -273,7 +268,6 @@ class Ui_settings(object):
         self.lyrics_order_listWidget.setSortingEnabled(__sortingEnabled)
 
         self.skip_inst_lyrics_checkBox.setText(QCoreApplication.translate("settings", u"\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd/\u672c\u5730\u5339\u914d\u65f6\u8df3\u8fc7\u7eaf\u97f3\u4e50", None))
-        self.get_normal_lyrics_checkBox.setText(QCoreApplication.translate("settings", u"\u6ca1\u6709\u53ef\u7528\u7684\u52a0\u5bc6\u6b4c\u8bcd\u65f6\u5c1d\u8bd5\u83b7\u53d6\u666e\u901a\u6b4c\u8bcd", None))
         self.auto_select_checkBox.setText(QCoreApplication.translate("settings", u"\u6b4c\u66f2\u641c\u7d22\u6b4c\u8bcd\u65f6\u81ea\u52a8\u9009\u62e9(\u9177\u72d7\u97f3\u4e50)", None))
         self.groupBox.setTitle(QCoreApplication.translate("settings", u"\u4fdd\u5b58\u8bbe\u7f6e", None))
         self.textBrowser.setHtml(QCoreApplication.translate("settings", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"

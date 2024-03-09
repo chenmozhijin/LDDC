@@ -211,24 +211,8 @@ class LyricProcessingWorker(QRunnable):
                 song_name_str = "歌名:" + song_info['title']
             if error1 is not None:
                 logging.error(f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']},错误：{error1}")
-
-                self.data_mutex.lock()
-                get_normal_lyrics = bool(self.data.cfg["get_normal_lyrics"] and song_info['source'] == Source.QM)
-                self.data_mutex.unlock()
-                if get_normal_lyrics:
-                    logging.info(f"尝试获取普通歌词：{song_name_str},源:{song_info['source']}, id: {song_info['id']}")
-
-                    for _i in range(3):  # 重试3次
-                        error2, error2_type = lyrics.download_normal_lyrics()
-                        if error2_type != LyricProcessingError.REQUEST:  # 如果正常或不是请求错误不重试
-                            break
-
-                    if error2 is not None:
-                        self.signals.error.emit(f"歌名:{song_name_str}的歌词获取失败:\n错误1：{error1}\n错误2:{error2}")
-                        return None, False
-                else:
-                    self.signals.error.emit(f"获取歌名:{song_name_str}的加密歌词失败:{error1}")
-                    return None, False
+                self.signals.error.emit(f"获取歌名:{song_name_str}的加密歌词失败:{error1}")
+                return None, False
 
             if error1_type != LyricProcessingError.REQUEST and not from_cache:  # 如果不是请求错误则缓存
                 cache[("lyrics", song_info["source"], song_info['id'], song_info.get("accesskey", ""))] = lyrics

@@ -6,10 +6,8 @@ import re
 from base64 import b64decode
 from enum import Enum
 
-from bs4 import BeautifulSoup
-
 from decryptor import QrcType, krc_decrypt, qrc_decrypt
-from utils.api import Source, get_krc, get_qrc, ne_get_lyric, qm_get_lyric
+from utils.api import Source, get_krc, ne_get_lyric, qm_get_lyric
 from utils.utils import ms2formattime, time2ms
 
 
@@ -424,6 +422,7 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
         self.album = info.get("album", None)
         self.id = info.get("id", None)
         self.mid = info.get("mid", None)
+        self.duration = info.get("duration", None)
         self.accesskey = info.get("accesskey", None)
 
         self.lrc_types = {}
@@ -440,22 +439,16 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
 
         match self.source:
             case Source.QM:
-                response = get_qrc(self.id)
+                response = qm_get_lyric({'album': self.album, 'artist': self.artist, 'title': self.title, 'id': self.id, 'duration': self.duration})
                 if isinstance(response, str):
                     return f"请求qrc歌词失败,错误:{response}", LyricProcessingError.REQUEST
-                qrc_xml = re.sub(r"^<!--|-->$", "", response.text.strip())
-                qrc_suop = BeautifulSoup(qrc_xml, 'xml')
-                for key, value in [("orig", 'content'),
-                                   ("ts", 'contentts'),
-                                   ("roma", 'contentroma')]:
-                    find_result = qrc_suop.find(value)
-                    if find_result is not None and find_result['timetag'] != "0":
-                        encrypted_lyric = find_result.get_text()
-
-                        cannot_decrypt = ["789C014000BFFF", "789C014800B7FF"]
-                        for c in cannot_decrypt:
-                            if encrypted_lyric.startswith(c):
-                                return f"没有获取到可解密的歌词(encrypted_lyric starts with {c})", LyricProcessingError.NOT_FOUND
+                for key, value in [("orig", 'lyric'),
+                                   ("ts", 'trans'),
+                                   ("roma", 'roma')]:
+                    lrc = response[value]
+                    lrc_t = (response["qrc_t"] if response["qrc_t"] != 0 else response["lrc_t"]) if value == "lyric" else response[value + "_t"]
+                    if lrc != "" and lrc_t != "0":
+                        encrypted_lyric = lrc
 
                         lyric, error = qrc_decrypt(encrypted_lyric, QrcType.CLOUD)
 
@@ -463,9 +456,9 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                             lrc_type = judge_lyric_type(lyric)
                             if lrc_type == LyricType.QRC:
                                 tags, lyric = qrc2list(lyric)
-                            elif LyricType.LRC:
+                            elif lrc_type == LyricType.LRC:
                                 tags, lyric = lrc2list(lyric)
-                            elif LyricType.PlainText:
+                            elif lrc_type == LyricType.PlainText:
                                 tags = {}
                                 lyric = plaintext2list(lyric)
                             self.lrc_types[key] = lrc_type
@@ -476,7 +469,7 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                             self[key] = lyric
                         elif error is not None:
                             return "解密歌词失败, 错误: " + error, LyricProcessingError.DECRYPT
-                    elif (find_result['timetag'] == "0" and key == "orig"):
+                    elif (lrc_t == "0" and key == "orig"):
                         return "没有获取到可解密的歌词(timetag=0)", LyricProcessingError.NOT_FOUND
 
             case Source.KG:
@@ -547,36 +540,6 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
         if "orig" not in self or self["orig"] is None:
             logging.error("没有获取到的歌词(orig=None)")
             return "没有获取到的歌词(orig=None)", LyricProcessingError.NOT_FOUND
-        return None, None
-
-    def download_normal_lyrics(self) -> tuple[str | None, LyricProcessingError | None]:
-        result = qm_get_lyric(self.mid)
-        if isinstance(result, str):
-            return f"请求普通歌词时错误: {result}", LyricProcessingError.REQUEST
-        orig, ts = result
-        if orig is not None:
-            if judge_lyric_type(orig) == LyricType.LRC:
-                self.tags, self["orig"] = lrc2list(orig)
-                self.lrc_types["orig"] = LyricType.LRC
-            else:
-                self["orig"] = plaintext2list(orig)
-                self.lrc_types["orig"] = LyricType.PlainText
-        if ts is not None:
-            if judge_lyric_type(ts) == LyricType.LRC:
-                tags, self["ts"] = lrc2list(ts)
-                self.lrc_types["ts"] = LyricType.LRC
-            else:
-                self["ts"] = plaintext2list(ts)
-                self.lrc_types["ts"] = LyricType.PlainText
-            if not self.tags:
-                self.tags = tags
-
-        for key, lrc in self.items():
-            # 判断是否逐字
-            self.lrc_isverbatim[key] = is_verbatim(lrc)
-
-        if self["orig"] is None and self["ts"] is None:
-            return "没有获取到可用的歌词(orig=None and ts=None)", LyricProcessingError.NOT_FOUND
         return None, None
 
     def get_merge_lrc(self, lyrics_order: list) -> str:
