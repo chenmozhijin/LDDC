@@ -12,7 +12,11 @@ if __name__ != '__main__':
 else:
     from utils import time2ms
 
-file_extensions = ['3g2', 'aac', 'aif', 'ape', 'apev2', 'dff', 'dsf', 'flac', 'm4a', 'm4b', 'mid', 'mp3', 'mp4', 'mpc', 'ofr', 'ofs', 'ogg', 'oggflac', 'oggtheora', 'opus', 'spx', 'tak', 'tta', 'wav', 'wma', 'wv']
+file_extensions = ['3g2', 'aac', 'aif', 'ape', 'apev2', 'dff',
+                   'dsf', 'flac', 'm4a', 'm4b', 'mid', 'mp3',
+                   'mp4', 'mpc', 'ofr', 'ofs', 'ogg', 'oggflac',
+                   'oggtheora', 'opus', 'spx', 'tak', 'tta',
+                   'wav', 'wma', 'wv']
 
 
 def get_audio_file_info(file_path: str) -> dict | str:

@@ -66,7 +66,7 @@ def krc_decrypt(encrypted_lyrics: bytearray | bytes) -> tuple[str | None, str | 
 
     try:
         decrypted_data = bytearray()
-        for i in range(len(encrypted_data)):
+        for i, _item in enumerate(encrypted_data):
             decrypted_data.append(encrypted_data[i] ^ KRC_KEY[i % len(KRC_KEY)])
 
         return decompress(decrypted_data).decode('utf-8'), None

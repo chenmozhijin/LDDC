@@ -500,10 +500,13 @@ class LocalMatchWorker(QRunnable):
         from_cache = False
         inst = False
         obtained_sources = []
+        inst_score = None
         lyrics: list[tuple[Lyrics, int, dict]] = []
         for song_info, score in scores:
             if not self.is_running:
                 return None, None
+            if inst and abs(inst_score - score) > 30:
+                continue
             if song_info['source'] in obtained_sources:
                 continue
             lyric = None
@@ -513,6 +516,7 @@ class LocalMatchWorker(QRunnable):
                 logging.debug(f"lyric['orig']:{lyric['orig']}")
                 if self.skip_inst_lyrics and len(lyric["orig"]) != 0 and (lyric["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or lyric["orig"][0][2][0][2] == "纯音乐，请欣赏"):
                     inst = True
+                    inst_score = score
                     continue
                 lyrics.append((lyric, score, song_info))
                 inst = False
@@ -542,13 +546,17 @@ class LocalMatchWorker(QRunnable):
             return merged_lyric, song_info
         if 'artist' in info:
             if inst:
-                msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐"
+                msg = (f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} "
+                       f"搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐")
             else:
-                msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 歌词获取失败"
+                msg = (f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} "
+                       f"搜索结果:{song_info['artist']} - {song_info['title']} 歌词获取失败")
         elif inst:
-            msg = f"[{self.current_index}/{self.total_index}]本地: {info['title']} 搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐"
+            msg = (f"[{self.current_index}/{self.total_index}]本地: {info['title']} "
+                   f"搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐")
         else:
-            msg = f"[{self.current_index}/{self.total_index}]本地: {info['title']} 搜索结果:{song_info['artist']} - {song_info['title']} 歌词获取失败"
+            msg = (f"[{self.current_index}/{self.total_index}]本地: {info['title']} "
+                   f"搜索结果:{song_info['artist']} - {song_info['title']} 歌词获取失败")
         self.signals.massage.emit(msg)
         return None, None
 
@@ -658,9 +666,11 @@ class LocalMatchWorker(QRunnable):
                         with open(save_path, "w", encoding="utf-8") as f:
                             f.write(merged_lyric)
                         if 'artist' in song_info:
-                            msg = f"[{self.current_index}/{self.total_index}]本地: {song_info['artist']} - {song_info['title']} 匹配: {lrc_info['artist']} - {lrc_info['title']} 成功保存到{save_path}"
+                            msg = (f"[{self.current_index}/{self.total_index}]本地: {song_info['artist']} - {song_info['title']} "
+                                   f"匹配: {lrc_info['artist']} - {lrc_info['title']} 成功保存到{save_path}")
                         else:
-                            msg = f"[{self.current_index}/{self.total_index}]本地: {song_info['title']} 匹配: {lrc_info['artist']} - {lrc_info['title']} 成功保存到{save_path}"
+                            msg = (f"[{self.current_index}/{self.total_index}]本地: {song_info['title']} "
+                                   f"匹配: {lrc_info['artist']} - {lrc_info['title']} 成功保存到{save_path}")
                         self.signals.massage.emit(msg)
                     except Exception as e:
                         self.signals.error.emit(str(e), 0)

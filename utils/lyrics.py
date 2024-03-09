@@ -212,7 +212,8 @@ def krc2dict(krc: str) -> tuple[dict, dict]:
             continue
 
         for word_start_time, word_duration, word_content in wrods_split_content:
-            orig_list[-1][2].append((int(line_start_time) + int(word_start_time), int(line_start_time) + int(word_start_time) + int(word_duration), word_content))
+            orig_list[-1][2].append((int(line_start_time) + int(word_start_time),
+                                     int(line_start_time) + int(word_start_time) + int(word_duration), word_content))
 
     if "language" in tags and tags["language"].strip() != "":
         languages = json.loads(b64decode(tags["language"].strip()))

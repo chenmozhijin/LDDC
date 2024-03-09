@@ -1,5 +1,3 @@
-import re
-
 from utils.lyrics import Lyrics
 
 
@@ -7,10 +5,6 @@ def merge_lyrics(lyrics1: Lyrics, lyrics2: Lyrics) -> Lyrics:
     """
     合并两个Lyrics对象
     """
-    def get_clean_line(line: tuple[int, int | None, list[tuple[int, int | None, str]]]) -> str:
-        line_str = "".join([word[2]for word in line[2] if word[2] != ""])
-        return re.sub(r'[^\w]|_', '', line_str)
-
     if lyrics1.lrc_isverbatim["orig"] is True:
         pass
     elif lyrics2.lrc_isverbatim["orig"] is True:

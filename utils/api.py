@@ -65,7 +65,8 @@ NeteaseCloudMusic_headers = {
     "MG-Product-Name": "music",
     "Nm-GCore-Status": "1",
     "Origin": "orpheus://orpheus",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.157 NeteaseMusicDesktop/2.9.7.199711 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko)"
+                  " Chrome/35.0.1916.157 NeteaseMusicDesktop/2.9.7.199711 Safari/537.36",
     "Accept-Encoding": "gzip,deflate",
     "Accept-Language": "en-us,en;q=0.8",
     "Cookie": "os=pc; osver=Microsoft-Windows-10--build-22621-64bit; appver=2.9.7.199711; channel=netease; WEVNSM=1.0.0; WNMCID=slodmo.1709434129796.01.0;",
