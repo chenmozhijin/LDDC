@@ -310,6 +310,15 @@ def is_same_line(line1: tuple[int, int | None, list[tuple[int, int | None, str]]
     return False
 
 
+def is_verbatim(lrc_list: list) -> bool:
+    isverbatim = False
+    for line_list in lrc_list:
+        if len(line_list[2]) > 1:
+            isverbatim = True
+            break
+    return isverbatim
+
+
 def find_closest_match(list1: list, list2: list, list3: list | None = None, source: Source | None = None) -> list[tuple[list, list]]:
     list1: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list1[:]
     list2: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list2[:]
@@ -417,6 +426,7 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
         self.accesskey = info.get("accesskey", None)
 
         self.lrc_types = {}
+        self.lrc_isverbatim = {}
         self.tags = {}
 
     def download_and_decrypt(self) -> tuple[str | None, LyricProcessingError | None]:
@@ -529,6 +539,10 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                             self[key] = plaintext2list(lyrics[value]['lyric'])
                             self.lrc_types[key] = LyricType.PlainText
 
+        for key, lrc in self.items():
+            # 判断是否逐字
+            self.lrc_isverbatim[key] = is_verbatim(lrc)
+
         if "orig" not in self or self["orig"] is None:
             logging.error("没有获取到的歌词(orig=None)")
             return "没有获取到的歌词(orig=None)", LyricProcessingError.NOT_FOUND
@@ -555,6 +569,11 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                 self.lrc_types["ts"] = LyricType.PlainText
             if not self.tags:
                 self.tags = tags
+
+        for key, lrc in self.items():
+            # 判断是否逐字
+            self.lrc_isverbatim[key] = is_verbatim(lrc)
+
         if self["orig"] is None and self["ts"] is None:
             return "没有获取到可用的歌词(orig=None and ts=None)", LyricProcessingError.NOT_FOUND
         return None, None

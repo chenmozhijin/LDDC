@@ -20,7 +20,7 @@ from utils.api import (
     Source,
 )
 from utils.data import Data
-from utils.lyrics import LyricType
+from utils.lyrics import Lyrics, LyricType
 from utils.utils import get_save_path, ms2formattime
 from utils.worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
 from view.get_list_lyrics import GetListLyrics
@@ -43,7 +43,7 @@ class SearchWidget(QWidget, Ui_search):
         self.search_lyrics_result = None
         self.preview_info = None
 
-        self.result_path = []  # 值为"search": 搜索、"songlist":歌曲列表(歌单、专辑),"l"
+        self.result_path = []  # 值为"search": 搜索、"songlist":歌曲列表(歌单、专辑)、"lyrics": 歌词搜索结果
 
         self.save_path_lineEdit.setText(self.data.cfg["default_save_path"])
 
@@ -285,24 +285,22 @@ class SearchWidget(QWidget, Ui_search):
     @Slot(int, dict)
     def update_preview_lyric_result_slot(self, taskid: int, result: dict) -> None:
         """更新预览歌词结果时调用"""
-        def lrc_type2text(lrc_type: LyricType) -> str:
-            if lrc_type in [LyricType.QRC, LyricType.KRC, LyricType.YRC, LyricType.JSONVERBATIM]:
-                return "逐字"
-            if lrc_type in [LyricType.LRC, LyricType.JSONLINE]:
-                return "逐行"
-            if lrc_type == LyricType.PlainText:
+        def get_lrc_type(lrc: Lyrics, lrc_type: str) -> str:
+            if lrc.lrc_types[lrc_type] == LyricType.PlainText:
                 return "纯文本"
-            return "未知"
+            if lrc.lrc_isverbatim[lrc_type] is True:
+                return "逐字"
+            return "逐行"
         if taskid != self.taskid["update_preview_lyric"]:
             return
-        self.preview_info = {"info": result["info"], 'lrc_types': result['lrc_types']}
+        self.preview_info = {"info": result["info"]}
         lyric_types_text = ""
-        if "orig" in result['lrc_types']:
-            lyric_types_text += "原文" + f"({lrc_type2text(result['lrc_types']['orig'])})"
-        if "ts" in result['lrc_types']:
-            lyric_types_text += "、译文" + f"({lrc_type2text(result['lrc_types']['ts'])})"
-        if "roma" in result['lrc_types']:
-            lyric_types_text += "、罗马音" + f"({lrc_type2text(result['lrc_types']['roma'])})"
+        if "orig" in result['lrc'].lrc_types:
+            lyric_types_text += "原文" + f"({get_lrc_type(result['lrc'], 'orig')})"
+        if "ts" in result['lrc'].lrc_types:
+            lyric_types_text += "、译文" + f"({get_lrc_type(result['lrc'], 'ts')})"
+        if "roma" in result['lrc'].lrc_types:
+            lyric_types_text += "、罗马音" + f"({get_lrc_type(result['lrc'], 'roma')})"
         self.lyric_types_lineEdit.setText(lyric_types_text)
         self.songid_lineEdit.setText(str(result['info']['id']))
 

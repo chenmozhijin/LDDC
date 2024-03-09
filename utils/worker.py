@@ -32,7 +32,7 @@ from utils.api import (
     qm_search,
 )
 from utils.data import Data
-from utils.lyrics import LyricProcessingError, Lyrics, LyricType
+from utils.lyrics import LyricProcessingError, Lyrics
 from utils.song_info import get_audio_file_info, parse_cue
 from utils.utils import (
     escape_filename,
@@ -48,7 +48,7 @@ match sys.platform:
     case _:
         cache_dir = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "cache")
 cache = Cache(cache_dir)
-cache_version = 1
+cache_version = 2
 if "version" not in cache or cache["version"] != cache_version:
     cache.clear()
 cache["version"] = cache_version
@@ -107,16 +107,20 @@ class SearchWorker(QRunnable):
             logging.debug(f"从缓存中获取搜索结果,类型:{self.search_type}, 关键字:{keyword}")
             search_return = cache[("serach", str(keyword), self.search_type, self.source)]
         else:
-            match self.source:
-                case Source.QM:
-                    search_return = qm_search(keyword, self.search_type)
-                case Source.KG:
-                    if isinstance(keyword, dict) and self.search_type == SearchType.LYRICS:
-                        search_return = kg_search(keyword, SearchType.LYRICS)
-                    else:
-                        search_return = kg_search(keyword, self.search_type)
-                case Source.NE:
-                    search_return = ne_search(keyword, self.search_type)
+            for _i in range(3):
+                match self.source:
+                    case Source.QM:
+                        search_return = qm_search(keyword, self.search_type)
+                    case Source.KG:
+                        if isinstance(keyword, dict) and self.search_type == SearchType.LYRICS:
+                            search_return = kg_search(keyword, SearchType.LYRICS)
+                        else:
+                            search_return = kg_search(keyword, self.search_type)
+                    case Source.NE:
+                        search_return = ne_search(keyword, self.search_type)
+                if isinstance(search_return, str):
+                    continue
+                break
             if isinstance(search_return, str):
                 self.signals.error.emit(search_return)
                 return
@@ -253,7 +257,7 @@ class LyricProcessingWorker(QRunnable):
             return from_cache
 
         if self.task["type"] == "get_merged_lyric":
-            self.signals.result.emit(self.taskid, {'info': song_info, 'lrc_types': lyrics.lrc_types, 'merged_lyric': merged_lyric})
+            self.signals.result.emit(self.taskid, {'info': song_info, 'lrc': lyrics, 'merged_lyric': merged_lyric})
 
         elif self.task["type"] == "get_list_lyrics":
             save_folder, file_name = get_save_path(self.task["save_folder"], self.task["lyrics_file_name_format"] + ".lrc", song_info, lyrics_order)
@@ -375,7 +379,6 @@ class LocalMatchWorker(QRunnable):
         self.is_running = False
 
     def search_and_get(self, info: dict) -> list:
-
         # Step 1 搜索歌曲
         scores = []
         if info["artist"] is None:  # noqa: SIM108
@@ -519,23 +522,23 @@ class LocalMatchWorker(QRunnable):
             if not from_cache:
                 time.sleep(0.5)
 
-        verbatim_lyrics_formats = [LyricType.QRC, LyricType.KRC, LyricType.YRC, LyricType.JSONVERBATIM]
         if len(lyrics) == 1:
             song_info = lyrics[0][2]
             lyrics = lyrics[0][0]
         elif len(lyrics) > 1:
-            if lyrics[0][0].lrc_types['orig'] in verbatim_lyrics_formats:
+            if lyrics[0][0].lrc_isverbatim['orig'] is True:
                 song_info = lyrics[0][2]
                 lyrics = lyrics[0][0]
-            elif lyrics[1][0].lrc_types['orig'] in verbatim_lyrics_formats and abs(lyrics[0][1] - lyrics[1][1]) < 15:
+            elif lyrics[1][0].lrc_isverbatim['orig'] is True and abs(lyrics[0][1] - lyrics[1][1]) < 15:
                 song_info = lyrics[1][2]
                 lyrics = lyrics[1][0]
-            elif len(lyrics) > 2 and lyrics[2][0].lrc_types['orig'] in verbatim_lyrics_formats and abs(lyrics[0][1] - lyrics[2][1]) < 15:
+            elif len(lyrics) > 2 and lyrics[2][0].lrc_isverbatim['orig'] is True and abs(lyrics[0][1] - lyrics[2][1]) < 15:
                 song_info = lyrics[2][2]
                 lyrics = lyrics[2][0]
             else:
                 song_info = lyrics[0][2]
                 lyrics = lyrics[0][0]
+
         # Step 4 合并歌词
         if isinstance(lyrics, Lyrics):
             merged_lyric = lyrics.merge(self.lyrics_order)
