@@ -9,7 +9,6 @@ from base64 import b64decode, b64encode
 from enum import Enum
 
 import requests
-from bs4 import BeautifulSoup
 
 from decryptor.eapi import eapi_params_encrypt, eapi_response_decrypt, get_cache_key
 
@@ -651,10 +650,9 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
             case SearchType.SONGLIST:
                 results = []
                 for songlist in response_json['data']['info']:
-                    name_soup = BeautifulSoup(songlist['specialname'], 'html.parser')
                     results.append({
                         'id': songlist['specialid'],
-                        'name': name_soup.get_text(),
+                        'name': songlist['specialname'],
                         'pic': songlist['imgurl'],  # 歌单封面
                         'count': songlist['songcount'],  # 歌曲数量
                         'time': songlist['publishtime'],
