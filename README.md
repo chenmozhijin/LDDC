@@ -11,13 +11,12 @@
 ## 功能
 
 - [x] 搜索QQ音乐、酷狗音乐、网易云音乐的单曲、专辑、歌单
-- [x] 下载整个 专辑、歌单 的歌词
-- [x] 为本地歌曲文件匹配歌词
+- [x] 一键下载整个 专辑、歌单 的歌词
+- [x] 一键为本地歌曲文件匹配歌词
 - [x] 自动转换为精准lrc格式
 - [x] 双击预览歌词,直接保存
 - [x] 多种类型(原文、译文、罗马音)歌词随意合并
 - [x] 保存路径多种占位符随意组合
-- [x] 无可用加密歌词时尝试获取普通歌词
 - [x] 支持打开本地的加密歌词
 - [x] 多平台支持
 
@@ -88,6 +87,6 @@
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=jixunmoe&repo=qmc-decode)](https://github.com/jixunmoe/qmc-decode)
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=parakeet-rs&repo=libparakeet)](https://github.com/parakeet-rs/libparakeet)
 
-### 音乐api
+### 音乐平台api
 
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=MCQTSS&repo=MCQTSS_QQMusic)](https://github.com/MCQTSS/MCQTSS_QQMusic)
