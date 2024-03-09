@@ -131,10 +131,7 @@ class SearchWorker(QRunnable):
 
         if self.source == Source.KG and isinstance(self.keyword, dict) and self.search_type == SearchType.LYRICS:
             # 为歌词搜索结果添加歌曲信息(歌词保存需要)
-            result = []
-            for i, item in enumerate(search_return):
-                result.append(self.keyword)
-                result[i].update(item)
+            result = [dict(self.keyword, **item) for item in search_return]
         else:
             result = search_return
         self.signals.result.emit(self.taskid, self.search_type.value, result)
@@ -198,9 +195,9 @@ class LyricProcessingWorker(QRunnable):
     def get_lyrics(self, song_info: dict) -> tuple[None | Lyrics, bool]:
         logging.debug(f"开始获取歌词：{song_info['id']}")
         from_cache = False
-        if ("lyrics", song_info["source"], song_info['id']) in cache:
-            lyrics = cache[("lyrics", song_info["source"], song_info['id'])]
-            logging.info(f"从缓存中获取歌词：源:{song_info['source']}, id:{song_info['id']}")
+        if ("lyrics", song_info["source"], song_info['id'], song_info.get("accesskey", "")) in cache:
+            lyrics = cache[("lyrics", song_info["source"], song_info['id'], song_info.get("accesskey", ""))]
+            logging.info(f"从缓存中获取歌词：源:{song_info['source']}, id:{song_info['id']}, accesskey: {song_info.get('accesskey', '无')}")
             from_cache = True
         if not from_cache:
             lyrics = Lyrics(song_info)
@@ -233,7 +230,7 @@ class LyricProcessingWorker(QRunnable):
                     return None, False
 
             if error1_type != LyricProcessingError.REQUEST and not from_cache:  # 如果不是请求错误则缓存
-                cache[("lyrics", song_info["source"], song_info['id'])] = lyrics
+                cache[("lyrics", song_info["source"], song_info['id'], song_info.get("accesskey", ""))] = lyrics
         return lyrics, from_cache
 
     def get_merged_lyric(self, song_info: dict, lyric_type: list) -> bool:
@@ -247,7 +244,7 @@ class LyricProcessingWorker(QRunnable):
         self.data_mutex.unlock()
 
         try:
-            merged_lyric = lyrics.merge(lyrics_order)
+            merged_lyric = lyrics.get_merge_lrc(lyrics_order)
         except Exception as e:
             logging.exception("合并歌词失败")
             self.signals.error.emit(f"合并歌词失败：{e}")
@@ -541,7 +538,7 @@ class LocalMatchWorker(QRunnable):
 
         # Step 4 合并歌词
         if isinstance(lyrics, Lyrics):
-            merged_lyric = lyrics.merge(self.lyrics_order)
+            merged_lyric = lyrics.get_merge_lrc(self.lyrics_order)
             return merged_lyric, song_info
         if 'artist' in info:
             if inst:

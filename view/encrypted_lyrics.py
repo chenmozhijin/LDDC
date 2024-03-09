@@ -85,7 +85,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
                 self.lyrics = Lyrics({"source": Source.QM})
                 self.lyrics.tags, lyric = qrc2list(lyrics)
                 self.lyrics["orig"] = lyric
-                lrc = self.lyrics.merge(["orig"])
+                lrc = self.lyrics.get_merge_lrc(["orig"])
             elif self.lyrics_type == "krc":
                 self.data_mutex.lock()
                 type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
@@ -95,7 +95,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
 
                 self.lyrics.tags, lyric = krc2dict(lyrics)
                 self.lyrics.update(lyric)
-                lrc = self.lyrics.merge(lyrics_order)
+                lrc = self.lyrics.get_merge_lrc(lyrics_order)
         except Exception as e:
             logging.exception("转换失败")
             QMessageBox.critical(self, "错误", f"转换失败：{e}")
@@ -109,7 +109,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
             self.data_mutex.lock()
             lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
             self.data_mutex.unlock()
-            self.plainTextEdit.setPlainText(self.lyrics.merge(lyrics_order))
+            self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order))
 
     def save(self) -> None:
         file_path, _ = QFileDialog.getSaveFileName(self, "保存文件", "", "LRC文件 (*.lrc)")

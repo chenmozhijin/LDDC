@@ -578,7 +578,7 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
             return "没有获取到可用的歌词(orig=None and ts=None)", LyricProcessingError.NOT_FOUND
         return None, None
 
-    def merge(self, lyrics_order: list) -> str:
+    def get_merge_lrc(self, lyrics_order: list) -> str:
         """
         合并歌词
         :param lyrics_order:歌词顺序,同时决定需要合并的类型
