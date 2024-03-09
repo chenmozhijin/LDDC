@@ -33,6 +33,7 @@ from utils.api import (
 )
 from utils.data import Data
 from utils.lyrics import LyricProcessingError, Lyrics
+from utils.song_info import file_extensions as audio_formats
 from utils.song_info import get_audio_file_info, parse_cue
 from utils.utils import (
     escape_filename,
@@ -576,11 +577,6 @@ class LocalMatchWorker(QRunnable):
             cue_audio_files = []
             cue_count = 0
             audio_file_paths = []
-            file_extensions = ['3g2', 'aac', 'aif', 'ape', 'apev2',
-                               'dff', 'dsf', 'flac', 'm4a', 'm4b', 'mid',
-                               'mp3', 'mp4', 'mpc', 'ofr', 'ofs', 'ogg',
-                               'oggflac', 'oggtheora', 'opus', 'spx', 'tak',
-                               'tta', 'wav', 'wma', 'wv']
             for root, _dirs, files in os.walk(self.song_path):
                 for file in files:
                     if not self.is_running:
@@ -599,7 +595,7 @@ class LocalMatchWorker(QRunnable):
                         except Exception as e:
                             logging.exception("处理cue文件时错误")
                             self.signals.error.emit(f"处理cue文件时错误:{e}", 0)
-                    elif file.lower().split(".")[-1] in file_extensions:
+                    elif file.lower().split(".")[-1] in audio_formats:
                         file_path = os.path.join(root, file)
                         audio_file_paths.append(file_path)
 

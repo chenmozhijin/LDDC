@@ -511,9 +511,9 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                 if 'lyricUser' in lyrics and 'nickname' in lyrics['lyricUser']:
                     tags.update({"by": lyrics['lyricUser']['nickname']})
                 if 'transUser' in lyrics and 'nickname' in lyrics['transUser']:
-                    if 'by' in tags:
+                    if 'by' in tags and tags['by'] != lyrics['transUser']['nickname']:
                         tags['by'] += f" & {lyrics['transUser']['nickname']}"
-                    else:
+                    elif 'by' not in tags:
                         tags.update({"by": lyrics['transUser']['nickname']})
                 self.tags = tags
                 if 'yrc' in lyrics and len(lyrics['yrc']['lyric']) != 0:

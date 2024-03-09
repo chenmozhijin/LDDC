@@ -8,6 +8,26 @@ from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 
+def aes_encrypt(data: str | bytes, key: bytes) -> bytes:
+    if isinstance(data, str):
+        data = data.encode()
+    backend = default_backend()
+    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=backend)  # noqa: S305
+    encryptor = cipher.encryptor()
+    padder = padding.PKCS7(128).padder()
+    padded_data = padder.update(data) + padder.finalize()
+    return encryptor.update(padded_data) + encryptor.finalize()
+
+
+def aes_decrypt(cipher_buffer: bytes, key: bytes) -> bytes:
+    backend = default_backend()
+    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=backend)  # noqa: S305
+    decryptor = cipher.decryptor()
+    unpadder = padding.PKCS7(128).unpadder()
+    decrypted_data = decryptor.update(cipher_buffer) + decryptor.finalize()
+    return unpadder.update(decrypted_data) + unpadder.finalize()
+
+
 def eapi_params_encrypt(path: bytes, params: dict) -> str:
     """
     eapi接口参数加密
@@ -19,12 +39,7 @@ def eapi_params_encrypt(path: bytes, params: dict) -> str:
     sign_src = b'nobody' + path + b'use' + params_bytes + b'md5forencrypt'
     sign = hashlib.md5(sign_src).hexdigest()  # noqa: S324
     aes_src = path + b'-36cd479b6b5-' + params_bytes + b'-36cd479b6b5-' + sign.encode()
-    backend = default_backend()
-    cipher = Cipher(algorithms.AES(b'e82ckenh8dichen8'), modes.ECB(), backend=backend)  # noqa: S305
-    encryptor = cipher.encryptor()
-    padder = padding.PKCS7(128).padder()
-    padded_data = padder.update(aes_src) + padder.finalize()
-    encrypted_data = encryptor.update(padded_data) + encryptor.finalize()
+    encrypted_data = aes_encrypt(aes_src, b'e82ckenh8dichen8')
     return f"params={binascii.hexlify(encrypted_data).upper().decode()}"
 
 
@@ -35,39 +50,20 @@ def eapi_params_decrypt(encrypted_text: str) -> dict:
     :return: 解密后的 dict 对象
     """
     encrypted_bytes = binascii.unhexlify(encrypted_text)
-    backend = default_backend()
-    cipher = Cipher(algorithms.AES(b'e82ckenh8dichen8'), modes.ECB(), backend=backend)  # noqa: S305
-    decryptor = cipher.decryptor()
-    unpadder = padding.PKCS7(128).unpadder()
-    decrypted_data = decryptor.update(encrypted_bytes) + decryptor.finalize()
-    unpadded_data = unpadder.update(decrypted_data) + unpadder.finalize()
-    decrypted_text = unpadded_data.decode()
+    decrypted_data = aes_decrypt(encrypted_bytes, b'e82ckenh8dichen8')
+    decrypted_text = decrypted_data.decode()
     parts = decrypted_text.split('-36cd479b6b5-')
     path = parts[0].encode()
-    params = parts[1].encode()
-    params = json.loads(params)
+    params = json.loads(parts[1])
     sign_src = b'nobody' + path + b'use' + json.dumps(params, separators=(',', ':')).encode() + b'md5forencrypt'
     m = hashlib.md5()  # noqa: S324
     m.update(sign_src)
     return params
 
 
-def eapi_response_decrypt(cipher_buffer: bytes) -> bytes:
-    backend = default_backend()
-    cipher = Cipher(algorithms.AES(b'e82ckenh8dichen8'), modes.ECB(), backend=backend)  # noqa: S305
-    decryptor = cipher.decryptor()
-    unpadder = padding.PKCS7(128).unpadder()
-    decrypted_data = decryptor.update(cipher_buffer) + decryptor.finalize()
-    return unpadder.update(decrypted_data) + unpadder.finalize()
-
-
 def get_cache_key(data: str | bytes) -> str:
-    if isinstance(data, str):
-        data = data.encode()
-    backend = default_backend()
-    cipher = Cipher(algorithms.AES(b")(13daqP@ssw0rd~"), modes.ECB(), backend=backend)  # noqa: S305
-    encryptor = cipher.encryptor()
-    padder = padding.PKCS7(128).padder()
-    padded_data = padder.update(data) + padder.finalize()
-    encrypted = encryptor.update(padded_data) + encryptor.finalize()
-    return b64encode(encrypted).decode()
+    return b64encode(aes_encrypt(data, b")(13daqP@ssw0rd~")).decode()
+
+
+def eapi_response_decrypt(cipher_buffer: bytes) -> bytes:
+    return aes_decrypt(cipher_buffer, b'e82ckenh8dichen8')
