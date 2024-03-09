@@ -5,4 +5,4 @@ lxml
 mutagen
 diskcache
 chardet
-pycryptodome
+cryptography
