@@ -140,7 +140,7 @@
             <item>
              <widget class="QCheckBox" name="skip_inst_lyrics_checkBox">
               <property name="text">
-               <string>保存专辑/歌单歌词时跳过纯音乐</string>
+               <string>保存专辑/歌单歌词/本地匹配时跳过纯音乐</string>
               </property>
              </widget>
             </item>

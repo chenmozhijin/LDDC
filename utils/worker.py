@@ -460,13 +460,14 @@ class LocalMatchWorker(QRunnable):
         scores = sorted(scores, key=lambda x: x[1], reverse=True)
         if len(scores) == 0:
             return None, None
-        if (self.skip_inst_lyrics and
-            scores[0][0]['source'] == Source.KG and
+        if (self.skip_inst_lyrics and scores[0][0]['source'] == Source.KG and
                 scores[0][0]['language'] in ["纯音乐", '伴奏']):
             if 'artist' in info:
-                msg = f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} 搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐"
+                msg = (f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} "
+                       f"搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐")
             else:
-                msg = f"[{self.current_index}/{self.total_index}]本地: {info['title']} 搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐"
+                msg = (f"[{self.current_index}/{self.total_index}]本地: {info['title']} "
+                       f"搜索结果:{scores[0][0]['artist']} - {scores[0][0]['title']} 跳过纯音乐")
             self.signals.massage.emit(msg)
             return None, None
 
@@ -518,10 +519,11 @@ class LocalMatchWorker(QRunnable):
             lyric, from_cache = self.LyricProcessingWorker.get_lyrics(song_info)
             if lyric is not None:
                 obtained_sources.append(song_info['source'])
-                logging.debug(f"lyric['orig']:{lyric['orig']}")
                 if (self.skip_inst_lyrics and len(lyric["orig"]) != 0 and
                     (lyric["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or
-                     lyric["orig"][0][2][0][2] == "纯音乐，请欣赏")):
+                     lyric["orig"][0][2][0][2] == "纯音乐，请欣赏") or
+                    (song_info['source'] == Source.KG and
+                     song_info['language'] in ["纯音乐", '伴奏'])):
                     inst = True
                     inst_score = score
                     continue
