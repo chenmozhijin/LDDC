@@ -73,6 +73,7 @@ ignore = [
     "FBT001", 
     "FBT003",
     "PLR2004",
+    "FBT002",
 ]
 
 [lint.pylint]

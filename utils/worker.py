@@ -49,7 +49,7 @@ match sys.platform:
     case _:
         cache_dir = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "cache")
 cache = Cache(cache_dir)
-cache_version = 2
+cache_version = 3
 if "version" not in cache or cache["version"] != cache_version:
     cache.clear()
 cache["version"] = cache_version
@@ -84,17 +84,18 @@ class CheckUpdate(QRunnable):
 
 class SearchSignal(QObject):
     error = Signal(str)
-    result = Signal(int, int, list)
+    result = Signal(int, SearchType, list)
 
 
 class SearchWorker(QRunnable):
 
-    def __init__(self, taskid: int, keyword: str | dict, search_type: SearchType, source: Source) -> None:
+    def __init__(self, taskid: int, keyword: str | dict, search_type: SearchType, source: Source, page: int | str = 1) -> None:
         super().__init__()
         self.taskid = taskid
         self.keyword = keyword  # str: 关键字, dict: 歌曲信息
         self.search_type = search_type
         self.source = source
+        self.page = int(page)
         self.signals = SearchSignal()
 
     def run(self) -> None:
@@ -104,21 +105,21 @@ class SearchWorker(QRunnable):
                        "duration": self.keyword["duration"], "hash": self.keyword["hash"]}
         else:
             keyword = self.keyword
-        if ("serach", str(keyword), self.search_type, self.source) in cache:
+        if ("serach", str(keyword), self.search_type, self.source, self.page) in cache:
             logging.debug(f"从缓存中获取搜索结果,类型:{self.search_type}, 关键字:{keyword}")
-            search_return = cache[("serach", str(keyword), self.search_type, self.source)]
+            search_return = cache[("serach", str(keyword), self.search_type, self.source, self.page)]
         else:
             for _i in range(3):
                 match self.source:
                     case Source.QM:
-                        search_return = qm_search(keyword, self.search_type)
+                        search_return = qm_search(keyword, self.search_type, self.page)
                     case Source.KG:
                         if isinstance(keyword, dict) and self.search_type == SearchType.LYRICS:
                             search_return = kg_search(keyword, SearchType.LYRICS)
                         else:
-                            search_return = kg_search(keyword, self.search_type)
+                            search_return = kg_search(keyword, self.search_type, self.page)
                     case Source.NE:
-                        search_return = ne_search(keyword, self.search_type)
+                        search_return = ne_search(keyword, self.search_type, self.page)
                 if isinstance(search_return, str):
                     continue
                 break
@@ -128,14 +129,14 @@ class SearchWorker(QRunnable):
             if not search_return:
                 self.signals.error.emit("没有任何结果")
                 return
-            cache[("serach", str(keyword), self.search_type, self.source)] = search_return
+            cache[("serach", str(keyword), self.search_type, self.source, self.page)] = search_return
 
         if self.source == Source.KG and isinstance(self.keyword, dict) and self.search_type == SearchType.LYRICS:
             # 为歌词搜索结果添加歌曲信息(歌词保存需要)
             result = [dict(self.keyword, **item) for item in search_return]
         else:
             result = search_return
-        self.signals.result.emit(self.taskid, self.search_type.value, result)
+        self.signals.result.emit(self.taskid, self.search_type, result)
         logging.debug("发送结果信号")
 
 
@@ -385,9 +386,9 @@ class LocalMatchWorker(QRunnable):
             for keyword in keywords:
                 if not self.is_running:
                     return None, None
-                if ("serach", str(keyword), SearchType.SONG, source) in cache:
+                if ("serach", str(keyword), SearchType.SONG, source, 1) in cache:
                     logging.debug(f"从缓存中获取搜索结果,类型: 歌曲, 关键字:{keyword}")
-                    search_return = cache[("serach", str(keyword), SearchType.SONG, source)]
+                    search_return = cache[("serach", str(keyword), SearchType.SONG, source, 1)]
                     from_cache = True
 
                 if not from_cache:
@@ -405,7 +406,7 @@ class LocalMatchWorker(QRunnable):
                     continue
 
                 if not from_cache:
-                    cache[("serach", str(keyword), SearchType.SONG, source)] = search_return
+                    cache[("serach", str(keyword), SearchType.SONG, source, 1)] = search_return
 
                 if (info["artist"] is not None and
                     keyword == f"{info['artist']} - {info['title']}" and

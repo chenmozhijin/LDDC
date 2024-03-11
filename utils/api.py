@@ -124,7 +124,14 @@ def eapi_get_params_header() -> str:
     }, ensure_ascii=False, separators=(',', ':'))
 
 
-def ne_search(keyword: str, search_type: SearchType) -> dict:
+def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> dict:
+    """
+    网易云音乐搜索
+    :param keyword:关键字
+    :param search_type搜索类型
+    :param page页码(从1开始)
+    :return: 搜索结果(list)或错误(str)
+    """
     match search_type:
         case SearchType.SONG:
             param_type = "1"
@@ -143,9 +150,9 @@ def ne_search(keyword: str, search_type: SearchType) -> dict:
         "type": param_type,
         "queryCorrect": "true",
         "s": keyword,
-        "offset": "0",
+        "offset": str((int(page) - 1) * 20),
         "total": "true",
-        "limit": "100",
+        "limit": "20",
         "e_r": True,
         "header": eapi_get_params_header(),
     }
@@ -352,11 +359,12 @@ def qm_get_lyric(info: dict[str: str]) -> dict:
         return data
 
 
-def qm_search(keyword: str, search_type: SearchType) -> list | str:
+def qm_search(keyword: str, search_type: SearchType, page: int | str = 1) -> list | str:
     """
-    搜索
+    QQ音乐搜索
     :param keyword:关键字
     :param search_type搜索类型
+    :param page页码(从1开始)
     :return: 搜索结果(list)或错误(str)
     """
     logging.debug(f"开始搜索：{keyword}, 类型为{search_type}")
@@ -379,8 +387,8 @@ def qm_search(keyword: str, search_type: SearchType) -> list | str:
             "method": "DoSearchForQQMusicDesktop",
             "module": "music.search.SearchCgiService",
             "param": {
-                "num_per_page": "20",
-                "page_num": "1",
+                "num_per_page": 20,
+                "page_num": int(page),
                 "query": keyword,
                 "search_type": search_type.value,
             },
@@ -573,6 +581,13 @@ def kgsonglist2result(songlist: list, list_type: str = "search") -> list:
 
 
 def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str | list:
+    """
+    酷狗音乐搜索
+    :param keyword:关键字
+    :param search_type搜索类型
+    :param page页码(从1开始)
+    :return: 搜索结果(list)或错误(str)
+    """
     if isinstance(info, str):
         keyword = info
     elif isinstance(info, dict):
@@ -623,7 +638,7 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
                 "plat": "0",
                 "keyword": keyword,
                 "pagesize": "20",
-                "page": "1",
+                "page": page,
                 "sver": "2",
                 "with_res_tag": "1",
             }
