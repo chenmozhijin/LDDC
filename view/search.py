@@ -39,7 +39,7 @@ class SearchWidget(QWidget, Ui_search):
         self.search_type = SearchType.SONG
 
         self.songlist_result = None
-        self.get_next_page = False
+        self.reset_page_status()
         self.search_info = {'keyword': None, 'search_type': None, 'source': None, 'page': None}  # 搜索的信息
         self.search_result = None
         self.search_lyrics_result = None
@@ -259,7 +259,6 @@ class SearchWidget(QWidget, Ui_search):
     @Slot(str)
     def search_error_slot(self, error: str) -> None:
         """搜索错误时调用"""
-        self.get_next_page = False
         self.search_pushButton.setText('搜索')
         self.search_pushButton.setEnabled(True)
         QMessageBox.critical(self, "搜索错误", error)
@@ -267,7 +266,7 @@ class SearchWidget(QWidget, Ui_search):
     @Slot()
     def search_button_clicked(self) -> None:
         """搜索按钮被点击"""
-        self.get_next_page = False
+        self.reset_page_status()
         keyword = self.search_keyword_lineEdit.text()
         if keyword == "":
             QMessageBox.warning(self, "搜索错误", "请输入搜索关键字")
@@ -422,7 +421,7 @@ class SearchWidget(QWidget, Ui_search):
         获取歌单、专辑中的歌曲
         :param result_type: album或songlist
         """
-        self.get_next_page = False
+        self.reset_page_status()
         self.return_toolButton.setEnabled(True)
         self.taskid["results_table"] += 1
         if result_type == "album":
@@ -470,7 +469,7 @@ class SearchWidget(QWidget, Ui_search):
         if (info['source'] == Source.KG and info['language'] in ["纯音乐", '伴奏'] and
            QMessageBox.question(self, "提示", "是否为纯音乐搜索歌词", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)) == QMessageBox.No:
             return
-        self.get_next_page = False
+        self.reset_page_status()
         self.taskid["results_table"] += 1
         worker = SearchWorker(self.taskid["results_table"],
                               info,
@@ -508,17 +507,38 @@ class SearchWidget(QWidget, Ui_search):
             case "album" | "songlist":  # 如果结果表格显的是搜索结果的专辑、歌单
                 self.get_songlist_result(result_type[1], info)
 
+    def reset_page_status(self) -> None:
+        """重置有关页码的状态(正在获取下一页、已获取所有页)"""
+        self.get_next_page = False
+        self.all_results_obtained = False
+
     @Slot(int, SearchType, list)
     def search_nextpage_result_slot(self, taskid: int, search_type: SearchType, result: list) -> None:
         if taskid != self.taskid["results_table"]:
             return
         self.get_next_page = False
 
+        self.search_info['page'] += 1
         last_row = self.results_tableWidget.rowCount() - 1
         self.results_tableWidget.removeRow(last_row)
 
         self.update_result_table(("search", search_type), result, False)
         self.search_result["result"].extend(result)
+
+    @Slot(str)
+    def search_nextpage_error(self, error: str) -> None:
+        self.get_next_page = False
+        last_row = self.results_tableWidget.rowCount() - 1
+        if error == "没有任何结果":
+            self.all_results_obtained = True
+
+            # 创建"没有更多结果"的 QTableWidgetItem
+            nomore_item = QTableWidgetItem("没有更多结果")
+            nomore_item.setTextAlignment(0x0004 | 0x0080)  # 设置水平和垂直居中对齐
+            self.results_tableWidget.setItem(last_row, 0, nomore_item)
+        else:
+            self.results_tableWidget.removeRow(last_row)
+            QMessageBox.critical(self, "错误", error)
 
     def results_table_scroll_changed(self, value: int) -> None:
         # 判断是否已经滚动到了底部
@@ -531,7 +551,7 @@ class SearchWidget(QWidget, Ui_search):
         if (result_type[0] == "search" and
             not self.get_next_page and
             self.search_result is not None and
-                len(self.search_result["result"]) % 20 == 0):
+                not self.all_results_obtained):
             self.get_next_page = True
 
             # 创建加载中的 QTableWidgetItem
@@ -547,5 +567,5 @@ class SearchWidget(QWidget, Ui_search):
             self.taskid["results_table"] += 1
             worker = SearchWorker(self.taskid["results_table"], self.search_info['keyword'], self.search_info['search_type'], self.search_info['source'], self.search_info['page'] + 1)
             worker.signals.result.connect(self.search_nextpage_result_slot)
-            worker.signals.error.connect(self.search_error_slot)
+            worker.signals.error.connect(self.search_nextpage_error)
             self.threadpool.start(worker)
