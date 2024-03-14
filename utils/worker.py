@@ -560,10 +560,10 @@ class LocalMatchWorker(QRunnable):
                     if file.lower().endswith('.cue'):
                         file_path = os.path.join(root, file)
                         try:
-                            songs, audio_file_paths = parse_cue(file_path)
+                            songs, cue_audio_file_paths = parse_cue(file_path)
                             if len(songs) > 0:
                                 song_infos.extend(songs)
-                                cue_audio_files.extend(audio_file_paths)
+                                cue_audio_files.extend(cue_audio_file_paths)
                                 cue_count += 1
                             else:
                                 logging.warning(f"没有在cue文件 {file_path} 解析到歌曲")
