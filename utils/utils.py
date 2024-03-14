@@ -2,16 +2,46 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 from difflib import SequenceMatcher
 
+from utils.enum import LyricsFormat
+
+
+def get_divmod_time(ms: int) -> tuple[int, int, int, int]:
+    total_s, ms = divmod(ms, 1000)
+    h, remainder = divmod(total_s, 3600)
+    m, s = divmod(remainder, 60)
+    return h, m, s, ms
+
 
 def ms2formattime(ms: int) -> str:
-    m, ms = divmod(ms, 60000)
-    s, ms = divmod(ms, 1000)
+    _h, m, s, ms = get_divmod_time(ms)
     return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"
+
+
+def ms2srt_timestamp(ms: int) -> str:
+    h, m, s, ms = get_divmod_time(ms)
+
+    return f"{int(h):02d}:{int(m):02d}:{int(s):02d},{int(ms):03d}"
+
+
+def ms2ass_timestamp(ms: int) -> str:
+    h, m, s, ms = get_divmod_time(ms)
+
+    return f"{int(h):02d}:{int(m):02d}:{int(s):02d}.{int(ms):03d}"
 
 
 def time2ms(m: int | str, s: int | str, ms: int | str) -> int:
     """时间转毫秒"""
     return (int(m) * 60 + int(s)) * 1000 + int(ms)
+
+
+def get_lyrics_format_ext(lyrics_format: LyricsFormat) -> str:
+    match lyrics_format:
+        case LyricsFormat.VERBATIMLRC | LyricsFormat.LINEBYLINELRC:
+            return ".lrc"
+        case LyricsFormat.SRT:
+            return ".srt"
+        case LyricsFormat.ASS:
+            return ".ass"
 
 
 def str2log_level(level: str) -> int:

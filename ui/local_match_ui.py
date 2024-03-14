@@ -174,6 +174,37 @@ class Ui_local_match(object):
         self.groupBox_2.setObjectName(u"groupBox_2")
         self.gridLayout_2 = QGridLayout(self.groupBox_2)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.label_9 = QLabel(self.groupBox_2)
+        self.label_9.setObjectName(u"label_9")
+
+        self.horizontalLayout_3.addWidget(self.label_9)
+
+        self.original_checkBox = QCheckBox(self.groupBox_2)
+        self.original_checkBox.setObjectName(u"original_checkBox")
+        self.original_checkBox.setChecked(True)
+
+        self.horizontalLayout_3.addWidget(self.original_checkBox)
+
+        self.translate_checkBox = QCheckBox(self.groupBox_2)
+        self.translate_checkBox.setObjectName(u"translate_checkBox")
+        sizePolicy1.setHeightForWidth(self.translate_checkBox.sizePolicy().hasHeightForWidth())
+        self.translate_checkBox.setSizePolicy(sizePolicy1)
+        self.translate_checkBox.setChecked(True)
+
+        self.horizontalLayout_3.addWidget(self.translate_checkBox, 0, Qt.AlignLeft)
+
+        self.romanized_checkBox = QCheckBox(self.groupBox_2)
+        self.romanized_checkBox.setObjectName(u"romanized_checkBox")
+        sizePolicy1.setHeightForWidth(self.romanized_checkBox.sizePolicy().hasHeightForWidth())
+        self.romanized_checkBox.setSizePolicy(sizePolicy1)
+
+        self.horizontalLayout_3.addWidget(self.romanized_checkBox, 0, Qt.AlignLeft)
+
+
+        self.gridLayout_2.addLayout(self.horizontalLayout_3, 0, 0, 1, 1)
+
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.verticalLayout_2 = QVBoxLayout()
@@ -239,38 +270,28 @@ class Ui_local_match(object):
         self.horizontalLayout_4.addItem(self.horizontalSpacer_4)
 
 
-        self.gridLayout_2.addLayout(self.horizontalLayout_4, 1, 0, 1, 1)
+        self.gridLayout_2.addLayout(self.horizontalLayout_4, 2, 0, 1, 1)
 
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.label_9 = QLabel(self.groupBox_2)
-        self.label_9.setObjectName(u"label_9")
+        self.horizontalLayout_9 = QHBoxLayout()
+        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
+        self.label_10 = QLabel(self.groupBox_2)
+        self.label_10.setObjectName(u"label_10")
+        sizePolicy2.setHeightForWidth(self.label_10.sizePolicy().hasHeightForWidth())
+        self.label_10.setSizePolicy(sizePolicy2)
 
-        self.horizontalLayout_3.addWidget(self.label_9)
+        self.horizontalLayout_9.addWidget(self.label_10)
 
-        self.original_checkBox = QCheckBox(self.groupBox_2)
-        self.original_checkBox.setObjectName(u"original_checkBox")
-        self.original_checkBox.setChecked(True)
+        self.lyricsformat_comboBox = QComboBox(self.groupBox_2)
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.setObjectName(u"lyricsformat_comboBox")
 
-        self.horizontalLayout_3.addWidget(self.original_checkBox)
-
-        self.translate_checkBox = QCheckBox(self.groupBox_2)
-        self.translate_checkBox.setObjectName(u"translate_checkBox")
-        sizePolicy1.setHeightForWidth(self.translate_checkBox.sizePolicy().hasHeightForWidth())
-        self.translate_checkBox.setSizePolicy(sizePolicy1)
-        self.translate_checkBox.setChecked(True)
-
-        self.horizontalLayout_3.addWidget(self.translate_checkBox, 0, Qt.AlignLeft)
-
-        self.romanized_checkBox = QCheckBox(self.groupBox_2)
-        self.romanized_checkBox.setObjectName(u"romanized_checkBox")
-        sizePolicy1.setHeightForWidth(self.romanized_checkBox.sizePolicy().hasHeightForWidth())
-        self.romanized_checkBox.setSizePolicy(sizePolicy1)
-
-        self.horizontalLayout_3.addWidget(self.romanized_checkBox, 0, Qt.AlignLeft)
+        self.horizontalLayout_9.addWidget(self.lyricsformat_comboBox)
 
 
-        self.gridLayout_2.addLayout(self.horizontalLayout_3, 0, 0, 1, 1)
+        self.gridLayout_2.addLayout(self.horizontalLayout_9, 1, 0, 1, 1)
 
 
         self.verticalLayout.addWidget(self.groupBox_2)
@@ -328,6 +349,10 @@ class Ui_local_match(object):
         self.lyrics_filename_mode_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"\u4e0e\u6b4c\u66f2\u6587\u4ef6\u540d\u76f8\u540c", None))
 
         self.groupBox_2.setTitle(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd", None))
+        self.label_9.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u7c7b\u578b:", None))
+        self.original_checkBox.setText(QCoreApplication.translate("local_match", u"\u539f\u6587", None))
+        self.translate_checkBox.setText(QCoreApplication.translate("local_match", u"\u8bd1\u6587", None))
+        self.romanized_checkBox.setText(QCoreApplication.translate("local_match", u"\u7f57\u9a6c\u97f3", None))
         self.label_7.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6765\u6e90:", None))
         self.qm_checkBox.setText(QCoreApplication.translate("local_match", u"QQ\u97f3\u4e50", None))
         self.ne_checkBox.setText(QCoreApplication.translate("local_match", u"\u7f51\u6613\u4e91\u97f3\u4e50", None))
@@ -344,10 +369,12 @@ class Ui_local_match(object):
         ___qlistwidgetitem2.setText(QCoreApplication.translate("local_match", u"\u7f51\u6613\u4e91\u97f3\u4e50", None));
         self.source_listWidget.setSortingEnabled(__sortingEnabled)
 
-        self.label_9.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u7c7b\u578b:", None))
-        self.original_checkBox.setText(QCoreApplication.translate("local_match", u"\u539f\u6587", None))
-        self.translate_checkBox.setText(QCoreApplication.translate("local_match", u"\u8bd1\u6587", None))
-        self.romanized_checkBox.setText(QCoreApplication.translate("local_match", u"\u7f57\u9a6c\u97f3", None))
+        self.label_10.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u683c\u5f0f:", None))
+        self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"LRC(\u9010\u5b57)", None))
+        self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"LRC(\u9010\u884c)", None))
+        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"SRT", None))
+        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("local_match", u"ASS", None))
+
         self.start_cancel_pushButton.setText(QCoreApplication.translate("local_match", u"\u5f00\u59cb\u5339\u914d", None))
     # retranslateUi
 

@@ -15,6 +15,7 @@ from PySide6.QtCore import (
 )
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
@@ -68,6 +69,20 @@ class Ui_encrypted_lyrics(object):
 
         self.horizontalLayout_2.addWidget(self.romanized_checkBox, 0, Qt.AlignLeft)
 
+        self.label_2 = QLabel(encrypted_lyrics)
+        self.label_2.setObjectName(u"label_2")
+
+        self.horizontalLayout_2.addWidget(self.label_2)
+
+        self.lyricsformat_comboBox = QComboBox(encrypted_lyrics)
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.setObjectName(u"lyricsformat_comboBox")
+
+        self.horizontalLayout_2.addWidget(self.lyricsformat_comboBox)
+
 
         self.verticalLayout.addLayout(self.horizontalLayout_2)
 
@@ -110,8 +125,14 @@ class Ui_encrypted_lyrics(object):
         self.original_checkBox.setText(QCoreApplication.translate("encrypted_lyrics", u"\u539f\u6587", None))
         self.translate_checkBox.setText(QCoreApplication.translate("encrypted_lyrics", u"\u8bd1\u6587", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("encrypted_lyrics", u"\u7f57\u9a6c\u97f3", None))
+        self.label_2.setText(QCoreApplication.translate("encrypted_lyrics", u"\u8f6c\u6362\u7684\u683c\u5f0f\uff1a", None))
+        self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("encrypted_lyrics", u"LRC(\u9010\u5b57)", None))
+        self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("encrypted_lyrics", u"LRC(\u9010\u884c)", None))
+        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("encrypted_lyrics", u"SRT", None))
+        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("encrypted_lyrics", u"ASS", None))
+
         self.open_pushButton.setText(QCoreApplication.translate("encrypted_lyrics", u"\u6253\u5f00\u52a0\u5bc6\u6b4c\u8bcd", None))
-        self.convert_pushButton.setText(QCoreApplication.translate("encrypted_lyrics", u"\u8f6c\u6362\u4e3alrc", None))
+        self.convert_pushButton.setText(QCoreApplication.translate("encrypted_lyrics", u"\u8f6c\u6362\u683c\u5f0f", None))
         self.save_pushButton.setText(QCoreApplication.translate("encrypted_lyrics", u"\u4fdd\u5b58\u6b4c\u8bcd", None))
     # retranslateUi
 

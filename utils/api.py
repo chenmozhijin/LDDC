@@ -6,11 +6,11 @@ import random
 import re
 import time
 from base64 import b64decode, b64encode
-from enum import Enum
 
 import requests
 
 from decryptor.eapi import eapi_params_encrypt, eapi_response_decrypt, get_cache_key
+from utils.enum import SearchType, Source
 
 
 def get_latest_version() -> tuple[bool, str]:
@@ -24,27 +24,6 @@ def get_latest_version() -> tuple[bool, str]:
             latest_version = latest_release["tag_name"]
             return True, latest_version
         return False, "获取最新版本信息失败"
-
-
-class SearchType(Enum):
-    SONG = 0
-    ARTIST = 1
-    ALBUM = 2
-    SONGLIST = 3
-    LYRICS = 7
-
-
-class Source(Enum):
-    QM = 1
-    KG = 2
-    NE = 3
-
-    # 定义 Source 类的序列化方法
-    def __json__(self, obj: any) -> str:
-        if isinstance(obj, Source):
-            return str(obj.name)
-        msg = f"Object of type {obj.__class__.__name__} is not JSON serializable"
-        raise TypeError(msg)
 
 
 json.JSONEncoder.default = Source.__json__

@@ -69,6 +69,37 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>转换的格式：</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="lyricsformat_comboBox">
+       <item>
+        <property name="text">
+         <string>LRC(逐字)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>LRC(逐行)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>SRT</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>ASS</string>
+        </property>
+       </item>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
@@ -89,7 +120,7 @@
      <item>
       <widget class="QPushButton" name="convert_pushButton">
        <property name="text">
-        <string>转换为lrc</string>
+        <string>转换格式</string>
        </property>
       </widget>
      </item>

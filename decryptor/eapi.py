@@ -1,7 +1,7 @@
 import binascii
 import hashlib
 import json
-from base64 import b64encode
+from base64 import b64decode, b64encode
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
@@ -63,6 +63,10 @@ def eapi_params_decrypt(encrypted_text: str) -> dict:
 
 def get_cache_key(data: str | bytes) -> str:
     return b64encode(aes_encrypt(data, b")(13daqP@ssw0rd~")).decode()
+
+
+def cache_key_decrypt(data: str | bytes) -> str:
+    return aes_decrypt(b64decode(data), b")(13daqP@ssw0rd~").decode()
 
 
 def eapi_response_decrypt(cipher_buffer: bytes) -> bytes:

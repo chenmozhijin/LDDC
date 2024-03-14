@@ -5,7 +5,6 @@ import os
 import re
 import sys
 import time
-from enum import Enum
 
 from diskcache import Cache
 from PySide6.QtCore import (
@@ -20,8 +19,6 @@ from PySide6.QtCore import (
 
 from ui.sidebar_window import SidebarWindow
 from utils.api import (
-    SearchType,
-    Source,
     get_latest_version,
     kg_get_songlist,
     kg_search,
@@ -32,12 +29,21 @@ from utils.api import (
     qm_search,
 )
 from utils.data import Data
-from utils.lyrics import LyricProcessingError, Lyrics
+from utils.enum import (
+    LocalMatchFileNameMode,
+    LocalMatchSaveMode,
+    LyricsFormat,
+    LyricsProcessingError,
+    SearchType,
+    Source,
+)
+from utils.lyrics import Lyrics
 from utils.song_info import file_extensions as audio_formats
 from utils.song_info import get_audio_file_info, parse_cue
 from utils.utils import (
     escape_filename,
     escape_path,
+    get_lyrics_format_ext,
     get_save_path,
     replace_info_placeholders,
     text_difference,
@@ -206,7 +212,7 @@ class LyricProcessingWorker(QRunnable):
 
             for _i in range(3):  # 重试3次
                 error1, error1_type = lyrics.download_and_decrypt()
-                if error1_type != LyricProcessingError.REQUEST:  # 如果正常或不是请求错误不重试
+                if error1_type != LyricsProcessingError.REQUEST:  # 如果正常或不是请求错误不重试
                     break
             if 'title' in song_info:
                 song_name_str = "歌名:" + song_info['title']
@@ -215,7 +221,7 @@ class LyricProcessingWorker(QRunnable):
                 self.signals.error.emit(f"获取歌名:{song_name_str}的加密歌词失败:{error1}")
                 return None, False
 
-            if error1_type != LyricProcessingError.REQUEST and not from_cache:  # 如果不是请求错误则缓存
+            if error1_type != LyricsProcessingError.REQUEST and not from_cache:  # 如果不是请求错误则缓存
                 cache[("lyrics", song_info["source"], song_info['id'], song_info.get("accesskey", ""))] = lyrics
         return lyrics, from_cache
 
@@ -230,7 +236,7 @@ class LyricProcessingWorker(QRunnable):
         self.data_mutex.unlock()
 
         try:
-            merged_lyric = lyrics.get_merge_lrc(lyrics_order)
+            merged_lyric = lyrics.get_merge_lrc(lyrics_order, self.task["lyrics_format"])
         except Exception as e:
             logging.exception("合并歌词失败")
             self.signals.error.emit(f"合并歌词失败：{e}")
@@ -240,10 +246,10 @@ class LyricProcessingWorker(QRunnable):
             return from_cache
 
         if self.task["type"] == "get_merged_lyric":
-            self.signals.result.emit(self.taskid, {'info': song_info, 'lrc': lyrics, 'merged_lyric': merged_lyric})
+            self.signals.result.emit(self.taskid, {'info': {**song_info, 'lyrics_format': self.task["lyrics_format"]}, 'lrc': lyrics, 'merged_lyric': merged_lyric})
 
         elif self.task["type"] == "get_list_lyrics":
-            save_folder, file_name = get_save_path(self.task["save_folder"], self.task["lyrics_file_name_format"] + ".lrc", song_info, lyrics_order)
+            save_folder, file_name = get_save_path(self.task["save_folder"], self.task["lyrics_file_name_format"] + get_lyrics_format_ext(self.task["lyrics_format"]), song_info, lyrics_order)
             save_path = os.path.join(save_folder, file_name)  # 获取保存路径
             inst = bool(self.skip_inst_lyrics and len(lyrics["orig"]) != 0 and
                         (lyrics["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or
@@ -297,19 +303,6 @@ class GetSongListWorker(QRunnable):
             self.signals.error.emit("获取歌曲列表失败, 未知错误")
 
 
-class LocalMatchSaveMode(Enum):
-    # 镜像/歌曲/指定
-    MIRROR = 0
-    SONG = 1
-    SPECIFY = 2
-
-
-class LocalMatchFileNameMode(Enum):
-    # 歌曲/格式
-    SONG = 0
-    FORMAT = 1
-
-
 class LocalMatchSignal(QObject):
     massage = Signal(str)
     error = Signal(str, int)
@@ -319,23 +312,19 @@ class LocalMatchSignal(QObject):
 class LocalMatchWorker(QRunnable):
 
     def __init__(self,
-                 song_path: str,
-                 save_path: str | None,
-                 save_mode: LocalMatchSaveMode,
-                 flienmae_mode: LocalMatchFileNameMode,
-                 lyrics_order: dict,
-                 sources: list,
+                 infos: dict,
                  threadpool: QThreadPool,
                  data: Data,
                  ) -> None:
         super().__init__()
         self.signals = LocalMatchSignal()
-        self.song_path = song_path
-        self.save_path = save_path
-        self.save_mode = save_mode
-        self.fliename_mode = flienmae_mode
-        self.lyrics_order = lyrics_order
-        self.sources = sources
+        self.song_path: str = infos["song_path"]
+        self.save_path: str = infos["save_path"]
+        self.save_mode: LocalMatchSaveMode = infos["save_mode"]
+        self.fliename_mode: LocalMatchFileNameMode = infos["flienmae_mode"]
+        self.lyrics_order: list[str] = infos["lyrics_order"]
+        self.lyrics_format: LyricsFormat = infos["lyrics_format"]
+        self.sources: list = infos["sources"]
         self.threadpool = threadpool
         self.data = data
         self.data_mutex = data.mutex
@@ -349,7 +338,7 @@ class LocalMatchWorker(QRunnable):
         self.file_name_format = self.data.cfg["lyrics_file_name_format"]
         self.data_mutex.unlock()
 
-        self.LyricProcessingWorker = LyricProcessingWorker({}, self.data)
+        self.LyricProcessingWorker = LyricProcessingWorker({"lyrics_format": infos["lyrics_format"]}, self.data)
         self.LyricProcessingWorker.signals.error.connect(self.lyric_processing_error)
 
         self.min_title_pattern1 = re.compile(r"\(.*\)$|（.*）$|<.*>$|\[.*\]$|＜.*＞$|[-～~].*[-～~]$")
@@ -536,7 +525,7 @@ class LocalMatchWorker(QRunnable):
 
         # Step 4 合并歌词
         if isinstance(lyrics, Lyrics):
-            merged_lyric = lyrics.get_merge_lrc(self.lyrics_order)
+            merged_lyric = lyrics.get_merge_lrc(self.lyrics_order, self.lyrics_format)
             return merged_lyric, song_info
         if 'artist' in info:
             if inst:
@@ -641,12 +630,12 @@ class LocalMatchWorker(QRunnable):
                         case LocalMatchFileNameMode.SONG:
                             if song_info["type"] == "cue":
                                 save_folder = os.path.join(save_folder, os.path.splitext(os.path.basename(song_info["file_path"]))[0])
-                                save_filename = escape_filename(replace_info_placeholders(self.file_name_format, lrc_info, self.lyrics_order)) + ".lrc"
+                                save_filename = escape_filename(replace_info_placeholders(self.file_name_format, lrc_info, self.lyrics_order)) + get_lyrics_format_ext(self.lyrics_format)
                             else:
-                                save_filename = os.path.splitext(os.path.basename(song_info["file_path"]))[0] + ".lrc"
+                                save_filename = os.path.splitext(os.path.basename(song_info["file_path"]))[0] + get_lyrics_format_ext(self.lyrics_format)
 
                         case LocalMatchFileNameMode.FORMAT:
-                            save_filename = escape_filename(replace_info_placeholders(self.file_name_format, lrc_info, self.lyrics_order)) + ".lrc"
+                            save_filename = escape_filename(replace_info_placeholders(self.file_name_format, lrc_info, self.lyrics_order)) + get_lyrics_format_ext(self.lyrics_format)
 
                     save_path = os.path.join(save_folder, save_filename)
                     try:

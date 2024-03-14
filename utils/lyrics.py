@@ -4,36 +4,25 @@ import json
 import logging
 import re
 from base64 import b64decode
-from enum import Enum
 
-from decryptor import QrcType, krc_decrypt, qrc_decrypt
-from utils.api import Source, get_krc, ne_get_lyric, qm_get_lyric
-from utils.utils import ms2formattime, time2ms
+from decryptor import krc_decrypt, qrc_decrypt
+from utils.api import get_krc, ne_get_lyric, qm_get_lyric
+from utils.enum import LyricsFormat, LyricsProcessingError, LyricsType, QrcType, Source
+from utils.utils import ms2ass_timestamp, ms2formattime, ms2srt_timestamp, time2ms
 
-
-class LyricType(Enum):
-    PlainText = 0
-    JSONVERBATIM = 1
-    JSONLINE = 2
-    LRC = 3
-    QRC = 4
-    KRC = 5
-    YRC = 6
+try:
+    main = __import__("__main__")
+    version = main.__version__.replace("v", "")
+except Exception:
+    version = ""
 
 
-class LyricProcessingError(Enum):
-    REQUEST = 0
-    DECRYPT = 1
-    NOT_FOUND = 2
-    UNSUPPORTED = 3
-
-
-def judge_lyric_type(text: str) -> LyricType:
-    if "<?xml " in text[:10] or "<QrcInfos>" in text[:10]:
-        return LyricType.QRC
+def judge_lyric_type(text: str) -> LyricsType:
+    if re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', text, re.DOTALL):
+        return LyricsType.QRC
     if "[" in text and "]" in text:
-        return LyricType.LRC
-    return LyricType.PlainText
+        return LyricsType.LRC
+    return LyricsType.PlainText
 
 
 def has_content(line: str) -> bool:
@@ -256,17 +245,21 @@ def tagsdict2str(tags_dict: dict, lrc_type: str) -> str:
     return tags_str
 
 
-def lrclist2str(lrc_list: list) -> str:
+def lrclist2str(lrc_list: list, verbatim: bool = True) -> str:
     lrc_str = ""
     for line_list in lrc_list:
-        lrc_str += linelist2str(line_list) + "\n"  # 换行
+        lrc_str += linelist2str(line_list, verbatim) + "\n"  # 换行
     return lrc_str
 
 
-def linelist2str(line_list: list[tuple[int, int | None, list[tuple[int, int | None, str]]]]) -> str:
+def linelist2str(line_list: list[tuple[int, int | None, list[tuple[int, int | None, str]]]], verbatim: bool = True) -> str:
     lrc_str = ""
     if line_list[0] is None and line_list[1] is None:
         lrc_str += line_list[2][0][2]
+    elif verbatim is False:
+        if line_list[0] is not None:
+            lrc_str += f"[{ms2formattime(line_list[0])}]"
+        lrc_str += "".join([word[2]for word in line_list[2] if word[2] != ""])
     elif len(line_list[2]) == 1 and line_list[0] is not None and line_list[1] is not None:
         lrc_str += f"[{ms2formattime(line_list[0])}]{line_list[2][0][2]}[{ms2formattime(line_list[1])}]"
     elif len(line_list[2]) == 1 and line_list[0] is not None:
@@ -290,6 +283,19 @@ def linelist2str(line_list: list[tuple[int, int | None, list[tuple[int, int | No
     else:
         logging.warning(f"转换为lrc时忽略行{line_list}")
     return lrc_str
+
+
+def linelist2asstext(line_list: list[tuple[int, int | None, list[tuple[int, int | None, str]]]]) -> str:
+    ass_text = ""
+    if len(line_list[2]) == 1:
+        return "".join([word[2]for word in line_list[2] if word[2] != ""])
+    for word in line_list[2]:
+        if word[0] is not None and word[1] is not None:
+            k = abs(word[1] - word[0]) // 10
+        else:
+            return "".join([word[2]for word in line_list[2] if word[2] != ""])
+        ass_text += r"{\kf" + str(k) + "}" + word[2]
+    return ass_text
 
 
 def is_same_line(line1: tuple[int, int | None, list[tuple[int, int | None, str]]], line2: tuple[int, int | None, list[tuple[int, int | None, str]]]) -> bool:
@@ -429,19 +435,19 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
         self.lrc_isverbatim = {}
         self.tags = {}
 
-    def download_and_decrypt(self) -> tuple[str | None, LyricProcessingError | None]:
+    def download_and_decrypt(self) -> tuple[str | None, LyricsProcessingError | None]:
         """
         下载与解密歌词
         :return: 错误信息, 错误类型 | None, None
         """
         if self.source not in [Source.QM, Source.KG, Source.NE]:
-            return "不支持的源", LyricProcessingError.UNSUPPORTED
+            return "不支持的源", LyricsProcessingError.UNSUPPORTED
 
         match self.source:
             case Source.QM:
                 response = qm_get_lyric({'album': self.album, 'artist': self.artist, 'title': self.title, 'id': self.id, 'duration': self.duration})
                 if isinstance(response, str):
-                    return f"请求qrc歌词失败,错误:{response}", LyricProcessingError.REQUEST
+                    return f"请求qrc歌词失败,错误:{response}", LyricsProcessingError.REQUEST
                 for key, value in [("orig", 'lyric'),
                                    ("ts", 'trans'),
                                    ("roma", 'roma')]:
@@ -454,11 +460,11 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
 
                         if lyric is not None:
                             lrc_type = judge_lyric_type(lyric)
-                            if lrc_type == LyricType.QRC:
+                            if lrc_type == LyricsType.QRC:
                                 tags, lyric = qrc2list(lyric)
-                            elif lrc_type == LyricType.LRC:
+                            elif lrc_type == LyricsType.LRC:
                                 tags, lyric = lrc2list(lyric)
-                            elif lrc_type == LyricType.PlainText:
+                            elif lrc_type == LyricsType.PlainText:
                                 tags = {}
                                 lyric = plaintext2list(lyric)
                             self.lrc_types[key] = lrc_type
@@ -468,31 +474,31 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
 
                             self[key] = lyric
                         elif error is not None:
-                            return "解密歌词失败, 错误: " + error, LyricProcessingError.DECRYPT
+                            return "解密歌词失败, 错误: " + error, LyricsProcessingError.DECRYPT
                     elif (lrc_t == "0" and key == "orig"):
-                        return "没有获取到可解密的歌词(timetag=0)", LyricProcessingError.NOT_FOUND
+                        return "没有获取到可解密的歌词(timetag=0)", LyricsProcessingError.NOT_FOUND
 
             case Source.KG:
                 encrypted_krc = get_krc(self.id, self.accesskey)
                 if isinstance(encrypted_krc, str):
-                    return f"请求krc歌词失败,错误:{response}", LyricProcessingError.REQUEST
+                    return f"请求krc歌词失败,错误:{response}", LyricsProcessingError.REQUEST
                 krc, error = krc_decrypt(encrypted_krc)
                 if krc is None:
                     error = f"错误:{error}" if error is not None else ""
-                    return f"解密krc歌词失败,错误:{error}", LyricProcessingError.DECRYPT
+                    return f"解密krc歌词失败,错误:{error}", LyricsProcessingError.DECRYPT
                 self.tags, lyric = krc2dict(krc)
                 self.update(lyric)
                 if 'orig' in lyric:
-                    self.lrc_types['orig'] = LyricType.KRC
+                    self.lrc_types['orig'] = LyricsType.KRC
                 if 'ts' in lyric:
-                    self.lrc_types['ts'] = LyricType.JSONLINE
+                    self.lrc_types['ts'] = LyricsType.JSONLINE
                 if 'roma' in lyric:
-                    self.lrc_types['roma'] = LyricType.JSONVERBATIM
+                    self.lrc_types['roma'] = LyricsType.JSONVERBATIM
 
             case Source.NE:
                 lyrics = ne_get_lyric(self.id)
                 if isinstance(lyrics, str):
-                    return "请求网易云歌词失败, 错误: " + lyrics, LyricProcessingError.REQUEST
+                    return "请求网易云歌词失败, 错误: " + lyrics, LyricsProcessingError.REQUEST
                 logging.debug(f"lyrics: {lyrics}")
                 tags = {}
                 if self.artist:
@@ -525,13 +531,13 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                         lyric_type = judge_lyric_type(lyrics[value]['lyric'])
                         if value == 'yrc':
                             self[key] = yrc2list(lyrics[value]['lyric'])
-                            self.lrc_types[key] = LyricType.YRC
-                        elif lyric_type == LyricType.LRC:
+                            self.lrc_types[key] = LyricsType.YRC
+                        elif lyric_type == LyricsType.LRC:
                             self[key] = lrc2list(lyrics[value]['lyric'])[1]
-                            self.lrc_types[key] = LyricType.LRC
-                        elif lyric_type == LyricType.PlainText:
+                            self.lrc_types[key] = LyricsType.LRC
+                        elif lyric_type == LyricsType.PlainText:
                             self[key] = plaintext2list(lyrics[value]['lyric'])
-                            self.lrc_types[key] = LyricType.PlainText
+                            self.lrc_types[key] = LyricsType.PlainText
 
         for key, lrc in self.items():
             # 判断是否逐字
@@ -539,28 +545,20 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
 
         if "orig" not in self or self["orig"] is None:
             logging.error("没有获取到的歌词(orig=None)")
-            return "没有获取到的歌词(orig=None)", LyricProcessingError.NOT_FOUND
+            return "没有获取到的歌词(orig=None)", LyricsProcessingError.NOT_FOUND
         return None, None
 
-    def get_merge_lrc(self, lyrics_order: list) -> str:
+    def get_merge_lrc(self, lyrics_order: list, lyrics_format: LyricsFormat = LyricsFormat.VERBATIMLRC) -> str:
         """
         合并歌词
         :param lyrics_order:歌词顺序,同时决定需要合并的类型
         :return: 合并后的歌词
         """
-        match len(lyrics_order):
-            case 0:
-                logging.warning("没有需要合并的歌词")
-                return ""
-            case 1:
-                if lyrics_order[0] in self:
-                    return tagsdict2str(self.tags, "lrc") + get_clear_lyric(lrclist2str(self[lyrics_order[0]]))
-                logging.warning("没有需要合并的歌词")
-                return ""
+        if len(lyrics_order) == 0:
+            logging.warning("没有需要合并的歌词")
+            return ""
 
         lyrics = [(key, lyric) for key, lyric in self.items() if key in lyrics_order]
-        if len(lyrics) == 1:
-            return tagsdict2str(self.tags, "lrc") + get_clear_lyric(lrclist2str(lyrics[0][1]))
 
         if 'orig' not in lyrics:  # 确保只勾选译文与罗马音时正常合并时
             lyrics.append(('orig', self['orig']))
@@ -575,39 +573,127 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
         if "roma" in self:
             mapping_tables["roma"] = find_closest_match(self["orig"], self["roma"], list3=self.get("orig_lrc", None), source=self.source)
 
-        def get_full_line(mapping_table: dict, orig_linelist: list) -> str:
-            match_lines = [line for orig_line, line in mapping_table if orig_line == orig_linelist]
-            if not match_lines:
-                return ""
+        if self.lrc_types["orig"] == LyricsType.PlainText:
+            lyrics_format = LyricsFormat.LINEBYLINELRC
 
-            line = match_lines[0]
-            line_str = linelist2str(line).replace(f"[{ms2formattime(line[0])}]", "") if line[0] else linelist2str(line)
+        match lyrics_format:
+            case LyricsFormat.VERBATIMLRC | LyricsFormat.LINEBYLINELRC:
+                def get_full_line(mapping_table: dict, orig_linelist: list) -> str:
+                    match_lines = [line for orig_line, line in mapping_table if orig_line == orig_linelist]
+                    if not match_lines:
+                        return ""
 
-            if not has_content(line_str):
-                return ""
-            if orig_linelist[0] is not None:
-                if re.search(end_time_pattern, line_str) or orig_linelist[1] is None:    # 检查是否有结束时间
-                    return f"[{ms2formattime(orig_linelist[0])}]{line_str}"
-                return f"[{ms2formattime(orig_linelist[0])}]{line_str}[{ms2formattime(orig_linelist[1])}]"
-            return line_str
+                    line = match_lines[0]
+                    if line[0]:
+                        line_str = linelist2str(line, bool(lyrics_format == LyricsFormat.VERBATIMLRC)).replace(f"[{ms2formattime(line[0])}]", "")
+                    else:
+                        line_str = linelist2str(line)
 
-        for orig_linelist in self["orig"]:
-            lines = ""
-            full_orig_line = linelist2str(orig_linelist)  # 此时line为完整的原文歌词行
+                    if not has_content(line_str):
+                        return ""
+                    if orig_linelist[0] is not None:
+                        if re.search(end_time_pattern, line_str) or orig_linelist[1] is None or lyrics_format == LyricsFormat.LINEBYLINELRC:  # 检查是添加末尾时间戳
+                            return f"[{ms2formattime(orig_linelist[0])}]{line_str}"
+                        return f"[{ms2formattime(orig_linelist[0])}]{line_str}[{ms2formattime(orig_linelist[1])}]"
+                    return line_str
 
-            for type_ in lyrics_order:
-                if type_ == "orig":
-                    line = full_orig_line
-                elif type_ in mapping_tables:
-                    line = get_full_line(mapping_tables[type_], orig_linelist)
-                else:
-                    continue
+                for orig_linelist in self["orig"]:
+                    lines = ""
+                    full_orig_line = linelist2str(orig_linelist, bool(lyrics_format == LyricsFormat.VERBATIMLRC))  # 此时line为完整的原文歌词行
 
-                if lines != "" and line != "":
-                    lines += "\n" + line
-                else:
-                    lines += line
+                    for type_ in lyrics_order:
+                        if type_ == "orig":
+                            line = full_orig_line
+                        elif type_ in mapping_tables:
+                            line = get_full_line(mapping_tables[type_], orig_linelist)
+                        else:
+                            continue
 
-            lyric_lines.append(lines)
+                        if lines != "" and line != "":
+                            lines += "\n" + line
+                        else:
+                            lines += line
 
-        return tagsdict2str(self.tags, "lrc") + get_clear_lyric("\n".join(lyric_lines))
+                    lyric_lines.append(lines)
+
+                return tagsdict2str(self.tags, "lrc") + get_clear_lyric("\n".join(lyric_lines))
+
+            case LyricsFormat.SRT:
+                srt_lines = []
+                for i, orig_linelist in enumerate(self["orig"]):
+                    sn = i + 1
+                    if orig_linelist[1] is None:
+                        if i + 1 < len(self["orig"]):
+                            endtime = self["orig"][i + 1][0]
+                        elif self.duration is not None:
+                            endtime = self.duration * 1000
+                        else:
+                            endtime = orig_linelist[0] + 10000  # 加十秒
+                    else:
+                        endtime = orig_linelist[1]
+
+                    srt_lines.append(f"{sn}\n{ms2srt_timestamp(orig_linelist[0])} --> {ms2srt_timestamp(endtime)}\n")
+                    for lrc_type in lyrics_order:
+                        match lrc_type:
+                            case "orig":
+                                srt_lines.append("".join([word[2]for word in orig_linelist[2]]) + "\n")
+                            case "ts" | "roma":
+                                if lrc_type not in mapping_tables:
+                                    continue
+                                match_lines = [line for orig_line, line in mapping_tables[lrc_type] if orig_line == orig_linelist]
+                                if match_lines:
+                                    match_line_str = "".join([word[2]for word in match_lines[0][2]])
+                                    if has_content(match_line_str):
+                                        srt_lines.append(match_line_str + "\n")
+                    srt_lines.append("\n")
+                return "".join(srt_lines)
+
+            case LyricsFormat.ASS:
+                ass_lines = ["[Script Info]",
+                             f"; Script generated by LDDC {version}",
+                             "; https://github.com/chenmozhijin/LDDC"]
+
+                if self.title is not None:
+                    ass_lines.append(f"Title: {self.title}")
+                ass_lines.extend(["ScriptType: v4.00+", "Timer: 100.0000", ""])
+
+                ass_lines.extend([
+                    "[V4+ Styles]",
+                    "Format: Name, Fontname, Fontsize, PrimaryColour, "
+                    "SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
+                    "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle,"
+                    " Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+                ])
+                for lrc_type in lyrics_order:
+                    if lrc_type in mapping_tables or lrc_type == "orig":
+                        ass_lines.append(f"Style: {lrc_type},Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1")
+
+                ass_lines.extend(["",
+                                  "[Events]",
+                                  "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"])
+                for lrc_type in lyrics_order[::-1]:
+                    if lrc_type in mapping_tables or lrc_type == "orig":
+                        for i, orig_linelist in enumerate(self["orig"]):
+                            ass_line = "Dialogue: 0,"
+                            if orig_linelist[1] is None:
+                                if i + 1 < len(self["orig"]):
+                                    endtime = self["orig"][i + 1][0]
+                                elif self.duration is not None:
+                                    endtime = self.duration * 1000
+                                else:
+                                    endtime = orig_linelist[0] + 10000  # 加十秒
+                            else:
+                                endtime = orig_linelist[1]
+                            ass_line += f"{ms2ass_timestamp(orig_linelist[0])},{ms2ass_timestamp(endtime)},{lrc_type},,0,0,0,,"
+                            if lrc_type == "orig":
+                                line = orig_linelist
+                            else:
+                                match_lines = [line for orig_line, line in mapping_tables[lrc_type] if orig_line == orig_linelist]
+                                if not match_lines or not has_content("".join([word[2]for word in match_lines[0][2]])):
+                                    continue
+                                line = match_lines[0]
+                            ass_line += linelist2asstext(line)
+                            ass_lines.append(ass_line)
+
+                return "\n".join(ass_lines)
+        return ""

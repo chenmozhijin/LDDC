@@ -13,9 +13,9 @@ from PySide6.QtWidgets import (
 )
 
 from ui.local_match_ui import Ui_local_match
-from utils.api import Source
 from utils.data import Data
-from utils.worker import LocalMatchFileNameMode, LocalMatchSaveMode, LocalMatchWorker
+from utils.enum import LocalMatchFileNameMode, LocalMatchSaveMode, LyricsFormat, Source
+from utils.worker import LocalMatchWorker
 
 
 class LocalMatchWidget(QWidget, Ui_local_match):
@@ -105,12 +105,18 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 save_mode = LocalMatchSaveMode.SONG
             case 2:
                 save_mode = LocalMatchSaveMode.SPECIFY
+            case _:
+                QMessageBox.critical(self, "错误", "保存模式选择错误！")
+                return
 
         match self.lyrics_filename_mode_comboBox.currentIndex():
             case 0:
                 flienmae_mode = LocalMatchFileNameMode.FORMAT
             case 1:
                 flienmae_mode = LocalMatchFileNameMode.SONG
+            case _:
+                QMessageBox.critical(self, "错误", "歌词文件名错误！")
+                return
 
         source = []
         for source_type in [self.source_listWidget.item(i).text() for i in range(self.source_listWidget.count())]:
@@ -132,12 +138,15 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 item.setEnabled(False)
 
         self.worker = LocalMatchWorker(
-            self.song_path_lineEdit.text(),
-            self.save_path_lineEdit.text(),
-            save_mode,
-            flienmae_mode,
-            lyrics_order,
-            source,
+            {
+                "song_path": self.song_path_lineEdit.text(),
+                "save_path": self.save_path_lineEdit.text(),
+                "save_mode": save_mode,
+                "flienmae_mode": flienmae_mode,
+                "lyrics_order": lyrics_order,
+                "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+                "sources": source,
+            },
             self.threadpool,
             self.data,
         )

@@ -3,10 +3,10 @@ import os
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
-from decryptor import QrcType, krc_decrypt, qrc_decrypt
+from decryptor import krc_decrypt, qrc_decrypt
 from ui.encrypted_lyrics_ui import Ui_encrypted_lyrics
-from utils.api import Source
 from utils.data import Data
+from utils.enum import LyricsFormat, LyricsType, QrcType, Source
 from utils.lyrics import Lyrics, krc2dict, qrc2list
 
 
@@ -28,6 +28,8 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         self.translate_checkBox.stateChanged.connect(self.change_lyrics_type)
         self.romanized_checkBox.stateChanged.connect(self.change_lyrics_type)
         self.original_checkBox.stateChanged.connect(self.change_lyrics_type)
+
+        self.lyricsformat_comboBox.currentIndexChanged.connect(self.change_lyrics_format)
 
     def get_lyric_type(self) -> list:
         lyric_type = []
@@ -73,8 +75,8 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         self.plainTextEdit.setPlainText(lyrics)
 
     def convert(self) -> None:
-        if self.lyrics_type == "lrc":
-            QMessageBox.information(self, "提示", "当前歌词已经是lrc格式了！")
+        if self.lyrics_type == "converted":
+            QMessageBox.information(self, "提示", "当前歌词已经转换过了！")
             return
         lyrics = self.plainTextEdit.toPlainText()
         if lyrics.strip() == "":
@@ -85,7 +87,8 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
                 self.lyrics = Lyrics({"source": Source.QM})
                 self.lyrics.tags, lyric = qrc2list(lyrics)
                 self.lyrics["orig"] = lyric
-                lrc = self.lyrics.get_merge_lrc(["orig"])
+                self.lyrics.lrc_types["orig"] = LyricsType.QRC
+                lrc = self.lyrics.get_merge_lrc(["orig"], LyricsFormat(self.lyricsformat_comboBox.currentIndex()))
             elif self.lyrics_type == "krc":
                 self.data_mutex.lock()
                 type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
@@ -95,24 +98,34 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
 
                 self.lyrics.tags, lyric = krc2dict(lyrics)
                 self.lyrics.update(lyric)
-                lrc = self.lyrics.get_merge_lrc(lyrics_order)
+                self.lyrics.lrc_types["orig"] = LyricsType.KRC
+                self.lyrics.lrc_types["ts"] = LyricsType.JSONLINE
+                self.lyrics.lrc_types["roma"] = LyricsType.JSONVERBATIM
+                lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()))
         except Exception as e:
             logging.exception("转换失败")
             QMessageBox.critical(self, "错误", f"转换失败：{e}")
             return
         self.plainTextEdit.setPlainText(lrc)
-        self.lyrics_type = "lrc"
+        self.lyrics_type = "converted"
+
+    def update_lyrics(self) -> None:
+        type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
+        self.data_mutex.lock()
+        lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+        self.data_mutex.unlock()
+        self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex())))
 
     def change_lyrics_type(self) -> None:
-        if self.lyrics_type == "lrc" and isinstance(self.lyrics, Lyrics) and self.lyrics.source == Source.KG:
-            type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-            self.data_mutex.lock()
-            lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
-            self.data_mutex.unlock()
-            self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order))
+        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics) and self.lyrics.source == Source.KG:
+            self.update_lyrics()
+
+    def change_lyrics_format(self) -> None:
+        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics):
+            self.update_lyrics()
 
     def save(self) -> None:
-        file_path, _ = QFileDialog.getSaveFileName(self, "保存文件", "", "LRC文件 (*.lrc)")
+        file_path, _ = QFileDialog.getSaveFileName(self, "保存文件", "", "歌词\\字幕文件 (*.lrc *.srt *.ass)")
         if file_path == "":
             return
         try:

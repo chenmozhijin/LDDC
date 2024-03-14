@@ -15,13 +15,10 @@ from PySide6.QtWidgets import (
 )
 
 from ui.search_ui import Ui_search
-from utils.api import (
-    SearchType,
-    Source,
-)
 from utils.data import Data
-from utils.lyrics import Lyrics, LyricType
-from utils.utils import get_save_path, ms2formattime
+from utils.enum import LyricsFormat, LyricsType, SearchType, Source
+from utils.lyrics import Lyrics
+from utils.utils import get_lyrics_format_ext, get_save_path, ms2formattime
 from utils.worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
 from view.get_list_lyrics import GetListLyrics
 
@@ -68,6 +65,7 @@ class SearchWidget(QWidget, Ui_search):
         self.translate_checkBox.stateChanged.connect(self.update_preview_lyric)
         self.romanized_checkBox.stateChanged.connect(self.update_preview_lyric)
         self.original_checkBox.stateChanged.connect(self.update_preview_lyric)
+        self.lyricsformat_comboBox.currentTextChanged.connect(self.update_preview_lyric)
 
         self.return_toolButton.clicked.connect(self.result_return)
 
@@ -154,6 +152,7 @@ class SearchWidget(QWidget, Ui_search):
         worker = LyricProcessingWorker({"type": "get_list_lyrics",
                                         "song_info_list": self.songlist_result["result"],
                                         "lyric_type": self.get_lyric_type(),
+                                        "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                                         "save_folder": save_folder,
                                         "lyrics_file_name_format": lyrics_file_name_format,
                                         },
@@ -190,7 +189,7 @@ class SearchWidget(QWidget, Ui_search):
         # 获取已选择的歌词(用于替换占位符)
         save_folder, file_name = get_save_path(
             self.save_path_lineEdit.text(),
-            self.data.cfg["lyrics_file_name_format"] + ".lrc",
+            self.data.cfg["lyrics_file_name_format"] + get_lyrics_format_ext(self.preview_info["info"]["lyrics_format"]),
             self.preview_info["info"],
             lyrics_types)
 
@@ -292,7 +291,7 @@ class SearchWidget(QWidget, Ui_search):
     def update_preview_lyric_result_slot(self, taskid: int, result: dict) -> None:
         """更新预览歌词结果时调用"""
         def get_lrc_type(lrc: Lyrics, lrc_type: str) -> str:
-            if lrc.lrc_types[lrc_type] == LyricType.PlainText:
+            if lrc.lrc_types[lrc_type] == LyricsType.PlainText:
                 return "纯文本"
             if lrc.lrc_isverbatim[lrc_type] is True:
                 return "逐字"
@@ -321,7 +320,11 @@ class SearchWidget(QWidget, Ui_search):
 
         self.taskid["update_preview_lyric"] += 1
         worker = LyricProcessingWorker(
-            {"type": "get_merged_lyric", "song_info": info, "lyric_type": self.get_lyric_type(), "id": self.taskid["update_preview_lyric"]},
+            {"type": "get_merged_lyric",
+             "song_info": info,
+             "lyric_type": self.get_lyric_type(),
+             "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+             "id": self.taskid["update_preview_lyric"]},
             self.data)
         worker.signals.result.connect(self.update_preview_lyric_result_slot)
         worker.signals.error.connect(self.update_preview_lyric_error_slot)
@@ -397,7 +400,7 @@ class SearchWidget(QWidget, Ui_search):
                 table.setProperty("result_type", (result_type[0], "lyrics"))
 
     @Slot(str)
-    def get_songlist__error(self, error: str) -> None:
+    def get_songlist_error(self, error: str) -> None:
         """获取歌单、专辑中的歌曲错误时调用"""
         QMessageBox.critical(self, "错误", error)
         self.result_return()
@@ -433,7 +436,7 @@ class SearchWidget(QWidget, Ui_search):
         elif result_type == "songlist":
             worker = GetSongListWorker(self.taskid["results_table"], result_type, info['id'], info['source'])
         worker.signals.result.connect(self.show_songlist_result)
-        worker.signals.error.connect(self.get_songlist__error)
+        worker.signals.error.connect(self.get_songlist_error)
         self.threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
         self.result_path.append("songlist")

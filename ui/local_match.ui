@@ -225,7 +225,57 @@
             <string>歌词</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
-            <item row="1" column="0">
+            <item row="0" column="0">
+             <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <item>
+               <widget class="QLabel" name="label_9">
+                <property name="text">
+                 <string>歌词类型:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="original_checkBox">
+                <property name="text">
+                 <string>原文</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item alignment="Qt::AlignLeft">
+               <widget class="QCheckBox" name="translate_checkBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>译文</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item alignment="Qt::AlignLeft">
+               <widget class="QCheckBox" name="romanized_checkBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>罗马音</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item row="2" column="0">
              <layout class="QHBoxLayout" name="horizontalLayout_4">
               <item>
                <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -335,52 +385,43 @@
               </item>
              </layout>
             </item>
-            <item row="0" column="0">
-             <layout class="QHBoxLayout" name="horizontalLayout_3">
+            <item row="1" column="0">
+             <layout class="QHBoxLayout" name="horizontalLayout_9">
               <item>
-               <widget class="QLabel" name="label_9">
-                <property name="text">
-                 <string>歌词类型:</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="original_checkBox">
-                <property name="text">
-                 <string>原文</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item alignment="Qt::AlignLeft">
-               <widget class="QCheckBox" name="translate_checkBox">
+               <widget class="QLabel" name="label_10">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>译文</string>
-                </property>
-                <property name="checked">
-                 <bool>true</bool>
+                 <string>歌词格式:</string>
                 </property>
                </widget>
               </item>
-              <item alignment="Qt::AlignLeft">
-               <widget class="QCheckBox" name="romanized_checkBox">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>罗马音</string>
-                </property>
+              <item>
+               <widget class="QComboBox" name="lyricsformat_comboBox">
+                <item>
+                 <property name="text">
+                  <string>LRC(逐字)</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>LRC(逐行)</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>SRT</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>ASS</string>
+                 </property>
+                </item>
                </widget>
               </item>
              </layout>

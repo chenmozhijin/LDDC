@@ -1,14 +1,9 @@
 import logging
-from enum import Enum
 from zlib import decompress
 
 from decryptor.qmc1 import qmc1_decrypt
 from decryptor.tripledes import DECRYPT, tripledes_crypt, tripledes_key_setup
-
-
-class QrcType(Enum):
-    LOCAL = 0
-    CLOUD = 1
+from utils.enum import QrcType
 
 
 def qrc_decrypt(encrypted_qrc: str | bytearray | bytes, qrc_type: QrcType) -> tuple[str | None, str | None]:

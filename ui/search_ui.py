@@ -8,15 +8,8 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QMetaObject,
-    QSize,
-    Qt,
-)
-from PySide6.QtGui import (
-    QFont,
-)
+from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractScrollArea,
@@ -222,19 +215,19 @@ class Ui_search(object):
 
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.verticalLayout_7 = QVBoxLayout()
-        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.horizontalLayout_4 = QHBoxLayout()
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.label_6 = QLabel(search)
-        self.label_6.setObjectName(u"label_6")
+        self.verticalLayout_9 = QVBoxLayout()
+        self.verticalLayout_9.setObjectName(u"verticalLayout_9")
+        self.horizontalLayout_7 = QHBoxLayout()
+        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.label_7 = QLabel(search)
+        self.label_7.setObjectName(u"label_7")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         sizePolicy3.setHorizontalStretch(0)
         sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
-        self.label_6.setSizePolicy(sizePolicy3)
+        sizePolicy3.setHeightForWidth(self.label_7.sizePolicy().hasHeightForWidth())
+        self.label_7.setSizePolicy(sizePolicy3)
 
-        self.horizontalLayout_4.addWidget(self.label_6)
+        self.horizontalLayout_7.addWidget(self.label_7)
 
         self.save_path_lineEdit = QLineEdit(search)
         self.save_path_lineEdit.setObjectName(u"save_path_lineEdit")
@@ -244,25 +237,27 @@ class Ui_search(object):
         sizePolicy4.setHeightForWidth(self.save_path_lineEdit.sizePolicy().hasHeightForWidth())
         self.save_path_lineEdit.setSizePolicy(sizePolicy4)
 
-        self.horizontalLayout_4.addWidget(self.save_path_lineEdit)
+        self.horizontalLayout_7.addWidget(self.save_path_lineEdit)
 
         self.select_path_pushButton = QPushButton(search)
         self.select_path_pushButton.setObjectName(u"select_path_pushButton")
         sizePolicy.setHeightForWidth(self.select_path_pushButton.sizePolicy().hasHeightForWidth())
         self.select_path_pushButton.setSizePolicy(sizePolicy)
 
-        self.horizontalLayout_4.addWidget(self.select_path_pushButton)
+        self.horizontalLayout_7.addWidget(self.select_path_pushButton)
 
 
-        self.verticalLayout_7.addLayout(self.horizontalLayout_4)
+        self.verticalLayout_9.addLayout(self.horizontalLayout_7)
 
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.horizontalLayout_8 = QHBoxLayout()
+        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
         self.original_checkBox = QCheckBox(search)
         self.original_checkBox.setObjectName(u"original_checkBox")
+        sizePolicy.setHeightForWidth(self.original_checkBox.sizePolicy().hasHeightForWidth())
+        self.original_checkBox.setSizePolicy(sizePolicy)
         self.original_checkBox.setChecked(True)
 
-        self.horizontalLayout_2.addWidget(self.original_checkBox)
+        self.horizontalLayout_8.addWidget(self.original_checkBox)
 
         self.translate_checkBox = QCheckBox(search)
         self.translate_checkBox.setObjectName(u"translate_checkBox")
@@ -270,24 +265,45 @@ class Ui_search(object):
         self.translate_checkBox.setSizePolicy(sizePolicy)
         self.translate_checkBox.setChecked(True)
 
-        self.horizontalLayout_2.addWidget(self.translate_checkBox, 0, Qt.AlignLeft)
+        self.horizontalLayout_8.addWidget(self.translate_checkBox)
 
         self.romanized_checkBox = QCheckBox(search)
         self.romanized_checkBox.setObjectName(u"romanized_checkBox")
         sizePolicy.setHeightForWidth(self.romanized_checkBox.sizePolicy().hasHeightForWidth())
         self.romanized_checkBox.setSizePolicy(sizePolicy)
 
-        self.horizontalLayout_2.addWidget(self.romanized_checkBox, 0, Qt.AlignLeft)
+        self.horizontalLayout_8.addWidget(self.romanized_checkBox)
 
 
-        self.verticalLayout_7.addLayout(self.horizontalLayout_2)
+        self.verticalLayout_9.addLayout(self.horizontalLayout_8)
 
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+        self.horizontalLayout_9 = QHBoxLayout()
+        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
+        self.label_9 = QLabel(search)
+        self.label_9.setObjectName(u"label_9")
+        sizePolicy3.setHeightForWidth(self.label_9.sizePolicy().hasHeightForWidth())
+        self.label_9.setSizePolicy(sizePolicy3)
 
-        self.verticalLayout_7.addItem(self.verticalSpacer)
+        self.horizontalLayout_9.addWidget(self.label_9)
+
+        self.lyricsformat_comboBox = QComboBox(search)
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.setObjectName(u"lyricsformat_comboBox")
+
+        self.horizontalLayout_9.addWidget(self.lyricsformat_comboBox)
 
 
-        self.horizontalLayout_3.addLayout(self.verticalLayout_7)
+        self.verticalLayout_9.addLayout(self.horizontalLayout_9)
+
+        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+
+        self.verticalLayout_9.addItem(self.verticalSpacer_2)
+
+
+        self.horizontalLayout_3.addLayout(self.verticalLayout_9)
 
         self.horizontalSpacer_3 = QSpacerItem(97, 20, QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Minimum)
 
@@ -342,11 +358,17 @@ class Ui_search(object):
         self.label_2.setText(QCoreApplication.translate("search", u"\u6b4c\u8bcd\u7c7b\u578b", None))
         self.lyric_types_lineEdit.setText("")
         self.label_3.setText(QCoreApplication.translate("search", u"\u6b4c\u66f2/\u6b4c\u8bcdid", None))
-        self.label_6.setText(QCoreApplication.translate("search", u"\u4fdd\u5b58\u5230:", None))
+        self.label_7.setText(QCoreApplication.translate("search", u"\u4fdd\u5b58\u5230:", None))
         self.select_path_pushButton.setText(QCoreApplication.translate("search", u"\u9009\u62e9\u4fdd\u5b58\u8def\u5f84", None))
         self.original_checkBox.setText(QCoreApplication.translate("search", u"\u539f\u6587", None))
         self.translate_checkBox.setText(QCoreApplication.translate("search", u"\u8bd1\u6587", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("search", u"\u7f57\u9a6c\u97f3", None))
+        self.label_9.setText(QCoreApplication.translate("search", u"\u6b4c\u8bcd\u683c\u5f0f:", None))
+        self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("search", u"LRC(\u9010\u5b57)", None))
+        self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("search", u"LRC(\u9010\u884c)", None))
+        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("search", u"SRT", None))
+        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("search", u"ASS", None))
+
         self.save_list_lyrics_pushButton.setText(QCoreApplication.translate("search", u"\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u7684\u6b4c\u8bcd", None))
         self.save_preview_lyric_pushButton.setText(QCoreApplication.translate("search", u"\u4fdd\u5b58\u9884\u89c8\u7684\u6b4c\u8bcd", None))
     # retranslateUi
