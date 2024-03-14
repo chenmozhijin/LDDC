@@ -233,6 +233,7 @@ def ne_get_songlist(listid: str | int, list_type: str) -> str | list:
         case "songlist":
             path = "/eapi/playlist/v4/detail"
             params.update({"n": '500', 's': '0'})
+            params.update({'cache_key': get_cache_key(f'e_r=true&id={listid!s}&n=500&s=0')})
 
     try:
         data = _eapi_request(path, params)
