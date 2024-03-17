@@ -218,7 +218,7 @@ class LyricProcessingWorker(QRunnable):
                 song_name_str = "歌名:" + song_info['title']
             if error1 is not None:
                 logging.error(f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']},错误：{error1}")
-                self.signals.error.emit(f"获取歌名:{song_name_str}的加密歌词失败:{error1}")
+                self.signals.error.emit(f"获取 {song_name_str} 加密歌词失败:{error1}")
                 return None, False
 
             if error1_type != LyricsProcessingError.REQUEST and not from_cache:  # 如果不是请求错误则缓存
