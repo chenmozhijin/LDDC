@@ -27,56 +27,7 @@
 
 ## 使用方法
 
-### 1.运行
-
-#### 方式一:从[release](https://github.com/chenmozhijin/LDDC/releases)下载
-
-> 未发布的预览版本可以在[Actions](https://github.com/chenmozhijin/LDDC/actions)中下载
-
-##### windows
-
-1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中最新版本的zip
-2. 解压zip包
-3. 运行`LDDC.exe`
-
-##### linux(Debian, Ubuntu)
-
-1. 下载[release](https://github.com/chenmozhijin/LDDC/releases)中最新版本的deb包
-2. 执行`sudo apt install ./LDDC_x.x.x_amd64.deb`
-3. 运行`LDDC`
-
-#### 方式二:直接运行LDDC.py
-
-> 需要安装python3.10+环境
-
-1. 下载源代码
-2. 安装依赖库  
-   进入源代码目录执行:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. 运行`LDDC.py`
-
-### 2.使用
-
-#### 1.搜索
-
-1. 选择搜索类型，输入关键词
-2. 双击选择对应结果,会 自动下载歌词或获取对应的专辑、歌单
-3. 如果进入了专辑、歌单列表可点击"返回"返回搜索结果
-
-#### 2.保存
-
-1. "保存到"表示要保存歌词的文件夹,可以使用占位符,如:`D:\LDDC\lyrics\%<album>`
-2. 如果预览了一个歌词可点击"保存预览的歌词"保存歌词
-3. 如果进入了专辑、歌单列表可点击"保存专辑/歌单的歌词"下载列表中的歌词
-4. 如果保存专辑/歌单的歌词时出现了错误,重试的速度会很快(因为有缓存)
-
-#### 3.设置
-
-1. 歌词设置中的顺序可以随意拖动(立即生效)
+见[LDDC使用指南](https://github.com/chenmozhijin/LDDC/wiki)
 
 ## 感谢
 
