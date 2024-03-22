@@ -75,10 +75,6 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             self.worker_finished()
             return
 
-        if self.save_mode_comboBox.currentIndex() != 1 and not os.path.exists(self.save_path_lineEdit.text()):
-            QMessageBox.warning(self, "警告", "保存路径不存在！")
-            return
-
         if not os.path.exists(self.song_path_lineEdit.text()):
             QMessageBox.warning(self, "警告", "歌曲文件夹不存在！")
             return
