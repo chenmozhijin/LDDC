@@ -146,7 +146,9 @@ def lrc2list(lrc: str, source: Source | None = None) -> tuple[dict, list]:
             lrc_list[-1][2].append((line_start_time, line_end_time, line_content))
             continue
 
-        if source == Source.NE and len([word_content for m, s, ms, word_content in wrods_split_contents if word_content != ""]) == 1 and wrods_split_contents[-1][3] != "":
+        if (source == Source.NE and
+            len([word_content for m, s, ms, word_content in wrods_split_contents if word_content != ""]) == 1 and
+                wrods_split_contents[-1][3] != ""):
             # 如果转换的是网易云歌词且这一行有开头有几个连在一起的时间戳表示这几个时间戳的行都是这个歌词
             line_content = wrods_split_contents[-1][3]
             lrc_list[-1][2].append((line_start_time, line_end_time, line_content))
