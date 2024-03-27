@@ -55,7 +55,7 @@ match sys.platform:
     case _:
         cache_dir = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "cache")
 cache = Cache(cache_dir)
-cache_version = 3
+cache_version = 4
 if "version" not in cache or cache["version"] != cache_version:
     cache.clear()
 cache["version"] = cache_version

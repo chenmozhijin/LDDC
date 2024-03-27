@@ -108,7 +108,7 @@ def yrc2list(yrc: str) -> list:
     return lrc_list
 
 
-def lrc2list(lrc: str) -> tuple[dict, list]:
+def lrc2list(lrc: str, source: Source | None = None) -> tuple[dict, list]:
     """将lrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
     lrc_list: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = []
     tags = {}
@@ -146,15 +146,22 @@ def lrc2list(lrc: str) -> tuple[dict, list]:
             lrc_list[-1][2].append((line_start_time, line_end_time, line_content))
             continue
 
-        line = []
-        for wrods_split_content in wrods_split_contents:
-            m, s, ms, word_content = wrods_split_content
+        if source == Source.NE and len([word_content for m, s, ms, word_content in wrods_split_contents if word_content != ""]) == 1 and wrods_split_contents[-1][3] != "":
+            # 如果转换的是网易云歌词且这一行有开头有几个连在一起的时间戳表示这几个时间戳的行都是这个歌词
+            line_content = wrods_split_contents[-1][3]
+            lrc_list[-1][2].append((line_start_time, line_end_time, line_content))
+            for m, s, ms, _line_content in wrods_split_contents:
+                line_start_time = time2ms(m, s, ms)
+                lrc_list.append((line_start_time, None, [(line_start_time, None, line_content)]))
+            continue
+
+        line = lrc_list[-1][2]
+        for m, s, ms, word_content in wrods_split_contents:
             word_start_time = time2ms(m, s, ms)
             if line:
-                line[-1][1] = word_start_time
-            lrc_list.append((word_start_time, None, word_content))
+                line[-1] = (line[-1][0], word_start_time, line[-1][2])
+            line.append((word_start_time, None, word_content))
 
-        lrc_list.append(line)
     return tags, lrc_list
 
 
@@ -533,7 +540,7 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                             self[key] = yrc2list(lyrics[value]['lyric'])
                             self.lrc_types[key] = LyricsType.YRC
                         elif lyric_type == LyricsType.LRC:
-                            self[key] = lrc2list(lyrics[value]['lyric'])[1]
+                            self[key] = lrc2list(lyrics[value]['lyric'], source=Source.NE)[1]
                             self.lrc_types[key] = LyricsType.LRC
                         elif lyric_type == LyricsType.PlainText:
                             self[key] = plaintext2list(lyrics[value]['lyric'])
