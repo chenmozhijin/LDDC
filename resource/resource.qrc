@@ -2,4 +2,7 @@
     <qresource prefix="/LDDC">
         <file>img/icon/logo.png</file>
     </qresource>
+    <qresource prefix="/">
+        <file>i18n/LDDC_en.qm</file>
+    </qresource>
 </RCC>

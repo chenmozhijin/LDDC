@@ -8,6 +8,8 @@ import sys
 
 from PySide6.QtCore import QMutex
 
+from .paths import main_path
+
 
 class Data:
 
@@ -40,6 +42,7 @@ class Data:
                 "lyrics_order": ["罗马音", "原文", "译文"],
                 "skip_inst_lyrics": True,
                 "auto_select": True,
+                "language": "auto",
             }
             self.init_db()
             self.read_config()
@@ -108,3 +111,6 @@ class Data:
             c.execute("UPDATE config SET value=? WHERE item=?", (str(value), item))
         self.conn.commit()
         self.mutex.unlock()
+
+
+data = Data(main_path)

@@ -6,6 +6,7 @@ import re
 
 import mutagen
 from chardet import detect
+from PySide6.QtCore import QCoreApplication
 
 if __name__ != '__main__':
     from utils.utils import time2ms
@@ -22,7 +23,7 @@ file_extensions = ['3g2', 'aac', 'aif', 'ape', 'apev2', 'dff',
 def get_audio_file_info(file_path: str) -> dict | str:
     if not os.path.isfile(file_path):
         logging.error(f"未找到文件: {file_path}")
-        return f"未找到文件: {file_path}"
+        return QCoreApplication.translate("song_info", "未找到文件: ") + file_path
     try:
         if file_path.lower().split('.')[-1] in file_extensions:
             audio = mutagen.File(file_path, easy=True)
@@ -69,7 +70,7 @@ def get_audio_file_info(file_path: str) -> dict | str:
                 return metadata
     except Exception as e:
         logging.exception(f"{file_path}获取文件信息失败")
-        return f"{file_path}获取文件信息失败: {e}"
+        return file_path + QCoreApplication.translate("song_info", "获取文件信息失败:") + str(e)
 
 
 def get_audio_duration(file_path: str) -> str | None:

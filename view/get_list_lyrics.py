@@ -17,7 +17,7 @@ class GetListLyrics(QDialog, Ui_get_list_lyrics):
 
     def closeEvent(self, arg__1: QCloseEvent) -> None:
         if (self.ask_to_close and
-                QMessageBox.question(self, "提示", "是否要取消获取专辑/歌单歌词？", QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.No):
+                QMessageBox.question(self, self.tr("提示"), self.tr("是否要取消获取专辑/歌单歌词？"), QMessageBox.Yes | QMessageBox.No, QMessageBox.No) == QMessageBox.No):
             arg__1.ignore()
             return
         self.closed.emit()

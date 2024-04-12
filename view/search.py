@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from ui.search_ui import Ui_search
-from utils.data import Data
+from utils.data import data
 from utils.enum import LyricsFormat, LyricsType, SearchType, Source
 from utils.lyrics import Lyrics
 from utils.utils import get_lyrics_format_ext, get_save_path, ms2formattime
@@ -24,7 +24,7 @@ from view.get_list_lyrics import GetListLyrics
 
 
 class SearchWidget(QWidget, Ui_search):
-    def __init__(self, main_window: QWidget, data: Data, threadpool: QThreadPool) -> None:
+    def __init__(self, main_window: QWidget, threadpool: QThreadPool) -> None:
         super().__init__()
         self.setupUi(self)
         self.return_toolButton.setEnabled(False)
@@ -59,7 +59,7 @@ class SearchWidget(QWidget, Ui_search):
         self.save_list_lyrics_pushButton.clicked.connect(self.save_list_lyrics)
 
         self.search_pushButton.clicked.connect(self.search_button_clicked)
-        self.search_type_comboBox.currentTextChanged.connect(self.search_type_changed)
+        self.search_type_comboBox.currentIndexChanged.connect(self.search_type_changed)
         self.results_tableWidget.doubleClicked.connect(self.select_results)
 
         self.translate_checkBox.stateChanged.connect(self.update_preview_lyric)
@@ -84,12 +84,12 @@ class SearchWidget(QWidget, Ui_search):
 
     def get_source(self) -> Source:
         """返回选择了的源"""
-        match self.source_comboBox.currentText():
-            case "QQ音乐":
+        match self.source_comboBox.currentIndex():
+            case 0:
                 return Source.QM
-            case "酷狗音乐":
+            case 1:
                 return Source.KG
-            case "网易云音乐":
+            case 2:
                 return Source.NE
 
     def save_list_lyrics(self) -> None:
@@ -134,16 +134,16 @@ class SearchWidget(QWidget, Ui_search):
 
             if count == self.get_list_lyrics_box.progressBar.maximum():
                 self.get_list_lyrics_box.ask_to_close = False
-                self.get_list_lyrics_box.pushButton.setText("关闭")
+                self.get_list_lyrics_box.pushButton.setText(self.tr("关闭"))
                 self.get_list_lyrics_box.closed.connect(None)
                 self.get_list_lyrics_box.pushButton.clicked.connect(self.get_list_lyrics_box.close)
-                QMessageBox.information(self.main_window, "提示", "获取歌词完成")
+                QMessageBox.information(self.main_window, self.tr("提示"), self.tr("获取歌词完成"))
                 self.main_window.setDisabled(False)
 
         self.main_window.setDisabled(True)
         self.get_list_lyrics_box.ask_to_close = True
         self.get_list_lyrics_box.progressBar.setValue(0)
-        self.get_list_lyrics_box.pushButton.setText("取消")
+        self.get_list_lyrics_box.pushButton.setText(self.tr("取消"))
         self.get_list_lyrics_box.progressBar.setMaximum(len(self.songlist_result["result"]))
         self.get_list_lyrics_box.plainTextEdit.setPlainText("")
         self.get_list_lyrics_box.show()
@@ -163,7 +163,7 @@ class SearchWidget(QWidget, Ui_search):
 
         def cancel_get_list_lyrics() -> None:
             self.get_list_lyrics_box.ask_to_close = False
-            self.get_list_lyrics_box.pushButton.setText("关闭")
+            self.get_list_lyrics_box.pushButton.setText(self.tr("关闭"))
             self.get_list_lyrics_box.closed.connect(None)
             self.get_list_lyrics_box.pushButton.clicked.connect(self.get_list_lyrics_box.close)
             self.main_window.setDisabled(False)
@@ -212,16 +212,16 @@ class SearchWidget(QWidget, Ui_search):
             self.save_path_lineEdit.setText(os.path.normpath(save_path))
 
     @Slot(str)
-    def search_type_changed(self, text: str) -> None:
+    def search_type_changed(self, index: int) -> None:
         """搜索类型改变"""
-        match text:
-            case "单曲":
+        match index:
+            case 0:
                 self.search_type = SearchType.SONG
-            case "专辑":
+            case 1:
                 self.search_type = SearchType.ALBUM
-            case "歌手":
+            case 2:
                 self.search_type = SearchType.ARTIST
-            case "歌单":
+            case 3:
                 self.search_type = SearchType.SONGLIST
 
     def result_return(self) -> None:
@@ -247,7 +247,7 @@ class SearchWidget(QWidget, Ui_search):
         """搜索结果槽函数"""
         if taskid != self.taskid["results_table"]:
             return
-        self.search_pushButton.setText('搜索')
+        self.search_pushButton.setText(self.tr('搜索'))
         self.search_pushButton.setEnabled(True)
         self.return_toolButton.setEnabled(False)
         self.update_result_table(("search", search_type), result)
@@ -258,9 +258,9 @@ class SearchWidget(QWidget, Ui_search):
     @Slot(str)
     def search_error_slot(self, error: str) -> None:
         """搜索错误时调用"""
-        self.search_pushButton.setText('搜索')
+        self.search_pushButton.setText(self.tr('搜索'))
         self.search_pushButton.setEnabled(True)
-        QMessageBox.critical(self, "搜索错误", error)
+        QMessageBox.critical(self, self.tr("搜索错误"), error)
 
     @Slot()
     def search_button_clicked(self) -> None:
@@ -268,7 +268,7 @@ class SearchWidget(QWidget, Ui_search):
         self.reset_page_status()
         keyword = self.search_keyword_lineEdit.text()
         if keyword == "":
-            QMessageBox.warning(self, "搜索错误", "请输入搜索关键字")
+            QMessageBox.warning(self, self.tr("搜索错误"), self.tr("请输入搜索关键字"))
             return
         self.search_pushButton.setText('正在搜索...')
         self.search_pushButton.setEnabled(False)
@@ -284,7 +284,7 @@ class SearchWidget(QWidget, Ui_search):
     @Slot(str)
     def update_preview_lyric_error_slot(self, error: str) -> None:
         """更新预览歌词错误时调用"""
-        QMessageBox.critical(self, "获取预览歌词错误", error)
+        QMessageBox.critical(self, self.tr("获取预览歌词错误"), error)
         self.preview_plainTextEdit.setPlainText("")
 
     @Slot(int, dict)
@@ -292,20 +292,20 @@ class SearchWidget(QWidget, Ui_search):
         """更新预览歌词结果时调用"""
         def get_lrc_type(lrc: Lyrics, lrc_type: str) -> str:
             if lrc.lrc_types[lrc_type] == LyricsType.PlainText:
-                return "纯文本"
+                return self.tr("纯文本")
             if lrc.lrc_isverbatim[lrc_type] is True:
-                return "逐字"
-            return "逐行"
+                return self.tr("逐字")
+            return self.tr("逐行")
         if taskid != self.taskid["update_preview_lyric"]:
             return
         self.preview_info = {"info": result["info"]}
         lyric_types_text = ""
         if "orig" in result['lrc'].lrc_types:
-            lyric_types_text += "原文" + f"({get_lrc_type(result['lrc'], 'orig')})"
+            lyric_types_text += self.tr("原文") + f"({get_lrc_type(result['lrc'], 'orig')})"
         if "ts" in result['lrc'].lrc_types:
-            lyric_types_text += "、译文" + f"({get_lrc_type(result['lrc'], 'ts')})"
+            lyric_types_text += self.tr("、译文") + f"({get_lrc_type(result['lrc'], 'ts')})"
         if "roma" in result['lrc'].lrc_types:
-            lyric_types_text += "、罗马音" + f"({get_lrc_type(result['lrc'], 'roma')})"
+            lyric_types_text += self.tr("、罗马音") + f"({get_lrc_type(result['lrc'], 'roma')})"
         self.lyric_types_lineEdit.setText(lyric_types_text)
         self.songid_lineEdit.setText(str(result['info']['id']))
 
@@ -331,7 +331,7 @@ class SearchWidget(QWidget, Ui_search):
         self.threadpool.start(worker)
 
         self.preview_info = None
-        self.preview_plainTextEdit.setPlainText("处理中...")
+        self.preview_plainTextEdit.setPlainText(self.tr("处理中..."))
 
     def update_result_table(self, result_type: tuple, result: list, clear: bool = True) -> None:
         """
@@ -346,7 +346,7 @@ class SearchWidget(QWidget, Ui_search):
         match result_type[1]:
             case SearchType.SONG:
                 table.setColumnCount(4)
-                table.setHorizontalHeaderLabels(["歌曲", "艺术家", "专辑", "时长"])
+                table.setHorizontalHeaderLabels([self.tr("歌曲"), self.tr("艺术家"), self.tr("专辑"), self.tr("时长")])
                 table.set_proportions([0.4, 0.2, 0.4, 2])
 
                 for song in result:
@@ -362,7 +362,7 @@ class SearchWidget(QWidget, Ui_search):
 
             case SearchType.ALBUM:
                 table.setColumnCount(4)
-                table.setHorizontalHeaderLabels(["专辑", "艺术家", "发行日期", "歌曲数量"])
+                table.setHorizontalHeaderLabels([self.tr("专辑"), self.tr("艺术家"), self.tr("发行日期"), self.tr("歌曲数量")])
                 table.set_proportions([0.6, 0.4, 2, 2])
                 for album in result:
                     table.insertRow(table.rowCount())
@@ -375,7 +375,7 @@ class SearchWidget(QWidget, Ui_search):
 
             case SearchType.SONGLIST:
                 table.setColumnCount(4)
-                table.setHorizontalHeaderLabels(["歌单", "创建者", "创建时间", "歌曲数量"])
+                table.setHorizontalHeaderLabels([self.tr("歌单"), self.tr("创建者"), self.tr("创建时间"), self.tr("歌曲数量")])
                 table.set_proportions([0.6, 0.4, 2, 2])
                 for songlist in result:
                     table.insertRow(table.rowCount())
@@ -388,7 +388,7 @@ class SearchWidget(QWidget, Ui_search):
 
             case SearchType.LYRICS:
                 table.setColumnCount(4)
-                table.setHorizontalHeaderLabels(["id", "上传者", "时长", "分数"])
+                table.setHorizontalHeaderLabels(["id", self.tr("上传者"), self.tr("时长"), self.tr("分数")])
                 table.set_proportions([2, 1, 2, 2])
                 for lyric in result:
                     table.insertRow(table.rowCount())
@@ -402,7 +402,7 @@ class SearchWidget(QWidget, Ui_search):
     @Slot(str)
     def get_songlist_error(self, error: str) -> None:
         """获取歌单、专辑中的歌曲错误时调用"""
-        QMessageBox.critical(self, "错误", error)
+        QMessageBox.critical(self, self.tr("错误"), error)
         self.result_return()
 
     @Slot(int, str, list)
@@ -444,7 +444,7 @@ class SearchWidget(QWidget, Ui_search):
     @Slot(str)
     def search_lyrics_error_slot(self, error: str) -> None:
         """搜索歌词错误时调用"""
-        QMessageBox.critical(self, "错误", error)
+        QMessageBox.critical(self, self.tr("错误"), error)
 
     @Slot(int, SearchType, list)
     def search_lyrics_result_slot(self, taskid: int, _type: SearchType, result: list) -> None:
@@ -452,7 +452,7 @@ class SearchWidget(QWidget, Ui_search):
             return
         if not result:
             # never
-            QMessageBox.information(self, "提示", "没有找到歌词")
+            QMessageBox.information(self, self.tr("提示"), self.tr("没有找到歌词"))
         elif len(result) == 1:
             self.update_preview_lyric(result[0])
         else:
@@ -470,7 +470,7 @@ class SearchWidget(QWidget, Ui_search):
     def search_lyrics(self, info: dict) -> None:
         """搜索歌词(已经搜索了歌曲)"""
         if (info['source'] == Source.KG and info['language'] in ["纯音乐", '伴奏'] and
-           QMessageBox.question(self, "提示", "是否为纯音乐搜索歌词", QMessageBox.Yes | QMessageBox.No, QMessageBox.No)) == QMessageBox.No:
+           QMessageBox.question(self, self.tr("提示"), self.tr("是否为纯音乐搜索歌词"), QMessageBox.Yes | QMessageBox.No, QMessageBox.No)) == QMessageBox.No:
             return
         self.reset_page_status()
         self.taskid["results_table"] += 1
@@ -536,12 +536,12 @@ class SearchWidget(QWidget, Ui_search):
             self.all_results_obtained = True
 
             # 创建"没有更多结果"的 QTableWidgetItem
-            nomore_item = QTableWidgetItem("没有更多结果")
+            nomore_item = QTableWidgetItem(self.tr("没有更多结果"))
             nomore_item.setTextAlignment(0x0004 | 0x0080)  # 设置水平和垂直居中对齐
             self.results_tableWidget.setItem(last_row, 0, nomore_item)
         else:
             self.results_tableWidget.removeRow(last_row)
-            QMessageBox.critical(self, "错误", error)
+            QMessageBox.critical(self, self.tr("错误"), error)
 
     def results_table_scroll_changed(self, value: int) -> None:
         # 判断是否已经滚动到了底部
@@ -558,7 +558,7 @@ class SearchWidget(QWidget, Ui_search):
             self.get_next_page = True
 
             # 创建加载中的 QTableWidgetItem
-            loading_item = QTableWidgetItem("加载中...")
+            loading_item = QTableWidgetItem(self.tr("加载中..."))
             loading_item.setTextAlignment(0x0004 | 0x0080)  # 设置水平和垂直居中对齐
 
             # 设置合并单元格

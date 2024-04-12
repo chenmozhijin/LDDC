@@ -3,34 +3,25 @@
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
-from PySide6.QtGui import QFont
-from PySide6.QtWidgets import (
-    QAbstractItemView,
-    QCheckBox,
-    QComboBox,
-    QFrame,
-    QGroupBox,
-    QHBoxLayout,
-    QLabel,
-    QLayout,
-    QLineEdit,
-    QListView,
-    QListWidgetItem,
-    QPushButton,
-    QSizePolicy,
-    QSpacerItem,
-    QTextBrowser,
-    QVBoxLayout,
-)
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
+    QFrame, QGroupBox, QHBoxLayout, QLabel,
+    QLayout, QLineEdit, QListView, QListWidgetItem,
+    QPushButton, QSizePolicy, QSpacerItem, QTextBrowser,
+    QVBoxLayout, QWidget)
 
 from ui.custom_widgets import LyricOrderListWidget
-
 
 class Ui_settings(object):
     def setupUi(self, settings):
@@ -62,7 +53,7 @@ class Ui_settings(object):
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.verticalLayout_4 = QVBoxLayout()
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.verticalLayout_4.setSizeConstraint(QLayout.SetDefaultConstraint)
+        self.verticalLayout_4.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
         self.label_4 = QLabel(self.groupBox_2)
         self.label_4.setObjectName(u"label_4")
         sizePolicy.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
@@ -79,20 +70,24 @@ class Ui_settings(object):
         self.lyrics_order_listWidget.setSizePolicy(sizePolicy)
         self.lyrics_order_listWidget.setMinimumSize(QSize(0, 0))
         self.lyrics_order_listWidget.setMaximumSize(QSize(118, 96))
-        self.lyrics_order_listWidget.setFrameShape(QFrame.Box)
-        self.lyrics_order_listWidget.setFrameShadow(QFrame.Sunken)
-        self.lyrics_order_listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.lyrics_order_listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.lyrics_order_listWidget.setFrameShape(QFrame.Shape.Box)
+        self.lyrics_order_listWidget.setFrameShadow(QFrame.Shadow.Sunken)
+        self.lyrics_order_listWidget.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.lyrics_order_listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.lyrics_order_listWidget.setAutoScroll(True)
-        self.lyrics_order_listWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.lyrics_order_listWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.lyrics_order_listWidget.setDragEnabled(True)
-        self.lyrics_order_listWidget.setDragDropMode(QAbstractItemView.InternalMove)
-        self.lyrics_order_listWidget.setDefaultDropAction(Qt.MoveAction)
-        self.lyrics_order_listWidget.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.lyrics_order_listWidget.setMovement(QListView.Free)
+        self.lyrics_order_listWidget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.lyrics_order_listWidget.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.lyrics_order_listWidget.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.lyrics_order_listWidget.setMovement(QListView.Movement.Free)
         self.lyrics_order_listWidget.setSortingEnabled(False)
 
         self.verticalLayout_4.addWidget(self.lyrics_order_listWidget)
+
+        self.verticalSpacer_3 = QSpacerItem(20, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout_4.addItem(self.verticalSpacer_3)
 
 
         self.horizontalLayout_4.addLayout(self.verticalLayout_4)
@@ -136,24 +131,24 @@ class Ui_settings(object):
         self.textBrowser.setSizePolicy(sizePolicy1)
         self.textBrowser.setMinimumSize(QSize(192, 106))
         self.textBrowser.setMaximumSize(QSize(234, 78))
-        self.textBrowser.setFrameShape(QFrame.Box)
-        self.textBrowser.setFrameShadow(QFrame.Sunken)
-        self.textBrowser.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.textBrowser.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.textBrowser.setFrameShape(QFrame.Shape.Box)
+        self.textBrowser.setFrameShadow(QFrame.Shadow.Sunken)
+        self.textBrowser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.textBrowser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.textBrowser.setOpenLinks(False)
 
-        self.horizontalLayout_2.addWidget(self.textBrowser, 0, Qt.AlignTop)
+        self.horizontalLayout_2.addWidget(self.textBrowser, 0, Qt.AlignmentFlag.AlignTop)
 
         self.verticalLayout_3 = QVBoxLayout()
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.horizontalLayout_3.setSizeConstraint(QLayout.SetDefaultConstraint)
+        self.horizontalLayout_3.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
         self.label_2 = QLabel(self.groupBox)
         self.label_2.setObjectName(u"label_2")
         sizePolicy.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
         self.label_2.setSizePolicy(sizePolicy)
-        self.label_2.setTextFormat(Qt.AutoText)
+        self.label_2.setTextFormat(Qt.TextFormat.AutoText)
 
         self.horizontalLayout_3.addWidget(self.label_2)
 
@@ -228,6 +223,21 @@ class Ui_settings(object):
 
         self.verticalLayout_2.addWidget(self.groupBox_3)
 
+        self.groupBox_4 = QGroupBox(settings)
+        self.groupBox_4.setObjectName(u"groupBox_4")
+        self.verticalLayout_7 = QVBoxLayout(self.groupBox_4)
+        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
+        self.language_comboBox = QComboBox(self.groupBox_4)
+        self.language_comboBox.addItem("")
+        self.language_comboBox.addItem("")
+        self.language_comboBox.addItem("")
+        self.language_comboBox.setObjectName(u"language_comboBox")
+
+        self.verticalLayout_7.addWidget(self.language_comboBox)
+
+
+        self.verticalLayout_2.addWidget(self.groupBox_4)
+
 
         self.horizontalLayout.addLayout(self.verticalLayout_2)
 
@@ -299,6 +309,11 @@ class Ui_settings(object):
         self.log_level_comboBox.setItemText(3, QCoreApplication.translate("settings", u"INFO", None))
         self.log_level_comboBox.setItemText(4, QCoreApplication.translate("settings", u"DEBUG", None))
         self.log_level_comboBox.setItemText(5, QCoreApplication.translate("settings", u"NOTSET", None))
+
+        self.groupBox_4.setTitle(QCoreApplication.translate("settings", u"\u8bed\u8a00\u8bbe\u7f6e", None))
+        self.language_comboBox.setItemText(0, QCoreApplication.translate("settings", u"\u81ea\u52a8", None))
+        self.language_comboBox.setItemText(1, QCoreApplication.translate("settings", u"\u82f1\u6587", None))
+        self.language_comboBox.setItemText(2, QCoreApplication.translate("settings", u"\u4e2d\u6587", None))
 
     # retranslateUi
 

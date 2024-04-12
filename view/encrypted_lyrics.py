@@ -5,13 +5,13 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from decryptor import krc_decrypt, qrc_decrypt
 from ui.encrypted_lyrics_ui import Ui_encrypted_lyrics
-from utils.data import Data
+from utils.data import data
 from utils.enum import LyricsFormat, LyricsType, QrcType, Source
 from utils.lyrics import Lyrics, krc2dict, qrc2list
 
 
 class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
-    def __init__(self, data: Data) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self.setupUi(self)
         self.connect_signals()
@@ -42,17 +42,17 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         return lyric_type
 
     def open_file(self) -> None:
-        file_path = QFileDialog.getOpenFileName(self, "选取加密歌词", "", "加密歌词(*.qrc *.krc)")[0]
+        file_path = QFileDialog.getOpenFileName(self, self.tr("选取加密歌词"), "", self.tr("加密歌词(*.qrc *.krc)"))[0]
         if file_path == "":
             return
         if not os.path.exists(file_path):
-            QMessageBox.warning(self, "警告", "文件不存在！")
+            QMessageBox.warning(self, self.tr("警告"), self.tr("文件不存在！"))
             return
         try:
             with open(file_path, "rb") as f:
                 data = f.read()
         except Exception as e:
-            QMessageBox.warning(self, "警告", f"读取文件失败：{e}")
+            QMessageBox.warning(self, self.tr("警告"), self.tr("读取文件失败：") + str(e))
             return
         qrc_magicheader = bytes.fromhex("98 25 B0 AC E3 02 83 68 E8 FC 6C")
         krc_magicheader = bytes.fromhex("6B 72 63 31 38")
@@ -63,24 +63,24 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
             self.lyrics_type = "krc"
             lyrics, error = krc_decrypt(data)
         else:
-            QMessageBox.warning(self, "警告", "文件格式不正确！")
+            QMessageBox.warning(self, self.tr("警告"), self.tr("文件格式不正确！"))
             return
 
         if lyrics is None:
             self.lyrics_type = None
-            msg = "解密失败" if error is None else f"解密失败：{error}"
-            QMessageBox.critical(self, "错误", msg)
+            msg = self.tr("解密失败") if error is None else self.tr("解密失败：") + error
+            QMessageBox.critical(self, self.tr("错误"), msg)
             return
 
         self.plainTextEdit.setPlainText(lyrics)
 
     def convert(self) -> None:
         if self.lyrics_type == "converted":
-            QMessageBox.information(self, "提示", "当前歌词已经转换过了！")
+            QMessageBox.information(self, self.tr("提示"), self.tr("当前歌词已经转换过了！"))
             return
         lyrics = self.plainTextEdit.toPlainText()
         if lyrics.strip() == "":
-            QMessageBox.warning(self, "警告", "歌词内容不能为空！")
+            QMessageBox.warning(self, self.tr("警告"), self.tr("歌词内容不能为空！"))
             return
         try:
             if self.lyrics_type == "qrc":
@@ -104,7 +104,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
                 lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()))
         except Exception as e:
             logging.exception("转换失败")
-            QMessageBox.critical(self, "错误", f"转换失败：{e}")
+            QMessageBox.critical(self, self.tr("错误"), self.tr("转换失败：") + str(e))
             return
         self.plainTextEdit.setPlainText(lrc)
         self.lyrics_type = "converted"
@@ -125,11 +125,11 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
             self.update_lyrics()
 
     def save(self) -> None:
-        file_path, _ = QFileDialog.getSaveFileName(self, "保存文件", "", "歌词\\字幕文件 (*.lrc *.srt *.ass)")
+        file_path, _ = QFileDialog.getSaveFileName(self, self.tr("保存文件"), "", self.tr("歌词文件 (*.lrc *.srt *.ass)"))
         if file_path == "":
             return
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(self.plainTextEdit.toPlainText())
         except Exception as e:
-            QMessageBox.critical(self, "错误", f"保存失败：{e}")
+            QMessageBox.critical(self, self.tr("错误"), self.tr("保存失败：") + str(e))

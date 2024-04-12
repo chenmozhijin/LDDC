@@ -5,6 +5,8 @@ import logging
 import re
 from base64 import b64decode
 
+from PySide6.QtCore import QCoreApplication
+
 from decryptor import krc_decrypt, qrc_decrypt
 from utils.api import get_krc, ne_get_lyric, qm_get_lyric
 from utils.enum import LyricsFormat, LyricsProcessingError, LyricsType, QrcType, Source
@@ -450,13 +452,13 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
         :return: 错误信息, 错误类型 | None, None
         """
         if self.source not in [Source.QM, Source.KG, Source.NE]:
-            return "不支持的源", LyricsProcessingError.UNSUPPORTED
+            return QCoreApplication.translate("lyrics", "不支持的源"), LyricsProcessingError.UNSUPPORTED
 
         match self.source:
             case Source.QM:
                 response = qm_get_lyric({'album': self.album, 'artist': self.artist, 'title': self.title, 'id': self.id, 'duration': self.duration})
                 if isinstance(response, str):
-                    return f"请求qrc歌词失败,错误:{response}", LyricsProcessingError.REQUEST
+                    return QCoreApplication.translate("lyrics", "请求qrc歌词失败,错误:{0}").format(response), LyricsProcessingError.REQUEST
                 for key, value in [("orig", 'lyric'),
                                    ("ts", 'trans'),
                                    ("roma", 'roma')]:
@@ -483,18 +485,18 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
 
                             self[key] = lyric
                         elif error is not None:
-                            return "解密歌词失败, 错误: " + error, LyricsProcessingError.DECRYPT
+                            return QCoreApplication.translate("lyrics", "解密歌词失败, 错误: ") + error, LyricsProcessingError.DECRYPT
                     elif (lrc_t == "0" and key == "orig"):
-                        return "没有获取到可解密的歌词(timetag=0)", LyricsProcessingError.NOT_FOUND
+                        return QCoreApplication.translate("lyrics", "没有获取到可用的歌词(timetag=0)"), LyricsProcessingError.NOT_FOUND
 
             case Source.KG:
                 encrypted_krc = get_krc(self.id, self.accesskey)
                 if isinstance(encrypted_krc, str):
-                    return f"请求krc歌词失败,错误:{response}", LyricsProcessingError.REQUEST
+                    return QCoreApplication.translate("lyrics", "请求krc歌词失败,错误:{0}").format(response), LyricsProcessingError.REQUEST
                 krc, error = krc_decrypt(encrypted_krc)
                 if krc is None:
                     error = f"错误:{error}" if error is not None else ""
-                    return f"解密krc歌词失败,错误:{error}", LyricsProcessingError.DECRYPT
+                    return QCoreApplication.translate("lyrics", "解密krc歌词失败,错误:{0}").format(error), LyricsProcessingError.DECRYPT
                 self.tags, lyric = krc2dict(krc)
                 self.update(lyric)
                 if 'orig' in lyric:
@@ -507,7 +509,7 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
             case Source.NE:
                 lyrics = ne_get_lyric(self.id)
                 if isinstance(lyrics, str):
-                    return "请求网易云歌词失败, 错误: " + lyrics, LyricsProcessingError.REQUEST
+                    return QCoreApplication.translate("lyrics", "请求网易云歌词失败, 错误: ") + lyrics, LyricsProcessingError.REQUEST
                 logging.debug(f"lyrics: {lyrics}")
                 tags = {}
                 if self.artist:
@@ -553,8 +555,8 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
             self.lrc_isverbatim[key] = is_verbatim(lrc)
 
         if "orig" not in self or self["orig"] is None:
-            logging.error("没有获取到的歌词(orig=None)")
-            return "没有获取到的歌词(orig=None)", LyricsProcessingError.NOT_FOUND
+            logging.error("没有获取到歌词(orig=None)")
+            return QCoreApplication.translate("lyrics", "没有获取到歌词(orig=None)"), LyricsProcessingError.NOT_FOUND
         return None, None
 
     def get_merge_lrc(self, lyrics_order: list, lyrics_format: LyricsFormat = LyricsFormat.VERBATIMLRC) -> str:

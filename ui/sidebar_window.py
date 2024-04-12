@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
+from enum import Enum
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
@@ -14,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 
-class Position:
+class SidebarButtonPosition(Enum):
     TOP = 0
     BOTTOM = 1
 
@@ -24,12 +26,12 @@ class SidebarWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setup_ui()
+        self.__setup_ui()
         self.Total_Widgets = 0
         self.Top_Widgets = 0
         self.Bottom_Widgets = 0
 
-    def setup_ui(self) -> None:
+    def __setup_ui(self) -> None:
         self.setObjectName("SidebarWindow")
         self.centralwidget = QWidget(self)
         self.centralwidget.setObjectName("centralwidget")
@@ -47,24 +49,28 @@ class SidebarWindow(QMainWindow):
         self.sidebar.setContentsMargins(0, 10, 0, 10)
         self.Widgets.tabBar().hide()
 
-        sidebar_spacer = QSpacerItem(40, 20, QSizePolicy.Fixed, QSizePolicy.Expanding)
-        self.sidebar.addItem(sidebar_spacer)
+        self.__sidebar_spacer = QSpacerItem(40, 20, QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.sidebar.addItem(self.__sidebar_spacer)
+
+    def set_current_widget(self, index: int) -> None:
+        current_button = self.sidebar.itemAt(index + 1).widget() if index >= self.Top_Widgets else self.sidebar.itemAt(index).widget()
+        self.Widgets.setCurrentIndex(index)
+        self.widget_changed.emit(index)
+        current_button.setChecked(True)
+        for i in range(self.sidebar.count()):
+            item = self.sidebar.itemAt(i).widget()
+            if item != current_button and isinstance(item, QPushButton):
+                item.setChecked(False)
 
     def SidebarButtonClicked(self) -> None:
         sender = self.sender()
         index = sender.property("index")
-        self.Widgets.setCurrentIndex(index)
-        self.widget_changed.emit(index)
-        sender.setChecked(True)
-        for i in range(self.sidebar.count()):
-            item = self.sidebar.itemAt(i).widget()
-            if item != sender and isinstance(item, QPushButton):
-                item.setChecked(False)
+        self.set_current_widget(index)
 
     def set_sidebar_width(self, width: int) -> None:
         self.sidebar_widget.setFixedWidth(width)
 
-    def add_widget(self, name: str, widget: QWidget, position: Position = Position.TOP) -> None:
+    def add_widget(self, name: str, widget: QWidget, position: SidebarButtonPosition = SidebarButtonPosition.TOP, icon: None | QIcon = None) -> None:
         '''
         添加一个新页面到侧边栏中
         :param name: 页面的名称
@@ -73,6 +79,9 @@ class SidebarWindow(QMainWindow):
         :return: None
         '''
         button = QPushButton(name)
+        button.setLayoutDirection(Qt.LeftToRight)
+        if isinstance(icon, QIcon):
+            button.setIcon(icon)
         button.setCheckable(True)
         if self.Total_Widgets == 0:
             button.setChecked(True)
@@ -91,11 +100,26 @@ class SidebarWindow(QMainWindow):
             }
             """,
         )
-        if position == Position.TOP:
+        if position == SidebarButtonPosition.TOP:
             self.sidebar.insertWidget(self.Top_Widgets, button)
             self.Top_Widgets += 1
-        elif position == Position.BOTTOM:
+        elif position == SidebarButtonPosition.BOTTOM:
             self.sidebar.addWidget(button)
             self.Bottom_Widgets += 1
         self.Widgets.addTab(widget, "")
         self.Total_Widgets += 1
+
+    def clear_widgets(self) -> None:
+        '''
+        清空所有页面
+        :return: None
+        '''
+        self.Widgets.clear()
+        while self.sidebar.count():
+            item = self.sidebar.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self.sidebar.addItem(self.__sidebar_spacer)
+        self.Total_Widgets = 0
+        self.Top_Widgets = 0
+        self.Bottom_Widgets = 0

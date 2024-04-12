@@ -3,40 +3,23 @@
 ################################################################################
 ## Form generated from reading UI file 'local_match.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QMetaObject,
-    QSize,
-    Qt,
-)
-from PySide6.QtGui import (
-    QFont,
-)
-from PySide6.QtWidgets import (
-    QAbstractItemView,
-    QCheckBox,
-    QComboBox,
-    QGridLayout,
-    QGroupBox,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QListWidget,
-    QListWidgetItem,
-    QPlainTextEdit,
-    QPushButton,
-    QSizePolicy,
-    QSpacerItem,
-    QSplitter,
-    QVBoxLayout,
-    QWidget,
-)
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox,
+    QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+    QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit,
+    QPushButton, QSizePolicy, QSpacerItem, QSplitter,
+    QVBoxLayout, QWidget)
 
 class Ui_local_match(object):
     def setupUi(self, local_match):
@@ -52,7 +35,7 @@ class Ui_local_match(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.splitter.sizePolicy().hasHeightForWidth())
         self.splitter.setSizePolicy(sizePolicy)
-        self.splitter.setOrientation(Qt.Horizontal)
+        self.splitter.setOrientation(Qt.Orientation.Horizontal)
         self.splitter.setOpaqueResize(True)
         self.splitter.setHandleWidth(5)
         self.splitter.setChildrenCollapsible(False)
@@ -193,14 +176,14 @@ class Ui_local_match(object):
         self.translate_checkBox.setSizePolicy(sizePolicy1)
         self.translate_checkBox.setChecked(True)
 
-        self.horizontalLayout_3.addWidget(self.translate_checkBox, 0, Qt.AlignLeft)
+        self.horizontalLayout_3.addWidget(self.translate_checkBox, 0, Qt.AlignmentFlag.AlignLeft)
 
         self.romanized_checkBox = QCheckBox(self.groupBox_2)
         self.romanized_checkBox.setObjectName(u"romanized_checkBox")
         sizePolicy1.setHeightForWidth(self.romanized_checkBox.sizePolicy().hasHeightForWidth())
         self.romanized_checkBox.setSizePolicy(sizePolicy1)
 
-        self.horizontalLayout_3.addWidget(self.romanized_checkBox, 0, Qt.AlignLeft)
+        self.horizontalLayout_3.addWidget(self.romanized_checkBox, 0, Qt.AlignmentFlag.AlignLeft)
 
 
         self.gridLayout_2.addLayout(self.horizontalLayout_3, 0, 0, 1, 1)
@@ -214,7 +197,7 @@ class Ui_local_match(object):
         self.label_7 = QLabel(self.groupBox_2)
         self.label_7.setObjectName(u"label_7")
 
-        self.horizontalLayout_5.addWidget(self.label_7, 0, Qt.AlignTop)
+        self.horizontalLayout_5.addWidget(self.label_7, 0, Qt.AlignmentFlag.AlignTop)
 
         self.verticalLayout_4 = QVBoxLayout()
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
@@ -240,7 +223,7 @@ class Ui_local_match(object):
         self.label_2 = QLabel(self.groupBox_2)
         self.label_2.setObjectName(u"label_2")
 
-        self.horizontalLayout_5.addWidget(self.label_2, 0, Qt.AlignTop)
+        self.horizontalLayout_5.addWidget(self.label_2, 0, Qt.AlignmentFlag.AlignTop)
 
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_5)
@@ -253,15 +236,12 @@ class Ui_local_match(object):
         QListWidgetItem(self.source_listWidget)
         QListWidgetItem(self.source_listWidget)
         self.source_listWidget.setObjectName(u"source_listWidget")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.source_listWidget.sizePolicy().hasHeightForWidth())
-        self.source_listWidget.setSizePolicy(sizePolicy3)
+        sizePolicy1.setHeightForWidth(self.source_listWidget.sizePolicy().hasHeightForWidth())
+        self.source_listWidget.setSizePolicy(sizePolicy1)
         self.source_listWidget.setMinimumSize(QSize(0, 0))
         self.source_listWidget.setMaximumSize(QSize(96, 64))
-        self.source_listWidget.setDragDropMode(QAbstractItemView.DragDrop)
-        self.source_listWidget.setDefaultDropAction(Qt.MoveAction)
+        self.source_listWidget.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.source_listWidget.setDefaultDropAction(Qt.DropAction.MoveAction)
 
         self.horizontalLayout_4.addWidget(self.source_listWidget)
 

@@ -6,13 +6,14 @@ from logging import Logger
 from PySide6.QtWidgets import QFileDialog, QWidget
 
 from ui.settings_ui import Ui_settings
-from utils.data import Data
+from utils.data import data
+from utils.translator import load_translation
 from utils.utils import str2log_level
 
 
 class SettingWidget(QWidget, Ui_settings):
 
-    def __init__(self, data: Data, logger: Logger) -> None:
+    def __init__(self, logger: Logger) -> None:
         super().__init__()
         self.data = data
         self.logger = logger
@@ -28,17 +29,21 @@ class SettingWidget(QWidget, Ui_settings):
         self.log_level_comboBox.setCurrentText(self.data.cfg["log_level"])
         self.skip_inst_lyrics_checkBox.setChecked(self.data.cfg["skip_inst_lyrics"])
         self.auto_select_checkBox.setChecked(self.data.cfg["auto_select"])
+        match self.data.cfg["language"]:
+            case "auto":
+                self.language_comboBox.setCurrentIndex(0)
+            case "en":
+                self.language_comboBox.setCurrentIndex(1)
+            case "zh-Hans":
+                self.language_comboBox.setCurrentIndex(2)
 
     def select_default_save_path(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, "选择默认保存路径")
+        path = QFileDialog.getExistingDirectory(self, self.tr("选择默认保存路径"))
         if path:
             self.default_save_path_lineEdit.setText(os.path.normpath(path))
 
     def connect_signals(self) -> None:
-        self.lyrics_order_listWidget.droped.connect(lambda: self.data.write_config(
-                                                    "lyrics_order",
-                                                    [self.lyrics_order_listWidget.item(i).text()
-                                                     for i in range(self.lyrics_order_listWidget.count())]))
+        self.lyrics_order_listWidget.droped.connect(self.lyrics_order_changed)
 
         self.lyrics_file_name_format_lineEdit.textChanged.connect(
             lambda: self.data.write_config("lyrics_file_name_format", self.lyrics_file_name_format_lineEdit.text()))
@@ -58,3 +63,31 @@ class SettingWidget(QWidget, Ui_settings):
 
         self.auto_select_checkBox.stateChanged.connect(
             lambda: self.data.write_config("auto_select", self.auto_select_checkBox.isChecked()))
+
+        self.language_comboBox.currentIndexChanged.connect(self.language_comboBox_changed)
+
+    def language_comboBox_changed(self, index: int) -> None:
+        match index:
+            case 0:
+                self.data.write_config("language", "auto")
+            case 1:
+                self.data.write_config("language", "en")
+            case 2:
+                self.data.write_config("language", "zh-Hans")
+        load_translation()
+
+    def lyrics_order_changed(self) -> None:
+        lyrics_order = []
+        for type_ in [self.lyrics_order_listWidget.item(i).text()
+                      for i in range(self.lyrics_order_listWidget.count())]:
+            if type_ == self.tr("罗马音"):
+                lyrics_order.append("罗马音")
+            elif type_ == self.tr("原文"):
+                lyrics_order.append("原文")
+            elif type_ == self.tr("译文"):
+                lyrics_order.append("译文")
+            else:
+                msg = "Unknown lyrics type"
+                raise ValueError(msg)
+
+        self.data.write_config("lyrics_order", lyrics_order)

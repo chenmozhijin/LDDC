@@ -23,7 +23,7 @@
       </sizepolicy>
      </property>
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="opaqueResize">
       <bool>true</bool>
@@ -138,7 +138,7 @@
               <item>
                <spacer name="horizontalSpacer">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Orientation::Horizontal</enum>
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
@@ -204,7 +204,7 @@
               <item>
                <spacer name="horizontalSpacer_2">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Orientation::Horizontal</enum>
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
@@ -244,7 +244,7 @@
                 </property>
                </widget>
               </item>
-              <item alignment="Qt::AlignLeft">
+              <item alignment="Qt::AlignmentFlag::AlignLeft">
                <widget class="QCheckBox" name="translate_checkBox">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -260,7 +260,7 @@
                 </property>
                </widget>
               </item>
-              <item alignment="Qt::AlignLeft">
+              <item alignment="Qt::AlignmentFlag::AlignLeft">
                <widget class="QCheckBox" name="romanized_checkBox">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -281,7 +281,7 @@
                <layout class="QVBoxLayout" name="verticalLayout_2">
                 <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_5">
-                  <item alignment="Qt::AlignTop">
+                  <item alignment="Qt::AlignmentFlag::AlignTop">
                    <widget class="QLabel" name="label_7">
                     <property name="text">
                      <string>歌词来源:</string>
@@ -316,7 +316,7 @@
                     </item>
                    </layout>
                   </item>
-                  <item alignment="Qt::AlignTop">
+                  <item alignment="Qt::AlignmentFlag::AlignTop">
                    <widget class="QLabel" name="label_2">
                     <property name="text">
                      <string>优先顺序:</string>
@@ -330,7 +330,7 @@
               <item>
                <widget class="QListWidget" name="source_listWidget">
                 <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
                   <verstretch>0</verstretch>
                  </sizepolicy>
@@ -348,10 +348,10 @@
                  </size>
                 </property>
                 <property name="dragDropMode">
-                 <enum>QAbstractItemView::DragDrop</enum>
+                 <enum>QAbstractItemView::DragDropMode::DragDrop</enum>
                 </property>
                 <property name="defaultDropAction">
-                 <enum>Qt::MoveAction</enum>
+                 <enum>Qt::DropAction::MoveAction</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -373,7 +373,7 @@
               <item>
                <spacer name="horizontalSpacer_4">
                 <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
+                 <enum>Qt::Orientation::Horizontal</enum>
                 </property>
                 <property name="sizeHint" stdset="0">
                  <size>
@@ -439,7 +439,7 @@
          <item>
           <spacer name="verticalSpacer">
            <property name="orientation">
-            <enum>Qt::Vertical</enum>
+            <enum>Qt::Orientation::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
