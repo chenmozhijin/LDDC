@@ -80,13 +80,16 @@ class CheckUpdate(QRunnable):
 
             if compare_version_numbers(self.version, last_version):
                 QMetaObject.invokeMethod(self.windows, "show_message", Qt.QueuedConnection,
-                                         Q_ARG(str, "update"), Q_ARG(str, QCoreApplication.translate("CheckUpdate", "检查更新")), Q_ARG(str, QCoreApplication.translate("CheckUpdate", "发现新版本{0},是否前往GitHub下载？").format(last_version)))
+                                         Q_ARG(str, "update"), Q_ARG(str, QCoreApplication.translate("CheckUpdate", "检查更新")),
+                                         Q_ARG(str, QCoreApplication.translate("CheckUpdate", "发现新版本{0},是否前往GitHub下载？").format(last_version)))
             elif not self.isAuto:
                 QMetaObject.invokeMethod(self.windows, "show_message", Qt.QueuedConnection,
-                                         Q_ARG(str, "info"), Q_ARG(str, QCoreApplication.translate("CheckUpdate", "检查更新")), Q_ARG(str, QCoreApplication.translate("CheckUpdate", "已经是最新版本")))
+                                         Q_ARG(str, "info"), Q_ARG(str, QCoreApplication.translate("CheckUpdate", "检查更新")),
+                                         Q_ARG(str, QCoreApplication.translate("CheckUpdate", "已经是最新版本")))
         elif not self.isAuto:
             QMetaObject.invokeMethod(self.windows, "show_message", Qt.QueuedConnection,
-                                     Q_ARG(str, "error"), Q_ARG(str, QCoreApplication.translate("CheckUpdate", "检查更新")), Q_ARG(str, QCoreApplication.translate("CheckUpdate", "检查更新失败，错误:{0}").format(last_version)))
+                                     Q_ARG(str, "error"), Q_ARG(str, QCoreApplication.translate("CheckUpdate", "检查更新")),
+                                     Q_ARG(str, QCoreApplication.translate("CheckUpdate", "检查更新失败，错误:{0}").format(last_version)))
 
 
 class SearchSignal(QObject):
@@ -190,7 +193,11 @@ class LyricProcessingWorker(QRunnable):
                             self.signals.error.emit(QCoreApplication.translate("LyricProcess", "搜索歌词时出现错误{0}").format(search_return))
                             continue
                         if not search_return:
-                            self.signals.error.emit(QCoreApplication.translate("LyricProcess", "搜索歌词没有任何结果,源:{source}, 歌名:{title}, : {hash}").format(source=song_info['source'], song_info=song_info['title'], hash=song_info['hash']))
+                            self.signals.error.emit(
+                                QCoreApplication.translate("LyricProcess",
+                                                           "搜索歌词没有任何结果,源:{source}, 歌名:{title}, : {hash}").format(source=song_info['source'],
+                                                                                                                 song_info=song_info['title'],
+                                                                                                                 hash=song_info['hash']))
                             continue
                         info = song_info
                         info.update(search_return[0])
@@ -250,7 +257,10 @@ class LyricProcessingWorker(QRunnable):
             self.signals.result.emit(self.taskid, {'info': {**song_info, 'lyrics_format': self.task["lyrics_format"]}, 'lrc': lyrics, 'merged_lyric': merged_lyric})
 
         elif self.task["type"] == "get_list_lyrics":
-            save_folder, file_name = get_save_path(self.task["save_folder"], self.task["lyrics_file_name_format"] + get_lyrics_format_ext(self.task["lyrics_format"]), song_info, lyrics_order)
+            save_folder, file_name = get_save_path(self.task["save_folder"],
+                                                   self.task["lyrics_file_name_format"] + get_lyrics_format_ext(self.task["lyrics_format"]),
+                                                   song_info,
+                                                   lyrics_order)
             save_path = os.path.join(save_folder, file_name)  # 获取保存路径
             inst = bool(self.skip_inst_lyrics and len(lyrics["orig"]) != 0 and
                         (lyrics["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or
@@ -439,10 +449,14 @@ class LocalMatchWorker(QRunnable):
                 scores[0][0]['language'] in ["纯音乐", '伴奏']):
             if 'artist' in info:
                 msg = (f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} " +
-                       QCoreApplication.translate("LocalMatch", "搜索结果") + f":{scores[0][0]['artist']} - {scores[0][0]['title']}" + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
+                       QCoreApplication.translate("LocalMatch", "搜索结果") +
+                       f":{scores[0][0]['artist']} - {scores[0][0]['title']}" +
+                       QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
             else:
                 msg = (f"[{self.current_index}/{self.total_index}]本地: {info['title']} " +
-                       QCoreApplication.translate("LocalMatch", "搜索结果") + f":{scores[0][0]['artist']} - {scores[0][0]['title']}" + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
+                       QCoreApplication.translate("LocalMatch", "搜索结果") +
+                       f":{scores[0][0]['artist']} - {scores[0][0]['title']}" +
+                       QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
             self.signals.massage.emit(msg)
             return None, None
 
@@ -530,17 +544,25 @@ class LocalMatchWorker(QRunnable):
             return merged_lyric, song_info
         if 'artist' in info:
             if inst:
-                msg = (f"[{self.current_index}/{self.total_index}]" + QCoreApplication.translate("LocalMatch", "本地") + f": {info['artist']} - {info['title']} " +
-                       QCoreApplication.translate("LocalMatch", "搜索结果") + f":{scores[0][0]['artist']} - {scores[0][0]['title']}" + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
+                msg = (f"[{self.current_index}/{self.total_index}]" +
+                       QCoreApplication.translate("LocalMatch", "本地") + f": {info['artist']} - {info['title']} " +
+                       QCoreApplication.translate("LocalMatch", "搜索结果") +
+                       f":{scores[0][0]['artist']} - {scores[0][0]['title']}" + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
             else:
-                msg = (f"[{self.current_index}/{self.total_index}]" + QCoreApplication.translate("LocalMatch", "本地") + f": {info['artist']} - {info['title']} " +
-                       QCoreApplication.translate("LocalMatch", "搜索结果") + f":{song_info['artist']} - {song_info['title']}" + QCoreApplication.translate("LocalMatch", "歌词获取失败"))
+                msg = (f"[{self.current_index}/{self.total_index}]" +
+                       QCoreApplication.translate("LocalMatch", "本地") + f": {info['artist']} - {info['title']} " +
+                       QCoreApplication.translate("LocalMatch", "搜索结果") +
+                       f":{song_info['artist']} - {song_info['title']}" + QCoreApplication.translate("LocalMatch", "歌词获取失败"))
         elif inst:
-            msg = (f"[{self.current_index}/{self.total_index}]" + QCoreApplication.translate("LocalMatch", "本地") + f": {info['title']} " +
-                   QCoreApplication.translate("LocalMatch", "搜索结果") + f":{scores[0][0]['artist']} - {scores[0][0]['title']}" + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
+            msg = (f"[{self.current_index}/{self.total_index}]" +
+                   QCoreApplication.translate("LocalMatch", "本地") + f": {info['title']} " +
+                   QCoreApplication.translate("LocalMatch", "搜索结果") +
+                   f":{scores[0][0]['artist']} - {scores[0][0]['title']}" + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
         else:
-            msg = (f"[{self.current_index}/{self.total_index}]" + QCoreApplication.translate("LocalMatch", "本地") + f": {info['title']} " +
-                   QCoreApplication.translate("LocalMatch", "搜索结果") + f":{song_info['artist']} - {song_info['title']}" + QCoreApplication.translate("LocalMatch", "歌词获取失败"))
+            msg = (f"[{self.current_index}/{self.total_index}]" +
+                   QCoreApplication.translate("LocalMatch", "本地") + f": {info['title']} " +
+                   QCoreApplication.translate("LocalMatch", "搜索结果") +
+                   f":{song_info['artist']} - {song_info['title']}" + QCoreApplication.translate("LocalMatch", "歌词获取失败"))
         self.signals.massage.emit(msg)
         return None, None
 
@@ -645,11 +667,15 @@ class LocalMatchWorker(QRunnable):
                         with open(save_path, "w", encoding="utf-8") as f:
                             f.write(merged_lyric)
                         if 'artist' in song_info:
-                            msg = (f"[{self.current_index}/{self.total_index}]" + QCoreApplication.translate("LocalMatch", "本地") + f": {song_info['artist']} - {song_info['title']} " +
-                                   QCoreApplication.translate("LocalMatch", "匹配") + f": {lrc_info['artist']} - {lrc_info['title']} " + QCoreApplication.translate("LocalMatch", "成功保存到") + f"{save_path}")
+                            msg = (f"[{self.current_index}/{self.total_index}]" +
+                                   QCoreApplication.translate("LocalMatch", "本地") + f": {song_info['artist']} - {song_info['title']} " +
+                                   QCoreApplication.translate("LocalMatch", "匹配") + f": {lrc_info['artist']} - {lrc_info['title']} " +
+                                   QCoreApplication.translate("LocalMatch", "成功保存到") + f"{save_path}")
                         else:
-                            msg = (f"[{self.current_index}/{self.total_index}]" + QCoreApplication.translate("LocalMatch", "本地") + f": {song_info['title']} " +
-                                   QCoreApplication.translate("LocalMatch", "匹配") + f": {lrc_info['artist']} - {lrc_info['title']} " + QCoreApplication.translate("LocalMatch", "成功保存到") + f"{save_path}")
+                            msg = (f"[{self.current_index}/{self.total_index}]" +
+                                   QCoreApplication.translate("LocalMatch", "本地") + f": {song_info['title']} " +
+                                   QCoreApplication.translate("LocalMatch", "匹配") + f": {lrc_info['artist']} - {lrc_info['title']} " +
+                                   QCoreApplication.translate("LocalMatch", "成功保存到") + f"{save_path}")
                         self.signals.massage.emit(msg)
                     except Exception as e:
                         self.signals.error.emit(str(e), 0)
