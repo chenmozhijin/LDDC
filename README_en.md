@@ -1,6 +1,6 @@
 # LDDC
 
-[中文](.\README.md) | English
+[中文](./README.md) | English
 
 > Accurate Lyrics (verbatim lyrics) Download, Decryption, and Conversion
 
