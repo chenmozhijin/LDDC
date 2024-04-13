@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-__version__ = "v0.6.1"
+__version__ = "v0.6.2"
 import logging
 import os
 import resource.resource_rc
@@ -61,6 +61,7 @@ class MainWindow(SidebarWindow):
         self.setWindowTitle("LDDC")
         self.resize(1050, 600)
         self.setWindowIcon(QIcon(":/LDDC/img/icon/logo.png"))
+        self.set_sidebar_width(95)
 
         self.search_widget = SearchWidget(self, threadpool)
         self.local_match_widget = LocalMatchWidget(threadpool)

@@ -3,13 +3,20 @@
 ################################################################################
 ## Form generated from reading UI file 'search.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.6.2
+## Created by: Qt User Interface Compiler version 6.7.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtCore import (
+    QCoreApplication,
+    QMetaObject,
+    QSize,
+    Qt,
+)
+from PySide6.QtGui import (
+    QFont,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractScrollArea,
@@ -22,6 +29,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSpacerItem,
+    QSpinBox,
     QSplitter,
     QToolButton,
     QVBoxLayout,
@@ -105,7 +113,7 @@ class Ui_search(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.splitter.sizePolicy().hasHeightForWidth())
         self.splitter.setSizePolicy(sizePolicy1)
-        self.splitter.setOrientation(Qt.Horizontal)
+        self.splitter.setOrientation(Qt.Orientation.Horizontal)
         self.splitter.setOpaqueResize(True)
         self.splitter.setHandleWidth(5)
         self.splitter.setChildrenCollapsible(False)
@@ -126,9 +134,9 @@ class Ui_search(object):
 
         self.return_toolButton = QToolButton(self.layoutWidget_2)
         self.return_toolButton.setObjectName(u"return_toolButton")
-        self.return_toolButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.return_toolButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.return_toolButton.setAutoRaise(False)
-        self.return_toolButton.setArrowType(Qt.LeftArrow)
+        self.return_toolButton.setArrowType(Qt.ArrowType.LeftArrow)
 
         self.verticalLayout_3.addWidget(self.return_toolButton)
 
@@ -136,14 +144,14 @@ class Ui_search(object):
         self.results_tableWidget.setObjectName(u"results_tableWidget")
         sizePolicy1.setHeightForWidth(self.results_tableWidget.sizePolicy().hasHeightForWidth())
         self.results_tableWidget.setSizePolicy(sizePolicy1)
-        self.results_tableWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.results_tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.AdjustIgnored)
-        self.results_tableWidget.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.results_tableWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.results_tableWidget.setSizeAdjustPolicy(QAbstractScrollArea.SizeAdjustPolicy.AdjustIgnored)
+        self.results_tableWidget.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.results_tableWidget.setProperty("showDropIndicator", False)
-        self.results_tableWidget.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.results_tableWidget.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.results_tableWidget.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.results_tableWidget.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.results_tableWidget.setShowGrid(False)
-        self.results_tableWidget.setGridStyle(Qt.SolidLine)
+        self.results_tableWidget.setGridStyle(Qt.PenStyle.SolidLine)
         self.results_tableWidget.horizontalHeader().setVisible(True)
         self.results_tableWidget.horizontalHeader().setCascadingSectionResizes(False)
         self.results_tableWidget.horizontalHeader().setDefaultSectionSize(100)
@@ -204,7 +212,7 @@ class Ui_search(object):
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.preview_plainTextEdit.sizePolicy().hasHeightForWidth())
         self.preview_plainTextEdit.setSizePolicy(sizePolicy2)
-        self.preview_plainTextEdit.setLineWrapMode(QPlainTextEdit.NoWrap)
+        self.preview_plainTextEdit.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.preview_plainTextEdit.setReadOnly(True)
 
         self.verticalLayout_8.addWidget(self.preview_plainTextEdit)
@@ -274,6 +282,26 @@ class Ui_search(object):
 
         self.horizontalLayout_8.addWidget(self.romanized_checkBox)
 
+        self.label_5 = QLabel(search)
+        self.label_5.setObjectName(u"label_5")
+        sizePolicy3.setHeightForWidth(self.label_5.sizePolicy().hasHeightForWidth())
+        self.label_5.setSizePolicy(sizePolicy3)
+
+        self.horizontalLayout_8.addWidget(self.label_5)
+
+        self.offset_spinBox = QSpinBox(search)
+        self.offset_spinBox.setObjectName(u"offset_spinBox")
+        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        sizePolicy5.setHorizontalStretch(0)
+        sizePolicy5.setVerticalStretch(0)
+        sizePolicy5.setHeightForWidth(self.offset_spinBox.sizePolicy().hasHeightForWidth())
+        self.offset_spinBox.setSizePolicy(sizePolicy5)
+        self.offset_spinBox.setMinimum(-999999999)
+        self.offset_spinBox.setMaximum(999999999)
+        self.offset_spinBox.setSingleStep(100)
+
+        self.horizontalLayout_8.addWidget(self.offset_spinBox)
+
 
         self.verticalLayout_9.addLayout(self.horizontalLayout_8)
 
@@ -311,21 +339,21 @@ class Ui_search(object):
 
         self.save_list_lyrics_pushButton = QPushButton(search)
         self.save_list_lyrics_pushButton.setObjectName(u"save_list_lyrics_pushButton")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
-        sizePolicy5.setHorizontalStretch(0)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.save_list_lyrics_pushButton.sizePolicy().hasHeightForWidth())
-        self.save_list_lyrics_pushButton.setSizePolicy(sizePolicy5)
+        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+        sizePolicy6.setHorizontalStretch(0)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.save_list_lyrics_pushButton.sizePolicy().hasHeightForWidth())
+        self.save_list_lyrics_pushButton.setSizePolicy(sizePolicy6)
 
         self.horizontalLayout_3.addWidget(self.save_list_lyrics_pushButton)
 
         self.save_preview_lyric_pushButton = QPushButton(search)
         self.save_preview_lyric_pushButton.setObjectName(u"save_preview_lyric_pushButton")
-        sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
-        sizePolicy6.setHorizontalStretch(0)
-        sizePolicy6.setVerticalStretch(0)
-        sizePolicy6.setHeightForWidth(self.save_preview_lyric_pushButton.sizePolicy().hasHeightForWidth())
-        self.save_preview_lyric_pushButton.setSizePolicy(sizePolicy6)
+        sizePolicy7 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+        sizePolicy7.setHorizontalStretch(0)
+        sizePolicy7.setVerticalStretch(0)
+        sizePolicy7.setHeightForWidth(self.save_preview_lyric_pushButton.sizePolicy().hasHeightForWidth())
+        self.save_preview_lyric_pushButton.setSizePolicy(sizePolicy7)
         self.save_preview_lyric_pushButton.setMinimumSize(QSize(92, 85))
 
         self.horizontalLayout_3.addWidget(self.save_preview_lyric_pushButton)
@@ -363,6 +391,7 @@ class Ui_search(object):
         self.original_checkBox.setText(QCoreApplication.translate("search", u"\u539f\u6587", None))
         self.translate_checkBox.setText(QCoreApplication.translate("search", u"\u8bd1\u6587", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("search", u"\u7f57\u9a6c\u97f3", None))
+        self.label_5.setText(QCoreApplication.translate("search", u"\u504f\u79fb\u91cf:", None))
         self.label_9.setText(QCoreApplication.translate("search", u"\u6b4c\u8bcd\u683c\u5f0f:", None))
         self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("search", u"LRC(\u9010\u5b57)", None))
         self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("search", u"LRC(\u9010\u884c)", None))

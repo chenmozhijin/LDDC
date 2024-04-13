@@ -47,6 +47,12 @@ class LocalMatchWidget(QWidget, Ui_local_match):
 
         self.start_cancel_pushButton.clicked.connect(self.start_cancel_button_clicked)
 
+    def retranslateUi(self, local_match: QWidget) -> None:
+        super().retranslateUi(local_match)
+        self.save_mode_changed(self.save_mode_comboBox.currentIndex())
+        if self.running:
+            self.start_cancel_pushButton.setText(self.tr("取消匹配"))
+
     def select_path(self, path_line_edit: QLineEdit) -> None:
         path = QFileDialog.getExistingDirectory(self, self.tr("选择文件夹"), dir=path_line_edit.text())
         if path:

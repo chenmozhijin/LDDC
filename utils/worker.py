@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
+import json
 import logging
 import os
 import re
@@ -195,9 +196,8 @@ class LyricProcessingWorker(QRunnable):
                         if not search_return:
                             self.signals.error.emit(
                                 QCoreApplication.translate("LyricProcess",
-                                                           "搜索歌词没有任何结果,源:{source}, 歌名:{title}, : {hash}").format(source=song_info['source'],
-                                                                                                                 song_info=song_info['title'],
-                                                                                                                 hash=song_info['hash']))
+                                                           "搜索歌词没有任何结果,源:{0}, 歌名:{1}, : {2}").format(
+                                                               song_info['source'], song_info['title'], song_info['hash']))
                             continue
                         info = song_info
                         info.update(search_return[0])
@@ -226,7 +226,7 @@ class LyricProcessingWorker(QRunnable):
                 song_name_str = "歌名:" + song_info['title']
             if error1 is not None:
                 logging.error(f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']},错误：{error1}")
-                self.signals.error.emit(f"获取 {song_name_str} 加密歌词失败:{error1}")
+                self.signals.error.emit(QCoreApplication.translate("LyricProcess", "获取 {0} 加密歌词失败:{1}").format(song_name_str, error1))
                 return None, False
 
             if error1_type != LyricsProcessingError.REQUEST and not from_cache:  # 如果不是请求错误则缓存
@@ -244,7 +244,7 @@ class LyricProcessingWorker(QRunnable):
         self.data_mutex.unlock()
 
         try:
-            merged_lyric = lyrics.get_merge_lrc(lyrics_order, self.task["lyrics_format"])
+            merged_lyric = lyrics.get_merge_lrc(lyrics_order, self.task["lyrics_format"], self.task.get("offset", 0))
         except Exception as e:
             logging.exception("合并歌词失败")
             self.signals.error.emit(QCoreApplication.translate("LyricProcess", "合并歌词失败：{0}").format(str(e)))
@@ -448,14 +448,16 @@ class LocalMatchWorker(QRunnable):
         if (self.skip_inst_lyrics and scores[0][0]['source'] == Source.KG and
                 scores[0][0]['language'] in ["纯音乐", '伴奏']):
             if 'artist' in info:
-                msg = (f"[{self.current_index}/{self.total_index}]本地: {info['artist']} - {info['title']} " +
+                msg = (f"[{self.current_index}/{self.total_index}]" +
+                       QCoreApplication.translate("LocalMatch", "本地") + f": {info['artist']} - {info['title']} " +
                        QCoreApplication.translate("LocalMatch", "搜索结果") +
-                       f":{scores[0][0]['artist']} - {scores[0][0]['title']}" +
+                       f":{scores[0][0]['artist']} - {scores[0][0]['title']} " +
                        QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
             else:
-                msg = (f"[{self.current_index}/{self.total_index}]本地: {info['title']} " +
+                msg = (f"[{self.current_index}/{self.total_index}]" +
+                       QCoreApplication.translate("LocalMatch", "本地") + f"{info['title']} " +
                        QCoreApplication.translate("LocalMatch", "搜索结果") +
-                       f":{scores[0][0]['artist']} - {scores[0][0]['title']}" +
+                       f":{scores[0][0]['artist']} - {scores[0][0]['title']} " +
                        QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
             self.signals.massage.emit(msg)
             return None, None
@@ -463,10 +465,12 @@ class LocalMatchWorker(QRunnable):
         logging.debug(f"scores: {scores}")
         # Step 2 搜索歌词
         from_cache = False
-        for index, data in enumerate(scores):
+
+        index = 0
+        while index < len(scores):
             if not self.is_running:
                 return None, None
-            song_info, score = data
+            song_info, score = scores[index]
             if song_info['source'] == Source.KG:
                 keyword = {"keyword": f"{song_info['artist']} - {song_info['title']}",
                            "duration": song_info["duration"], "hash": song_info["hash"]}
@@ -483,13 +487,15 @@ class LocalMatchWorker(QRunnable):
                             break
                 if isinstance(search_return, str):
                     self.signals.error.emit(search_return, 0)
+                    scores.pop(index)
                     continue
                 if not search_return:
-                    scores.remove(data)
+                    scores.pop(index)
                     continue
 
                 cache[("serach", str(keyword), SearchType.LYRICS, Source.KG)] = search_return
                 scores[index][0].update(search_return[0])
+            index += 1
 
         # Step 3 获取歌词
         from_cache = False
@@ -547,22 +553,22 @@ class LocalMatchWorker(QRunnable):
                 msg = (f"[{self.current_index}/{self.total_index}]" +
                        QCoreApplication.translate("LocalMatch", "本地") + f": {info['artist']} - {info['title']} " +
                        QCoreApplication.translate("LocalMatch", "搜索结果") +
-                       f":{scores[0][0]['artist']} - {scores[0][0]['title']}" + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
+                       f":{scores[0][0]['artist']} - {scores[0][0]['title']} " + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
             else:
                 msg = (f"[{self.current_index}/{self.total_index}]" +
                        QCoreApplication.translate("LocalMatch", "本地") + f": {info['artist']} - {info['title']} " +
                        QCoreApplication.translate("LocalMatch", "搜索结果") +
-                       f":{song_info['artist']} - {song_info['title']}" + QCoreApplication.translate("LocalMatch", "歌词获取失败"))
+                       f":{song_info['artist']} - {song_info['title']} " + QCoreApplication.translate("LocalMatch", "歌词获取失败"))
         elif inst:
             msg = (f"[{self.current_index}/{self.total_index}]" +
                    QCoreApplication.translate("LocalMatch", "本地") + f": {info['title']} " +
                    QCoreApplication.translate("LocalMatch", "搜索结果") +
-                   f":{scores[0][0]['artist']} - {scores[0][0]['title']}" + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
+                   f":{scores[0][0]['artist']} - {scores[0][0]['title']} " + QCoreApplication.translate("LocalMatch", "跳过纯音乐"))
         else:
             msg = (f"[{self.current_index}/{self.total_index}]" +
                    QCoreApplication.translate("LocalMatch", "本地") + f": {info['title']} " +
                    QCoreApplication.translate("LocalMatch", "搜索结果") +
-                   f":{song_info['artist']} - {song_info['title']}" + QCoreApplication.translate("LocalMatch", "歌词获取失败"))
+                   f":{song_info['artist']} - {song_info['title']} " + QCoreApplication.translate("LocalMatch", "歌词获取失败"))
         self.signals.massage.emit(msg)
         return None, None
 
@@ -590,7 +596,7 @@ class LocalMatchWorker(QRunnable):
                                 cue_count += 1
                             else:
                                 logging.warning(f"没有在cue文件 {file_path} 解析到歌曲")
-                                self.signals.error.emit(f"没有在cue文件 {file_path} 解析到歌曲", 0)
+                                self.signals.error.emit(QCoreApplication.translate("LocalMatch", "没有在cue文件 {0} 解析到歌曲").format(file_path), 0)
                         except Exception as e:
                             logging.exception("处理cue文件时错误")
                             self.signals.error.emit(f"处理cue文件时错误:{e}", 0)
@@ -622,7 +628,6 @@ class LocalMatchWorker(QRunnable):
             # Step 3 根据信息搜索并获取歌词
             self.signals.massage.emit(QCoreApplication.translate("LocalMatch", "正在搜索并获取歌词..."))
             merged_lyric = None
-            import json
             logging.debug(f"song_infos: {json.dumps(song_infos, indent=4, ensure_ascii=False)}")
             self.total_index = len(song_infos)
             for index, song_info in enumerate(song_infos):

@@ -30,6 +30,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         self.original_checkBox.stateChanged.connect(self.change_lyrics_type)
 
         self.lyricsformat_comboBox.currentIndexChanged.connect(self.change_lyrics_format)
+        self.offset_spinBox.valueChanged.connect(self.change_offset)
 
     def get_lyric_type(self) -> list:
         lyric_type = []
@@ -88,7 +89,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
                 self.lyrics.tags, lyric = qrc2list(lyrics)
                 self.lyrics["orig"] = lyric
                 self.lyrics.lrc_types["orig"] = LyricsType.QRC
-                lrc = self.lyrics.get_merge_lrc(["orig"], LyricsFormat(self.lyricsformat_comboBox.currentIndex()))
+                lrc = self.lyrics.get_merge_lrc(["orig"], LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
             elif self.lyrics_type == "krc":
                 self.data_mutex.lock()
                 type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
@@ -101,7 +102,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
                 self.lyrics.lrc_types["orig"] = LyricsType.KRC
                 self.lyrics.lrc_types["ts"] = LyricsType.JSONLINE
                 self.lyrics.lrc_types["roma"] = LyricsType.JSONVERBATIM
-                lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()))
+                lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
         except Exception as e:
             logging.exception("转换失败")
             QMessageBox.critical(self, self.tr("错误"), self.tr("转换失败：") + str(e))
@@ -114,7 +115,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         self.data_mutex.lock()
         lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
         self.data_mutex.unlock()
-        self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex())))
+        self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value()))
 
     def change_lyrics_type(self) -> None:
         if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics) and self.lyrics.source == Source.KG:
@@ -124,8 +125,19 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics):
             self.update_lyrics()
 
+    def change_offset(self) -> None:
+        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics):
+            self.update_lyrics()
+
     def save(self) -> None:
-        file_path, _ = QFileDialog.getSaveFileName(self, self.tr("保存文件"), "", self.tr("歌词文件 (*.lrc *.srt *.ass)"))
+        match self.lyricsformat_comboBox.currentIndex():
+            case 0 | 1:
+                ext = "(*.lrc)"
+            case 2:
+                ext = "(*.srt)"
+            case 3:
+                ext = "(*.ass)"
+        file_path, _ = QFileDialog.getSaveFileName(self, self.tr("保存文件"), "", self.tr("歌词文件 ") + ext)
         if file_path == "":
             return
         try:

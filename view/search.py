@@ -66,6 +66,7 @@ class SearchWidget(QWidget, Ui_search):
         self.romanized_checkBox.stateChanged.connect(self.update_preview_lyric)
         self.original_checkBox.stateChanged.connect(self.update_preview_lyric)
         self.lyricsformat_comboBox.currentTextChanged.connect(self.update_preview_lyric)
+        self.offset_spinBox.valueChanged.connect(self.update_preview_lyric)
 
         self.return_toolButton.clicked.connect(self.result_return)
 
@@ -97,7 +98,7 @@ class SearchWidget(QWidget, Ui_search):
         result_type = self.results_tableWidget.property("result_type")
         if (result_type is None or
                 result_type[0] not in ["album", "songlist"]):
-            QMessageBox.warning(self, '警告', '请先选择一个专辑或歌单')
+            QMessageBox.warning(self, self.tr('警告'), self.tr('请先选择一个专辑或歌单'))
             return
 
         self.data_mutex.lock()
@@ -114,9 +115,9 @@ class SearchWidget(QWidget, Ui_search):
             else:
                 save_path = result['save_path']
                 save_folder = os.path.dirname(save_path)
-                text += f"获取 {result['info']['title']} - {result['info']['artist']} 歌词成功"
+                text += self.tr("获取 {0} 歌词成功").format(f"{result['info']['title']} - {result['info']['artist']}")
                 if result['inst']:  # 检查是否为纯音乐,并且设置跳过纯音乐
-                    text += "但歌曲为纯音乐,已跳过"
+                    text += self.tr("但歌曲为纯音乐,已跳过")
                 else:
                     # 保存
                     try:
@@ -125,9 +126,9 @@ class SearchWidget(QWidget, Ui_search):
                         with open(save_path, 'w', encoding='utf-8') as f:
                             f.write(result['merged_lyric'])
                     except Exception as e:
-                        text += f"但保存歌词失败,原因:{e}"
+                        text += self.tr("但保存歌词失败,原因:") + str(e)
                     else:
-                        text += f",保存到{save_path}"
+                        text += self.tr(",保存到") + save_path
                 self.get_list_lyrics_box.plainTextEdit.appendPlainText(text)
 
             self.get_list_lyrics_box.progressBar.setValue(count)
@@ -176,11 +177,11 @@ class SearchWidget(QWidget, Ui_search):
     def save_preview_lyric(self) -> None:
         """保存预览的歌词"""
         if self.preview_info is None or self.save_path_lineEdit.text() == "":
-            QMessageBox.warning(self, '警告', '请先下载并预览歌词并选择保存路径')
+            QMessageBox.warning(self, self.tr('警告'), self.tr('请先下载并预览歌词并选择保存路径'))
             return
 
         if self.preview_plainTextEdit.toPlainText() == "":
-            QMessageBox.warning(self, '警告', '歌词内容为空')
+            QMessageBox.warning(self, self.tr('警告'), self.tr('歌词内容为空'))
             return
 
         self.data_mutex.lock()
@@ -201,13 +202,13 @@ class SearchWidget(QWidget, Ui_search):
                 os.makedirs(save_folder)
             with open(save_path, 'w', encoding='utf-8') as f:
                 f.write(self.preview_plainTextEdit.toPlainText())
-            QMessageBox.information(self, '提示', '歌词保存成功')
+            QMessageBox.information(self, self.tr('提示'), self.tr('歌词保存成功'))
         except Exception as e:
-            QMessageBox.warning(self, '警告', f'歌词保存失败：{e}')
+            QMessageBox.warning(self, self.tr('警告'), self.tr('歌词保存失败：') + str(e))
 
     @Slot()
     def select_savepath(self) -> None:
-        save_path = QFileDialog.getExistingDirectory(self, "选择保存路径", dir=self.save_path_lineEdit.text())
+        save_path = QFileDialog.getExistingDirectory(self, self.tr("选择保存路径"), dir=self.save_path_lineEdit.text())
         if save_path:
             self.save_path_lineEdit.setText(os.path.normpath(save_path))
 
@@ -220,8 +221,6 @@ class SearchWidget(QWidget, Ui_search):
             case 1:
                 self.search_type = SearchType.ALBUM
             case 2:
-                self.search_type = SearchType.ARTIST
-            case 3:
                 self.search_type = SearchType.SONGLIST
 
     def result_return(self) -> None:
@@ -270,7 +269,7 @@ class SearchWidget(QWidget, Ui_search):
         if keyword == "":
             QMessageBox.warning(self, self.tr("搜索错误"), self.tr("请输入搜索关键字"))
             return
-        self.search_pushButton.setText('正在搜索...')
+        self.search_pushButton.setText(self.tr('正在搜索...'))
         self.search_pushButton.setEnabled(False)
         self.taskid["results_table"] += 1
         self.search_info = {'keyword': keyword, 'search_type': self.search_type, 'source': self.get_source(), 'page': 1}
@@ -324,7 +323,8 @@ class SearchWidget(QWidget, Ui_search):
              "song_info": info,
              "lyric_type": self.get_lyric_type(),
              "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
-             "id": self.taskid["update_preview_lyric"]},
+             "id": self.taskid["update_preview_lyric"],
+             "offset": self.offset_spinBox.value()},
             self.data)
         worker.signals.result.connect(self.update_preview_lyric_result_slot)
         worker.signals.error.connect(self.update_preview_lyric_error_slot)

@@ -28,3 +28,7 @@ class AboutWidget(QWidget, Ui_about):
     def connect_signals(self) -> None:
         self.github_pushButton.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/chenmozhijin/LDDC")))
         self.githubissues_pushButton.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/chenmozhijin/LDDC/issues")))
+
+    def retranslateUi(self, about: QWidget) -> None:
+        super().retranslateUi(about)
+        self.init_ui()

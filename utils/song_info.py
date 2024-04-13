@@ -33,7 +33,7 @@ def get_audio_file_info(file_path: str) -> dict | str:
                 elif "TIT2" in audio and "�" not in str(audio["TIT2"][0]):
                     title = str(audio["TIT2"][0])
                 else:
-                    return f"{file_path}无法获取歌曲标题,跳过"
+                    return file_path + QCoreApplication.translate("song_info", " 无法获取歌曲标题,跳过")
 
                 if "artist" in audio and "�" not in str(audio["artist"][0]):
                     artist = str(audio["artist"][0])
@@ -66,7 +66,7 @@ def get_audio_file_info(file_path: str) -> dict | str:
                     "file_path": file_path,
                 }
                 if metadata["title"] is None:
-                    return f"{file_path}无法获取歌曲标题,跳过"
+                    return file_path + QCoreApplication.translate("song_info", " 无法获取歌曲标题,跳过")
                 return metadata
     except Exception as e:
         logging.exception(f"{file_path}获取文件信息失败")

@@ -559,30 +559,56 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
             return QCoreApplication.translate("lyrics", "没有获取到歌词(orig=None)"), LyricsProcessingError.NOT_FOUND
         return None, None
 
-    def get_merge_lrc(self, lyrics_order: list, lyrics_format: LyricsFormat = LyricsFormat.VERBATIMLRC) -> str:
+    def get_merge_lrc(self, lyrics_order: list, lyrics_format: LyricsFormat = LyricsFormat.VERBATIMLRC, offset: int = 0) -> str:
         """
         合并歌词
         :param lyrics_order:歌词顺序,同时决定需要合并的类型
+        :param lyrics_format:歌词格式
+        :param offset:偏移量
         :return: 合并后的歌词
         """
         if len(lyrics_order) == 0:
             logging.warning("没有需要合并的歌词")
             return ""
 
-        lyrics = [(key, lyric) for key, lyric in self.items() if key in lyrics_order]
+        if offset != 0:
+            lyrics_dict: dict[str, list[tuple[int | None, int | None, list[tuple[int | None, int | None, str]]]]] = {}
+
+            def _offset_time(time: int | None) -> int | None:
+                if isinstance(time, int):
+                    if time + offset > 0:
+                        return time + offset
+                    return 0
+                return time
+
+            for lrc_type, lrc_list in self.items():
+                lyrics_dict[lrc_type] = []
+                for lrc_line in lrc_list:
+                    l_s = _offset_time(lrc_line[0])
+                    l_e = _offset_time(lrc_line[1])
+                    words = []
+                    for word in lrc_line[2]:
+                        w_s = _offset_time(word[0])
+                        w_e = _offset_time(word[1])
+                        words.append((w_s, w_e, word[2]))
+                    lyrics_dict[lrc_type].append((l_s, l_e, words))
+        else:
+            lyrics_dict: dict[str, list[tuple[int | None, int | None, list[tuple[int | None, int | None, str]]]]] = self
+
+        lyrics = [(key, lyric) for key, lyric in lyrics_dict.items() if key in lyrics_order]
 
         if 'orig' not in lyrics:  # 确保只勾选译文与罗马音时正常合并时
-            lyrics.append(('orig', self['orig']))
+            lyrics.append(('orig', lyrics_dict['orig']))
 
         end_time_pattern = re.compile(r"(\[\d+:\d+\.\d+\])$")
 
         mapping_tables = {}
         lyric_lines = []
 
-        if "ts" in self:
-            mapping_tables["ts"] = find_closest_match(self["orig"], self["ts"], list3=self.get("orig_lrc", None), source=self.source)
-        if "roma" in self:
-            mapping_tables["roma"] = find_closest_match(self["orig"], self["roma"], list3=self.get("orig_lrc", None), source=self.source)
+        if "ts" in lyrics_dict:
+            mapping_tables["ts"] = find_closest_match(lyrics_dict["orig"], lyrics_dict["ts"], list3=lyrics_dict.get("orig_lrc"), source=self.source)
+        if "roma" in lyrics_dict:
+            mapping_tables["roma"] = find_closest_match(lyrics_dict["orig"], lyrics_dict["roma"], list3=lyrics_dict.get("orig_lrc"), source=self.source)
 
         if self.lrc_types["orig"] == LyricsType.PlainText:
             lyrics_format = LyricsFormat.LINEBYLINELRC
@@ -608,7 +634,7 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                         return f"[{ms2formattime(orig_linelist[0])}]{line_str}[{ms2formattime(orig_linelist[1])}]"
                     return line_str
 
-                for orig_linelist in self["orig"]:
+                for orig_linelist in lyrics_dict["orig"]:
                     lines = ""
                     full_orig_line = linelist2str(orig_linelist, bool(lyrics_format == LyricsFormat.VERBATIMLRC))  # 此时line为完整的原文歌词行
 
@@ -631,11 +657,11 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
 
             case LyricsFormat.SRT:
                 srt_lines = []
-                for i, orig_linelist in enumerate(self["orig"]):
+                for i, orig_linelist in enumerate(lyrics_dict["orig"]):
                     sn = i + 1
                     if orig_linelist[1] is None:
-                        if i + 1 < len(self["orig"]):
-                            endtime = self["orig"][i + 1][0]
+                        if i + 1 < len(lyrics_dict["orig"]):
+                            endtime = lyrics_dict["orig"][i + 1][0]
                         elif self.duration is not None:
                             endtime = self.duration * 1000
                         else:
@@ -684,13 +710,13 @@ class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None,
                                   "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"])
                 for lrc_type in lyrics_order[::-1]:
                     if lrc_type in mapping_tables or lrc_type == "orig":
-                        for i, orig_linelist in enumerate(self["orig"]):
+                        for i, orig_linelist in enumerate(lyrics_dict["orig"]):
                             ass_line = "Dialogue: 0,"
                             if orig_linelist[1] is None:
-                                if i + 1 < len(self["orig"]):
-                                    endtime = self["orig"][i + 1][0]
+                                if i + 1 < len(lyrics_dict["orig"]):
+                                    endtime = lyrics_dict["orig"][i + 1][0]
                                 elif self.duration is not None:
-                                    endtime = self.duration * 1000
+                                    endtime = lyrics_dict.duration * 1000
                                 else:
                                     endtime = orig_linelist[0] + 10000  # 加十秒
                             else:

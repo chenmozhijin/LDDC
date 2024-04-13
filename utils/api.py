@@ -632,6 +632,8 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
                 "duration": duration,
                 "hash": hash_,
             }
+        case _:
+            return f"错误: 未知搜索类型{search_type!s}"
     try:
         response = requests.get(url, params=params, timeout=3)
         response.raise_for_status()

@@ -101,71 +101,61 @@ class Ui_local_match(object):
         self.groupBox.setObjectName(u"groupBox")
         self.gridLayout = QGridLayout(self.groupBox)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.label_5 = QLabel(self.groupBox)
-        self.label_5.setObjectName(u"label_5")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.label_5.sizePolicy().hasHeightForWidth())
-        self.label_5.setSizePolicy(sizePolicy2)
-
-        self.horizontalLayout.addWidget(self.label_5)
-
-        self.save_mode_comboBox = QComboBox(self.groupBox)
-        self.save_mode_comboBox.addItem("")
-        self.save_mode_comboBox.addItem("")
-        self.save_mode_comboBox.addItem("")
-        self.save_mode_comboBox.setObjectName(u"save_mode_comboBox")
-        sizePolicy1.setHeightForWidth(self.save_mode_comboBox.sizePolicy().hasHeightForWidth())
-        self.save_mode_comboBox.setSizePolicy(sizePolicy1)
-        self.save_mode_comboBox.setMinimumSize(QSize(194, 0))
-
-        self.horizontalLayout.addWidget(self.save_mode_comboBox)
-
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout.addItem(self.horizontalSpacer)
-
-
-        self.gridLayout.addLayout(self.horizontalLayout, 0, 0, 1, 1)
-
         self.save_path_lineEdit = QLineEdit(self.groupBox)
         self.save_path_lineEdit.setObjectName(u"save_path_lineEdit")
 
-        self.gridLayout.addWidget(self.save_path_lineEdit, 2, 0, 1, 1)
+        self.gridLayout.addWidget(self.save_path_lineEdit, 1, 0, 1, 1)
 
         self.save_path_pushButton = QPushButton(self.groupBox)
         self.save_path_pushButton.setObjectName(u"save_path_pushButton")
         sizePolicy1.setHeightForWidth(self.save_path_pushButton.sizePolicy().hasHeightForWidth())
         self.save_path_pushButton.setSizePolicy(sizePolicy1)
 
-        self.gridLayout.addWidget(self.save_path_pushButton, 2, 1, 1, 1)
+        self.gridLayout.addWidget(self.save_path_pushButton, 1, 1, 1, 1)
 
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.label_6 = QLabel(self.groupBox)
-        self.label_6.setObjectName(u"label_6")
+        self.gridLayout_7 = QGridLayout()
+        self.gridLayout_7.setObjectName(u"gridLayout_7")
+        self.label_8 = QLabel(self.groupBox)
+        self.label_8.setObjectName(u"label_8")
 
-        self.horizontalLayout_2.addWidget(self.label_6)
+        self.gridLayout_7.addWidget(self.label_8, 1, 0, 1, 1)
+
+        self.label_11 = QLabel(self.groupBox)
+        self.label_11.setObjectName(u"label_11")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.label_11.sizePolicy().hasHeightForWidth())
+        self.label_11.setSizePolicy(sizePolicy2)
+
+        self.gridLayout_7.addWidget(self.label_11, 0, 0, 1, 1)
+
+        self.save_mode_comboBox = QComboBox(self.groupBox)
+        self.save_mode_comboBox.addItem("")
+        self.save_mode_comboBox.addItem("")
+        self.save_mode_comboBox.addItem("")
+        self.save_mode_comboBox.setObjectName(u"save_mode_comboBox")
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.save_mode_comboBox.sizePolicy().hasHeightForWidth())
+        self.save_mode_comboBox.setSizePolicy(sizePolicy3)
+        self.save_mode_comboBox.setMinimumSize(QSize(194, 0))
+
+        self.gridLayout_7.addWidget(self.save_mode_comboBox, 0, 1, 1, 1)
 
         self.lyrics_filename_mode_comboBox = QComboBox(self.groupBox)
         self.lyrics_filename_mode_comboBox.addItem("")
         self.lyrics_filename_mode_comboBox.addItem("")
         self.lyrics_filename_mode_comboBox.setObjectName(u"lyrics_filename_mode_comboBox")
-        sizePolicy1.setHeightForWidth(self.lyrics_filename_mode_comboBox.sizePolicy().hasHeightForWidth())
-        self.lyrics_filename_mode_comboBox.setSizePolicy(sizePolicy1)
+        sizePolicy3.setHeightForWidth(self.lyrics_filename_mode_comboBox.sizePolicy().hasHeightForWidth())
+        self.lyrics_filename_mode_comboBox.setSizePolicy(sizePolicy3)
         self.lyrics_filename_mode_comboBox.setMinimumSize(QSize(133, 0))
 
-        self.horizontalLayout_2.addWidget(self.lyrics_filename_mode_comboBox)
-
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_2.addItem(self.horizontalSpacer_2)
+        self.gridLayout_7.addWidget(self.lyrics_filename_mode_comboBox, 1, 1, 1, 1)
 
 
-        self.gridLayout.addLayout(self.horizontalLayout_2, 1, 0, 1, 1)
+        self.gridLayout.addLayout(self.gridLayout_7, 0, 0, 1, 1)
 
 
         self.verticalLayout.addWidget(self.groupBox)
@@ -174,13 +164,15 @@ class Ui_local_match(object):
         self.groupBox_2.setObjectName(u"groupBox_2")
         self.gridLayout_2 = QGridLayout(self.groupBox_2)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.gridLayout_5 = QGridLayout()
+        self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.label_9 = QLabel(self.groupBox_2)
         self.label_9.setObjectName(u"label_9")
 
-        self.horizontalLayout_3.addWidget(self.label_9)
+        self.gridLayout_5.addWidget(self.label_9, 0, 0, 1, 1)
 
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.original_checkBox = QCheckBox(self.groupBox_2)
         self.original_checkBox.setObjectName(u"original_checkBox")
         self.original_checkBox.setChecked(True)
@@ -203,80 +195,14 @@ class Ui_local_match(object):
         self.horizontalLayout_3.addWidget(self.romanized_checkBox, 0, Qt.AlignmentFlag.AlignLeft)
 
 
-        self.gridLayout_2.addLayout(self.horizontalLayout_3, 0, 0, 1, 1)
+        self.gridLayout_5.addLayout(self.horizontalLayout_3, 0, 1, 1, 1)
 
-        self.horizontalLayout_4 = QHBoxLayout()
-        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.verticalLayout_2 = QVBoxLayout()
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.horizontalLayout_5 = QHBoxLayout()
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.label_7 = QLabel(self.groupBox_2)
-        self.label_7.setObjectName(u"label_7")
-
-        self.horizontalLayout_5.addWidget(self.label_7, 0, Qt.AlignmentFlag.AlignTop)
-
-        self.verticalLayout_4 = QVBoxLayout()
-        self.verticalLayout_4.setObjectName(u"verticalLayout_4")
-        self.qm_checkBox = QCheckBox(self.groupBox_2)
-        self.qm_checkBox.setObjectName(u"qm_checkBox")
-        self.qm_checkBox.setChecked(True)
-
-        self.verticalLayout_4.addWidget(self.qm_checkBox)
-
-        self.ne_checkBox = QCheckBox(self.groupBox_2)
-        self.ne_checkBox.setObjectName(u"ne_checkBox")
-
-        self.verticalLayout_4.addWidget(self.ne_checkBox)
-
-        self.kg_checkBox = QCheckBox(self.groupBox_2)
-        self.kg_checkBox.setObjectName(u"kg_checkBox")
-
-        self.verticalLayout_4.addWidget(self.kg_checkBox)
-
-
-        self.horizontalLayout_5.addLayout(self.verticalLayout_4)
-
-        self.label_2 = QLabel(self.groupBox_2)
-        self.label_2.setObjectName(u"label_2")
-
-        self.horizontalLayout_5.addWidget(self.label_2, 0, Qt.AlignmentFlag.AlignTop)
-
-
-        self.verticalLayout_2.addLayout(self.horizontalLayout_5)
-
-
-        self.horizontalLayout_4.addLayout(self.verticalLayout_2)
-
-        self.source_listWidget = QListWidget(self.groupBox_2)
-        QListWidgetItem(self.source_listWidget)
-        QListWidgetItem(self.source_listWidget)
-        QListWidgetItem(self.source_listWidget)
-        self.source_listWidget.setObjectName(u"source_listWidget")
-        sizePolicy1.setHeightForWidth(self.source_listWidget.sizePolicy().hasHeightForWidth())
-        self.source_listWidget.setSizePolicy(sizePolicy1)
-        self.source_listWidget.setMinimumSize(QSize(0, 0))
-        self.source_listWidget.setMaximumSize(QSize(96, 64))
-        self.source_listWidget.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
-        self.source_listWidget.setDefaultDropAction(Qt.DropAction.MoveAction)
-
-        self.horizontalLayout_4.addWidget(self.source_listWidget)
-
-        self.horizontalSpacer_4 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-
-        self.horizontalLayout_4.addItem(self.horizontalSpacer_4)
-
-
-        self.gridLayout_2.addLayout(self.horizontalLayout_4, 2, 0, 1, 1)
-
-        self.horizontalLayout_9 = QHBoxLayout()
-        self.horizontalLayout_9.setObjectName(u"horizontalLayout_9")
         self.label_10 = QLabel(self.groupBox_2)
         self.label_10.setObjectName(u"label_10")
         sizePolicy2.setHeightForWidth(self.label_10.sizePolicy().hasHeightForWidth())
         self.label_10.setSizePolicy(sizePolicy2)
 
-        self.horizontalLayout_9.addWidget(self.label_10)
+        self.gridLayout_5.addWidget(self.label_10, 1, 0, 1, 1)
 
         self.lyricsformat_comboBox = QComboBox(self.groupBox_2)
         self.lyricsformat_comboBox.addItem("")
@@ -285,10 +211,76 @@ class Ui_local_match(object):
         self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.setObjectName(u"lyricsformat_comboBox")
 
-        self.horizontalLayout_9.addWidget(self.lyricsformat_comboBox)
+        self.gridLayout_5.addWidget(self.lyricsformat_comboBox, 1, 1, 1, 1)
 
 
-        self.gridLayout_2.addLayout(self.horizontalLayout_9, 1, 0, 1, 1)
+        self.gridLayout_2.addLayout(self.gridLayout_5, 1, 0, 1, 1)
+
+        self.horizontalLayout_5 = QHBoxLayout()
+        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
+        self.gridLayout_3 = QGridLayout()
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.kg_checkBox = QCheckBox(self.groupBox_2)
+        self.kg_checkBox.setObjectName(u"kg_checkBox")
+        sizePolicy1.setHeightForWidth(self.kg_checkBox.sizePolicy().hasHeightForWidth())
+        self.kg_checkBox.setSizePolicy(sizePolicy1)
+
+        self.gridLayout_3.addWidget(self.kg_checkBox, 2, 1, 1, 1)
+
+        self.label_7 = QLabel(self.groupBox_2)
+        self.label_7.setObjectName(u"label_7")
+        sizePolicy2.setHeightForWidth(self.label_7.sizePolicy().hasHeightForWidth())
+        self.label_7.setSizePolicy(sizePolicy2)
+
+        self.gridLayout_3.addWidget(self.label_7, 0, 0, 1, 1)
+
+        self.qm_checkBox = QCheckBox(self.groupBox_2)
+        self.qm_checkBox.setObjectName(u"qm_checkBox")
+        sizePolicy1.setHeightForWidth(self.qm_checkBox.sizePolicy().hasHeightForWidth())
+        self.qm_checkBox.setSizePolicy(sizePolicy1)
+        self.qm_checkBox.setChecked(True)
+        self.qm_checkBox.setTristate(False)
+
+        self.gridLayout_3.addWidget(self.qm_checkBox, 0, 1, 1, 1)
+
+        self.ne_checkBox = QCheckBox(self.groupBox_2)
+        self.ne_checkBox.setObjectName(u"ne_checkBox")
+        sizePolicy1.setHeightForWidth(self.ne_checkBox.sizePolicy().hasHeightForWidth())
+        self.ne_checkBox.setSizePolicy(sizePolicy1)
+
+        self.gridLayout_3.addWidget(self.ne_checkBox, 1, 1, 1, 1)
+
+
+        self.horizontalLayout_5.addLayout(self.gridLayout_3)
+
+        self.gridLayout_4 = QGridLayout()
+        self.gridLayout_4.setObjectName(u"gridLayout_4")
+        self.label_2 = QLabel(self.groupBox_2)
+        self.label_2.setObjectName(u"label_2")
+        sizePolicy2.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
+        self.label_2.setSizePolicy(sizePolicy2)
+
+        self.gridLayout_4.addWidget(self.label_2, 0, 0, 1, 1, Qt.AlignmentFlag.AlignTop)
+
+        self.source_listWidget = QListWidget(self.groupBox_2)
+        QListWidgetItem(self.source_listWidget)
+        QListWidgetItem(self.source_listWidget)
+        QListWidgetItem(self.source_listWidget)
+        self.source_listWidget.setObjectName(u"source_listWidget")
+        sizePolicy3.setHeightForWidth(self.source_listWidget.sizePolicy().hasHeightForWidth())
+        self.source_listWidget.setSizePolicy(sizePolicy3)
+        self.source_listWidget.setMinimumSize(QSize(0, 0))
+        self.source_listWidget.setMaximumSize(QSize(96, 64))
+        self.source_listWidget.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.source_listWidget.setDefaultDropAction(Qt.DropAction.MoveAction)
+
+        self.gridLayout_4.addWidget(self.source_listWidget, 0, 1, 1, 1, Qt.AlignmentFlag.AlignLeft)
+
+
+        self.horizontalLayout_5.addLayout(self.gridLayout_4)
+
+
+        self.gridLayout_2.addLayout(self.horizontalLayout_5, 0, 0, 1, 1)
 
 
         self.verticalLayout.addWidget(self.groupBox_2)
@@ -335,13 +327,13 @@ class Ui_local_match(object):
         self.label_4.setText(QCoreApplication.translate("local_match", u"\u4e3a\u672c\u5730\u6b4c\u66f2\u6587\u4ef6\u5339\u914d\u6b4c\u8bcd", None))
         self.song_path_pushButton.setText(QCoreApplication.translate("local_match", u"\u9009\u62e9\u8981\u904d\u5386\u7684\u6587\u4ef6\u5939", None))
         self.groupBox.setTitle(QCoreApplication.translate("local_match", u"\u4fdd\u5b58", None))
-        self.label_5.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u4fdd\u5b58\u6a21\u5f0f:", None))
+        self.save_path_pushButton.setText(QCoreApplication.translate("local_match", u"\u9009\u62e9\u6587\u4ef6\u5939\u8def\u5f84", None))
+        self.label_8.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6587\u4ef6\u540d:", None))
+        self.label_11.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u4fdd\u5b58\u6a21\u5f0f:", None))
         self.save_mode_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"\u4fdd\u5b58\u5230\u6b4c\u66f2\u6587\u4ef6\u5939\u7684\u955c\u50cf\u6587\u4ef6\u5939", None))
         self.save_mode_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"\u4fdd\u5b58\u5230\u6b4c\u66f2\u6587\u4ef6\u5939", None))
         self.save_mode_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"\u4fdd\u5b58\u5230\u6307\u5b9a\u6587\u4ef6\u5939", None))
 
-        self.save_path_pushButton.setText(QCoreApplication.translate("local_match", u"\u9009\u62e9\u6587\u4ef6\u5939\u8def\u5f84", None))
-        self.label_6.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6587\u4ef6\u540d:", None))
         self.lyrics_filename_mode_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"\u4e0e\u8bbe\u7f6e\u4e2d\u7684\u683c\u5f0f\u76f8\u540c", None))
         self.lyrics_filename_mode_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"\u4e0e\u6b4c\u66f2\u6587\u4ef6\u540d\u76f8\u540c", None))
 
@@ -350,10 +342,16 @@ class Ui_local_match(object):
         self.original_checkBox.setText(QCoreApplication.translate("local_match", u"\u539f\u6587", None))
         self.translate_checkBox.setText(QCoreApplication.translate("local_match", u"\u8bd1\u6587", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("local_match", u"\u7f57\u9a6c\u97f3", None))
+        self.label_10.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u683c\u5f0f:", None))
+        self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"LRC(\u9010\u5b57)", None))
+        self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"LRC(\u9010\u884c)", None))
+        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"SRT", None))
+        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("local_match", u"ASS", None))
+
+        self.kg_checkBox.setText(QCoreApplication.translate("local_match", u"\u9177\u72d7\u97f3\u4e50", None))
         self.label_7.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6765\u6e90:", None))
         self.qm_checkBox.setText(QCoreApplication.translate("local_match", u"QQ\u97f3\u4e50", None))
         self.ne_checkBox.setText(QCoreApplication.translate("local_match", u"\u7f51\u6613\u4e91\u97f3\u4e50", None))
-        self.kg_checkBox.setText(QCoreApplication.translate("local_match", u"\u9177\u72d7\u97f3\u4e50", None))
         self.label_2.setText(QCoreApplication.translate("local_match", u"\u4f18\u5148\u987a\u5e8f:", None))
 
         __sortingEnabled = self.source_listWidget.isSortingEnabled()
@@ -365,12 +363,6 @@ class Ui_local_match(object):
         ___qlistwidgetitem2 = self.source_listWidget.item(2)
         ___qlistwidgetitem2.setText(QCoreApplication.translate("local_match", u"\u7f51\u6613\u4e91\u97f3\u4e50", None));
         self.source_listWidget.setSortingEnabled(__sortingEnabled)
-
-        self.label_10.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u683c\u5f0f:", None))
-        self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"LRC(\u9010\u5b57)", None))
-        self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"LRC(\u9010\u884c)", None))
-        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"SRT", None))
-        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("local_match", u"ASS", None))
 
         self.start_cancel_pushButton.setText(QCoreApplication.translate("local_match", u"\u5f00\u59cb\u5339\u914d", None))
     # retranslateUi
