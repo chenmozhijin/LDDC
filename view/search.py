@@ -425,6 +425,7 @@ class SearchWidget(QWidget, Ui_search):
         :param result_type: album或songlist
         """
         self.reset_page_status()
+        self.results_tableWidget.setProperty("result_type", (None, None))  # 修复搜索结果翻页覆盖歌单、专辑结果
         self.return_toolButton.setEnabled(True)
         self.taskid["results_table"] += 1
         if result_type == "album":
@@ -496,8 +497,8 @@ class SearchWidget(QWidget, Ui_search):
             case _:
                 return
 
-        match result_type[1]:  # 如果结果表格显示的是歌曲
-            case "songs":
+        match result_type[1]:
+            case "songs":  # 如果结果表格显示的是歌曲
                 match info["source"]:
                     case Source.QM | Source.NE:
                         self.update_preview_lyric(info)
