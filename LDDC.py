@@ -3,7 +3,6 @@
 __version__ = "v0.6.2"
 import logging
 import os
-import resource.resource_rc
 import sys
 import time
 
@@ -30,6 +29,7 @@ from view.encrypted_lyrics import EncryptedLyricsWidget
 from view.local_match import LocalMatchWidget
 from view.search import SearchWidget
 from view.setting import SettingWidget
+import res.resource_rc
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -51,7 +51,7 @@ logger.setLevel(str2log_level(data.cfg["log_level"]))
 threadpool = QThreadPool()
 logging.debug(f"最大线程数: {threadpool.maxThreadCount()}")
 
-resource.resource_rc.qInitResources()
+res.resource_rc.qInitResources()
 
 
 class MainWindow(SidebarWindow):
