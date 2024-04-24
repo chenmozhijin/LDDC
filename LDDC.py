@@ -61,7 +61,7 @@ class MainWindow(SidebarWindow):
         self.setWindowTitle("LDDC")
         self.resize(1050, 600)
         self.setWindowIcon(QIcon(":/LDDC/img/icon/logo.png"))
-        self.set_sidebar_width(95)
+        self.set_sidebar_width(100)
 
         self.search_widget = SearchWidget(self, threadpool)
         self.local_match_widget = LocalMatchWidget(threadpool)
