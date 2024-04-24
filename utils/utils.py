@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 from difflib import SequenceMatcher
 
+from utils.data import data
 from utils.enum import LyricsFormat
 
 
@@ -14,7 +15,13 @@ def get_divmod_time(ms: int) -> tuple[int, int, int, int]:
 
 def ms2formattime(ms: int) -> str:
     _h, m, s, ms = get_divmod_time(ms)
-    return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"
+    data.mutex.lock()
+    lrc_ms_digit_count = data.cfg["lrc_ms_digit_count"]
+    data.mutex.unlock()
+    if lrc_ms_digit_count == 2:
+        ms = round(ms / 10)
+        return f"{int(m):02d}:{int(s):02d}.{int(ms):02d}"
+    return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"  # lrc_ms_digit_count == 3
 
 
 def ms2srt_timestamp(ms: int) -> str:

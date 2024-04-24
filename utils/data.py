@@ -43,6 +43,7 @@ class Data:
                 "skip_inst_lyrics": True,
                 "auto_select": True,
                 "language": "auto",
+                "lrc_ms_digit_count": 3,
             }
             self.init_db()
             self.read_config()

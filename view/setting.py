@@ -35,6 +35,7 @@ class SettingWidget(QWidget, Ui_settings):
                 self.language_comboBox.setCurrentIndex(1)
             case "zh-Hans":
                 self.language_comboBox.setCurrentIndex(2)
+        self.lrc_ms_digit_count_spinBox.setValue(data.cfg["lrc_ms_digit_count"])
 
     def select_default_save_path(self) -> None:
         path = QFileDialog.getExistingDirectory(self, self.tr("选择默认保存路径"))
@@ -64,6 +65,10 @@ class SettingWidget(QWidget, Ui_settings):
             lambda: data.write_config("auto_select", self.auto_select_checkBox.isChecked()))
 
         self.language_comboBox.currentIndexChanged.connect(self.language_comboBox_changed)
+
+        self.lrc_ms_digit_count_spinBox.valueChanged.connect(
+            lambda: data.write_config("lrc_ms_digit_count", self.lrc_ms_digit_count_spinBox.value())
+        )
 
     def language_comboBox_changed(self, index: int) -> None:
         match index:

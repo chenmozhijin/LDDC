@@ -27,8 +27,8 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         self.romanized_checkBox.stateChanged.connect(self.change_lyrics_type)
         self.original_checkBox.stateChanged.connect(self.change_lyrics_type)
 
-        self.lyricsformat_comboBox.currentIndexChanged.connect(self.change_lyrics_format)
-        self.offset_spinBox.valueChanged.connect(self.change_offset)
+        self.lyricsformat_comboBox.currentIndexChanged.connect(self.update_lyrics)
+        self.offset_spinBox.valueChanged.connect(self.update_lyrics)
 
     def get_lyric_type(self) -> list:
         lyric_type = []
@@ -109,6 +109,8 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         self.lyrics_type = "converted"
 
     def update_lyrics(self) -> None:
+        if not (self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics)):
+            return
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
         data.mutex.lock()
         lyrics_order = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
@@ -117,14 +119,6 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
 
     def change_lyrics_type(self) -> None:
         if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics) and self.lyrics.source == Source.KG:
-            self.update_lyrics()
-
-    def change_lyrics_format(self) -> None:
-        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics):
-            self.update_lyrics()
-
-    def change_offset(self) -> None:
-        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics):
             self.update_lyrics()
 
     def save(self) -> None:

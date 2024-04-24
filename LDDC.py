@@ -89,7 +89,14 @@ class MainWindow(SidebarWindow):
         self.settings_widget.lyrics_order_listWidget.droped.connect(
             self.search_widget.update_preview_lyric)  # 修改歌词顺序时更新预览
         self.settings_widget.lyrics_order_listWidget.droped.connect(
+            self.encrypted_lyrics_widget.update_lyrics())
+        self.settings_widget.lyrics_order_listWidget.droped.connect(
             self.encrypted_lyrics_widget.change_lyrics_type)
+
+        self.settings_widget.lrc_ms_digit_count_spinBox.valueChanged.connect(
+            self.search_widget.update_preview_lyric)
+        self.settings_widget.lrc_ms_digit_count_spinBox.valueChanged.connect(
+            self.encrypted_lyrics_widget.update_lyrics)
 
         self.about_widget.checkupdate_pushButton.clicked.connect(lambda: self.check_update(False))
 

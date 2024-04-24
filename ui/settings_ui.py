@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QSpacerItem,
+    QSpinBox,
     QTextBrowser,
     QVBoxLayout,
 )
@@ -119,6 +120,24 @@ class Ui_settings(object):
         self.auto_select_checkBox.setObjectName(u"auto_select_checkBox")
 
         self.verticalLayout_6.addWidget(self.auto_select_checkBox)
+
+        self.horizontalLayout_7 = QHBoxLayout()
+        self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
+        self.label_6 = QLabel(self.groupBox_2)
+        self.label_6.setObjectName(u"label_6")
+
+        self.horizontalLayout_7.addWidget(self.label_6)
+
+        self.lrc_ms_digit_count_spinBox = QSpinBox(self.groupBox_2)
+        self.lrc_ms_digit_count_spinBox.setObjectName(u"lrc_ms_digit_count_spinBox")
+        self.lrc_ms_digit_count_spinBox.setMinimum(2)
+        self.lrc_ms_digit_count_spinBox.setMaximum(3)
+        self.lrc_ms_digit_count_spinBox.setValue(3)
+
+        self.horizontalLayout_7.addWidget(self.lrc_ms_digit_count_spinBox)
+
+
+        self.verticalLayout_6.addLayout(self.horizontalLayout_7)
 
         self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
@@ -295,6 +314,7 @@ class Ui_settings(object):
 
         self.skip_inst_lyrics_checkBox.setText(QCoreApplication.translate("settings", u"\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd/\u672c\u5730\u5339\u914d\u65f6\u8df3\u8fc7\u7eaf\u97f3\u4e50", None))
         self.auto_select_checkBox.setText(QCoreApplication.translate("settings", u"\u6b4c\u66f2\u641c\u7d22\u6b4c\u8bcd\u65f6\u81ea\u52a8\u9009\u62e9(\u9177\u72d7\u97f3\u4e50)", None))
+        self.label_6.setText(QCoreApplication.translate("settings", u"LRC\u6b4c\u8bcd\u6beb\u79d2\u4f4d\u6570", None))
         self.groupBox.setTitle(QCoreApplication.translate("settings", u"\u4fdd\u5b58\u8bbe\u7f6e", None))
         self.textBrowser.setHtml(QCoreApplication.translate("settings", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
