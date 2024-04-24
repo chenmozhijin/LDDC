@@ -1,3 +1,5 @@
+import logging
+
 from PySide6.QtCore import QLocale, QTranslator
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -17,6 +19,7 @@ def load_translation() -> None:
             locale = QLocale.system()
 
             language = locale.language()
+            logging.info(f"System language detected: {language}")
             if language != QLocale.Language.Chinese:
                 translator.load(":/i18n/LDDC_en.qm")
         case "en":
