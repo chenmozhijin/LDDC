@@ -15,7 +15,6 @@ class SettingWidget(QWidget, Ui_settings):
 
     def __init__(self, logger: Logger) -> None:
         super().__init__()
-        self.data = data
         self.logger = logger
         self.setupUi(self)
         self.init_ui()
@@ -23,13 +22,13 @@ class SettingWidget(QWidget, Ui_settings):
 
     def init_ui(self) -> None:
         self.lyrics_order_listWidget.clear()
-        self.lyrics_order_listWidget.addItems(self.data.cfg["lyrics_order"])
-        self.lyrics_file_name_format_lineEdit.setText(self.data.cfg["lyrics_file_name_format"])
-        self.default_save_path_lineEdit.setText(self.data.cfg["default_save_path"])
-        self.log_level_comboBox.setCurrentText(self.data.cfg["log_level"])
-        self.skip_inst_lyrics_checkBox.setChecked(self.data.cfg["skip_inst_lyrics"])
-        self.auto_select_checkBox.setChecked(self.data.cfg["auto_select"])
-        match self.data.cfg["language"]:
+        self.lyrics_order_listWidget.addItems(data.cfg["lyrics_order"])
+        self.lyrics_file_name_format_lineEdit.setText(data.cfg["lyrics_file_name_format"])
+        self.default_save_path_lineEdit.setText(data.cfg["default_save_path"])
+        self.log_level_comboBox.setCurrentText(data.cfg["log_level"])
+        self.skip_inst_lyrics_checkBox.setChecked(data.cfg["skip_inst_lyrics"])
+        self.auto_select_checkBox.setChecked(data.cfg["auto_select"])
+        match data.cfg["language"]:
             case "auto":
                 self.language_comboBox.setCurrentIndex(0)
             case "en":
@@ -46,34 +45,34 @@ class SettingWidget(QWidget, Ui_settings):
         self.lyrics_order_listWidget.droped.connect(self.lyrics_order_changed)
 
         self.lyrics_file_name_format_lineEdit.textChanged.connect(
-            lambda: self.data.write_config("lyrics_file_name_format", self.lyrics_file_name_format_lineEdit.text()))
+            lambda: data.write_config("lyrics_file_name_format", self.lyrics_file_name_format_lineEdit.text()))
 
         self.default_save_path_lineEdit.textChanged.connect(
-            lambda: self.data.write_config("default_save_path", self.default_save_path_lineEdit.text()))
+            lambda: data.write_config("default_save_path", self.default_save_path_lineEdit.text()))
 
         self.log_level_comboBox.currentTextChanged.connect(
-            lambda: self.data.write_config("log_level", self.log_level_comboBox.currentText()))
+            lambda: data.write_config("log_level", self.log_level_comboBox.currentText()))
         self.log_level_comboBox.currentTextChanged.connect(
             lambda: self.logger.setLevel(str2log_level(self.log_level_comboBox.currentText())))
 
         self.select_default_save_path_pushButton.clicked.connect(self.select_default_save_path)
 
         self.skip_inst_lyrics_checkBox.stateChanged.connect(
-            lambda: self.data.write_config("skip_inst_lyrics", self.skip_inst_lyrics_checkBox.isChecked()))
+            lambda: data.write_config("skip_inst_lyrics", self.skip_inst_lyrics_checkBox.isChecked()))
 
         self.auto_select_checkBox.stateChanged.connect(
-            lambda: self.data.write_config("auto_select", self.auto_select_checkBox.isChecked()))
+            lambda: data.write_config("auto_select", self.auto_select_checkBox.isChecked()))
 
         self.language_comboBox.currentIndexChanged.connect(self.language_comboBox_changed)
 
     def language_comboBox_changed(self, index: int) -> None:
         match index:
             case 0:
-                self.data.write_config("language", "auto")
+                data.write_config("language", "auto")
             case 1:
-                self.data.write_config("language", "en")
+                data.write_config("language", "en")
             case 2:
-                self.data.write_config("language", "zh-Hans")
+                data.write_config("language", "zh-Hans")
         load_translation()
 
     def lyrics_order_changed(self) -> None:
@@ -90,4 +89,4 @@ class SettingWidget(QWidget, Ui_settings):
                 msg = "Unknown lyrics type"
                 raise ValueError(msg)
 
-        self.data.write_config("lyrics_order", lyrics_order)
+        data.write_config("lyrics_order", lyrics_order)

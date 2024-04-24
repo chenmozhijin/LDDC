@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
 )
 
+import res.resource_rc
 from ui.sidebar_window import SidebarButtonPosition, SidebarWindow
 from utils.data import data
 from utils.translator import apply_translation
@@ -29,7 +30,6 @@ from view.encrypted_lyrics import EncryptedLyricsWidget
 from view.local_match import LocalMatchWidget
 from view.search import SearchWidget
 from view.setting import SettingWidget
-import res.resource_rc
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 

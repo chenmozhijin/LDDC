@@ -17,8 +17,6 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         self.connect_signals()
         self.lyrics_type = None
         self.lyrics = None
-        self.data = data
-        self.data_mutex = data.mutex
 
     def connect_signals(self) -> None:
         self.open_pushButton.clicked.connect(self.open_file)
@@ -91,10 +89,10 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
                 self.lyrics.lrc_types["orig"] = LyricsType.QRC
                 lrc = self.lyrics.get_merge_lrc(["orig"], LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
             elif self.lyrics_type == "krc":
-                self.data_mutex.lock()
+                data.mutex.lock()
                 type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-                lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
-                self.data_mutex.unlock()
+                lyrics_order = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+                data.mutex.unlock()
                 self.lyrics = Lyrics({"source": Source.KG})
 
                 self.lyrics.tags, lyric = krc2dict(lyrics)
@@ -112,9 +110,9 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
 
     def update_lyrics(self) -> None:
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        self.data_mutex.lock()
-        lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
-        self.data_mutex.unlock()
+        data.mutex.lock()
+        lyrics_order = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+        data.mutex.unlock()
         self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value()))
 
     def change_lyrics_type(self) -> None:

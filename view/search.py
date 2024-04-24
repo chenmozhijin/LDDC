@@ -29,8 +29,6 @@ class SearchWidget(QWidget, Ui_search):
         self.setupUi(self)
         self.return_toolButton.setEnabled(False)
         self.main_window = main_window
-        self.data = data
-        self.data_mutex = data.mutex
         self.threadpool = threadpool
         self.connect_signals()
         self.search_type = SearchType.SONG
@@ -44,7 +42,7 @@ class SearchWidget(QWidget, Ui_search):
 
         self.result_path = []  # 值为"search": 搜索、"songlist":歌曲列表(歌单、专辑)、"lyrics": 歌词搜索结果
 
-        self.save_path_lineEdit.setText(self.data.cfg["default_save_path"])
+        self.save_path_lineEdit.setText(data.cfg["default_save_path"])
 
         self.get_list_lyrics_box = GetListLyrics(self)
 
@@ -101,9 +99,9 @@ class SearchWidget(QWidget, Ui_search):
             QMessageBox.warning(self, self.tr('警告'), self.tr('请先选择一个专辑或歌单'))
             return
 
-        self.data_mutex.lock()
-        lyrics_file_name_format = self.data.cfg["lyrics_file_name_format"]
-        self.data_mutex.unlock()
+        data.mutex.lock()
+        lyrics_file_name_format = data.cfg["lyrics_file_name_format"]
+        data.mutex.unlock()
         save_folder = self.save_path_lineEdit.text()
 
         def get_list_lyrics_update(count: int | str, result: dict | None = None) -> None:
@@ -156,8 +154,7 @@ class SearchWidget(QWidget, Ui_search):
                                         "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                                         "save_folder": save_folder,
                                         "lyrics_file_name_format": lyrics_file_name_format,
-                                        },
-                                       self.data)
+                                        })
         worker.signals.result.connect(get_list_lyrics_update)
         worker.signals.error.connect(get_list_lyrics_update)
         self.threadpool.start(worker)
@@ -184,17 +181,17 @@ class SearchWidget(QWidget, Ui_search):
             QMessageBox.warning(self, self.tr('警告'), self.tr('歌词内容为空'))
             return
 
-        self.data_mutex.lock()
+        data.mutex.lock()
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        lyrics_types = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+        lyrics_types = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
         # 获取已选择的歌词(用于替换占位符)
         save_folder, file_name = get_save_path(
             self.save_path_lineEdit.text(),
-            self.data.cfg["lyrics_file_name_format"] + get_lyrics_format_ext(self.preview_info["info"]["lyrics_format"]),
+            data.cfg["lyrics_file_name_format"] + get_lyrics_format_ext(self.preview_info["info"]["lyrics_format"]),
             self.preview_info["info"],
             lyrics_types)
 
-        self.data_mutex.unlock()
+        data.mutex.unlock()
 
         save_path = os.path.join(save_folder, file_name)
         try:
@@ -324,8 +321,7 @@ class SearchWidget(QWidget, Ui_search):
              "lyric_type": self.get_lyric_type(),
              "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
              "id": self.taskid["update_preview_lyric"],
-             "offset": self.offset_spinBox.value()},
-            self.data)
+             "offset": self.offset_spinBox.value()})
         worker.signals.result.connect(self.update_preview_lyric_result_slot)
         worker.signals.error.connect(self.update_preview_lyric_error_slot)
         self.threadpool.start(worker)
@@ -457,9 +453,9 @@ class SearchWidget(QWidget, Ui_search):
         elif len(result) == 1:
             self.update_preview_lyric(result[0])
         else:
-            self.data_mutex.lock()
-            auto_select = self.data.cfg['auto_select']
-            self.data_mutex.unlock()
+            data.mutex.lock()
+            auto_select = data.cfg['auto_select']
+            data.mutex.unlock()
             if auto_select:
                 self.update_preview_lyric(result[0])
             else:

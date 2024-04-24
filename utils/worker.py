@@ -30,7 +30,7 @@ from utils.api import (
     qm_get_songlist_song_list,
     qm_search,
 )
-from utils.data import Data
+from utils.data import data
 from utils.enum import (
     LocalMatchFileNameMode,
     LocalMatchSaveMode,
@@ -158,11 +158,9 @@ class LyricProcessingSignal(QObject):
 
 class LyricProcessingWorker(QRunnable):
 
-    def __init__(self, task: dict, data: Data) -> None:
+    def __init__(self, task: dict) -> None:
         super().__init__()
         self.task = task
-        self.data_mutex = data.mutex
-        self.data = data
         self.signals = LyricProcessingSignal()
         self.is_running = True
 
@@ -171,9 +169,9 @@ class LyricProcessingWorker(QRunnable):
             self.taskid = self.task["id"]
             self.get_merged_lyric(self.task["song_info"], self.task["lyric_type"])
         if self.task["type"] == "get_list_lyrics":
-            self.data_mutex.lock()
-            self.skip_inst_lyrics = self.data.cfg["skip_inst_lyrics"]
-            self.data_mutex.unlock()
+            data.mutex.lock()
+            self.skip_inst_lyrics = data.cfg["skip_inst_lyrics"]
+            data.mutex.unlock()
             for count, song_info in enumerate(self.task["song_info_list"]):
                 if not self.is_running:
                     logging.debug("任务被取消")
@@ -238,10 +236,10 @@ class LyricProcessingWorker(QRunnable):
         lyrics, from_cache = self.get_lyrics(song_info)
         if lyrics is None:
             return from_cache
-        self.data_mutex.lock()
+        data.mutex.lock()
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in lyric_type]
-        self.data_mutex.unlock()
+        lyrics_order = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in lyric_type]
+        data.mutex.unlock()
 
         try:
             merged_lyric = lyrics.get_merge_lrc(lyrics_order, self.task["lyrics_format"], self.task.get("offset", 0))
@@ -325,7 +323,6 @@ class LocalMatchWorker(QRunnable):
     def __init__(self,
                  infos: dict,
                  threadpool: QThreadPool,
-                 data: Data,
                  ) -> None:
         super().__init__()
         self.signals = LocalMatchSignal()
@@ -337,19 +334,17 @@ class LocalMatchWorker(QRunnable):
         self.lyrics_format: LyricsFormat = infos["lyrics_format"]
         self.sources: list = infos["sources"]
         self.threadpool = threadpool
-        self.data = data
-        self.data_mutex = data.mutex
 
         self.is_running = True
         self.current_index = 0
         self.total_index = 0
 
-        self.data_mutex.lock()
-        self.skip_inst_lyrics = self.data.cfg["skip_inst_lyrics"]
-        self.file_name_format = self.data.cfg["lyrics_file_name_format"]
-        self.data_mutex.unlock()
+        data.mutex.lock()
+        self.skip_inst_lyrics = data.cfg["skip_inst_lyrics"]
+        self.file_name_format = data.cfg["lyrics_file_name_format"]
+        data.mutex.unlock()
 
-        self.LyricProcessingWorker = LyricProcessingWorker({"lyrics_format": infos["lyrics_format"]}, self.data)
+        self.LyricProcessingWorker = LyricProcessingWorker({"lyrics_format": infos["lyrics_format"]})
         self.LyricProcessingWorker.signals.error.connect(self.lyric_processing_error)
 
         self.min_title_pattern1 = re.compile(r"\(.*\)$|（.*）$|<.*>$|\[.*\]$|＜.*＞$|[-～~].*[-～~]$")

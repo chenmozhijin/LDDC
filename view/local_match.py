@@ -22,8 +22,6 @@ class LocalMatchWidget(QWidget, Ui_local_match):
     def __init__(self, threadpool: QThreadPool) -> None:
         super().__init__()
 
-        self.data = data
-        self.data_mutex = data.mutex
         self.threadpool = threadpool
 
         self.running = False
@@ -35,9 +33,9 @@ class LocalMatchWidget(QWidget, Ui_local_match):
 
         self.save_mode_changed(self.save_mode_comboBox.currentIndex())
 
-        self.data_mutex.lock()
-        self.save_path_lineEdit.setText(self.data.cfg["default_save_path"])
-        self.data_mutex.unlock()
+        data.mutex.lock()
+        self.save_path_lineEdit.setText(data.cfg["default_save_path"])
+        data.mutex.unlock()
 
     def connect_signals(self) -> None:
         self.song_path_pushButton.clicked.connect(lambda: self.select_path(self.song_path_lineEdit))
@@ -93,9 +91,9 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         if self.romanized_checkBox.isChecked():
             lyric_types.append("roma")
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        self.data_mutex.lock()
-        lyrics_order = [type_mapping[type_] for type_ in self.data.cfg["lyrics_order"] if type_mapping[type_] in lyric_types]
-        self.data_mutex.unlock()
+        data.mutex.lock()
+        lyrics_order = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in lyric_types]
+        data.mutex.unlock()
 
         if len(lyric_types) == 0:
             QMessageBox.warning(self, self.tr("警告"), self.tr("请选择至少一种歌词类型！"))
@@ -150,7 +148,6 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 "sources": source,
             },
             self.threadpool,
-            self.data,
         )
         self.worker.signals.error.connect(self.worker_error)
         self.worker.signals.finished.connect(self.worker_finished)

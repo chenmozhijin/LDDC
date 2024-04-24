@@ -19,10 +19,6 @@ def load_translation() -> None:
             language = locale.language()
             if language != QLocale.Language.Chinese:
                 translator.load(":/i18n/LDDC_en.qm")
-            else:
-                translator.load(":/i18n/LDDC_zh.qm")
-        case "zh-Hans":
-            translator.load(":/i18n/LDDC_zh.qm")
         case "en":
             translator.load(":/i18n/LDDC_en.qm")
     QApplication.instance().installTranslator(translator)
