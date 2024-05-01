@@ -29,6 +29,18 @@ jobs:
                 python-version: 3.11
                 architecture: ${{ matrix.arch }}
 
+            - name: Get arch
+              id: arch
+              shell: bash
+              run: |
+                if [[ ${{ matrix.arch }} == 'x64' ]]; then
+                  echo "arch=amd64" >> $GITHUB_OUTPUT
+                elif [[ ${{ matrix.arch }} == 'arm64' ]]; then
+                  echo "arch=arm64" >> $GITHUB_OUTPUT
+                elif [[ ${{ matrix.arch }} == 'win32' ]]; then
+                  echo "arch=x86" >> $GITHUB_OUTPUT
+                fi
+            
             - name: Install dependencies
               run: |
                 pip install -r requirements.txt
