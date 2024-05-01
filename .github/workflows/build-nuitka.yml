@@ -34,11 +34,21 @@ jobs:
                 pip install -r requirements.txt
                 pip install imageio
             
-            - name: Install EGL
+            - name: Install EGL/upx
               if: ${{ matrix.os == 'ubuntu-latest' }}
               run: |
                 sudo apt-get update
-                sudo apt-get install libegl1
+                sudo apt-get install libegl1 upx
+
+            - name: Install create-dmg/upx
+              if: ${{ matrix.os == 'macos-latest' }}
+              run: |
+                brew install create-dmg upx 
+
+            - name: Install upx/7zip
+              if: ${{ matrix.os == 'windows-latest' }}
+              run: |
+                choco install upx 7zip -y
 
             - name: mkdir
               run: |
@@ -191,7 +201,6 @@ jobs:
             - name: Compress exe
               if: ${{ matrix.os == 'windows-latest' }}
               run: |
-                New-Item -Path upload -ItemType Directory
                 cd dist/exe/output/
                 7z a -tzip -mx=9 ../../../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}.zip LDDC
 
