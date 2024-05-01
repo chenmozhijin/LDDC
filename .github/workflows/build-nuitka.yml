@@ -120,8 +120,8 @@ jobs:
                 mkdir -p deb/usr/share/icons/
                 cp -r ../res/img/icon/logo.ico deb/usr/share/icons/LDDC.ico
                 cp -RT ../build/LDDC.dist deb/usr/lib/LDDC
-                chmod +x deb/usr/lib/LDDC/LDDC
-                ln -s ../lib/LDDC/LDDC deb/usr/bin/LDDC
+                chmod +x deb/usr/lib/LDDC/LDDC.bin
+                ln -s ../lib/LDDC/LDDC.bin deb/usr/bin/LDDC
   
                 echo "Package: LDDC" >> deb/DEBIAN/control
                 echo "Version: ${{ steps.info.outputs.version }}" >> deb/DEBIAN/control
@@ -133,7 +133,7 @@ jobs:
                 echo "[Desktop Entry]" >> deb/usr/share/applications/LDDC.desktop
                 echo "Name=LDDC" >> deb/usr/share/applications/LDDC.desktop
                 echo "Comment=lyrics tool" >> deb/usr/share/applications/LDDC.desktop
-                echo "Exec=/usr/lib/LDDC/LDDC" >> deb/usr/share/applications/LDDC.desktop
+                echo "Exec=/usr/bin/LDDC" >> deb/usr/share/applications/LDDC.desktop
                 echo "Icon=/usr/share/icons/LDDC.ico" >> deb/usr/share/applications/LDDC.desktop
                 echo "Terminal=false" >> deb/usr/share/applications/LDDC.desktop
                 echo "Type=Application" >> deb/usr/share/applications/LDDC.desktop
