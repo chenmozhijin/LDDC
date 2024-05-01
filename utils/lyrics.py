@@ -428,7 +428,7 @@ def find_closest_match(list1: list, list2: list, list3: list | None = None, sour
     return merged_list
 
 
-class Lyrics(dict[str: list[tuple[int | None, int | None, list[tuple[int | None, int | None, str]]]]]):
+class Lyrics(dict):
     def __init__(self, info: dict | None = None) -> None:
         if info is None:
             info = {}
