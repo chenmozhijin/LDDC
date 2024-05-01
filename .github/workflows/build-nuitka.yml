@@ -109,43 +109,43 @@ jobs:
 
                 mv dist/LDDC.dmg upload/LDDC-${{ steps.info.outputs.version }}-${{ steps.arch.outputs.arch }}.dmg
 
-                - name: create deb package
-                if: ${{ matrix.os == 'ubuntu-latest' }}
-                run: |
-                  cd dist
-                  mkdir -p deb/DEBIAN
-                  mkdir -p deb/usr/lib
-                  mkdir -p deb/usr/bin
-                  mkdir -p deb/usr/share/applications
-                  mkdir -p deb/usr/share/icons/
-                  cp -r ../res/img/icon/logo.ico deb/usr/share/icons/LDDC.ico
-                  cp -RT build/LDDC.dist deb/usr/lib/LDDC
-                  chmod +x deb/usr/lib/LDDC/LDDC
-                  ln -s ../lib/LDDC/LDDC deb/usr/bin/LDDC
+            - name: create deb package
+              if: ${{ matrix.os == 'ubuntu-latest' }}
+              run: |
+                cd dist
+                mkdir -p deb/DEBIAN
+                mkdir -p deb/usr/lib
+                mkdir -p deb/usr/bin
+                mkdir -p deb/usr/share/applications
+                mkdir -p deb/usr/share/icons/
+                cp -r ../res/img/icon/logo.ico deb/usr/share/icons/LDDC.ico
+                cp -RT build/LDDC.dist deb/usr/lib/LDDC
+                chmod +x deb/usr/lib/LDDC/LDDC
+                ln -s ../lib/LDDC/LDDC deb/usr/bin/LDDC
   
-                  echo "Package: LDDC" >> deb/DEBIAN/control
-                  echo "Version: ${{ steps.info.outputs.version }}" >> deb/DEBIAN/control
-                  echo "Architecture: ${{ steps.arch.outputs.arch }}" >> deb/DEBIAN/control
-                  echo "Maintainer: chenmozhijin" >> deb/DEBIAN/control
-                  echo "Depends: libxcb-cursor-dev"
-                  echo "Description: lyrics tool" >> deb/DEBIAN/control
+                echo "Package: LDDC" >> deb/DEBIAN/control
+                echo "Version: ${{ steps.info.outputs.version }}" >> deb/DEBIAN/control
+                echo "Architecture: ${{ steps.arch.outputs.arch }}" >> deb/DEBIAN/control
+                echo "Maintainer: chenmozhijin" >> deb/DEBIAN/control
+                echo "Depends: libxcb-cursor-dev"
+                echo "Description: lyrics tool" >> deb/DEBIAN/control
   
-                  echo "[Desktop Entry]" >> deb/usr/share/applications/LDDC.desktop
-                  echo "Name=LDDC" >> deb/usr/share/applications/LDDC.desktop
-                  echo "Comment=lyrics tool" >> deb/usr/share/applications/LDDC.desktop
-                  echo "Exec=/usr/lib/LDDC/LDDC" >> deb/usr/share/applications/LDDC.desktop
-                  echo "Icon=/usr/share/icons/LDDC.ico" >> deb/usr/share/applications/LDDC.desktop
-                  echo "Terminal=false" >> deb/usr/share/applications/LDDC.desktop
-                  echo "Type=Application" >> deb/usr/share/applications/LDDC.desktop
-                  echo "X-Ubuntu-Touch=true" >> deb/usr/share/applications/LDDC.desktop
-                  echo "Categories=Application" >> deb/usr/share/applications/LDDC.desktop
-                  chmod +x deb/usr/share/applications/LDDC.desktop
+                echo "[Desktop Entry]" >> deb/usr/share/applications/LDDC.desktop
+                echo "Name=LDDC" >> deb/usr/share/applications/LDDC.desktop
+                echo "Comment=lyrics tool" >> deb/usr/share/applications/LDDC.desktop
+                echo "Exec=/usr/lib/LDDC/LDDC" >> deb/usr/share/applications/LDDC.desktop
+                echo "Icon=/usr/share/icons/LDDC.ico" >> deb/usr/share/applications/LDDC.desktop
+                echo "Terminal=false" >> deb/usr/share/applications/LDDC.desktop
+                echo "Type=Application" >> deb/usr/share/applications/LDDC.desktop
+                echo "X-Ubuntu-Touch=true" >> deb/usr/share/applications/LDDC.desktop
+                echo "Categories=Application" >> deb/usr/share/applications/LDDC.desktop
+                chmod +x deb/usr/share/applications/LDDC.desktop
   
-                  sudo dpkg -b deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
-                  sudo apt install ./LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                sudo dpkg -b deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                sudo apt install ./LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
   
-                  cd ..
-                  mv dist/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb upload/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                cd ..
+                mv dist/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb upload/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
 
             - name: prepare create exe
               if: ${{ matrix.os == 'windows-latest' }} 
