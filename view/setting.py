@@ -3,9 +3,11 @@
 import os
 from logging import Logger
 
+from PySide6.QtCore import SignalInstance
 from PySide6.QtWidgets import QFileDialog, QWidget
 
 from ui.settings_ui import Ui_settings
+from utils.cache import cache
 from utils.data import data
 from utils.translator import load_translation
 from utils.utils import str2log_level
@@ -13,11 +15,13 @@ from utils.utils import str2log_level
 
 class SettingWidget(QWidget, Ui_settings):
 
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: Logger, widget_changed_signal: SignalInstance) -> None:
         super().__init__()
         self.logger = logger
         self.setupUi(self)
         self.init_ui()
+        self.widget_changed_signal = widget_changed_signal
+        self.widget_changed_signal.connect(self.update_cache_size)
         self.connect_signals()
 
     def init_ui(self) -> None:
@@ -41,6 +45,13 @@ class SettingWidget(QWidget, Ui_settings):
         path = QFileDialog.getExistingDirectory(self, self.tr("选择默认保存路径"))
         if path:
             self.default_save_path_lineEdit.setText(os.path.normpath(path))
+
+    def update_cache_size(self) -> None:
+        self.cache_size_label.setText(self.tr("缓存大小:") + f" {cache.volume() / 1000000 } MB")
+
+    def clear_cache(self) -> None:
+        cache.clear()
+        self.update_cache_size()
 
     def connect_signals(self) -> None:
         self.lyrics_order_listWidget.droped.connect(self.lyrics_order_changed)
@@ -67,8 +78,10 @@ class SettingWidget(QWidget, Ui_settings):
         self.language_comboBox.currentIndexChanged.connect(self.language_comboBox_changed)
 
         self.lrc_ms_digit_count_spinBox.valueChanged.connect(
-            lambda: data.write_config("lrc_ms_digit_count", self.lrc_ms_digit_count_spinBox.value())
+            lambda: data.write_config("lrc_ms_digit_count", self.lrc_ms_digit_count_spinBox.value()),
         )
+
+        self.clear_cache_pushButton.clicked.connect(self.clear_cache)
 
     def language_comboBox_changed(self, index: int) -> None:
         match index:

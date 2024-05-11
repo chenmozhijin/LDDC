@@ -4,10 +4,8 @@ import json
 import logging
 import os
 import re
-import sys
 import time
 
-from diskcache import Cache
 from PySide6.QtCore import (
     Q_ARG,
     QCoreApplication,
@@ -20,7 +18,8 @@ from PySide6.QtCore import (
 )
 
 from ui.sidebar_window import SidebarWindow
-from utils.api import (
+
+from .api import (
     get_latest_version,
     kg_get_songlist,
     kg_search,
@@ -30,8 +29,9 @@ from utils.api import (
     qm_get_songlist_song_list,
     qm_search,
 )
-from utils.data import data
-from utils.enum import (
+from .cache import cache
+from .data import data
+from .enum import (
     LocalMatchFileNameMode,
     LocalMatchSaveMode,
     LyricsFormat,
@@ -39,10 +39,10 @@ from utils.enum import (
     SearchType,
     Source,
 )
-from utils.lyrics import Lyrics
-from utils.song_info import file_extensions as audio_formats
-from utils.song_info import get_audio_file_info, parse_cue
-from utils.utils import (
+from .lyrics import Lyrics
+from .song_info import file_extensions as audio_formats
+from .song_info import get_audio_file_info, parse_cue
+from .utils import (
     escape_filename,
     escape_path,
     get_lyrics_format_ext,
@@ -50,17 +50,6 @@ from utils.utils import (
     replace_info_placeholders,
     text_difference,
 )
-
-match sys.platform:
-    case "linux" | "darwin":
-        cache_dir = os.path.expanduser("~/.config/LDDC/cache")
-    case _:
-        cache_dir = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "cache")
-cache = Cache(cache_dir)
-cache_version = 4
-if "version" not in cache or cache["version"] != cache_version:
-    cache.clear()
-cache["version"] = cache_version
 
 
 class CheckUpdate(QRunnable):
@@ -221,7 +210,7 @@ class LyricProcessingWorker(QRunnable):
                 if error1_type != LyricsProcessingError.REQUEST:  # 如果正常或不是请求错误不重试
                     break
             if 'title' in song_info:
-                song_name_str = "歌名:" + song_info['title']
+                song_name_str = QCoreApplication.translate("LyricProcess", "歌名:") + song_info['title']
             if error1 is not None:
                 logging.error(f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']},错误：{error1}")
                 self.signals.error.emit(QCoreApplication.translate("LyricProcess", "获取 {0} 加密歌词失败:{1}").format(song_name_str, error1))

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-__version__ = "v0.6.3"
+__version__ = "v0.6.4"
 import logging
 import os
 import sys
@@ -65,7 +65,7 @@ class MainWindow(SidebarWindow):
 
         self.search_widget = SearchWidget(self, threadpool)
         self.local_match_widget = LocalMatchWidget(threadpool)
-        self.settings_widget = SettingWidget(logger)
+        self.settings_widget = SettingWidget(logger, self.widget_changed)
         self.about_widget = AboutWidget(__version__)
         self.encrypted_lyrics_widget = EncryptedLyricsWidget()
         self.init_widgets()

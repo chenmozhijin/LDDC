@@ -15,7 +15,7 @@
 - [x] Search for singles, albums, and playlists on QQ Music, Kugou Music, and NetEase Cloud Music
 - [x] One-click download of lyrics for entire albums and playlists
 - [x] One-click match lyrics for local song files
-- [x] Support for saving in multiple formats (lrc, srt, ass)
+- [x] Support for saving in multiple formats (verbatim lrc,line by line lrc,Enhanced LRC, srt, ass)
 - [x] Double-click to preview lyrics and save directly
 - [x] Merge lyrics of various types (original, translated, romanized) at will
 - [x] Save path with various placeholders for arbitrary combinations

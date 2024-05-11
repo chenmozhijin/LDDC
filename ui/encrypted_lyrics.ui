@@ -134,6 +134,11 @@
        </item>
        <item>
         <property name="text">
+         <string>增强型LRC(ESLyric)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>SRT</string>
         </property>
        </item>

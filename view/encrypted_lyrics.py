@@ -8,6 +8,7 @@ from ui.encrypted_lyrics_ui import Ui_encrypted_lyrics
 from utils.data import data
 from utils.enum import LyricsFormat, LyricsType, QrcType, Source
 from utils.lyrics import Lyrics, krc2dict, qrc2list
+from utils.utils import get_lyrics_format_ext
 
 
 class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
@@ -122,14 +123,14 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
             self.update_lyrics()
 
     def save(self) -> None:
-        match self.lyricsformat_comboBox.currentIndex():
-            case 0 | 1:
-                ext = "(*.lrc)"
-            case 2:
-                ext = "(*.srt)"
-            case 3:
-                ext = "(*.ass)"
-        file_path, _ = QFileDialog.getSaveFileName(self, self.tr("保存文件"), "", self.tr("歌词文件 ") + ext)
+        if self.plainTextEdit.toPlainText() == "":
+            QMessageBox.warning(self, self.tr("警告"), self.tr("歌词内容不能为空！"))
+            return
+        if self.lyrics_type == 'converted':
+            ext = f'(*{get_lyrics_format_ext(LyricsFormat(self.lyricsformat_comboBox.currentIndex()))})'
+            file_path, _ = QFileDialog.getSaveFileName(self, self.tr("保存文件"), "", self.tr("歌词文件 ") + ext)
+        else:
+            file_path, _ = QFileDialog.getSaveFileName(self, self.tr("保存文件"), "", self.tr("全部文件") + "(*)")
         if file_path == "":
             return
         try:

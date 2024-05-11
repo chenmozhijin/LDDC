@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 from difflib import SequenceMatcher
 
-from utils.data import data
-from utils.enum import LyricsFormat
+from .data import data
+from .enum import LyricsFormat
 
 
 def get_divmod_time(ms: int) -> tuple[int, int, int, int]:
@@ -20,6 +20,9 @@ def ms2formattime(ms: int) -> str:
     data.mutex.unlock()
     if lrc_ms_digit_count == 2:
         ms = round(ms / 10)
+        if ms == 100:
+            ms = 0
+            s += 1
         return f"{int(m):02d}:{int(s):02d}.{int(ms):02d}"
     return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"  # lrc_ms_digit_count == 3
 
@@ -43,7 +46,7 @@ def time2ms(m: int | str, s: int | str, ms: int | str) -> int:
 
 def get_lyrics_format_ext(lyrics_format: LyricsFormat) -> str:
     match lyrics_format:
-        case LyricsFormat.VERBATIMLRC | LyricsFormat.LINEBYLINELRC:
+        case LyricsFormat.VERBATIMLRC | LyricsFormat.LINEBYLINELRC | LyricsFormat.ENHANCEDLRC:
             return ".lrc"
         case LyricsFormat.SRT:
             return ".srt"

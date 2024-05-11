@@ -8,9 +8,10 @@ from base64 import b64decode
 from PySide6.QtCore import QCoreApplication
 
 from decryptor import krc_decrypt, qrc_decrypt
-from utils.api import get_krc, ne_get_lyric, qm_get_lyric
-from utils.enum import LyricsFormat, LyricsProcessingError, LyricsType, QrcType, Source
-from utils.utils import ms2ass_timestamp, ms2formattime, ms2srt_timestamp, time2ms
+
+from .api import get_krc, ne_get_lyric, qm_get_lyric
+from .enum import LyricsFormat, LyricsProcessingError, LyricsType, QrcType, Source
+from .utils import ms2ass_timestamp, ms2formattime, ms2srt_timestamp, time2ms
 
 try:
     main = __import__("__main__")
@@ -29,7 +30,7 @@ def judge_lyric_type(text: str) -> LyricsType:
 
 def has_content(line: str) -> bool:
     """检查是否有实际内容"""
-    content = re.sub(r"\[\d+:\d+\.\d+\]|\[\d+,\d+\]", "", line).strip()
+    content = re.sub(r"\[\d+:\d+\.\d+\]|\[\d+,\d+\]|<\d+:\d+\.\d+>", "", line).strip()
     if content in ("", "//"):
         return False
     if len(content) == 2 and content[0].isupper() and content[1] == "：":
@@ -263,19 +264,46 @@ def lrclist2str(lrc_list: list, verbatim: bool = True) -> str:
     return lrc_str
 
 
-def linelist2str(line_list: list[tuple[int, int | None, list[tuple[int, int | None, str]]]], verbatim: bool = True) -> str:
+def linelist2str(line_list: tuple[int, int | None, list[tuple[int, int | None, str]]], verbatim: bool = True, enhanced: bool = False) -> str:
+    """
+    将歌词行列表转换为LRC歌词字符串
+    :param line_list: 歌词行列表
+    :param verbatim: 是否逐字模式
+    :param Enhanced: 是否为增强格式歌词
+    :return: LRC歌词字符串
+    """
     lrc_str = ""
-    if line_list[0] is None and line_list[1] is None:
+    if line_list[0] is None and line_list[1] is None:  # 纯文本
         lrc_str += line_list[2][0][2]
-    elif verbatim is False:
+
+    elif enhanced is True and line_list[0] is not None:
+        if len(line_list[2]) == 1:
+            lrc_str += f"[{ms2formattime(line_list[0])}]" + line_list[2][0][2]
+        else:
+            lrc_str += f"[{ms2formattime(line_list[0])}]"  # 添加行首时间戳
+
+            for i, word in enumerate(line_list[2]):
+                lrc_str += f"<{ms2formattime(word[0])}>" + word[2]
+
+                if word[1] is not None and (
+                    (i + 1 != len(line_list[2])
+                     and word[1] != line_list[2][i + 1][0])
+                        or (i + 1 == len(line_list[2])
+                            and word[1] != line_list[1])):
+                    lrc_str += f"<{ms2formattime(word[1])}>"
+
+            if line_list[1]:
+                lrc_str += f"<{ms2formattime(line_list[1])}>"  # 添加行尾时间戳
+
+    elif verbatim is False:  # 非逐字模式
         if line_list[0] is not None:
             lrc_str += f"[{ms2formattime(line_list[0])}]"
         lrc_str += "".join([word[2]for word in line_list[2] if word[2] != ""])
-    elif len(line_list[2]) == 1 and line_list[0] is not None and line_list[1] is not None:
+    elif len(line_list[2]) == 1 and line_list[0] is not None and line_list[1] is not None:  # 原歌词非逐字有行首尾时间戳
         lrc_str += f"[{ms2formattime(line_list[0])}]{line_list[2][0][2]}[{ms2formattime(line_list[1])}]"
-    elif len(line_list[2]) == 1 and line_list[0] is not None:
+    elif len(line_list[2]) == 1 and line_list[0] is not None:  # 原歌词非逐字只有行首时间戳
         lrc_str += f"[{ms2formattime(line_list[0])}]{line_list[2][0][2]}"
-    elif len(line_list[2]) > 1 and line_list[0] is not None and line_list[1] is not None:
+    elif len(line_list[2]) > 1 and line_list[0] is not None and line_list[1] is not None:  # 原歌词逐字有行首尾时间戳
         lrc_str += f"[{ms2formattime(line_list[0])}]"  # 添加行首时间戳
         last_end = line_list[0]
 
@@ -600,7 +628,7 @@ class Lyrics(dict):
         if 'orig' not in lyrics:  # 确保只勾选译文与罗马音时正常合并时
             lyrics.append(('orig', lyrics_dict['orig']))
 
-        end_time_pattern = re.compile(r"(\[\d+:\d+\.\d+\])$")
+        end_time_pattern = re.compile(r"(\[\d+:\d+\.\d+\])$|(<\d+:\d+\.\d+>)$")
 
         mapping_tables = {}
         lyric_lines = []
@@ -614,29 +642,34 @@ class Lyrics(dict):
             lyrics_format = LyricsFormat.LINEBYLINELRC
 
         match lyrics_format:
-            case LyricsFormat.VERBATIMLRC | LyricsFormat.LINEBYLINELRC:
+            case LyricsFormat.VERBATIMLRC | LyricsFormat.LINEBYLINELRC | LyricsFormat.ENHANCEDLRC:
                 def get_full_line(mapping_table: dict, orig_linelist: list) -> str:
                     match_lines = [line for orig_line, line in mapping_table if orig_line == orig_linelist]
                     if not match_lines:
                         return ""
 
                     line = match_lines[0]
-                    if line[0]:
-                        line_str = linelist2str(line, bool(lyrics_format == LyricsFormat.VERBATIMLRC)).replace(f"[{ms2formattime(line[0])}]", "")
-                    else:
-                        line_str = linelist2str(line)
+                    line_str = linelist2str(line,
+                                            bool(lyrics_format == LyricsFormat.VERBATIMLRC),
+                                            bool(lyrics_format == LyricsFormat.ENHANCEDLRC)).replace(f"[{ms2formattime(line[0])}]", "")
 
                     if not has_content(line_str):
                         return ""
                     if orig_linelist[0] is not None:
                         if re.search(end_time_pattern, line_str) or orig_linelist[1] is None or lyrics_format == LyricsFormat.LINEBYLINELRC:  # 检查是添加末尾时间戳
                             return f"[{ms2formattime(orig_linelist[0])}]{line_str}"
+                        if lyrics_format == LyricsFormat.ENHANCEDLRC:
+                            if len(line[2]) != 1:
+                                return f"[{ms2formattime(orig_linelist[0])}]{line_str}<{ms2formattime(orig_linelist[1])}>"
+                            return f"[{ms2formattime(orig_linelist[0])}]{line_str}"
                         return f"[{ms2formattime(orig_linelist[0])}]{line_str}[{ms2formattime(orig_linelist[1])}]"
                     return line_str
 
                 for orig_linelist in lyrics_dict["orig"]:
                     lines = ""
-                    full_orig_line = linelist2str(orig_linelist, bool(lyrics_format == LyricsFormat.VERBATIMLRC))  # 此时line为完整的原文歌词行
+                    full_orig_line = linelist2str(orig_linelist,
+                                                  bool(lyrics_format == LyricsFormat.VERBATIMLRC),
+                                                  bool(lyrics_format == LyricsFormat.ENHANCEDLRC))  # 此时line为完整的原文歌词行
 
                     for type_ in lyrics_order:
                         if type_ == "orig":

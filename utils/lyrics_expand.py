@@ -1,4 +1,4 @@
-from utils.lyrics import Lyrics
+from .lyrics import Lyrics
 
 
 def merge_lyrics(lyrics1: Lyrics, lyrics2: Lyrics) -> Lyrics:

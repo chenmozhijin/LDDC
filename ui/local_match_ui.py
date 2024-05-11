@@ -209,6 +209,7 @@ class Ui_local_match(object):
         self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.setObjectName(u"lyricsformat_comboBox")
 
         self.gridLayout_5.addWidget(self.lyricsformat_comboBox, 1, 1, 1, 1)
@@ -345,8 +346,9 @@ class Ui_local_match(object):
         self.label_10.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u683c\u5f0f:", None))
         self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"LRC(\u9010\u5b57)", None))
         self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"LRC(\u9010\u884c)", None))
-        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"SRT", None))
-        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("local_match", u"ASS", None))
+        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"\u589e\u5f3a\u578bLRC(ESLyric)", None))
+        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("local_match", u"SRT", None))
+        self.lyricsformat_comboBox.setItemText(4, QCoreApplication.translate("local_match", u"ASS", None))
 
         self.kg_checkBox.setText(QCoreApplication.translate("local_match", u"\u9177\u72d7\u97f3\u4e50", None))
         self.label_7.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6765\u6e90:", None))

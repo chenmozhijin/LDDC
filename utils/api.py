@@ -10,7 +10,8 @@ from base64 import b64decode, b64encode
 import requests
 
 from decryptor.eapi import eapi_params_encrypt, eapi_response_decrypt, get_cache_key
-from utils.enum import SearchType, Source
+
+from .enum import SearchType, Source
 
 
 def get_latest_version() -> tuple[bool, str]:

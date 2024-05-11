@@ -108,6 +108,7 @@ class Ui_encrypted_lyrics(object):
         self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.setObjectName(u"lyricsformat_comboBox")
 
         self.horizontalLayout_2.addWidget(self.lyricsformat_comboBox)
@@ -158,8 +159,9 @@ class Ui_encrypted_lyrics(object):
         self.label_2.setText(QCoreApplication.translate("encrypted_lyrics", u"\u8f6c\u6362\u7684\u683c\u5f0f\uff1a", None))
         self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("encrypted_lyrics", u"LRC(\u9010\u5b57)", None))
         self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("encrypted_lyrics", u"LRC(\u9010\u884c)", None))
-        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("encrypted_lyrics", u"SRT", None))
-        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("encrypted_lyrics", u"ASS", None))
+        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("encrypted_lyrics", u"\u589e\u5f3a\u578bLRC(ESLyric)", None))
+        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("encrypted_lyrics", u"SRT", None))
+        self.lyricsformat_comboBox.setItemText(4, QCoreApplication.translate("encrypted_lyrics", u"ASS", None))
 
         self.open_pushButton.setText(QCoreApplication.translate("encrypted_lyrics", u"\u6253\u5f00\u52a0\u5bc6\u6b4c\u8bcd", None))
         self.convert_pushButton.setText(QCoreApplication.translate("encrypted_lyrics", u"\u8f6c\u6362\u683c\u5f0f", None))

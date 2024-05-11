@@ -319,6 +319,7 @@ class Ui_search(object):
         self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.addItem("")
+        self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.setObjectName(u"lyricsformat_comboBox")
 
         self.horizontalLayout_9.addWidget(self.lyricsformat_comboBox)
@@ -395,8 +396,9 @@ class Ui_search(object):
         self.label_9.setText(QCoreApplication.translate("search", u"\u6b4c\u8bcd\u683c\u5f0f:", None))
         self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("search", u"LRC(\u9010\u5b57)", None))
         self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("search", u"LRC(\u9010\u884c)", None))
-        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("search", u"SRT", None))
-        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("search", u"ASS", None))
+        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("search", u"\u589e\u5f3a\u578bLRC(ESLyric)", None))
+        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("search", u"SRT", None))
+        self.lyricsformat_comboBox.setItemText(4, QCoreApplication.translate("search", u"ASS", None))
 
         self.save_list_lyrics_pushButton.setText(QCoreApplication.translate("search", u"\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u7684\u6b4c\u8bcd", None))
         self.save_preview_lyric_pushButton.setText(QCoreApplication.translate("search", u"\u4fdd\u5b58\u9884\u89c8\u7684\u6b4c\u8bcd", None))
