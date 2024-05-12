@@ -142,8 +142,12 @@ def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> dic
             return []
         match search_type:
             case SearchType.SONG:
+                if 'songs' not in data['result']:
+                    return []
                 results = nesonglist2result(data['result']['songs'])
             case SearchType.ALBUM:
+                if 'albums' not in data['result']:
+                    return []
                 results = []
                 for album in data['result']['albums']:
                     results.append({
@@ -156,6 +160,8 @@ def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> dic
                         'source': Source.NE,
                     })
             case SearchType.SONGLIST:
+                if 'playlists' not in data['result']:
+                    return []
                 results = []
                 for songlist in data['result']['playlists']:
                     results.append({

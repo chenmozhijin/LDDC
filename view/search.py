@@ -545,10 +545,10 @@ class SearchWidget(QWidget, Ui_search):
     def results_table_scroll_changed(self) -> None:
         # 判断是否已经滚动到了底部或消失
         results_table_scroll = self.results_tableWidget.verticalScrollBar()
+
         value = results_table_scroll.value()
-        max_val = results_table_scroll.maximum()
-        min_val = results_table_scroll.minimum()
-        if ((max_val - min_val) == 0 and self.results_tableWidget.rowCount() != 0) or value == self.results_tableWidget.verticalScrollBar().maximum():
+        max_value = results_table_scroll.maximum()
+        if value == max_value:
 
             # 更新列表(获取下一页)
             table = self.results_tableWidget
