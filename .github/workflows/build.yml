@@ -18,6 +18,9 @@ jobs:
             matrix:
                 os: [macos-latest, ubuntu-latest, windows-latest]
                 arch: [x64]
+                include:
+                  - os: macos-latest
+                    arch: arm64
 
         runs-on: ${{ matrix.os }}
         
