@@ -7,7 +7,6 @@ import sys
 import time
 
 from PySide6.QtCore import (
-    QThreadPool,
     QUrl,
     Slot,
 )
@@ -18,13 +17,14 @@ from PySide6.QtWidgets import (
 )
 
 import res.resource_rc
+from backend.worker import CheckUpdate
 from ui.sidebar_window import SidebarButtonPosition, SidebarWindow
 from utils.data import data
+from utils.threadpool import threadpool
 from utils.translator import apply_translation
 from utils.utils import (
     str2log_level,
 )
-from utils.worker import CheckUpdate
 from view.about import AboutWidget
 from view.encrypted_lyrics import EncryptedLyricsWidget
 from view.local_match import LocalMatchWidget
@@ -48,9 +48,6 @@ logger = logging.getLogger()
 data_mutex = data.mutex
 logger.setLevel(str2log_level(data.cfg["log_level"]))
 
-threadpool = QThreadPool()
-logging.debug(f"最大线程数: {threadpool.maxThreadCount()}")
-
 res.resource_rc.qInitResources()
 
 
@@ -63,8 +60,8 @@ class MainWindow(SidebarWindow):
         self.setWindowIcon(QIcon(":/LDDC/img/icon/logo.png"))
         self.set_sidebar_width(100)
 
-        self.search_widget = SearchWidget(self, threadpool)
-        self.local_match_widget = LocalMatchWidget(threadpool)
+        self.search_widget = SearchWidget(self)
+        self.local_match_widget = LocalMatchWidget()
         self.settings_widget = SettingWidget(logger, self.widget_changed)
         self.about_widget = AboutWidget(__version__)
         self.encrypted_lyrics_widget = EncryptedLyricsWidget()

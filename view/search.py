@@ -4,7 +4,6 @@ import os
 
 from PySide6.QtCore import (
     QModelIndex,
-    QThreadPool,
     Slot,
 )
 from PySide6.QtWidgets import (
@@ -14,22 +13,22 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from backend.lyrics import Lyrics
+from backend.worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
 from ui.search_ui import Ui_search
 from utils.data import data
 from utils.enum import LyricsFormat, LyricsType, SearchType, Source
-from utils.lyrics import Lyrics
+from utils.threadpool import threadpool
 from utils.utils import get_lyrics_format_ext, get_save_path, ms2formattime
-from utils.worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
 from view.get_list_lyrics import GetListLyrics
 
 
 class SearchWidget(QWidget, Ui_search):
-    def __init__(self, main_window: QWidget, threadpool: QThreadPool) -> None:
+    def __init__(self, main_window: QWidget) -> None:
         super().__init__()
         self.setupUi(self)
         self.return_toolButton.setEnabled(False)
         self.main_window = main_window
-        self.threadpool = threadpool
         self.connect_signals()
         self.search_type = SearchType.SONG
 
@@ -158,7 +157,7 @@ class SearchWidget(QWidget, Ui_search):
                                         })
         worker.signals.result.connect(get_list_lyrics_update)
         worker.signals.error.connect(get_list_lyrics_update)
-        self.threadpool.start(worker)
+        threadpool.start(worker)
 
         def cancel_get_list_lyrics() -> None:
             self.get_list_lyrics_box.ask_to_close = False
@@ -275,7 +274,7 @@ class SearchWidget(QWidget, Ui_search):
         worker = SearchWorker(self.taskid["results_table"], keyword, self.search_type, self.get_source(), 1)
         worker.signals.result.connect(self.search_result_slot)
         worker.signals.error.connect(self.search_error_slot)
-        self.threadpool.start(worker)
+        threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
         self.results_tableWidget.setProperty("result_type", (None, None))
 
@@ -326,7 +325,7 @@ class SearchWidget(QWidget, Ui_search):
              "offset": self.offset_spinBox.value()})
         worker.signals.result.connect(self.update_preview_lyric_result_slot)
         worker.signals.error.connect(self.update_preview_lyric_error_slot)
-        self.threadpool.start(worker)
+        threadpool.start(worker)
 
         self.preview_info = None
         self.preview_plainTextEdit.setPlainText(self.tr("处理中..."))
@@ -436,7 +435,7 @@ class SearchWidget(QWidget, Ui_search):
             worker = GetSongListWorker(self.taskid["results_table"], result_type, info['id'], info['source'])
         worker.signals.result.connect(self.show_songlist_result)
         worker.signals.error.connect(self.get_songlist_error)
-        self.threadpool.start(worker)
+        threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
         self.result_path.append("songlist")
 
@@ -478,7 +477,7 @@ class SearchWidget(QWidget, Ui_search):
                               SearchType.LYRICS, info['source'], 1)
         worker.signals.result.connect(self.search_lyrics_result_slot)
         worker.signals.error.connect(self.search_lyrics_error_slot)
-        self.threadpool.start(worker)
+        threadpool.start(worker)
 
     def select_results(self, index: QModelIndex) -> None:
         """结果表格元素被双击时调用"""
@@ -573,4 +572,4 @@ class SearchWidget(QWidget, Ui_search):
                 worker = SearchWorker(self.taskid["results_table"], self.search_info['keyword'], self.search_info['search_type'], self.search_info['source'], self.search_info['page'] + 1)
                 worker.signals.result.connect(self.search_nextpage_result_slot)
                 worker.signals.error.connect(self.search_nextpage_error)
-                self.threadpool.start(worker)
+                threadpool.start(worker)

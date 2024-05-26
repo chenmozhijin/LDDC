@@ -4,20 +4,32 @@ import json
 import logging
 import re
 from base64 import b64decode
+from typing import NewType
 
 from PySide6.QtCore import QCoreApplication
 
 from decryptor import krc_decrypt, qrc_decrypt
+from utils.enum import (
+    LyricsFormat,
+    LyricsProcessingError,
+    LyricsType,
+    QrcType,
+    Source,
+)
+from utils.utils import ms2ass_timestamp, ms2formattime, ms2srt_timestamp, time2ms
 
 from .api import get_krc, ne_get_lyric, qm_get_lyric
-from .enum import LyricsFormat, LyricsProcessingError, LyricsType, QrcType, Source
-from .utils import ms2ass_timestamp, ms2formattime, ms2srt_timestamp, time2ms
 
 try:
     main = __import__("__main__")
     version = main.__version__.replace("v", "")
 except Exception:
     version = ""
+
+LyricsWord = NewType("LyricsWord", tuple[int | None, int | None, str])
+LyricsLine = NewType("LyricsLine", tuple[int | None, int | None, list[LyricsWord]])
+LyricsData = NewType("LyricsData", list[LyricsLine])
+MultiLyricsData = NewType("MultiLyricsData", dict[str, LyricsData])
 
 
 def judge_lyric_type(text: str) -> LyricsType:
@@ -57,7 +69,7 @@ def qrc2list(qrc: str) -> tuple[dict, list]:
     qrc = re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', qrc, re.DOTALL)[0]
     qrc_lines = qrc.split('\n')
     tags = {}
-    lrc_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []
+    lrc_list: LyricsData = []
     wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?((?:(?!\(\d+,\d+\)).)+)\((\d+),(\d+)\)')  # 逐字匹配
     line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
     tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
@@ -85,7 +97,7 @@ def qrc2list(qrc: str) -> tuple[dict, list]:
 
 def yrc2list(yrc: str) -> list:
     """将yrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
-    lrc_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []
+    lrc_list: LyricsData = []
 
     line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
     wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?\((\d+),(\d+),\d+\)((?:.(?!\d+,\d+,\d+\)))*)')  # 逐字匹配
@@ -113,7 +125,7 @@ def yrc2list(yrc: str) -> list:
 
 def lrc2list(lrc: str, source: Source | None = None) -> tuple[dict, list]:
     """将lrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
-    lrc_list: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = []
+    lrc_list: LyricsData = []
     tags = {}
 
     tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
@@ -171,7 +183,7 @@ def lrc2list(lrc: str, source: Source | None = None) -> tuple[dict, list]:
 
 
 def plaintext2list(plaintext: str) -> list[list[None, None, list[None, None, str]]]:
-    lrc_list: list[tuple[None, None, list[tuple[None, None, str]]]] = []
+    lrc_list: LyricsData = []
     for line in plaintext.splitlines():
         lrc_list.append((None, None, [(None, None, line)]))
     return lrc_list
@@ -179,15 +191,15 @@ def plaintext2list(plaintext: str) -> list[list[None, None, list[None, None, str
 
 def krc2dict(krc: str) -> tuple[dict, dict]:
     """将明文krc转换为字典{歌词类型: [(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]}"""
-    lrc_dict: dict[str: list[tuple[int, int, list[tuple[int, int, str]]]]] = {}
+    lrc_dict: MultiLyricsData = {}
     tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
     tags: dict[str: str] = {}
 
     line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
     wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?<(\d+),(\d+),\d+>((?:.(?!\d+,\d+,\d+>))*)')  # 逐字匹配
-    orig_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []  # 原文歌词
-    roma_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []
-    ts_list: list[tuple[int, int, list[tuple[int, int, str]]]] = []
+    orig_list: LyricsData = []  # 原文歌词
+    roma_list: LyricsData = []
+    ts_list: LyricsData = []
 
     for i in krc.splitlines():
         line = i.strip()
@@ -264,7 +276,7 @@ def lrclist2str(lrc_list: list, verbatim: bool = True) -> str:
     return lrc_str
 
 
-def linelist2str(line_list: tuple[int, int | None, list[tuple[int, int | None, str]]], verbatim: bool = True, enhanced: bool = False) -> str:
+def linelist2str(line_list: LyricsLine, verbatim: bool = True, enhanced: bool = False) -> str:
     """
     将歌词行列表转换为LRC歌词字符串
     :param line_list: 歌词行列表
@@ -324,7 +336,7 @@ def linelist2str(line_list: tuple[int, int | None, list[tuple[int, int | None, s
     return lrc_str
 
 
-def linelist2asstext(line_list: list[tuple[int, int | None, list[tuple[int, int | None, str]]]]) -> str:
+def linelist2asstext(line_list: LyricsLine) -> str:
     ass_text = ""
     if len(line_list[2]) == 1:
         return "".join([word[2]for word in line_list[2] if word[2] != ""])
@@ -337,7 +349,7 @@ def linelist2asstext(line_list: list[tuple[int, int | None, list[tuple[int, int 
     return ass_text
 
 
-def is_same_line(line1: tuple[int, int | None, list[tuple[int, int | None, str]]], line2: tuple[int, int | None, list[tuple[int, int | None, str]]]) -> bool:
+def is_same_line(line1: LyricsLine, line2: LyricsLine) -> bool:
     """检查行是否近似相同"""
     line1_str = "".join([word[2]for word in line1[2] if word[2] != ""])
     line2_str = "".join([word[2]for word in line2[2] if word[2] != ""])
@@ -364,10 +376,10 @@ def is_verbatim(lrc_list: list) -> bool:
 
 
 def find_closest_match(list1: list, list2: list, list3: list | None = None, source: Source | None = None) -> list[tuple[list, list]]:
-    list1: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list1[:]
-    list2: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list2[:]
+    list1: LyricsData = list1[:]
+    list2: LyricsData = list2[:]
     if list3:
-        list3: list[tuple[int, int | None, list[tuple[int, int | None, str]]]] = list3[:]
+        list3: LyricsData = list3[:]
     # 存储合并结果的列表
     merged_dict = {}
     merged_list = []
@@ -587,6 +599,33 @@ class Lyrics(dict):
             return QCoreApplication.translate("lyrics", "没有获取到歌词(orig=None)"), LyricsProcessingError.NOT_FOUND
         return None, None
 
+    def add_offset(self, multi_lyrics_data: MultiLyricsData, offset: int = 0) -> MultiLyricsData:
+        """
+        添加偏移量
+        :param multi_lyrics_data:歌词
+        :param offset:偏移量
+        :return: 偏移后的歌词
+        """
+        if offset == 0:
+            return multi_lyrics_data
+
+        def _offset_time(time: int | None) -> int | None:
+            if isinstance(time, int):
+                return max(time + offset, 0)
+            return time
+
+        return {
+            lrc_type: [
+                (
+                    _offset_time(lrc_line[0]),
+                    _offset_time(lrc_line[1]),
+                    [(_offset_time(word[0]), _offset_time(word[1]), word[2]) for word in lrc_line[2]],
+                )
+                for lrc_line in lrc_list
+            ]
+            for lrc_type, lrc_list in multi_lyrics_data.items()
+        }
+
     def get_merge_lrc(self, lyrics_order: list, lyrics_format: LyricsFormat = LyricsFormat.VERBATIMLRC, offset: int = 0) -> str:
         """
         合并歌词
@@ -599,29 +638,7 @@ class Lyrics(dict):
             logging.warning("没有需要合并的歌词")
             return ""
 
-        if offset != 0:
-            lyrics_dict: dict[str, list[tuple[int | None, int | None, list[tuple[int | None, int | None, str]]]]] = {}
-
-            def _offset_time(time: int | None) -> int | None:
-                if isinstance(time, int):
-                    if time + offset > 0:
-                        return time + offset
-                    return 0
-                return time
-
-            for lrc_type, lrc_list in self.items():
-                lyrics_dict[lrc_type] = []
-                for lrc_line in lrc_list:
-                    l_s = _offset_time(lrc_line[0])
-                    l_e = _offset_time(lrc_line[1])
-                    words = []
-                    for word in lrc_line[2]:
-                        w_s = _offset_time(word[0])
-                        w_e = _offset_time(word[1])
-                        words.append((w_s, w_e, word[2]))
-                    lyrics_dict[lrc_type].append((l_s, l_e, words))
-        else:
-            lyrics_dict: dict[str, list[tuple[int | None, int | None, list[tuple[int | None, int | None, str]]]]] = self
+        lyrics_dict: MultiLyricsData = self.add_offset(MultiLyricsData(self), offset)
 
         lyrics = [(key, lyric) for key, lyric in lyrics_dict.items() if key in lyrics_order]
 
@@ -767,3 +784,45 @@ class Lyrics(dict):
 
                 return "\n".join(ass_lines)
         return ""
+
+    def get_full_timestamps_lyrics(self) -> MultiLyricsData | False:
+        """
+        获取完整时间戳的歌词
+        """
+        multi_lyrics_data: MultiLyricsData = {}
+        for lrc_type, lrc_data in self.items():
+            multi_lyrics_data[lrc_type] = []
+            for index, lrc_line in enumerate(lrc_data):
+                if lrc_line[0] is None:
+                    return False
+                if lrc_line[1] is None:
+                    if lrc_line[2] and lrc_line[2][-1][1] is not None:
+                        lrc_line[1] = lrc_line[2][-1][1]
+                    elif index + 1 < len(lrc_data) and lrc_data[index + 1][0] is not None:
+                        lrc_line[1] = lrc_data[index + 1][0]
+                    elif index + 1 == len(lrc_data) and self.duration is not None:
+                        lrc_line[1] = self.duration * 1000
+                    elif index + 1 == len(lrc_data):
+                        logging.warning("歌词时间戳不完整，无法生成精准的完整时间戳的歌词")
+                        lrc_line[1] = lrc_line[0] + 10000  # 加十秒
+                    else:
+                        return False
+                for w_index, word in enumerate(lrc_line[2]):
+                    if word[0] is None:
+                        if w_index == 0:
+                            lrc_line[2][w_index][0] = lrc_line[0]
+                        else:
+                            lrc_line[2][w_index][0] = lrc_line[2][w_index - 1][1]
+
+                    if word[1] is None:
+                        if w_index == len(lrc_line[2]) - 1:
+                            lrc_line[2][w_index][1] = lrc_line[1]
+                        elif lrc_line[2][w_index + 1][0] is not None:
+                            lrc_line[2][w_index][1] = lrc_line[2][w_index + 1][0]
+                        else:
+                            logging.error("歌词逐字时间戳不完整，无法生成完整时间戳的歌词")
+                            return False
+
+                multi_lyrics_data[lrc_type].append(lrc_line)
+
+        return multi_lyrics_data

@@ -1,6 +1,5 @@
 import os
 
-from PySide6.QtCore import QThreadPool
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -12,17 +11,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from backend.worker import LocalMatchWorker
 from ui.local_match_ui import Ui_local_match
 from utils.data import data
 from utils.enum import LocalMatchFileNameMode, LocalMatchSaveMode, LyricsFormat, Source
-from utils.worker import LocalMatchWorker
+from utils.threadpool import threadpool
 
 
 class LocalMatchWidget(QWidget, Ui_local_match):
-    def __init__(self, threadpool: QThreadPool) -> None:
+    def __init__(self) -> None:
         super().__init__()
-
-        self.threadpool = threadpool
 
         self.running = False
 
@@ -147,12 +145,12 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                 "sources": source,
             },
-            self.threadpool,
+            threadpool,
         )
         self.worker.signals.error.connect(self.worker_error)
         self.worker.signals.finished.connect(self.worker_finished)
         self.worker.signals.massage.connect(self.worker_massage)
-        self.threadpool.start(self.worker)
+        threadpool.start(self.worker)
 
     def worker_massage(self, massage: str) -> None:
         self.plainTextEdit.appendPlainText(massage)

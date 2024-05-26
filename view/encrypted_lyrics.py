@@ -7,7 +7,7 @@ from decryptor import krc_decrypt, qrc_decrypt
 from ui.encrypted_lyrics_ui import Ui_encrypted_lyrics
 from utils.data import data
 from utils.enum import LyricsFormat, LyricsType, QrcType, Source
-from utils.lyrics import Lyrics, krc2dict, qrc2list
+from backend.lyrics import Lyrics, krc2dict, qrc2list
 from utils.utils import get_lyrics_format_ext
 
 

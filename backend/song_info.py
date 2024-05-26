@@ -8,7 +8,7 @@ import mutagen
 from chardet import detect
 from PySide6.QtCore import QCoreApplication
 
-from .utils import time2ms
+from utils.utils import time2ms
 
 file_extensions = ['3g2', 'aac', 'aif', 'ape', 'apev2', 'dff',
                    'dsf', 'flac', 'm4a', 'm4b', 'mid', 'mp3',

@@ -18,6 +18,24 @@ from PySide6.QtCore import (
 )
 
 from ui.sidebar_window import SidebarWindow
+from utils.cache import cache
+from utils.data import data
+from utils.enum import (
+    LocalMatchFileNameMode,
+    LocalMatchSaveMode,
+    LyricsFormat,
+    LyricsProcessingError,
+    SearchType,
+    Source,
+)
+from utils.utils import (
+    escape_filename,
+    escape_path,
+    get_lyrics_format_ext,
+    get_save_path,
+    replace_info_placeholders,
+    text_difference,
+)
 
 from .api import (
     get_latest_version,
@@ -29,27 +47,9 @@ from .api import (
     qm_get_songlist_song_list,
     qm_search,
 )
-from .cache import cache
-from .data import data
-from .enum import (
-    LocalMatchFileNameMode,
-    LocalMatchSaveMode,
-    LyricsFormat,
-    LyricsProcessingError,
-    SearchType,
-    Source,
-)
 from .lyrics import Lyrics
 from .song_info import file_extensions as audio_formats
 from .song_info import get_audio_file_info, parse_cue
-from .utils import (
-    escape_filename,
-    escape_path,
-    get_lyrics_format_ext,
-    get_save_path,
-    replace_info_placeholders,
-    text_difference,
-)
 
 
 class CheckUpdate(QRunnable):
