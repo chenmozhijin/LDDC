@@ -1,8 +1,8 @@
 import logging
 from zlib import decompress
 
-from decryptor.qmc1 import qmc1_decrypt
-from decryptor.tripledes import DECRYPT, tripledes_crypt, tripledes_key_setup
+from backend.decryptor.qmc1 import qmc1_decrypt
+from backend.decryptor.tripledes import DECRYPT, tripledes_crypt, tripledes_key_setup
 from utils.enum import QrcType
 
 

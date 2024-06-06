@@ -4,7 +4,7 @@ import logging
 import sys
 import time
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QEvent, QPointF, QRectF, Qt, QTimer
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -17,14 +17,94 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QApplication, QWidget
 
+sys.path.append("D:\yy\project\lyric\LDDC")
+__version__ = "0.0.1"
+from tqdm import tqdm
+
 from backend.lyrics import LyricsWord, MultiLyricsData
 
+p = tqdm()
 
-class KaraokeLyrics(QWidget):
+desktop_lyrics_widgets = {}
+
+class TransparentWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowFlag(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)  # 将界面设置为无框
+        self.setAttribute(Qt.WA_TranslucentBackground)  # 将界面属性设置为半透明
+
+        self.setMouseTracking(True)  # 开启鼠标跟踪
+        self.initDrag()  # 初始化各拖拽状态
+        self.installEventFilter(self)  # 主窗口绑定事件过滤器
+
+    # 初始化各拖拽状态
+    def initDrag(self):
+        self._drag_position = None
+        self._resize_direction = None
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Enter:
+            self.setCursor(Qt.ArrowCursor)
+        return super().eventFilter(obj, event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_position = event.globalPosition().toPoint() - self.pos()
+            self._resize_direction = self.getResizeDirection(self._drag_position)
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.LeftButton and self._drag_position:
+            if self._resize_direction == 'move':
+                self.move(event.globalPosition().toPoint() - self._drag_position)
+            else:
+                self.resizeWindow(event)
+            event.accept()
+        else:
+            self.updateCursor(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.initDrag()
+
+    def updateCursor(self, event):
+        cursor_pos = event.globalPosition().toPoint() - self.pos()
+        direction = self.getResizeDirection(cursor_pos)
+        cursor_shape = {
+            'bottom_right': Qt.SizeFDiagCursor,
+            'bottom': Qt.SizeVerCursor,
+            'right': Qt.SizeHorCursor,
+            'move': Qt.ArrowCursor
+        }.get(direction, Qt.ArrowCursor)
+        self.setCursor(cursor_shape)
+
+    def getResizeDirection(self, pos):
+        margin = 5
+        right = pos.x() > self.width() - margin
+        bottom = pos.y() > self.height() - margin
+        if right and bottom:
+            return 'bottom_right'
+        if bottom:
+            return 'bottom'
+        if right:
+            return 'right'
+        return 'move'
+
+    def resizeWindow(self, event):
+        if self._resize_direction == 'bottom_right':
+            self.resize(event.globalPosition().x() - self.x(), event.globalPosition().y() - self.y())
+        elif self._resize_direction == 'bottom':
+            self.resize(self.width(), event.globalPosition().y() - self.y())
+        elif self._resize_direction == 'right':
+            self.resize(event.globalPosition().x() - self.x(), self.height())
+
+
+class DesktopLyricsWidget(TransparentWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Karaoke Lyrics")  # 设置窗口标题
-        self.setGeometry(100, 100, 1200, 200)   # 设置窗口尺寸和位置
+        self.setGeometry(100, 100, 1200, 0)   # 设置窗口尺寸和位置
 
         self.update_frequency: int = 1  # 更新频率,单位:毫秒
         self.timer = QTimer()
@@ -33,7 +113,7 @@ class KaraokeLyrics(QWidget):
         self.played_colors = [(0, 255, 255), (0, 128, 255)]
         self.not_played_colors = [(255, 0, 0), (255, 128, 128)]
 
-        self.text_font = QFont("Arial", 24)
+        self.text_font = QFont()
         self.reset()
 
     def reset(self) -> None:
@@ -51,22 +131,25 @@ class KaraokeLyrics(QWidget):
             self.timer.stop()
 
     def _reset_fort(self) -> None:
-        self.text_width_cache = {}  # 歌词宽度缓存
+        self.text_font.setPointSizeF(24)
         self.font_metrics = QFontMetricsF(self.text_font)
         self.font_height = self.font_metrics.height()
 
-    def stop(self) -> None:
+    def pause(self) -> None:
         """
-        停止歌词
+        暂停歌词
         """
         if self.timer.isActive():
             self.timer.stop()
 
-    def proceed(self) -> None:
+    def proceed(self, current_time: int | None = None) -> None:
         """
         继续歌词
         """
-        self.start_time = int(time.time() * 1000) - self.current_time
+        if not current_time:
+            self.start_time = int(time.time() * 1000) - self.current_time
+        else:
+            self.start_time = int(time.time() * 1000) - current_time
         if not self.timer.isActive():
             self.timer.start(self.update_frequency)
 
@@ -240,43 +323,37 @@ class KaraokeLyrics(QWidget):
                     lyrics_lines.append((after_lyrics_lines[2], "l" if (after_lyrics_index % 2) == 0 else "r", 255 * self.current_time / after_lyrics_lines[0]))
                     lyrics_lines.append((next_lyrics_lines[2], "l" if (next_lyrics_index % 2) == 0 else "r", 255 * self.current_time / next_lyrics_lines[0]))
 
+        p.update(1)
         self.update()
 
-    def _get_text_width(self, text: str) -> float:
-        width = 0
-        for char in text:
-            if char not in self.text_width_cache:
-                self.text_width_cache[char] = self.font_metrics.horizontalAdvance(char)
-            width += self.text_width_cache[char]
-        return width
-
     def paintEvent(self, _event: QPaintEvent) -> None:
+        super().paintEvent(_event)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setFont(self.text_font)
 
         current_chars: list[tuple[QPen, int, int, int, str]] = []  # x, y, played_width, char
 
-        y = 50
+        y = self.font_height
         for pos, lyrics_lines in self.lyrics_to_display.items():
             # pos: 方位(左/右)
             for played, (current_char, ratio), not_played, alpha in lyrics_lines:
                 # played: 已经播放过的歌词字, current_char: 正在播放的歌词字, not_played: 未播放的歌词字
 
                 # 计算字符串x坐标
-                x_len = self._get_text_width(played + current_char + not_played)  # 字符串长度
+                x_len = self.font_metrics.horizontalAdvance(played + current_char + not_played)  # 字符串长度
                 if pos == "l":
-                    x = self._get_text_width(played) * -0.9 if x_len > self.width() else 0
+                    x = self.font_metrics.horizontalAdvance(played) * -0.9 if x_len > self.width() else 0
                 elif pos == "r":
                     x = self.width() - x_len * 1.1
                     if x_len > self.width():
-                        x += self._get_text_width(not_played)
+                        x += self.font_metrics.horizontalAdvance(not_played)
 
-                played_gradient = QLinearGradient(x, y - self.font_height, x, y)
+                played_gradient = QLinearGradient(x, y - self.font_height * 0.5, x, y)
                 for i, color in enumerate(self.played_colors):
                     played_gradient.setColorAt(i / (len(self.played_colors) - 1), QColor(*color, alpha))
 
-                not_played_gradient = QLinearGradient(x, y - self.font_height, x, y)
+                not_played_gradient = QLinearGradient(x, y - self.font_height * 0.5, x, y)
                 for i, color in enumerate(self.not_played_colors):
                     not_played_gradient.setColorAt(i / (len(self.not_played_colors) - 1), QColor(*color, alpha))
 
@@ -284,37 +361,41 @@ class KaraokeLyrics(QWidget):
                 not_played_pen = QPen(QBrush(not_played_gradient), 0)
 
                 # 绘制已播放的部分
-                painter.setPen(played_pen)
-                painter.drawText(x, y, played)
-                x += self._get_text_width(played)
+                if played:
+                    painter.setPen(played_pen)
+                    painter.drawText(QPointF(x, y), played)
+                    x += self.font_metrics.horizontalAdvance(played)
 
-                # 记录当前播放的部分的已播放部分
-                played_width = self._get_text_width(current_char) * ratio
-                current_chars.append((played_pen, x, y, played_width, current_char))
+                if current_char:
+                    # 记录当前播放的部分的已播放部分
+                    played_width = self.font_metrics.horizontalAdvance(current_char) * ratio
+                    current_chars.append((played_pen, x, y, played_width, current_char))
 
-                # 绘制未播放的部分
-                painter.setPen(not_played_pen)
-                painter.drawText(x, y, current_char + not_played)
+                if current_char or not_played:
+                    # 绘制未播放的部分
+                    painter.setPen(not_played_pen)
+                    painter.drawText(QPointF(x, y), current_char + not_played)
 
                 y += self.font_height * 1.2  # 调整y坐标以容纳下一行
 
+        height = y
         # 绘制当前播放的部分的已播放部分
         painter.save()
         for played_pen, x, y, played_width, current_char in current_chars:
             painter.setPen(played_pen)
-            painter.setClipRect(x, y - self.font_height, played_width, self.font_height * 1.2)
-            painter.drawText(x, y, current_char)
+            painter.setClipRect(QRectF(x, y - self.font_height, played_width, self.font_height * 1.2))
+            painter.drawText(QPointF(x, y), current_char)
         painter.restore()
 
-        if self.height() < y:
-            self.resize(self.width(), y * 1.1)
+        if self.height() < height:
+            self.resize(self.width(), height - self.font_height)
 
 
 if __name__ == "__main__":
     # test
-    with open(r"..\test\test.krc", "rb") as f:
+    with open(r"test\test.krc", "rb") as f:
         data = f.read()
-    from decryptor import krc_decrypt
+    from backend.decryptor import krc_decrypt
     krc_data = krc_decrypt(data)[0]
 
     from backend.lyrics import Lyrics, krc2dict
@@ -328,7 +409,7 @@ if __name__ == "__main__":
     lyrics.lrc_types["roma"] = LyricsType.JSONVERBATIM
 
     app = QApplication(sys.argv)
-    window = KaraokeLyrics()
+    window = DesktopLyricsWidget()
     window.show()
     window.set_lyrics(lyrics, lyrics_order, 0)
     sys.exit(app.exec())
