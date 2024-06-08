@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 
 from backend.lyrics import Lyrics, ms2formattime
 from backend.worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
-from ui.search.search_base_ui import Ui_search_base
+from ui.search_base_ui import Ui_search_base
 from utils.data import cfg
 from utils.enum import LyricsFormat, LyricsType, SearchType, Source
 from utils.threadpool import threadpool

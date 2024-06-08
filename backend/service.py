@@ -63,7 +63,7 @@ class LDDCService(QObject):
         self.shared_memory = QSharedMemory(self)
         self.shared_memory.setKey("LDDCLOCK")
 
-        self.clients: dict[int, dict[str, QTcpSocket | bytearray]] = {}
+        self.clients: dict[int, tuple[QTcpSocket, bytearray]] = {}
         self.start_service(arg)
 
     def is_already_running(self) -> bool:
@@ -132,37 +132,35 @@ class LDDCService(QObject):
     def socket_on_new_connection(self) -> None:
         client_socket = self.socketserver.nextPendingConnection()
         client_id = id(client_socket)
-        self.clients[client_id] = {
-            'socket': client_socket,
-            'buffer': bytearray(),
-        }
+        self.clients[client_id] = (client_socket, bytearray())
         client_socket.readyRead.connect(lambda: self.socket_read_data(client_id))
         client_socket.disconnected.connect(lambda: self.handle_disconnection(client_id))
 
     def handle_disconnection(self, client_id: int) -> None:
-        self.clients[client_id]['socket'].deleteLater()
+        self.clients[client_id][0].deleteLater()
         del self.clients[client_id]
 
     def socket_read_data(self, client_id: int) -> None:
         """
         处理客户端发送的数据(前4字节应为消息长度)
         """
-        client_socket = self.clients[client_id]['socket']
+        client_socket = self.clients[client_id][0]
         if client_socket.bytesAvailable() > 0:
-            self.buffer.append(client_socket.readAll())
+            self.clients[client_id][1].append(client_socket.readAll())
+            buffer = self.clients[client_id][1]
             while True:
-                if len(self.buffer) < 4:
+                if len(buffer) < 4:
                     break
 
-                stream = QDataStream(self.buffer)
+                stream = QDataStream(buffer)
                 stream.setByteOrder(QDataStream.BigEndian)
                 message_length = stream.readUInt32()
 
-                if len(self.buffer) < 4 + message_length:
+                if len(buffer) < 4 + message_length:
                     break
 
-                message_data = self.buffer[4:4 + message_length]
-                self.buffer = self.buffer[4 + message_length:]
+                message_data = buffer[4:4 + message_length]
+                self.clients[client_id][1] = buffer[4 + message_length:]
 
                 self.handle_socket_message(message_data, client_id)
 
@@ -191,7 +189,7 @@ class LDDCService(QObject):
             self.handle_task.emit(json_data["id"], json_data)
 
     def send_response(self, client_id: int, response: str) -> None:
-        client_socket = self.clients[client_id]['socket']
+        client_socket = self.clients[client_id][0]
         response_bytes = response.encode('utf-8')
         response_length = len(response_bytes)
         length_bytes = response_length.to_bytes(4, byteorder='big')

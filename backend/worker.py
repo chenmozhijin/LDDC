@@ -623,14 +623,13 @@ class AutoLyricsFetcher(QRunnable):
                 not_same_other = re.sub(r"|".join(not_same_tags) + r"|[-><)(\]\[～]", "", not_same)  # 获取非tags部分
 
                 # 统一一些tags
-                for i in range(len(not_same_tags)):
-                    tag = not_same_tags[i]
-                    tag = re.sub(r"ver(?:sion)?\.?", "ver", tag)
-                    tag = re.sub(r"伴奏|纯音乐|inst\.?(?:rumental)|off ?vocal(?: ?[Vv]er.)?", "inst", tag)
-                    tag = tag.replace("mixed", "mix").replace("edited", "edit")
-                    tag = re.sub(r"(solo|mix|edit|style|size) ver", r"\1", tag)
-                    tag = re.sub("(?:tv|anime) ?(?:サイズ|size)?(?: ?ver)?", "tv size", tag)
-                    not_same_tags[i] = tag
+                for i, tag in enumerate(not_same_tags):
+                    tag_ = re.sub(r"ver(?:sion)?\.?", "ver", tag)
+                    tag_ = re.sub(r"伴奏|纯音乐|inst\.?(?:rumental)|off ?vocal(?: ?[Vv]er.)?", "inst", tag_)
+                    tag_ = tag_.replace("mixed", "mix").replace("edited", "edit")
+                    tag_ = re.sub(r"(solo|mix|edit|style|size) ver", r"\1", tag_)
+                    tag_ = re.sub("(?:tv|anime) ?(?:サイズ|size)?(?: ?ver)?", "tv size", tag_)
+                    not_same_tags[i] = tag_
 
                 return not_same_tags, not_same_other
 
@@ -641,9 +640,9 @@ class AutoLyricsFetcher(QRunnable):
             score0 = max(text_difference(title1, title2), 0) * 100  # 计算文本相似度得到的分数
             same_begin = ""  # 开头相同的字符串
 
-            for i in range(len(title1)):
-                if len(title2) > i and title1[i] == title2[i]:
-                    same_begin += title1[i]
+            for i, text1 in enumerate(title1):
+                if len(title2) > i and text1 == title2[i]:
+                    same_begin += text1
                 else:
                     break
 
