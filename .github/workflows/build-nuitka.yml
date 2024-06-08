@@ -96,7 +96,8 @@ jobs:
                 copyright: ${{ steps.info.outputs.copyright }}
 
                 windows-icon-from-ico: "res/img/icon/logo.png"
-                mingw64: true
+                clang: true
+                windows-console-mode: 'attach'
 
                 macos-app-icon: "res/img/icon/logo.png"
                 macos-app-version: ${{ steps.info.outputs.version }}
