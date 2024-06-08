@@ -29,7 +29,7 @@ jobs:
 
             - uses: actions/setup-python@v5
               with:
-                python-version: 3.11
+                python-version: 3.12
                 architecture: ${{ matrix.arch }}
 
             - name: Get arch
@@ -83,26 +83,42 @@ jobs:
 
             - name: Build Executable
               uses: Nuitka/Nuitka-Action@main
+              if : ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' }}
               with:
                 nuitka-version: main
                 script-name: LDDC.py
                 standalone: true
                 onefile: false
                 enable-plugins: pyside6
+                product-name: "LDDC"
+                file-version: ${{ steps.info.outputs.version }}
+                product-version: ${{ steps.info.outputs.version }}
+                copyright: ${{ steps.info.outputs.copyright }}
+
                 disable-console: true
+
+                macos-app-icon: "res/img/icon/logo.png"
+                macos-app-version: ${{ steps.info.outputs.version }}
+                macos-create-app-bundle: true
+                macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
+
+            - name: Build Executable
+              uses: Nuitka/Nuitka-Action@main
+              if : ${{ matrix.os == 'windows-latest' }}
+              with:
+                nuitka-version: main
+                script-name: LDDC.py
+                standalone: true
+                onefile: false
+                enable-plugins: pyside6
                 product-name: "LDDC"
                 file-version: ${{ steps.info.outputs.version }}
                 product-version: ${{ steps.info.outputs.version }}
                 copyright: ${{ steps.info.outputs.copyright }}
 
                 windows-icon-from-ico: "res/img/icon/logo.png"
-                clang: true
+                mingw64: true
                 windows-console-mode: 'attach'
-
-                macos-app-icon: "res/img/icon/logo.png"
-                macos-app-version: ${{ steps.info.outputs.version }}
-                macos-create-app-bundle: true
-                macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
 
             - name: Upload report
               uses: actions/upload-artifact@v4
