@@ -128,11 +128,17 @@ class MainWindow(SidebarWindow):
 
     @Slot()
     def show_window(self) -> None:
-        self.show()
         if self.isMinimized():
             self.showNormal()
-        self.raise_()
         self.activateWindow()
+
+        # 在其他线程调用时self.raise_()没有用
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+        self.show()
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
+        self.show()
+
+        self.setFocus()
 
 
 class ExitManager(QObject):
