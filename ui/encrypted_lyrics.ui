@@ -26,7 +26,7 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>歌词类型(仅krc):</string>
+        <string>歌词类型(krc可用):</string>
        </property>
       </widget>
      </item>

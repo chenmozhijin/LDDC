@@ -6,16 +6,16 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QLineEdit,
     QListWidget,
-    QMessageBox,
     QPushButton,
     QWidget,
 )
 
 from backend.worker import LocalMatchWorker
 from ui.local_match_ui import Ui_local_match
-from utils.data import data
+from utils.data import cfg
 from utils.enum import LocalMatchFileNameMode, LocalMatchSaveMode, LyricsFormat, Source
 from utils.threadpool import threadpool
+from view.msg_box import MsgBox
 
 
 class LocalMatchWidget(QWidget, Ui_local_match):
@@ -31,9 +31,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
 
         self.save_mode_changed(self.save_mode_comboBox.currentIndex())
 
-        data.mutex.lock()
-        self.save_path_lineEdit.setText(data.cfg["default_save_path"])
-        data.mutex.unlock()
+        self.save_path_lineEdit.setText(cfg["default_save_path"])
 
     def connect_signals(self) -> None:
         self.song_path_pushButton.clicked.connect(lambda: self.select_path(self.song_path_lineEdit))
@@ -50,9 +48,13 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             self.start_cancel_pushButton.setText(self.tr("取消匹配"))
 
     def select_path(self, path_line_edit: QLineEdit) -> None:
-        path = QFileDialog.getExistingDirectory(self, self.tr("选择文件夹"), dir=path_line_edit.text())
-        if path:
-            path_line_edit.setText(os.path.normpath(path))
+        def file_selected(save_path: str) -> None:
+            path_line_edit.setText(os.path.normpath(save_path))
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle(self.tr("选择文件夹"))
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.fileSelected.connect(file_selected)
+        dialog.open()
 
     def save_mode_changed(self, index: int) -> None:
         match index:
@@ -74,11 +76,11 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             # 取消
             if self.worker is not None:
                 self.worker.stop()
-            self.worker_finished()
+                self.start_cancel_pushButton.setText(self.tr("正在取消..."))
             return
 
         if not os.path.exists(self.song_path_lineEdit.text()):
-            QMessageBox.warning(self, self.tr("警告"), self.tr("歌曲文件夹不存在！"))
+            MsgBox.warning(self, self.tr("警告"), self.tr("歌曲文件夹不存在！"))
             return
 
         lyric_types = []
@@ -89,12 +91,10 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         if self.romanized_checkBox.isChecked():
             lyric_types.append("roma")
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        data.mutex.lock()
-        lyrics_order = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in lyric_types]
-        data.mutex.unlock()
+        lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in lyric_types]
 
         if len(lyric_types) == 0:
-            QMessageBox.warning(self, self.tr("警告"), self.tr("请选择至少一种歌词类型！"))
+            MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一种歌词类型！"))
 
         match self.save_mode_comboBox.currentIndex():
             case 0:
@@ -104,7 +104,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             case 2:
                 save_mode = LocalMatchSaveMode.SPECIFY
             case _:
-                QMessageBox.critical(self, self.tr("错误"), self.tr("保存模式选择错误！"))
+                MsgBox.critical(self, self.tr("错误"), self.tr("保存模式选择错误！"))
                 return
 
         match self.lyrics_filename_mode_comboBox.currentIndex():
@@ -113,7 +113,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             case 1:
                 flienmae_mode = LocalMatchFileNameMode.SONG
             case _:
-                QMessageBox.critical(self, self.tr("错误"), self.tr("歌词文件名错误！"))
+                MsgBox.critical(self, self.tr("错误"), self.tr("歌词文件名错误！"))
                 return
 
         source = []
@@ -125,7 +125,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             elif source_type == self.tr("网易云音乐") and self.ne_checkBox.isChecked():
                 source.append(Source.NE)
         if len(source) == 0:
-            QMessageBox.warning(self, self.tr("警告"), self.tr("请选择至少一个源！"))
+            MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一个源！"))
             return
 
         self.running = True
@@ -139,21 +139,26 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             {
                 "song_path": self.song_path_lineEdit.text(),
                 "save_path": self.save_path_lineEdit.text(),
+                "min_score": self.min_score_spinBox.value(),
                 "save_mode": save_mode,
                 "flienmae_mode": flienmae_mode,
                 "lyrics_order": lyrics_order,
                 "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
-                "sources": source,
+                "source": source,
             },
-            threadpool,
         )
         self.worker.signals.error.connect(self.worker_error)
         self.worker.signals.finished.connect(self.worker_finished)
         self.worker.signals.massage.connect(self.worker_massage)
+        self.worker.signals.progress.connect(self.change_progress)
         threadpool.start(self.worker)
 
     def worker_massage(self, massage: str) -> None:
         self.plainTextEdit.appendPlainText(massage)
+
+    def change_progress(self, current: int, maximum: int) -> None:
+        self.progressBar.setValue(current)
+        self.progressBar.setMaximum(maximum)
 
     def worker_finished(self) -> None:
         self.start_cancel_pushButton.setText(self.tr("开始匹配"))
@@ -162,10 +167,12 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             if isinstance(item, QLineEdit | QPushButton | QComboBox | QCheckBox | QListWidget):
                 item.setEnabled(True)
         self.save_mode_changed(self.save_mode_comboBox.currentIndex())
+        self.progressBar.setValue(0)
+        self.progressBar.setMaximum(0)
 
     def worker_error(self, error: str, level: int) -> None:
         if level == 0:
             self.plainTextEdit.appendPlainText(error)
         else:
-            QMessageBox.critical(self, self.tr("错误"), error)
+            MsgBox.critical(self, self.tr("错误"), error)
             self.worker_finished()

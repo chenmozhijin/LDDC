@@ -19,11 +19,8 @@ from PySide6.QtWidgets import QApplication, QWidget
 
 sys.path.append("D:\yy\project\lyric\LDDC")
 __version__ = "0.0.1"
-from tqdm import tqdm
 
 from backend.lyrics import LyricsWord, MultiLyricsData
-
-p = tqdm()
 
 desktop_lyrics_widgets = {}
 
@@ -323,7 +320,6 @@ class DesktopLyricsWidget(TransparentWindow):
                     lyrics_lines.append((after_lyrics_lines[2], "l" if (after_lyrics_index % 2) == 0 else "r", 255 * self.current_time / after_lyrics_lines[0]))
                     lyrics_lines.append((next_lyrics_lines[2], "l" if (next_lyrics_index % 2) == 0 else "r", 255 * self.current_time / next_lyrics_lines[0]))
 
-        p.update(1)
         self.update()
 
     def paintEvent(self, _event: QPaintEvent) -> None:

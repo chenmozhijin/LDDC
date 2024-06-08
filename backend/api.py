@@ -18,7 +18,7 @@ from .decryptor.eapi import (
 )
 
 
-def get_latest_version() -> tuple[bool, str]:
+def get_latest_version() -> tuple[bool, str, str]:
     try:
         latest_release = requests.get("https://api.github.com/repos/chenmozhijin/LDDC/releases/latest", timeout=5).json()
     except Exception as e:
@@ -27,7 +27,8 @@ def get_latest_version() -> tuple[bool, str]:
     else:
         if "tag_name" in latest_release:
             latest_version = latest_release["tag_name"]
-            return True, latest_version
+            body = latest_release["body"]
+            return True, latest_version, body
         return False, "获取最新版本信息失败"
 
 

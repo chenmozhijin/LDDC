@@ -1,14 +1,15 @@
 import logging
 import os
 
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
+from PySide6.QtWidgets import QFileDialog, QWidget
 
-from decryptor import krc_decrypt, qrc_decrypt
-from ui.encrypted_lyrics_ui import Ui_encrypted_lyrics
-from utils.data import data
-from utils.enum import LyricsFormat, LyricsType, QrcType, Source
+from backend.decryptor import krc_decrypt, qrc_decrypt
 from backend.lyrics import Lyrics, krc2dict, qrc2list
+from ui.encrypted_lyrics_ui import Ui_encrypted_lyrics
+from utils.data import cfg
+from utils.enum import LyricsFormat, LyricsType, QrcType, Source
 from utils.utils import get_lyrics_format_ext
+from view.msg_box import MsgBox
 
 
 class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
@@ -42,45 +43,50 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         return lyric_type
 
     def open_file(self) -> None:
-        file_path = QFileDialog.getOpenFileName(self, self.tr("选取加密歌词"), "", self.tr("加密歌词(*.qrc *.krc)"))[0]
-        if file_path == "":
-            return
-        if not os.path.exists(file_path):
-            QMessageBox.warning(self, self.tr("警告"), self.tr("文件不存在！"))
-            return
-        try:
-            with open(file_path, "rb") as f:
-                data = f.read()
-        except Exception as e:
-            QMessageBox.warning(self, self.tr("警告"), self.tr("读取文件失败：") + str(e))
-            return
-        qrc_magicheader = bytes.fromhex("98 25 B0 AC E3 02 83 68 E8 FC 6C")
-        krc_magicheader = bytes.fromhex("6B 72 63 31 38")
-        if data[:len(qrc_magicheader)] == qrc_magicheader:
-            self.lyrics_type = "qrc"
-            lyrics, error = qrc_decrypt(data, QrcType.LOCAL)
-        elif data[:len(krc_magicheader)] == krc_magicheader:
-            self.lyrics_type = "krc"
-            lyrics, error = krc_decrypt(data)
-        else:
-            QMessageBox.warning(self, self.tr("警告"), self.tr("文件格式不正确！"))
-            return
+        def file_selected(file_path: str) -> None:
+            if not os.path.exists(file_path):
+                MsgBox.warning(self, self.tr("警告"), self.tr("文件不存在！"))
+                return
+            try:
+                with open(file_path, "rb") as f:
+                    data = f.read()
+            except Exception as e:
+                MsgBox.warning(self, self.tr("警告"), self.tr("读取文件失败：") + str(e))
+                return
+            qrc_magicheader = bytes.fromhex("98 25 B0 AC E3 02 83 68 E8 FC 6C")
+            krc_magicheader = bytes.fromhex("6B 72 63 31 38")
+            if data[:len(qrc_magicheader)] == qrc_magicheader:
+                self.lyrics_type = "qrc"
+                lyrics, error = qrc_decrypt(data, QrcType.LOCAL)
+            elif data[:len(krc_magicheader)] == krc_magicheader:
+                self.lyrics_type = "krc"
+                lyrics, error = krc_decrypt(data)
+            else:
+                MsgBox.warning(self, self.tr("警告"), self.tr("文件格式不正确！"))
+                return
 
-        if lyrics is None:
-            self.lyrics_type = None
-            msg = self.tr("解密失败") if error is None else self.tr("解密失败：") + error
-            QMessageBox.critical(self, self.tr("错误"), msg)
-            return
+            if lyrics is None:
+                self.lyrics_type = None
+                msg = self.tr("解密失败") if error is None else self.tr("解密失败：") + error
+                MsgBox.critical(self, self.tr("错误"), msg)
+                return
 
-        self.plainTextEdit.setPlainText(lyrics)
+            self.plainTextEdit.setPlainText(lyrics)
+
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle(self.tr("选取加密歌词"))
+        dialog.setFileMode(QFileDialog.ExistingFile)
+        dialog.setNameFilter(self.tr("加密歌词(*.qrc *.krc)"))
+        dialog.fileSelected.connect(file_selected)
+        dialog.open()
 
     def convert(self) -> None:
         if self.lyrics_type == "converted":
-            QMessageBox.information(self, self.tr("提示"), self.tr("当前歌词已经转换过了！"))
+            MsgBox.information(self, self.tr("提示"), self.tr("当前歌词已经转换过了！"))
             return
         lyrics = self.plainTextEdit.toPlainText()
         if lyrics.strip() == "":
-            QMessageBox.warning(self, self.tr("警告"), self.tr("歌词内容不能为空！"))
+            MsgBox.warning(self, self.tr("警告"), self.tr("歌词内容不能为空！"))
             return
         try:
             if self.lyrics_type == "qrc":
@@ -90,10 +96,8 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
                 self.lyrics.lrc_types["orig"] = LyricsType.QRC
                 lrc = self.lyrics.get_merge_lrc(["orig"], LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
             elif self.lyrics_type == "krc":
-                data.mutex.lock()
                 type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-                lyrics_order = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
-                data.mutex.unlock()
+                lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
                 self.lyrics = Lyrics({"source": Source.KG})
 
                 self.lyrics.tags, lyric = krc2dict(lyrics)
@@ -104,7 +108,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
                 lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
         except Exception as e:
             logging.exception("转换失败")
-            QMessageBox.critical(self, self.tr("错误"), self.tr("转换失败：") + str(e))
+            MsgBox.critical(self, self.tr("错误"), self.tr("转换失败：") + str(e))
             return
         self.plainTextEdit.setPlainText(lrc)
         self.lyrics_type = "converted"
@@ -113,9 +117,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         if not (self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics)):
             return
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        data.mutex.lock()
-        lyrics_order = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
-        data.mutex.unlock()
+        lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
         self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value()))
 
     def change_lyrics_type(self) -> None:
@@ -124,17 +126,27 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
 
     def save(self) -> None:
         if self.plainTextEdit.toPlainText() == "":
-            QMessageBox.warning(self, self.tr("警告"), self.tr("歌词内容不能为空！"))
+            MsgBox.warning(self, self.tr("警告"), self.tr("歌词内容不能为空！"))
             return
+
+        def file_selected(file_path: str) -> None:
+            if self.lyrics_type == 'converted':
+                ext = get_lyrics_format_ext(LyricsFormat(self.lyricsformat_comboBox.currentIndex()))
+            if ext and not file_path.endswith(ext):
+                file_path += ext
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(self.plainTextEdit.toPlainText())
+            except Exception as e:
+                MsgBox.critical(self, self.tr("错误"), self.tr("保存失败：") + str(e))
+
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle(self.tr("保存歌词"))
+        dialog.setFileMode(QFileDialog.AnyFile)
         if self.lyrics_type == 'converted':
             ext = f'(*{get_lyrics_format_ext(LyricsFormat(self.lyricsformat_comboBox.currentIndex()))})'
-            file_path, _ = QFileDialog.getSaveFileName(self, self.tr("保存文件"), "", self.tr("歌词文件 ") + ext)
+            dialog.setNameFilter(self.tr("歌词文件 ") + ext)
         else:
-            file_path, _ = QFileDialog.getSaveFileName(self, self.tr("保存文件"), "", self.tr("全部文件") + "(*)")
-        if file_path == "":
-            return
-        try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(self.plainTextEdit.toPlainText())
-        except Exception as e:
-            QMessageBox.critical(self, self.tr("错误"), self.tr("保存失败：") + str(e))
+            dialog.setNameFilter(self.tr("全部文件") + "(*)")
+        dialog.fileSelected.connect(file_selected)
+        dialog.open()

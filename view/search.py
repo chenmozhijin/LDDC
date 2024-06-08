@@ -4,26 +4,35 @@ import os
 
 from PySide6.QtCore import (
     QModelIndex,
+    QSize,
     Slot,
+)
+from PySide6.QtGui import (
+    QFont,
 )
 from PySide6.QtWidgets import (
     QFileDialog,
-    QMessageBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSizePolicy,
     QTableWidgetItem,
     QWidget,
 )
 
-from backend.lyrics import Lyrics
+from backend.lyrics import Lyrics, ms2formattime
 from backend.worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
-from ui.search_ui import Ui_search
-from utils.data import data
+from ui.search.search_base_ui import Ui_search_base
+from utils.data import cfg
 from utils.enum import LyricsFormat, LyricsType, SearchType, Source
 from utils.threadpool import threadpool
-from utils.utils import get_lyrics_format_ext, get_save_path, ms2formattime
+from utils.utils import get_lyrics_format_ext, get_save_path
 from view.get_list_lyrics import GetListLyrics
+from view.msg_box import MsgBox
 
 
-class SearchWidget(QWidget, Ui_search):
+class SearchWidgetBase(QWidget, Ui_search_base):
     def __init__(self, main_window: QWidget) -> None:
         super().__init__()
         self.setupUi(self)
@@ -41,20 +50,12 @@ class SearchWidget(QWidget, Ui_search):
 
         self.result_path = []  # 值为"search": 搜索、"songlist":歌曲列表(歌单、专辑)、"lyrics": 歌词搜索结果
 
-        self.save_path_lineEdit.setText(data.cfg["default_save_path"])
-
-        self.get_list_lyrics_box = GetListLyrics(self)
-
         self.taskid = {
             "results_table": 0,
             "update_preview_lyric": 0,
         }  # 用于防止旧任务的结果覆盖新任务的结果
 
     def connect_signals(self) -> None:
-        self.select_path_pushButton.clicked.connect(self.select_savepath)
-        self.save_preview_lyric_pushButton.clicked.connect(self.save_preview_lyric)
-        self.save_list_lyrics_pushButton.clicked.connect(self.save_list_lyrics)
-
         self.search_pushButton.clicked.connect(self.search_button_clicked)
         self.search_type_comboBox.currentIndexChanged.connect(self.search_type_changed)
         self.results_tableWidget.doubleClicked.connect(self.select_results)
@@ -90,124 +91,6 @@ class SearchWidget(QWidget, Ui_search):
                 return Source.KG
             case 2:
                 return Source.NE
-
-    def save_list_lyrics(self) -> None:
-        """保存专辑、歌单中的所有歌词"""
-        result_type = self.results_tableWidget.property("result_type")
-        if (result_type is None or
-                result_type[0] not in ["album", "songlist"]):
-            QMessageBox.warning(self, self.tr('警告'), self.tr('请先选择一个专辑或歌单'))
-            return
-
-        data.mutex.lock()
-        lyrics_file_name_format = data.cfg["lyrics_file_name_format"]
-        data.mutex.unlock()
-        save_folder = self.save_path_lineEdit.text()
-
-        def get_list_lyrics_update(count: int | str, result: dict | None = None) -> None:
-            text = ""
-            if result is None:
-                error = count[:]
-                count = self.get_list_lyrics_box.progressBar.value() + 1
-                self.get_list_lyrics_box.plainTextEdit.appendPlainText(error)
-            else:
-                save_path = result['save_path']
-                save_folder = os.path.dirname(save_path)
-                text += self.tr("获取 {0} 歌词成功").format(f"{result['info']['title']} - {result['info']['artist']}")
-                if result['inst']:  # 检查是否为纯音乐,并且设置跳过纯音乐
-                    text += self.tr("但歌曲为纯音乐,已跳过")
-                else:
-                    # 保存
-                    try:
-                        if not os.path.exists(save_folder):
-                            os.makedirs(save_folder)
-                        with open(save_path, 'w', encoding='utf-8') as f:
-                            f.write(result['merged_lyric'])
-                    except Exception as e:
-                        text += self.tr("但保存歌词失败,原因:") + str(e)
-                    else:
-                        text += self.tr(",保存到") + save_path
-                self.get_list_lyrics_box.plainTextEdit.appendPlainText(text)
-
-            self.get_list_lyrics_box.progressBar.setValue(count)
-
-            if count == self.get_list_lyrics_box.progressBar.maximum():
-                self.get_list_lyrics_box.ask_to_close = False
-                self.get_list_lyrics_box.pushButton.setText(self.tr("关闭"))
-                self.get_list_lyrics_box.closed.connect(None)
-                self.get_list_lyrics_box.pushButton.clicked.connect(self.get_list_lyrics_box.close)
-                QMessageBox.information(self.main_window, self.tr("提示"), self.tr("获取歌词完成"))
-                self.main_window.setDisabled(False)
-
-        self.main_window.setDisabled(True)
-        self.get_list_lyrics_box.ask_to_close = True
-        self.get_list_lyrics_box.progressBar.setValue(0)
-        self.get_list_lyrics_box.pushButton.setText(self.tr("取消"))
-        self.get_list_lyrics_box.progressBar.setMaximum(len(self.songlist_result["result"]))
-        self.get_list_lyrics_box.plainTextEdit.setPlainText("")
-        self.get_list_lyrics_box.show()
-        self.get_list_lyrics_box.setEnabled(True)
-
-        worker = LyricProcessingWorker({"type": "get_list_lyrics",
-                                        "song_info_list": self.songlist_result["result"],
-                                        "lyric_type": self.get_lyric_type(),
-                                        "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
-                                        "save_folder": save_folder,
-                                        "lyrics_file_name_format": lyrics_file_name_format,
-                                        })
-        worker.signals.result.connect(get_list_lyrics_update)
-        worker.signals.error.connect(get_list_lyrics_update)
-        threadpool.start(worker)
-
-        def cancel_get_list_lyrics() -> None:
-            self.get_list_lyrics_box.ask_to_close = False
-            self.get_list_lyrics_box.pushButton.setText(self.tr("关闭"))
-            self.get_list_lyrics_box.closed.connect(None)
-            self.get_list_lyrics_box.pushButton.clicked.connect(self.get_list_lyrics_box.close)
-            self.main_window.setDisabled(False)
-            worker.stop()
-
-        self.get_list_lyrics_box.pushButton.clicked.connect(cancel_get_list_lyrics)
-        self.get_list_lyrics_box.closed.connect(cancel_get_list_lyrics)
-
-    @Slot()
-    def save_preview_lyric(self) -> None:
-        """保存预览的歌词"""
-        if self.preview_info is None or self.save_path_lineEdit.text() == "":
-            QMessageBox.warning(self, self.tr('警告'), self.tr('请先下载并预览歌词并选择保存路径'))
-            return
-
-        if self.preview_plainTextEdit.toPlainText() == "":
-            QMessageBox.warning(self, self.tr('警告'), self.tr('歌词内容为空'))
-            return
-
-        data.mutex.lock()
-        type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        lyrics_types = [type_mapping[type_] for type_ in data.cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
-        # 获取已选择的歌词(用于替换占位符)
-        save_folder, file_name = get_save_path(
-            self.save_path_lineEdit.text(),
-            data.cfg["lyrics_file_name_format"] + get_lyrics_format_ext(self.preview_info["info"]["lyrics_format"]),
-            self.preview_info["info"],
-            lyrics_types)
-
-        data.mutex.unlock()
-
-        save_path = os.path.join(save_folder, file_name)
-        try:
-            if not os.path.exists(save_folder):
-                os.makedirs(save_folder)
-            with open(save_path, 'w', encoding='utf-8') as f:
-                f.write(self.preview_plainTextEdit.toPlainText())
-            QMessageBox.information(self, self.tr('提示'), self.tr('歌词保存成功'))
-        except Exception as e:
-            QMessageBox.warning(self, self.tr('警告'), self.tr('歌词保存失败：') + str(e))
-
-    @Slot()
-    def select_savepath(self) -> None:
-        save_path = QFileDialog.getExistingDirectory(self, self.tr("选择保存路径"), dir=self.save_path_lineEdit.text())
-        if save_path:
-            self.save_path_lineEdit.setText(os.path.normpath(save_path))
 
     @Slot(str)
     def search_type_changed(self, index: int) -> None:
@@ -257,7 +140,7 @@ class SearchWidget(QWidget, Ui_search):
         """搜索错误时调用"""
         self.search_pushButton.setText(self.tr('搜索'))
         self.search_pushButton.setEnabled(True)
-        QMessageBox.critical(self, self.tr("搜索错误"), error)
+        MsgBox.critical(self, self.tr("搜索错误"), error)
 
     @Slot()
     def search_button_clicked(self) -> None:
@@ -265,7 +148,7 @@ class SearchWidget(QWidget, Ui_search):
         self.reset_page_status()
         keyword = self.search_keyword_lineEdit.text()
         if keyword == "":
-            QMessageBox.warning(self, self.tr("搜索错误"), self.tr("请输入搜索关键字"))
+            MsgBox.warning(self, self.tr("搜索错误"), self.tr("请输入搜索关键字"))
             return
         self.search_pushButton.setText(self.tr('正在搜索...'))
         self.search_pushButton.setEnabled(False)
@@ -281,7 +164,7 @@ class SearchWidget(QWidget, Ui_search):
     @Slot(str)
     def update_preview_lyric_error_slot(self, error: str) -> None:
         """更新预览歌词错误时调用"""
-        QMessageBox.critical(self, self.tr("获取预览歌词错误"), error)
+        MsgBox.critical(self, self.tr("获取预览歌词错误"), error)
         self.preview_plainTextEdit.setPlainText("")
 
     @Slot(int, dict)
@@ -399,7 +282,7 @@ class SearchWidget(QWidget, Ui_search):
     @Slot(str)
     def get_songlist_error(self, error: str) -> None:
         """获取歌单、专辑中的歌曲错误时调用"""
-        QMessageBox.critical(self, self.tr("错误"), error)
+        MsgBox.critical(self, self.tr("错误"), error)
         self.result_return()
 
     @Slot(int, str, list)
@@ -442,7 +325,7 @@ class SearchWidget(QWidget, Ui_search):
     @Slot(str)
     def search_lyrics_error_slot(self, error: str) -> None:
         """搜索歌词错误时调用"""
-        QMessageBox.critical(self, self.tr("错误"), error)
+        MsgBox.critical(self, self.tr("错误"), error)
 
     @Slot(int, SearchType, list)
     def search_lyrics_result_slot(self, taskid: int, _type: SearchType, result: list) -> None:
@@ -450,13 +333,11 @@ class SearchWidget(QWidget, Ui_search):
             return
         if not result:
             # never
-            QMessageBox.information(self, self.tr("提示"), self.tr("没有找到歌词"))
+            MsgBox.information(self, self.tr("提示"), self.tr("没有找到歌词"))
         elif len(result) == 1:
             self.update_preview_lyric(result[0])
         else:
-            data.mutex.lock()
-            auto_select = data.cfg['auto_select']
-            data.mutex.unlock()
+            auto_select = cfg['auto_select']
             if auto_select:
                 self.update_preview_lyric(result[0])
             else:
@@ -467,9 +348,6 @@ class SearchWidget(QWidget, Ui_search):
 
     def search_lyrics(self, info: dict) -> None:
         """搜索歌词(已经搜索了歌曲)"""
-        if (info['source'] == Source.KG and info['language'] in ["纯音乐", '伴奏'] and
-           QMessageBox.question(self, self.tr("提示"), self.tr("是否为纯音乐搜索歌词"), QMessageBox.Yes | QMessageBox.No, QMessageBox.No)) == QMessageBox.No:
-            return
         self.reset_page_status()
         self.taskid["results_table"] += 1
         worker = SearchWorker(self.taskid["results_table"],
@@ -539,7 +417,7 @@ class SearchWidget(QWidget, Ui_search):
             self.results_tableWidget.setItem(last_row, 0, nomore_item)
         else:
             self.results_tableWidget.removeRow(last_row)
-            QMessageBox.critical(self, self.tr("错误"), error)
+            MsgBox.critical(self, self.tr("错误"), error)
 
     def results_table_scroll_changed(self) -> None:
         # 判断是否已经滚动到了底部或消失
@@ -573,3 +451,187 @@ class SearchWidget(QWidget, Ui_search):
                 worker.signals.result.connect(self.search_nextpage_result_slot)
                 worker.signals.error.connect(self.search_nextpage_error)
                 threadpool.start(worker)
+
+
+class SearchWidget(SearchWidgetBase):
+    def __init__(self, main_window: QWidget) -> None:
+        super().__init__(main_window)
+        self.setup_ui()
+        self.resize(1050, 600)
+        self.select_path_pushButton.clicked.connect(self.select_savepath)
+        self.save_preview_lyric_pushButton.clicked.connect(self.save_preview_lyric)
+        self.save_list_lyrics_pushButton.clicked.connect(self.save_list_lyrics)
+
+    def setup_ui(self) -> None:
+
+        # 设置标题
+        title_font = QFont()
+        title_font.setPointSize(18)
+        self.label_title = QLabel(self)
+        self.label_sub_title = QLabel(self)
+        self.label_title.setFont(title_font)
+
+        self.verticalLayout.insertWidget(0, self.label_title)
+        self.verticalLayout.insertWidget(1, self.label_sub_title)
+
+        # 设置选择保存路径
+        self.select_path_lhorizontalLayout = QHBoxLayout()
+        self.select_path_label = QLabel(self)
+        self.save_path_lineEdit = QLineEdit(self)
+        self.save_path_lineEdit.setText(cfg["default_save_path"])
+        self.select_path_pushButton = QPushButton(self)
+
+        self.select_path_lhorizontalLayout.addWidget(self.select_path_label)
+        self.select_path_lhorizontalLayout.addWidget(self.save_path_lineEdit)
+        self.select_path_lhorizontalLayout.addWidget(self.select_path_pushButton)
+        self.control_verticalLayout.insertLayout(0, self.select_path_lhorizontalLayout)
+
+        # 设置保存按钮
+        self.save_preview_lyric_pushButton = QPushButton(self)
+        self.save_list_lyrics_pushButton = QPushButton(self)
+        save_button_size_policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        save_button_size_policy.setHorizontalStretch(0)
+        save_button_size_policy.setVerticalStretch(0)
+        save_button_size_policy.setHeightForWidth(self.save_preview_lyric_pushButton.sizePolicy().hasHeightForWidth())
+        self.save_preview_lyric_pushButton.setSizePolicy(save_button_size_policy)
+        self.save_list_lyrics_pushButton.setSizePolicy(save_button_size_policy)
+
+        but_h = self.control_verticalLayout.sizeHint().height() - self.control_verticalSpacer.sizeHint().height() * 0.8
+
+        self.save_preview_lyric_pushButton.setMinimumSize(QSize(0, but_h))
+        self.save_list_lyrics_pushButton.setMinimumSize(QSize(0, but_h))
+
+        self.bottom_horizontalLayout.addWidget(self.save_list_lyrics_pushButton)
+        self.bottom_horizontalLayout.addWidget(self.save_preview_lyric_pushButton)
+
+        self.retranslate_ui()
+
+    def retranslate_ui(self, search_base: SearchWidgetBase | None = None) -> None:
+        super().retranslateUi(self)
+        if search_base:
+            return
+        self.label_title.setText(self.tr("搜索"))
+        self.label_sub_title.setText(self.tr("从云端搜索并下载歌词"))
+
+        self.select_path_label.setText(self.tr("保存到:"))
+        self.select_path_pushButton.setText(self.tr("选择保存路径"))
+
+        self.save_preview_lyric_pushButton.setText(self.tr("保存预览歌词"))
+        self.save_list_lyrics_pushButton.setText(self.tr("保存专辑/歌单的歌词"))
+
+    def save_list_lyrics(self) -> None:
+        """保存专辑、歌单中的所有歌词"""
+        result_type = self.results_tableWidget.property("result_type")
+        if (result_type is None or
+                result_type[0] not in ["album", "songlist"]):
+            MsgBox.warning(self, self.tr('警告'), self.tr('请先选择一个专辑或歌单'))
+            return
+
+        lyrics_file_name_format = cfg["lyrics_file_name_format"]
+        save_folder = self.save_path_lineEdit.text()
+
+        worker = LyricProcessingWorker({"type": "get_list_lyrics",
+                                        "song_info_list": self.songlist_result["result"],
+                                        "lyric_type": self.get_lyric_type(),
+                                        "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+                                        "save_folder": save_folder,
+                                        "lyrics_file_name_format": lyrics_file_name_format,
+                                        })
+
+        def pushButton_clicked_slot() -> None:
+            if worker.is_running:
+                worker.stop()
+                set_no_running()
+            else:
+                self.get_list_lyrics_box.close()
+
+        def set_no_running() -> None:
+            self.get_list_lyrics_box.pushButton.setText(self.tr("关闭"))
+            self.get_list_lyrics_box.ask_to_close = False
+
+        def get_list_lyrics_update(count: int | str, result: dict | None = None) -> None:
+            text = ""
+            if result is None:
+                error = count[:]
+                count = self.get_list_lyrics_box.progressBar.value() + 1
+                self.get_list_lyrics_box.plainTextEdit.appendPlainText(error)
+            else:
+                save_path = result['save_path']
+                save_folder = os.path.dirname(save_path)
+                text += self.tr("获取 {0} 歌词成功").format(f"{result['info']['title']} - {result['info']['artist']}")
+                if result['inst']:  # 检查是否为纯音乐,并且设置跳过纯音乐
+                    text += self.tr("但歌曲为纯音乐,已跳过")
+                else:
+                    # 保存
+                    try:
+                        if not os.path.exists(save_folder):
+                            os.makedirs(save_folder)
+                        with open(save_path, 'w', encoding='utf-8') as f:
+                            f.write(result['merged_lyric'])
+                    except Exception as e:
+                        text += self.tr("但保存歌词失败,原因:") + str(e)
+                    else:
+                        text += self.tr(",保存到") + save_path
+                self.get_list_lyrics_box.plainTextEdit.appendPlainText(text)
+
+            self.get_list_lyrics_box.progressBar.setValue(count)
+
+            if count == self.get_list_lyrics_box.progressBar.maximum():
+                set_no_running()
+                MsgBox.information(self.main_window, self.tr("提示"), self.tr("获取歌词完成"))
+
+        self.get_list_lyrics_box = GetListLyrics(self)
+        self.main_window.setEnabled(False)
+        self.get_list_lyrics_box.ask_to_close = True
+        self.get_list_lyrics_box.progressBar.setValue(0)
+        self.get_list_lyrics_box.pushButton.setText(self.tr("取消"))
+        self.get_list_lyrics_box.pushButton.clicked.connect(pushButton_clicked_slot)
+        self.get_list_lyrics_box.closed.connect(lambda: self.main_window.setEnabled(True))
+        self.get_list_lyrics_box.progressBar.setMaximum(len(self.songlist_result["result"]))
+        self.get_list_lyrics_box.plainTextEdit.setPlainText("")
+        self.get_list_lyrics_box.show()
+        self.get_list_lyrics_box.setEnabled(True)
+
+        worker.signals.result.connect(get_list_lyrics_update)
+        worker.signals.error.connect(get_list_lyrics_update)
+        threadpool.start(worker)
+
+    @Slot()
+    def save_preview_lyric(self) -> None:
+        """保存预览的歌词"""
+        if self.preview_info is None or self.save_path_lineEdit.text() == "":
+            MsgBox.warning(self, self.tr('警告'), self.tr('请先下载并预览歌词并选择保存路径'))
+            return
+
+        if self.preview_plainTextEdit.toPlainText() == "":
+            MsgBox.warning(self, self.tr('警告'), self.tr('歌词内容为空'))
+            return
+
+        type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
+        lyrics_types = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+        # 获取已选择的歌词(用于替换占位符)
+        save_folder, file_name = get_save_path(
+            self.save_path_lineEdit.text(),
+            cfg["lyrics_file_name_format"] + get_lyrics_format_ext(self.preview_info["info"]["lyrics_format"]),
+            self.preview_info["info"],
+            lyrics_types)
+
+        save_path = os.path.join(save_folder, file_name)
+        try:
+            if not os.path.exists(save_folder):
+                os.makedirs(save_folder)
+            with open(save_path, 'w', encoding='utf-8') as f:
+                f.write(self.preview_plainTextEdit.toPlainText())
+            MsgBox.information(self, self.tr('提示'), self.tr('歌词保存成功'))
+        except Exception as e:
+            MsgBox.warning(self, self.tr('警告'), self.tr('歌词保存失败：') + str(e))
+
+    @Slot()
+    def select_savepath(self) -> None:
+        def file_selected(save_path: str) -> None:
+            self.save_path_lineEdit.setText(os.path.normpath(save_path))
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle(self.tr("选择保存路径"))
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.fileSelected.connect(file_selected)
+        dialog.open()

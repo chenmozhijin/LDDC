@@ -2,41 +2,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 from difflib import SequenceMatcher
 
-from .data import data
 from .enum import LyricsFormat
-
-
-def get_divmod_time(ms: int) -> tuple[int, int, int, int]:
-    total_s, ms = divmod(ms, 1000)
-    h, remainder = divmod(total_s, 3600)
-    m, s = divmod(remainder, 60)
-    return h, m, s, ms
-
-
-def ms2formattime(ms: int) -> str:
-    _h, m, s, ms = get_divmod_time(ms)
-    data.mutex.lock()
-    lrc_ms_digit_count = data.cfg["lrc_ms_digit_count"]
-    data.mutex.unlock()
-    if lrc_ms_digit_count == 2:
-        ms = round(ms / 10)
-        if ms == 100:
-            ms = 0
-            s += 1
-        return f"{int(m):02d}:{int(s):02d}.{int(ms):02d}"
-    return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"  # lrc_ms_digit_count == 3
-
-
-def ms2srt_timestamp(ms: int) -> str:
-    h, m, s, ms = get_divmod_time(ms)
-
-    return f"{int(h):02d}:{int(m):02d}:{int(s):02d},{int(ms):03d}"
-
-
-def ms2ass_timestamp(ms: int) -> str:
-    h, m, s, ms = get_divmod_time(ms)
-
-    return f"{int(h):02d}:{int(m):02d}:{int(s):02d}.{int(ms):03d}"
 
 
 def time2ms(m: int | str, s: int | str, ms: int | str) -> int:
@@ -138,5 +104,13 @@ def get_save_path(folder: str, file_name_format: str, info: dict, lyrics_types: 
 
 def text_difference(text1: str, text2: str) -> float:
     # 计算编辑距离
-    differ = SequenceMatcher(None, text1, text2)
+    differ = SequenceMatcher(lambda x: x == " ", text1, text2)
     return differ.ratio()
+
+
+def compare_version_numbers(current_version: str, last_version: str) -> bool:
+    last_version = tuple(int(i.split("-")[0]) for i in last_version.replace("v", "").split("."))
+    current_version = tuple(int(i.split("-")[0]) for i in current_version.replace("v", "").split("."))
+    if last_version == current_version and "beta" in current_version and "beta" not in last_version:
+        return True
+    return current_version < last_version

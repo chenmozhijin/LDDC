@@ -3,7 +3,7 @@ import logging
 from PySide6.QtCore import QLocale, QTranslator
 from PySide6.QtWidgets import QApplication, QWidget
 
-from .data import data
+from .data import cfg
 
 translator = QTranslator()
 _main_window = None
@@ -13,7 +13,7 @@ def load_translation() -> None:
     global translator  # noqa: PLW0603
     QApplication.instance().removeTranslator(translator)
     translator = QTranslator()
-    lang = data.cfg.get("language")
+    lang = cfg.get("language")
     match lang:
         case "auto":
             locale = QLocale.system()

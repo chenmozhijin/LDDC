@@ -8,7 +8,7 @@ from typing import NewType
 
 from PySide6.QtCore import QCoreApplication
 
-from decryptor import krc_decrypt, qrc_decrypt
+from utils.data import cfg
 from utils.enum import (
     LyricsFormat,
     LyricsProcessingError,
@@ -16,9 +16,10 @@ from utils.enum import (
     QrcType,
     Source,
 )
-from utils.utils import ms2ass_timestamp, ms2formattime, ms2srt_timestamp, time2ms
+from utils.utils import time2ms
 
 from .api import get_krc, ne_get_lyric, qm_get_lyric
+from .decryptor import krc_decrypt, qrc_decrypt
 
 try:
     main = __import__("__main__")
@@ -30,6 +31,37 @@ LyricsWord = NewType("LyricsWord", tuple[int | None, int | None, str])
 LyricsLine = NewType("LyricsLine", tuple[int | None, int | None, list[LyricsWord]])
 LyricsData = NewType("LyricsData", list[LyricsLine])
 MultiLyricsData = NewType("MultiLyricsData", dict[str, LyricsData])
+
+
+def _get_divmod_time(ms: int) -> tuple[int, int, int, int]:
+    total_s, ms = divmod(ms, 1000)
+    h, remainder = divmod(total_s, 3600)
+    m, s = divmod(remainder, 60)
+    return h, m, s, ms
+
+
+def ms2formattime(ms: int) -> str:
+    _h, m, s, ms = _get_divmod_time(ms)
+    lrc_ms_digit_count = cfg["lrc_ms_digit_count"]
+    if lrc_ms_digit_count == 2:
+        ms = round(ms / 10)
+        if ms == 100:
+            ms = 0
+            s += 1
+        return f"{int(m):02d}:{int(s):02d}.{int(ms):02d}"
+    return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"  # lrc_ms_digit_count == 3
+
+
+def ms2srt_timestamp(ms: int) -> str:
+    h, m, s, ms = _get_divmod_time(ms)
+
+    return f"{int(h):02d}:{int(m):02d}:{int(s):02d},{int(ms):03d}"
+
+
+def ms2ass_timestamp(ms: int) -> str:
+    h, m, s, ms = _get_divmod_time(ms)
+
+    return f"{int(h):02d}:{int(m):02d}:{int(s):02d}.{int(ms):03d}"
 
 
 def judge_lyric_type(text: str) -> LyricsType:
@@ -230,7 +262,14 @@ def krc2dict(krc: str) -> tuple[dict, dict]:
         languages = json.loads(b64decode(tags["language"].strip()))
         for language in languages["content"]:
             if language["type"] == 0:  # 逐字(罗马音)
+                offset = 0  # 用于跳过一些没有内容的行,它们不会存在与罗马音的字典中
                 for i, line in enumerate(orig_list):
+                    i = i - offset  # noqa: PLW2901
+                    if "".join([w[2] for w in line[2]]) == "":
+                        # 如果该行没有内容,则跳过
+                        offset += 1
+                        continue
+
                     roma_line = (line[0], line[1], [])
                     for j, word in enumerate(line[2]):
                         roma_line[2].append((word[0], word[1], language["lyricContent"][i][j]))

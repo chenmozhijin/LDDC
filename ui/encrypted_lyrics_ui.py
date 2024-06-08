@@ -8,24 +8,16 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QMetaObject,
-    Qt,
-)
-from PySide6.QtWidgets import (
-    QAbstractSpinBox,
-    QCheckBox,
-    QComboBox,
-    QHBoxLayout,
-    QLabel,
-    QPlainTextEdit,
-    QPushButton,
-    QSizePolicy,
-    QSpinBox,
-    QVBoxLayout,
-)
-
+from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
+    QMetaObject, QObject, QPoint, QRect,
+    QSize, QTime, QUrl, Qt)
+from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
+    QFont, QFontDatabase, QGradient, QIcon,
+    QImage, QKeySequence, QLinearGradient, QPainter,
+    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtWidgets import (QAbstractSpinBox, QApplication, QCheckBox, QComboBox,
+    QHBoxLayout, QLabel, QPlainTextEdit, QPushButton,
+    QSizePolicy, QSpinBox, QVBoxLayout, QWidget)
 
 class Ui_encrypted_lyrics(object):
     def setupUi(self, encrypted_lyrics):
@@ -151,7 +143,7 @@ class Ui_encrypted_lyrics(object):
 
     def retranslateUi(self, encrypted_lyrics):
         encrypted_lyrics.setWindowTitle(QCoreApplication.translate("encrypted_lyrics", u"Form", None))
-        self.label.setText(QCoreApplication.translate("encrypted_lyrics", u"\u6b4c\u8bcd\u7c7b\u578b(\u4ec5krc):", None))
+        self.label.setText(QCoreApplication.translate("encrypted_lyrics", u"\u6b4c\u8bcd\u7c7b\u578b(krc\u53ef\u7528):", None))
         self.original_checkBox.setText(QCoreApplication.translate("encrypted_lyrics", u"\u539f\u6587", None))
         self.translate_checkBox.setText(QCoreApplication.translate("encrypted_lyrics", u"\u8bd1\u6587", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("encrypted_lyrics", u"\u7f57\u9a6c\u97f3", None))
