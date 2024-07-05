@@ -1,4 +1,3 @@
-
 ################################################################################
 ## Form generated from reading UI file 'get_list_lyrics.ui'
 ##
@@ -20,7 +19,7 @@ from PySide6.QtWidgets import (
 
 
 class Ui_get_list_lyrics:
-    def setupUi(self, get_list_lyrics):
+    def setupUi(self, get_list_lyrics) -> None:
         if not get_list_lyrics.objectName():
             get_list_lyrics.setObjectName("get_list_lyrics")
         get_list_lyrics.resize(900, 450)

@@ -10,6 +10,7 @@ from base64 import b64decode, b64encode
 import requests
 
 from utils.enum import SearchType, Source
+from utils.error import LyricsRequestError
 
 from .decryptor.eapi import (
     eapi_params_encrypt,
@@ -23,13 +24,13 @@ def get_latest_version() -> tuple[bool, str, str]:
         latest_release = requests.get("https://api.github.com/repos/chenmozhijin/LDDC/releases/latest", timeout=5).json()
     except Exception as e:
         logging.exception("获取最新版本信息时错误")
-        return False, str(e)
+        return False, str(e), ""
     else:
         if "tag_name" in latest_release:
             latest_version = latest_release["tag_name"]
             body = latest_release["body"]
             return True, latest_version, body
-        return False, "获取最新版本信息失败"
+        return False, f"获取最新版本信息失败, 响应: {latest_release}", ""
 
 
 json.JSONEncoder.default = Source.__json__
@@ -62,11 +63,10 @@ def nesonglist2result(songlist: list) -> list:
     for song in songlist:
         info = song
         # 处理艺术家
-        artist = ""
+        artist = []
         for singer in info['ar']:
-            if artist != "":
-                artist += "/"
-            artist += singer['name']
+            if singer['name'] != "":
+                artist.append(singer['name'])
         results.append({
             'id': info['id'],
             'title': info['name'],
@@ -187,7 +187,7 @@ def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> dic
         return results
 
 
-def ne_get_lyric(songid: str | int) -> str | dict:
+def ne_get_lyrics(songid: str | int) -> dict:
     params = {
         "os": "pc",
         "id": str(songid),
@@ -203,8 +203,9 @@ def ne_get_lyric(songid: str | int) -> str | dict:
     try:
         data = _eapi_request("/eapi/song/lyric", params)
     except Exception as e:
-        logging.exception("网易云音乐歌词接口请求失败")
-        return str(e)
+        logging.exception("请求歌词失败")
+        msg = f"请求歌词失败: {e}"
+        raise LyricsRequestError(msg) from e
     return data
 
 
@@ -269,11 +270,10 @@ def qmsonglist2result(songlist: list, list_type: str | None = None) -> list:
     for song in songlist:
         info = song["songInfo"] if list_type == "album" else song
         # 处理艺术家
-        artist = ""
+        artist = []
         for singer in info['singer']:
-            if artist != "":
-                artist += "/"
-            artist += singer['name']
+            if singer['name'] != "":
+                artist.append(singer['name'])
         results.append({
             'id': info['id'],
             'mid': info['mid'],
@@ -287,17 +287,19 @@ def qmsonglist2result(songlist: list, list_type: str | None = None) -> list:
     return results
 
 
-def qm_get_lyric(info: dict[str: str]) -> dict:
+def qm_get_lyrics(title: str, artist: list[str], album: str, id_: int, duration: int) -> dict | str:
     """
     获取歌词
-    :param info:歌曲信息
+    :param title: 歌曲名
+    :param artist: 艺术家
+    :param album: 专辑名
+    :param id_: 歌曲id
+    :param duration: 歌曲时长
     :return: 歌词信息
     """
-    if 'album' not in info or 'artist' not in info or 'title' not in info or 'id' not in info or 'duration' not in info:
-        return "缺少必要参数"
-    base64_album_name = b64encode(info['album'].encode()).decode()
-    base64_singer_name = b64encode(info['artist'].split("/")[0].encode()).decode() if "/" in info["artist"] else b64encode(info["artist"].encode()).decode()
-    base64_song_name = b64encode(info["title"].encode()).decode()
+    base64_album_name = b64encode(album.encode()).decode()
+    base64_singer_name = b64encode(artist[0].encode()).decode() if artist else b64encode(b"").decode()
+    base64_song_name = b64encode(title.encode()).decode()
 
     data = json.dumps({
         "comm": {
@@ -324,14 +326,14 @@ def qm_get_lyric(info: dict[str: str]) -> dict:
                 "crypt": 1,
                 "ct": 19,
                 "cv": 1942,
-                "interval": info['duration'],
+                "interval": duration,
                 "lrc_t": 0,
                 "qrc": 1,
                 "qrc_t": 0,
                 "roma": 1,
                 "roma_t": 0,
                 "singerName": base64_singer_name,
-                "songID": int(info['id']),
+                "songID": id_,
                 "songName": base64_song_name,
                 "trans": 1,
                 "trans_t": 0,
@@ -344,10 +346,11 @@ def qm_get_lyric(info: dict[str: str]) -> dict:
         response.raise_for_status()
         data: dict = response.json()['music.musichallSong.PlayLyricInfo.GetPlayLyricInfo']['data']
     except Exception as e:
-        logging.exception("获取歌词失败")
-        return f"获取歌词失败：{e}"
+        logging.exception("请求歌词失败")
+        msg = f"请求歌词失败: {e}"
+        raise LyricsRequestError(msg) from e
     else:
-        logging.debug(f"请求qm歌词成功：{info['id']}, {json.dumps(data, ensure_ascii=False, indent=4)}")
+        logging.debug(f"请求qm歌词成功：{id_}, {json.dumps(data, ensure_ascii=False, indent=4)}")
         return data
 
 
@@ -553,12 +556,12 @@ def kgsonglist2result(songlist: list, list_type: str = "search") -> list:
         match list_type:
             case "songlist":
                 title = song['filename'].split("-")[1].strip()
-                artist = song['filename'].split("-")[0].strip()
+                artist = song['filename'].split("-")[0].strip().split("、")
                 album = ""
             case "search":
                 title = song['songname']
                 album = song['album_name']
-                artist = song['singername']
+                artist = song['singername'].split("、")
         results.append({
             'hash': song['hash'],
             'title': title,
@@ -575,11 +578,12 @@ def kgsonglist2result(songlist: list, list_type: str = "search") -> list:
 def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str | list:
     """
     酷狗音乐搜索
-    :param keyword:关键字
+    :param info:关键字
     :param search_type搜索类型
     :param page页码(从1开始)
     :return: 搜索结果(list)或错误(str)
     """
+    domain = random.choice(["mobiles.kugou.com", "msearchcdn.kugou.com", "mobilecdnbj.kugou.com", "msearch.kugou.com"])  # noqa: S311
     if isinstance(info, str):
         keyword = info
     elif isinstance(info, dict):
@@ -591,7 +595,7 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
         return f"输入参数类型错误,类型:{type(info)}"
     match search_type:
         case SearchType.SONG:
-            url = "http://msearchcdn.kugou.com/api/v3/search/song"
+            url = f"http://{domain}/api/v3/search/song"
             params = {
                 "showtype": "14",
                 "highlight": "",
@@ -610,7 +614,7 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
                 "with_res_tag": "1",
             }
         case SearchType.SONGLIST:
-            url = "http://mobilecdnbj.kugou.com/api/v3/search/special"
+            url = f"http://{domain}/api/v3/search/special"
             params = {
                 "version": "9108",
                 "highlight": "",
@@ -622,7 +626,7 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
                 "with_res_tag": "1",
             }
         case SearchType.ALBUM:
-            url = "http://msearch.kugou.com/api/v3/search/album"
+            url = f"http://{domain}/api/v3/search/album"
             params = {
                 "version": "9108",
                 "iscorrection": "1",
@@ -703,9 +707,10 @@ def kg_get_songlist(listid: str | int, list_type: str) -> str | list:
     if list_type not in ["album", "songlist"]:
         return "错误的list_type"
 
+    domain = random.choice(["mobiles.kugou.com", "msearchcdn.kugou.com", "mobilecdnbj.kugou.com", "msearch.kugou.com"])  # noqa: S311
     match list_type:
         case "album":
-            url = "http://mobilecdn.kugou.com/api/v3/album/song"
+            url = f"http://{domain}/api/v3/album/song"
             params = {
                 "version": "9108",
                 "albumid": listid,
@@ -717,7 +722,7 @@ def kg_get_songlist(listid: str | int, list_type: str) -> str | list:
             }
 
         case "songlist":
-            url = "http://mobilecdn.kugou.com/api/v3/special/song"
+            url = f"http://{domain}/api/v3/special/song"
             params = {
                 "version": "9108",
                 "specialid": listid,
@@ -740,7 +745,7 @@ def kg_get_songlist(listid: str | int, list_type: str) -> str | list:
         return results
 
 
-def get_krc(lyrsicid: str | int, access_key: str) -> str | list:
+def kg_get_lyrics(lyrsicid: str | int, access_key: str) -> list:
     url = "https://lyrics.kugou.com/download"
     params = {
         "ver": 1,
@@ -756,8 +761,9 @@ def get_krc(lyrsicid: str | int, access_key: str) -> str | list:
         response_json = response.json()
         krc = b64decode(response_json['content'])
     except Exception as e:
-        logging.exception("获取歌词数据时错误")
-        return str(e)
+        logging.exception("请求歌词失败")
+        msg = f"请求歌词失败: {e}"
+        raise LyricsRequestError(msg) from e
     else:
         logging.info("获取歌词数据成功")
         return krc

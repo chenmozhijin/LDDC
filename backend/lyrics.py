@@ -3,23 +3,14 @@
 import json
 import logging
 import re
-from base64 import b64decode
 from typing import NewType
-
-from PySide6.QtCore import QCoreApplication
 
 from utils.data import cfg
 from utils.enum import (
     LyricsFormat,
-    LyricsProcessingError,
     LyricsType,
-    QrcType,
     Source,
 )
-from utils.utils import time2ms
-
-from .api import get_krc, ne_get_lyric, qm_get_lyric
-from .decryptor import krc_decrypt, qrc_decrypt
 
 try:
     main = __import__("__main__")
@@ -64,14 +55,6 @@ def ms2ass_timestamp(ms: int) -> str:
     return f"{int(h):02d}:{int(m):02d}:{int(s):02d}.{int(ms):03d}"
 
 
-def judge_lyric_type(text: str) -> LyricsType:
-    if re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', text, re.DOTALL):
-        return LyricsType.QRC
-    if "[" in text and "]" in text:
-        return LyricsType.LRC
-    return LyricsType.PlainText
-
-
 def has_content(line: str) -> bool:
     """检查是否有实际内容"""
     content = re.sub(r"\[\d+:\d+\.\d+\]|\[\d+,\d+\]|<\d+:\d+\.\d+>", "", line).strip()
@@ -94,199 +77,6 @@ def get_clear_lyric(lyric: str) -> str:
         if has_content(line1):
             result.append(line1)
     return "\n".join(result)
-
-
-def qrc2list(qrc: str) -> tuple[dict, list]:
-    """将qrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
-    qrc = re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', qrc, re.DOTALL)[0]
-    qrc_lines = qrc.split('\n')
-    tags = {}
-    lrc_list: LyricsData = []
-    wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?((?:(?!\(\d+,\d+\)).)+)\((\d+),(\d+)\)')  # 逐字匹配
-    line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
-    tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
-
-    for i in qrc_lines:
-        line = i.strip()
-        line_split_content = re.findall(line_split_pattern, line)
-        if line_split_content:  # 判断是否为歌词行
-            line_start_time, line_duration, line_content = line_split_content[0]
-            lrc_list.append((int(line_start_time), int(line_start_time) + int(line_duration), []))
-            wrods_split_content = re.findall(wrods_split_pattern, line)
-            if wrods_split_content:  # 判断是否为逐字歌词
-                for text, starttime, duration in wrods_split_content:
-                    if text != "\r":
-                        lrc_list[-1][2].append((int(starttime), int(starttime) + int(duration), text))
-            else:  # 如果不是逐字歌词
-                lrc_list[-1][2].append((int(line_start_time), int(line_start_time) + int(line_duration), line_content))
-        else:
-            tag_split_content = re.findall(tag_split_pattern, line)
-            if tag_split_content:
-                tags.update({tag_split_content[0][0]: tag_split_content[0][1]})
-
-    return tags, lrc_list
-
-
-def yrc2list(yrc: str) -> list:
-    """将yrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
-    lrc_list: LyricsData = []
-
-    line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
-    wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?\((\d+),(\d+),\d+\)((?:.(?!\d+,\d+,\d+\)))*)')  # 逐字匹配
-    for i in yrc.splitlines():
-        line = i.strip()
-        if not line.startswith("["):
-            continue
-
-        line_split_content = re.findall(line_split_pattern, line)
-        if not line_split_content:
-            continue
-        line_start_time, line_duration, line_content = line_split_content[0]
-        lrc_list.append((int(line_start_time), int(line_start_time) + int(line_duration), []))
-
-        wrods_split_content = re.findall(wrods_split_pattern, line_content)
-        if not wrods_split_content:
-            lrc_list[-1][2].append((int(line_start_time), int(line_start_time) + int(line_duration), line_content))
-            continue
-
-        for word_start_time, word_duration, word_content in wrods_split_content:
-            lrc_list[-1][2].append((int(word_start_time), int(word_start_time) + int(word_duration), word_content))
-
-    return lrc_list
-
-
-def lrc2list(lrc: str, source: Source | None = None) -> tuple[dict, list]:
-    """将lrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
-    lrc_list: LyricsData = []
-    tags = {}
-
-    tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
-    line_split_pattern = re.compile(r"^\[(\d+):(\d+).(\d+)\](.*)$")
-    line_split_pattern_withend = re.compile(r"^\[(\d+):(\d+).(\d+)\](.*)\[(\d+):(\d+).(\d+)\]$")
-    wrods_split_pattern = re.compile(r"\[(\d+):(\d+).(\d+)\]((?:.(?!\d+:\d+.\d+\]))*)")  # 逐字匹配
-    for i in lrc.splitlines():
-        line = i.strip()
-        if not line.startswith("["):
-            continue
-
-        tag_split_content = re.findall(tag_split_pattern, line)
-        if tag_split_content:  # 标签行
-            tags.update({tag_split_content[0][0]: tag_split_content[0][1]})
-            continue
-
-        line_split_withend_content = re.findall(line_split_pattern_withend, line)
-        if not line_split_withend_content:
-            line_split_content = re.findall(line_split_pattern, line)
-            if not line_split_content:
-                continue
-            m, s, ms, line_content = line_split_content[0]
-            line_end_time = None
-            line_start_time = time2ms(m, s, ms)
-        else:
-            m, s, ms, line_content, m2, s2, ms2 = line_split_withend_content[0]
-            line_start_time = time2ms(m, s, ms)
-            line_end_time = time2ms(m2, s2, ms2)
-        lrc_list.append((line_start_time, line_end_time, []))
-
-        wrods_split_contents = re.findall(wrods_split_pattern, line_content)
-        if not wrods_split_contents:
-            lrc_list[-1][2].append((line_start_time, line_end_time, line_content))
-            continue
-
-        if (source == Source.NE and
-            len([word_content for m, s, ms, word_content in wrods_split_contents if word_content != ""]) == 1 and
-                wrods_split_contents[-1][3] != ""):
-            # 如果转换的是网易云歌词且这一行有开头有几个连在一起的时间戳表示这几个时间戳的行都是这个歌词
-            line_content = wrods_split_contents[-1][3]
-            lrc_list[-1][2].append((line_start_time, line_end_time, line_content))
-            for m, s, ms, _line_content in wrods_split_contents:
-                line_start_time = time2ms(m, s, ms)
-                lrc_list.append((line_start_time, None, [(line_start_time, None, line_content)]))
-            continue
-
-        line = lrc_list[-1][2]
-        for m, s, ms, word_content in wrods_split_contents:
-            word_start_time = time2ms(m, s, ms)
-            if line:
-                line[-1] = (line[-1][0], word_start_time, line[-1][2])
-            line.append((word_start_time, None, word_content))
-
-    return tags, lrc_list
-
-
-def plaintext2list(plaintext: str) -> list[list[None, None, list[None, None, str]]]:
-    lrc_list: LyricsData = []
-    for line in plaintext.splitlines():
-        lrc_list.append((None, None, [(None, None, line)]))
-    return lrc_list
-
-
-def krc2dict(krc: str) -> tuple[dict, dict]:
-    """将明文krc转换为字典{歌词类型: [(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]}"""
-    lrc_dict: MultiLyricsData = {}
-    tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
-    tags: dict[str: str] = {}
-
-    line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
-    wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?<(\d+),(\d+),\d+>((?:.(?!\d+,\d+,\d+>))*)')  # 逐字匹配
-    orig_list: LyricsData = []  # 原文歌词
-    roma_list: LyricsData = []
-    ts_list: LyricsData = []
-
-    for i in krc.splitlines():
-        line = i.strip()
-        if not line.startswith("["):
-            continue
-
-        tag_split_content = re.findall(tag_split_pattern, line)
-        if tag_split_content:  # 标签行
-            tags.update({tag_split_content[0][0]: tag_split_content[0][1]})
-            continue
-
-        line_split_content = re.findall(line_split_pattern, line)
-        if not line_split_content:
-            continue
-        line_start_time, line_duration, line_content = line_split_content[0]
-        orig_list.append((int(line_start_time), int(line_start_time) + int(line_duration), []))
-
-        wrods_split_content = re.findall(wrods_split_pattern, line_content)
-        if not wrods_split_content:
-            orig_list[-1][2].append((int(line_start_time), int(line_start_time) + int(line_duration), line_content))
-            continue
-
-        for word_start_time, word_duration, word_content in wrods_split_content:
-            orig_list[-1][2].append((int(line_start_time) + int(word_start_time),
-                                     int(line_start_time) + int(word_start_time) + int(word_duration), word_content))
-
-    if "language" in tags and tags["language"].strip() != "":
-        languages = json.loads(b64decode(tags["language"].strip()))
-        for language in languages["content"]:
-            if language["type"] == 0:  # 逐字(罗马音)
-                offset = 0  # 用于跳过一些没有内容的行,它们不会存在与罗马音的字典中
-                for i, line in enumerate(orig_list):
-                    i = i - offset  # noqa: PLW2901
-                    if "".join([w[2] for w in line[2]]) == "":
-                        # 如果该行没有内容,则跳过
-                        offset += 1
-                        continue
-
-                    roma_line = (line[0], line[1], [])
-                    for j, word in enumerate(line[2]):
-                        roma_line[2].append((word[0], word[1], language["lyricContent"][i][j]))
-                    roma_list.append(roma_line)
-            elif language["type"] == 1:  # 逐行(翻译)
-                for i, line in enumerate(orig_list):
-                    ts_list.append((line[0], line[1], [(line[0], line[1], language["lyricContent"][i][0])]))
-
-    tags_str = ""
-    for key, value in tags.items():
-        if key in ["al", "ar", "au", "by", "offset", "ti"]:
-            tags_str += f"[{key}:{value}]\n"
-
-    for key, lrc_list in ({"orig": orig_list, "roma": roma_list, "ts": ts_list}).items():
-        if lrc_list:
-            lrc_dict[key] = lrc_list
-    return tags, lrc_dict
 
 
 def tagsdict2str(tags_dict: dict, lrc_type: str) -> str:
@@ -405,15 +195,6 @@ def is_same_line(line1: LyricsLine, line2: LyricsLine) -> bool:
     return False
 
 
-def is_verbatim(lrc_list: list) -> bool:
-    isverbatim = False
-    for line_list in lrc_list:
-        if len(line_list[2]) > 1:
-            isverbatim = True
-            break
-    return isverbatim
-
-
 def find_closest_match(list1: list, list2: list, list3: list | None = None, source: Source | None = None) -> list[tuple[list, list]]:
     list1: LyricsData = list1[:]
     list2: LyricsData = list2[:]
@@ -513,7 +294,7 @@ class Lyrics(dict):
             info = {}
         logging.info(f"初始化{info}")
         self.source = info.get("source", None)
-        self.title = info.get('title', None)
+        self.title = info.get("title", None)
         self.artist = info.get("artist", None)
         self.album = info.get("album", None)
         self.id = info.get("id", None)
@@ -521,122 +302,8 @@ class Lyrics(dict):
         self.duration = info.get("duration", None)
         self.accesskey = info.get("accesskey", None)
 
-        self.lrc_types = {}
-        self.lrc_isverbatim = {}
+        self.types = {}
         self.tags = {}
-
-    def download_and_decrypt(self) -> tuple[str | None, LyricsProcessingError | None]:
-        """
-        下载与解密歌词
-        :return: 错误信息, 错误类型 | None, None
-        """
-        if self.source not in [Source.QM, Source.KG, Source.NE]:
-            return QCoreApplication.translate("lyrics", "不支持的源"), LyricsProcessingError.UNSUPPORTED
-
-        match self.source:
-            case Source.QM:
-                response = qm_get_lyric({'album': self.album, 'artist': self.artist, 'title': self.title, 'id': self.id, 'duration': self.duration})
-                if isinstance(response, str):
-                    return QCoreApplication.translate("lyrics", "请求qrc歌词失败,错误:{0}").format(response), LyricsProcessingError.REQUEST
-                for key, value in [("orig", 'lyric'),
-                                   ("ts", 'trans'),
-                                   ("roma", 'roma')]:
-                    lrc = response[value]
-                    lrc_t = (response["qrc_t"] if response["qrc_t"] != 0 else response["lrc_t"]) if value == "lyric" else response[value + "_t"]
-                    if lrc != "" and lrc_t != "0":
-                        encrypted_lyric = lrc
-
-                        lyric, error = qrc_decrypt(encrypted_lyric, QrcType.CLOUD)
-
-                        if lyric is not None:
-                            lrc_type = judge_lyric_type(lyric)
-                            if lrc_type == LyricsType.QRC:
-                                tags, lyric = qrc2list(lyric)
-                            elif lrc_type == LyricsType.LRC:
-                                tags, lyric = lrc2list(lyric)
-                            elif lrc_type == LyricsType.PlainText:
-                                tags = {}
-                                lyric = plaintext2list(lyric)
-                            self.lrc_types[key] = lrc_type
-
-                            if key == "orig":
-                                self.tags = tags
-
-                            self[key] = lyric
-                        elif error is not None:
-                            return QCoreApplication.translate("lyrics", "解密歌词失败, 错误: ") + error, LyricsProcessingError.DECRYPT
-                    elif (lrc_t == "0" and key == "orig"):
-                        return QCoreApplication.translate("lyrics", "没有获取到可用的歌词(timetag=0)"), LyricsProcessingError.NOT_FOUND
-
-            case Source.KG:
-                encrypted_krc = get_krc(self.id, self.accesskey)
-                if isinstance(encrypted_krc, str):
-                    return QCoreApplication.translate("lyrics", "请求krc歌词失败,错误:{0}").format(response), LyricsProcessingError.REQUEST
-                krc, error = krc_decrypt(encrypted_krc)
-                if krc is None:
-                    error = f"错误:{error}" if error is not None else ""
-                    return QCoreApplication.translate("lyrics", "解密krc歌词失败,错误:{0}").format(error), LyricsProcessingError.DECRYPT
-                self.tags, lyric = krc2dict(krc)
-                self.update(lyric)
-                if 'orig' in lyric:
-                    self.lrc_types['orig'] = LyricsType.KRC
-                if 'ts' in lyric:
-                    self.lrc_types['ts'] = LyricsType.JSONLINE
-                if 'roma' in lyric:
-                    self.lrc_types['roma'] = LyricsType.JSONVERBATIM
-
-            case Source.NE:
-                lyrics = ne_get_lyric(self.id)
-                if isinstance(lyrics, str):
-                    return QCoreApplication.translate("lyrics", "请求网易云歌词失败, 错误: ") + lyrics, LyricsProcessingError.REQUEST
-                logging.debug(f"lyrics: {lyrics}")
-                tags = {}
-                if self.artist:
-                    tags.update({"ar": self.artist})
-                if self.album:
-                    tags.update({"al": self.album})
-                if self.title:
-                    tags.update({"ti": self.title})
-                if 'lyricUser' in lyrics and 'nickname' in lyrics['lyricUser']:
-                    tags.update({"by": lyrics['lyricUser']['nickname']})
-                if 'transUser' in lyrics and 'nickname' in lyrics['transUser']:
-                    if 'by' in tags and tags['by'] != lyrics['transUser']['nickname']:
-                        tags['by'] += f" & {lyrics['transUser']['nickname']}"
-                    elif 'by' not in tags:
-                        tags.update({"by": lyrics['transUser']['nickname']})
-                self.tags = tags
-                if 'yrc' in lyrics and len(lyrics['yrc']['lyric']) != 0:
-                    mapping_table = [("orig", 'yrc'),
-                                     ("ts", 'tlyric'),
-                                     ("roma", 'romalrc'),
-                                     ("orig_lrc", 'lrc')]
-                else:
-                    mapping_table = [("orig", 'lrc'),
-                                     ("ts", 'tlyric'),
-                                     ("roma", 'romalrc')]
-                for key, value in mapping_table:
-                    if value not in lyrics:
-                        continue
-                    if isinstance(lyrics[value]['lyric'], str) and len(lyrics[value]['lyric']) != 0:
-                        lyric_type = judge_lyric_type(lyrics[value]['lyric'])
-                        if value == 'yrc':
-                            self[key] = yrc2list(lyrics[value]['lyric'])
-                            self.lrc_types[key] = LyricsType.YRC
-                        elif lyric_type == LyricsType.LRC:
-                            self[key] = lrc2list(lyrics[value]['lyric'], source=Source.NE)[1]
-                            self.lrc_types[key] = LyricsType.LRC
-                        elif lyric_type == LyricsType.PlainText:
-                            self[key] = plaintext2list(lyrics[value]['lyric'])
-                            self.lrc_types[key] = LyricsType.PlainText
-
-        for key, lrc in self.items():
-            # 判断是否逐字
-            self.lrc_isverbatim[key] = is_verbatim(lrc)
-
-        if "orig" not in self or self["orig"] is None:
-            logging.error("没有获取到歌词(orig=None)")
-            return QCoreApplication.translate("lyrics", "没有获取到歌词(orig=None)"), LyricsProcessingError.NOT_FOUND
-        return None, None
 
     def add_offset(self, multi_lyrics_data: MultiLyricsData, offset: int = 0) -> MultiLyricsData:
         """
@@ -694,7 +361,7 @@ class Lyrics(dict):
         if "roma" in lyrics_dict:
             mapping_tables["roma"] = find_closest_match(lyrics_dict["orig"], lyrics_dict["roma"], list3=lyrics_dict.get("orig_lrc"), source=self.source)
 
-        if self.lrc_types["orig"] == LyricsType.PlainText:
+        if self.types["orig"] == LyricsType.PlainText:
             lyrics_format = LyricsFormat.LINEBYLINELRC
 
         match lyrics_format:
@@ -822,6 +489,18 @@ class Lyrics(dict):
                             ass_lines.append(ass_line)
 
                 return "\n".join(ass_lines)
+
+            case LyricsFormat.JSON:
+                json_dict = {"version": 0, "info": {}, "tags": self.tags, "lyrics": dict(self)}
+                for key, value in vars(self).items():
+                    if key in ("source", "title", "artist", "album", "id", "mid", "duration", "accesskey"):
+                        if key == "source":
+                            value: Source
+                            json_dict["info"][key] = value.name
+                        else:
+                            json_dict["info"][key] = value
+
+                return json.dumps(json_dict, ensure_ascii=False)
         return ""
 
     def get_full_timestamps_lyrics(self) -> MultiLyricsData | False:

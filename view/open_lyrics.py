@@ -4,21 +4,24 @@ import os
 from PySide6.QtWidgets import QFileDialog, QWidget
 
 from backend.decryptor import krc_decrypt, qrc_decrypt
-from backend.lyrics import Lyrics, krc2dict, qrc2list
-from ui.encrypted_lyrics_ui import Ui_encrypted_lyrics
+from backend.fetcher import get_lyrics
+from backend.fetcher.local import KRC_MAGICHEADER, QRC_MAGICHEADER
+from backend.lyrics import Lyrics
+from ui.open_lyrics_ui import Ui_open_lyrics
 from utils.data import cfg
-from utils.enum import LyricsFormat, LyricsType, QrcType, Source
-from utils.utils import get_lyrics_format_ext
+from utils.enum import LyricsFormat, QrcType, Source
+from utils.utils import get_lyrics_format_ext, read_unknown_encoding_file
 from view.msg_box import MsgBox
 
 
-class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
+class OpenLyricsWidget(QWidget, Ui_open_lyrics):
     def __init__(self) -> None:
         super().__init__()
         self.setupUi(self)
         self.connect_signals()
         self.lyrics_type = None
-        self.lyrics = None
+        self.path: str | None = None
+        self.data: bytes | None = None
 
     def connect_signals(self) -> None:
         self.open_pushButton.clicked.connect(self.open_file)
@@ -53,21 +56,32 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
             except Exception as e:
                 MsgBox.warning(self, self.tr("警告"), self.tr("读取文件失败：") + str(e))
                 return
-            qrc_magicheader = bytes.fromhex("98 25 B0 AC E3 02 83 68 E8 FC 6C")
-            krc_magicheader = bytes.fromhex("6B 72 63 31 38")
-            if data[:len(qrc_magicheader)] == qrc_magicheader:
-                self.lyrics_type = "qrc"
-                lyrics, error = qrc_decrypt(data, QrcType.LOCAL)
-            elif data[:len(krc_magicheader)] == krc_magicheader:
-                self.lyrics_type = "krc"
-                lyrics, error = krc_decrypt(data)
-            else:
-                MsgBox.warning(self, self.tr("警告"), self.tr("文件格式不正确！"))
+            try:
+                if data.startswith(QRC_MAGICHEADER):
+                    self.lyrics_type = "qrc"
+                    lyrics = qrc_decrypt(data, QrcType.LOCAL)
+                    self.path = file_path
+                    self.data = data
+                elif data.startswith(KRC_MAGICHEADER):
+                    self.lyrics_type = "krc"
+                    lyrics = krc_decrypt(data)
+                    self.path = file_path
+                    self.data = data
+                elif file_path.lower().endswith(".lrc"):
+                    self.lyrics_type = "lrc"
+                    lyrics = read_unknown_encoding_file(file_data=data, sign_word=("[", "]", ":"))
+                    self.path = file_path
+                    self.data = data
+                else:
+                    MsgBox.warning(self, self.tr("警告"), self.tr("不支持的文件格式！"))
+                    return
+            except Exception as e:
+                logging.exception("打开失败")
+                MsgBox.critical(self, self.tr("警告"), self.tr("打开失败：") + str(e))
                 return
-
             if lyrics is None:
                 self.lyrics_type = None
-                msg = self.tr("解密失败") if error is None else self.tr("解密失败：") + error
+                msg = self.tr("打开失败")
                 MsgBox.critical(self, self.tr("错误"), msg)
                 return
 
@@ -76,7 +90,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         dialog = QFileDialog(self)
         dialog.setWindowTitle(self.tr("选取加密歌词"))
         dialog.setFileMode(QFileDialog.ExistingFile)
-        dialog.setNameFilter(self.tr("加密歌词(*.qrc *.krc)"))
+        dialog.setNameFilter(self.tr("加密歌词(*.qrc *.krc *.lrc)"))
         dialog.fileSelected.connect(file_selected)
         dialog.open()
 
@@ -89,23 +103,10 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
             MsgBox.warning(self, self.tr("警告"), self.tr("歌词内容不能为空！"))
             return
         try:
-            if self.lyrics_type == "qrc":
-                self.lyrics = Lyrics({"source": Source.QM})
-                self.lyrics.tags, lyric = qrc2list(lyrics)
-                self.lyrics["orig"] = lyric
-                self.lyrics.lrc_types["orig"] = LyricsType.QRC
-                lrc = self.lyrics.get_merge_lrc(["orig"], LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
-            elif self.lyrics_type == "krc":
-                type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-                lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
-                self.lyrics = Lyrics({"source": Source.KG})
-
-                self.lyrics.tags, lyric = krc2dict(lyrics)
-                self.lyrics.update(lyric)
-                self.lyrics.lrc_types["orig"] = LyricsType.KRC
-                self.lyrics.lrc_types["ts"] = LyricsType.JSONLINE
-                self.lyrics.lrc_types["roma"] = LyricsType.JSONVERBATIM
-                lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
+            self.lyrics = get_lyrics(Source.Local, use_cache=False, path=self.path, data=self.data)
+            type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
+            lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+            lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
         except Exception as e:
             logging.exception("转换失败")
             MsgBox.critical(self, self.tr("错误"), self.tr("转换失败：") + str(e))
@@ -121,7 +122,7 @@ class EncryptedLyricsWidget(QWidget, Ui_encrypted_lyrics):
         self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value()))
 
     def change_lyrics_type(self) -> None:
-        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics) and self.lyrics.source == Source.KG:
+        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics):
             self.update_lyrics()
 
     def save(self) -> None:

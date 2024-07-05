@@ -140,7 +140,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         """搜索错误时调用"""
         self.search_pushButton.setText(self.tr('搜索'))
         self.search_pushButton.setEnabled(True)
-        MsgBox.critical(self, self.tr("搜索错误"), error)
+        MsgBox.critical(self, self.tr("错误"), error)
 
     @Slot()
     def search_button_clicked(self) -> None:
@@ -148,7 +148,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.reset_page_status()
         keyword = self.search_keyword_lineEdit.text()
         if keyword == "":
-            MsgBox.warning(self, self.tr("搜索错误"), self.tr("请输入搜索关键字"))
+            MsgBox.warning(self, self.tr("错误"), self.tr("请输入搜索关键词"))
             return
         self.search_pushButton.setText(self.tr('正在搜索...'))
         self.search_pushButton.setEnabled(False)
@@ -171,20 +171,23 @@ class SearchWidgetBase(QWidget, Ui_search_base):
     def update_preview_lyric_result_slot(self, taskid: int, result: dict) -> None:
         """更新预览歌词结果时调用"""
         def get_lrc_type(lrc: Lyrics, lrc_type: str) -> str:
-            if lrc.lrc_types[lrc_type] == LyricsType.PlainText:
-                return self.tr("纯文本")
-            if lrc.lrc_isverbatim[lrc_type] is True:
-                return self.tr("逐字")
-            return self.tr("逐行")
+            match lrc.types[lrc_type]:
+                case LyricsType.PlainText:
+                    return self.tr("纯文本")
+                case LyricsType.VERBATIM:
+                    return self.tr("逐字")
+                case LyricsType.LINEBYLINE:
+                    return self.tr("逐行")
+
         if taskid != self.taskid["update_preview_lyric"]:
             return
         self.preview_info = {"info": result["info"]}
         lyric_types_text = ""
-        if "orig" in result['lrc'].lrc_types:
+        if "orig" in result['lrc'].types:
             lyric_types_text += self.tr("原文") + f"({get_lrc_type(result['lrc'], 'orig')})"
-        if "ts" in result['lrc'].lrc_types:
+        if "ts" in result['lrc'].types:
             lyric_types_text += self.tr("、译文") + f"({get_lrc_type(result['lrc'], 'ts')})"
-        if "roma" in result['lrc'].lrc_types:
+        if "roma" in result['lrc'].types:
             lyric_types_text += self.tr("、罗马音") + f"({get_lrc_type(result['lrc'], 'roma')})"
         self.lyric_types_lineEdit.setText(lyric_types_text)
         self.songid_lineEdit.setText(str(result['info']['id']))
@@ -232,9 +235,10 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                 for song in result:
                     table.insertRow(table.rowCount())
                     name = song['title'] + "(" + song["subtitle"] + ")" if song["subtitle"] != "" else song['title']
+                    artist = "/".join(song["artist"]) if isinstance(song["artist"], list) else song["artist"]
 
                     table.setItem(table.rowCount() - 1, 0, QTableWidgetItem(name))
-                    table.setItem(table.rowCount() - 1, 1, QTableWidgetItem(song["artist"]))
+                    table.setItem(table.rowCount() - 1, 1, QTableWidgetItem(artist))
                     table.setItem(table.rowCount() - 1, 2, QTableWidgetItem(song["album"]))
                     table.setItem(table.rowCount() - 1, 3, QTableWidgetItem('{:02d}:{:02d}'.format(*divmod(song['duration'], 60))))
 

@@ -25,9 +25,11 @@ from utils.enum import (
     LocalMatchSaveMode,
     LyricsFormat,
     LyricsProcessingError,
+    LyricsType,
     SearchType,
     Source,
 )
+from utils.error import LyricsRequestError
 from utils.threadpool import threadpool
 from utils.utils import (
     compare_version_numbers,
@@ -36,7 +38,6 @@ from utils.utils import (
     get_lyrics_format_ext,
     get_save_path,
     replace_info_placeholders,
-    text_difference,
 )
 
 from .api import (
@@ -49,6 +50,8 @@ from .api import (
     qm_get_songlist_song_list,
     qm_search,
 )
+from .calculate import calculate_artist_score, calculate_title_score
+from .fetcher import get_lyrics
 from .lyrics import Lyrics
 from .song_info import file_extensions as audio_formats
 from .song_info import get_audio_file_info, parse_cue
@@ -99,7 +102,7 @@ class SearchWorker(QRunnable):
     def run(self) -> None:
         logging.debug("开始搜索")
         if isinstance(self.keyword, dict):
-            keyword = {"keyword": f"{self.keyword['artist']} - {self.keyword['title']}",
+            keyword = {"keyword": f"{'、'.join(self.keyword['artist']) if isinstance(self.keyword['artist'], list) else self.keyword['artist']} - {self.keyword['title']}",
                        "duration": self.keyword["duration"], "hash": self.keyword["hash"]}
         else:
             keyword = self.keyword
@@ -176,9 +179,9 @@ class LyricProcessingWorker(QRunnable):
                         info = song_info
                     case Source.KG:
                         if self.skip_inst_lyrics and song_info['language'] in ["纯音乐", '伴奏']:
-                            self.signals.error.emit(f"{song_info['artist']} - {song_info['title']} 为纯音乐,已跳过")
+                            self.signals.error.emit(f"{'/'.join(song_info['artist'])} - {song_info['title']} 为纯音乐,已跳过")  # song_info['artist']一定为list
                             continue
-                        search_return = kg_search({"keyword": f"{song_info['artist']} - {song_info['title']}",
+                        search_return = kg_search({"keyword": f"{'、'.join(song_info['artist']) if isinstance(song_info['artist'], list) else song_info['artist']} - {song_info['title']}",
                                                    "duration": song_info["duration"],
                                                    "hash": song_info["hash"]},
                                                   SearchType.LYRICS)
@@ -204,32 +207,33 @@ class LyricProcessingWorker(QRunnable):
     def get_lyrics(self, song_info: dict) -> tuple[None | Lyrics, bool]:
         logging.debug(f"开始获取歌词：{song_info['id']}")
         from_cache = False
-        if ("lyrics", song_info["source"], song_info['id'], song_info.get("accesskey", "")) in cache:
-            lyrics = cache[("lyrics", song_info["source"], song_info['id'], song_info.get("accesskey", ""))]
-            logging.info(f"从缓存中获取歌词：源:{song_info['source']}, id:{song_info['id']}, accesskey: {song_info.get('accesskey', '无')}")
-            from_cache = True
-        if not from_cache:
-            lyrics = Lyrics(song_info)
+        lyrics = None
+        error = None
+        for _ in range(3):
+            try:
+                lyrics, from_cache = get_lyrics(**song_info, return_cache_status=True)
+                break
+            except LyricsRequestError as e:
+                error = e
+                continue
+            except Exception as e:
+                logging.exception("获取歌词失败")
+                self.signals.error.emit(str(e))
+                break
 
-            for _i in range(3):  # 重试3次
-                error1, error1_type = lyrics.download_and_decrypt()
-                if error1_type != LyricsProcessingError.REQUEST:  # 如果正常或不是请求错误不重试
-                    break
-
-            if error1 is not None:
-                return (error1, error1_type), False
-
-            if error1_type != LyricsProcessingError.REQUEST and not from_cache:  # 如果不是请求错误则缓存
-                cache[("lyrics", song_info["source"], song_info['id'], song_info.get("accesskey", ""))] = lyrics
+        if not lyrics:
+            if error:
+                return error, from_cache
+            return "", from_cache
         return lyrics, from_cache
 
     def get_merged_lyric(self, song_info: dict, lyric_type: list) -> bool:
         logging.debug(f"开始获取合并歌词：{song_info.get('id', song_info.get('hash', ''))}")
         lyrics, from_cache = self.get_lyrics(song_info)
-        if isinstance(lyrics, tuple):
+        if not isinstance(lyrics, Lyrics):
             song_name_str = QCoreApplication.translate("LyricProcess", "歌名:") + song_info["title"] if "title" in song_info else ""
-            logging.error(f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']},错误：{lyrics[0]}")
-            self.signals.error.emit(QCoreApplication.translate("LyricProcess", "获取 {0} 加密歌词失败:{1}").format(song_name_str, lyrics[0]))
+            logging.error(f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']},错误：{lyrics}")
+            self.signals.error.emit(QCoreApplication.translate("LyricProcess", "获取 {0} 加密歌词失败:{1}").format(song_name_str, lyrics))
             return from_cache
 
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
@@ -432,7 +436,10 @@ class LocalMatchWorker(QRunnable):
         try:
             song_info = result["orig_info"]
 
-            simple_song_info_str = f"{song_info['artist']} - {song_info['title']}" if "artist" in song_info else song_info["title"]
+            if "artist" in song_info:
+                simple_song_info_str = f"{'/'.join(song_info['artist']) if isinstance(song_info['artist'], list) else song_info['artist']} - {song_info['title']}"
+            else:
+                simple_song_info_str = song_info["title"]
 
             match result['state']:
                 case "成功":
@@ -556,8 +563,8 @@ class AutoLyricsFetcher(QRunnable):
         threadpool.start(worker)
 
     def search(self) -> None:
-        artist: str | None = self.info.get('artist')
-        keyword = f"{artist} - {self.info['title'].strip()}" if artist and artist.strip() else self.info["title"].strip()
+        artist: list | str | None = self.info.get('artist')
+        keyword = f"{'/'.join(artist) if isinstance(artist, list) else artist} - {self.info['title'].strip()}" if artist else self.info["title"].strip()
         for source in self.source:
             self.new_search_work(keyword, SearchType.SONG, source)
 
@@ -571,129 +578,14 @@ class AutoLyricsFetcher(QRunnable):
     @Slot(int, SearchType, list)
     def handle_search_result(self, taskid: int, search_type: SearchType, infos: list[dict]) -> None:
 
-        def unified_symbol(text: str) -> str:
-            text = text.strip().replace('（', '(').replace('）', ')').replace('：', ':')
-            return re.sub(r"\s", " ", text)
-
-        def calculate_artist_score(artist1: str, artist2: str) -> float:
-            artist1, artist2 = unified_symbol(artist1), unified_symbol(artist2)
-            if not artist1 or not artist2:
-                return -1
-            if artist1.lower() == artist2.lower():
-                return 100
-
-            score = max(text_difference(artist1.lower(), artist2.lower()), 0) * 100  # 计算文本相似度得到的分数
-
-            aliases1: list[str] = re.findall(r"\([Cc][Vv][.:]?\s?([^\)]*)\)", artist1)  # 获取别名
-            aliases2: list[str] = re.findall(r"\([Cc][Vv][.:]?\s?([^\)]*)\)", artist2)  # 获取别名
-
-            if " " in artist1 and artist1.split(" ")[0] == artist2 and len(artist2) > 3 and score < 80:
-                return 80
-
-            if len(aliases1) == len(aliases2):
-                sub_score = 0
-                for alias1 in aliases1:
-                    if alias1.strip() in aliases2:
-                        sub_score += 100 / len(aliases1)
-                if sub_score > score:
-                    return sub_score
-
-            elif aliases1:
-                sub_score = 0
-                for alias1 in aliases1:
-                    if alias1.strip() in artist2:
-                        sub_score += 100 / len(aliases1)
-                if sub_score > score:
-                    return sub_score
-
-            elif aliases2:
-                sub_score = 0
-                for alias2 in aliases2:
-                    if alias2.strip() in artist1:
-                        sub_score += 100 / len(aliases2)
-                    if sub_score > score:
-                        return sub_score
-
-            return score
-
-        def calculate_title_score(title1: str, title2: str) -> float:
-            def get_tags(not_same: str) -> tuple[list, str]:
-                not_same_tags: list[tuple[str, str, str, str]] = re.findall(r"[-<(\[～]([～\]^)>-]*)[～\]^)>-]|(\w+ ?(?:(?:solo |size )?ver(?:sion)?\.?|size|style|mix(?:ed)?|edit(?:ed)?|版|solo))|(纯音乐|inst\.?(?:rumental)|off ?vocal(?: ?[Vv]er.)?)", not_same)
-                not_same_tags: list[str] = [item.strip() for tup in not_same_tags for item in tup if item]  # 去除空字符串与符号
-                not_same_other = re.sub(r"|".join(not_same_tags) + r"|[-><)(\]\[～]", "", not_same)  # 获取非tags部分
-
-                # 统一一些tags
-                for i, tag in enumerate(not_same_tags):
-                    tag_ = re.sub(r"ver(?:sion)?\.?", "ver", tag)
-                    tag_ = re.sub(r"伴奏|纯音乐|inst\.?(?:rumental)|off ?vocal(?: ?[Vv]er.)?", "inst", tag_)
-                    tag_ = tag_.replace("mixed", "mix").replace("edited", "edit")
-                    tag_ = re.sub(r"(solo|mix|edit|style|size) ver", r"\1", tag_)
-                    tag_ = re.sub("(?:tv|anime) ?(?:サイズ|size)?(?: ?ver)?", "tv size", tag_)
-                    not_same_tags[i] = tag_
-
-                return not_same_tags, not_same_other
-
-            title1, title2 = unified_symbol(title1).lower(), unified_symbol(title2).lower()
-            if title1 == title2:
-                return 100
-
-            score0 = max(text_difference(title1, title2), 0) * 100  # 计算文本相似度得到的分数
-            same_begin = ""  # 开头相同的字符串
-
-            for i, text1 in enumerate(title1):
-                if len(title2) > i and text1 == title2[i]:
-                    same_begin += text1
-                else:
-                    break
-
-            if same_begin in (title1, title2) or not same_begin:
-                return score0
-
-            not_same1_tags, not_same1_other = get_tags(title1[len(same_begin):])
-            not_same2_tags, not_same2_other = get_tags(title2[len(same_begin):])
-
-            # 计算tags相似度
-            tag1_no_match = []
-            tag2_no_match = not_same2_tags
-            for tag1 in not_same1_tags:
-                if tag1 in not_same2_tags:
-                    # tag匹配
-                    tag2_no_match.remove(tag1)
-                elif re.findall(r"(?:solo|mix|edit|style|size|edit|inst)$", tag1):
-                    # 普通标签
-                    tag1_no_match.append(tag1)
-                elif tag1 in not_same2_other:
-                    not_same1_other += tag1
-
-            for tag2 in tag2_no_match:
-                if not re.findall(r"(?:solo|mix|edit|style|size|edit|inst)$", tag2) and tag2 in not_same1_other:
-                    not_same2_other += tag2
-                    tag2_no_match.remove(tag2)
-
-            kp = len(same_begin) / ((len(not_same1_other) + len(not_same2_other)) / 2 + len(same_begin))
-            score1 = 100 * kp + max(text_difference(not_same1_other, not_same2_other), 0) * (1 - kp)
-
-            if not tag1_no_match and not tag2_no_match:
-                return max(score1 * 0.7 + 30, score0)
-
-            score2, score3 = 0, 0
-            if tag1_no_match and tag2_no_match:
-                for tag1 in tag1_no_match:
-                    score2 += max([text_difference(tag1, tag2) for tag2 in tag2_no_match]) * (30 / len(tag1_no_match))
-
-                for tag2 in tag2_no_match:
-                    score3 += max([text_difference(tag1, tag2) for tag1 in tag1_no_match]) * (30 / len(tag2_no_match))
-
-            return max(score1 * 0.7 + max(score2, score3), score0)
-
         try:
             self.search_task_finished += 1
             keyword, _search_type, source = self.search_task[taskid]
             if source == Source.KG and search_type == SearchType.LYRICS:
                 self.new_get_work(infos[0])
             duration: int | None = self.info.get('duration')
-            artist: str | None = self.info.get('artist')
-            if artist and artist.strip():
+            artist: str | list | None = self.info.get('artist')
+            if isinstance(artist, str):
                 artist = artist.strip()
 
             score_info: list[tuple[float, dict]] = []
@@ -713,7 +605,7 @@ class AutoLyricsFetcher(QRunnable):
                     score += calculate_title_score(self.info['title'], info.get('title', '')) * 0.5
 
                 if score > self.min_score:
-                    # print(f"{self.info['title']}\t{artist}|{info.get('title', '')}\t{info.get('artist', '')}|{artist_score}\t{(score - artist_score * 0.5) * 2}\t{score}")
+                    print(f"{self.info['title']}\t{artist}|{info.get('title', '')}\t{info.get('artist', '')}|{artist_score}\t{(score - artist_score * 0.5) * 2}\t{score}")
                     score_info.append((score, info))
 
             score_info = sorted(score_info, key=lambda x: x[0], reverse=True)
@@ -727,7 +619,7 @@ class AutoLyricsFetcher(QRunnable):
                     self.new_search_work(best_info, SearchType.LYRICS, Source.KG)
                 else:
                     self.new_get_work(best_info)
-            elif keyword == f"{artist} - {self.info['title'].strip()}":
+            elif keyword == f"{'/'.join(self.info.get('artist')) if isinstance(self.info.get('artist'), list) else self.info.get('artist')} - {self.info['title'].strip()}":
                 # 尝试只搜索歌曲名
                 self.new_search_work(self.info['title'].strip(), SearchType.SONG, source)
             else:
@@ -781,9 +673,9 @@ class AutoLyricsFetcher(QRunnable):
             if abs(obtained_lyric[0]['score'] - highest_score) > 15:
                 self.obtained_lyrics.remove(obtained_lyric)
 
-        have_verbatim = [lyrics for lyrics in self.obtained_lyrics if lyrics[1].lrc_isverbatim.get("orig") is True]
-        have_ts = [lyrics for lyrics in self.obtained_lyrics if "ts" in lyrics[1].lrc_types]
-        have_roma = [lyrics for lyrics in self.obtained_lyrics if "roma" in lyrics[1].lrc_types]
+        have_verbatim = [lyrics for lyrics in self.obtained_lyrics if lyrics[1].types.get("orig") == LyricsType.VERBATIM]
+        have_ts = [lyrics for lyrics in self.obtained_lyrics if "ts" in lyrics[1]]
+        have_roma = [lyrics for lyrics in self.obtained_lyrics if "roma" in lyrics[1]]
 
         have_verbatim_ts: list[tuple[dict, Lyrics]] = []
         have_verbatim_roma: list[tuple[dict, Lyrics]] = []

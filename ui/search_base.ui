@@ -62,6 +62,15 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
+       <property name="inputMask">
+        <string/>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="placeholderText">
+        <string>输入关键词</string>
+       </property>
       </widget>
      </item>
      <item>

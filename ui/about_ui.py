@@ -1,4 +1,3 @@
-
 ################################################################################
 ## Form generated from reading UI file 'about.ui'
 ##
@@ -46,7 +45,10 @@ class Ui_about:
         self.verticalLayout.addWidget(self.title_label)
 
         self.verticalSpacer_2 = QSpacerItem(
-            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed,
+            20,
+            40,
+            QSizePolicy.Policy.Minimum,
+            QSizePolicy.Policy.Fixed,
         )
 
         self.verticalLayout.addItem(self.verticalSpacer_2)
@@ -63,13 +65,18 @@ class Ui_about:
         self.version_label.setObjectName("version_label")
 
         self.verticalLayout.addWidget(
-            self.version_label, 0, Qt.AlignmentFlag.AlignHCenter,
+            self.version_label,
+            0,
+            Qt.AlignmentFlag.AlignHCenter,
         )
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.horizontalSpacer_2 = QSpacerItem(
-            40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum,
+            40,
+            20,
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Minimum,
         )
 
         self.horizontalLayout.addItem(self.horizontalSpacer_2)
@@ -102,7 +109,10 @@ class Ui_about:
         self.horizontalLayout.addWidget(self.githubissues_pushButton)
 
         self.horizontalSpacer = QSpacerItem(
-            40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum,
+            40,
+            20,
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Minimum,
         )
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
@@ -110,7 +120,10 @@ class Ui_about:
         self.verticalLayout.addLayout(self.horizontalLayout)
 
         self.verticalSpacer = QSpacerItem(
-            20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding,
+            20,
+            40,
+            QSizePolicy.Policy.Minimum,
+            QSizePolicy.Policy.Expanding,
         )
 
         self.verticalLayout.addItem(self.verticalSpacer)

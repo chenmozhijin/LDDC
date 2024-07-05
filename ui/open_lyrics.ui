@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>encrypted_lyrics</class>
- <widget class="QWidget" name="encrypted_lyrics">
+ <class>open_lyrics</class>
+ <widget class="QWidget" name="open_lyrics">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>802</width>
-    <height>413</height>
+    <width>1050</width>
+    <height>600</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,6 +19,9 @@
      <property name="lineWrapMode">
       <enum>QPlainTextEdit::LineWrapMode::NoWrap</enum>
      </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
    <item>
@@ -26,7 +29,7 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>歌词类型(krc可用):</string>
+        <string>歌词类型:</string>
        </property>
       </widget>
      </item>
@@ -162,7 +165,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>打开加密歌词</string>
+        <string>打开歌词文件</string>
        </property>
       </widget>
      </item>

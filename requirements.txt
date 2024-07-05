@@ -4,3 +4,4 @@ mutagen
 diskcache
 chardet
 cryptography
+psutil

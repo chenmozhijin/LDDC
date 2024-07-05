@@ -37,7 +37,7 @@
 
 ### 歌词解密
 
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=Lyricify-Lyrics-Helper)](https://github.com/WXRIW/Lyricify-Lyrics-Helper)
+[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=QQMusicDecoder)](https://github.com/WXRIW/QQMusicDecoder)
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=jixunmoe&repo=qmc-decode)](https://github.com/jixunmoe/qmc-decode)
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=parakeet-rs&repo=libparakeet)](https://github.com/parakeet-rs/libparakeet)
 

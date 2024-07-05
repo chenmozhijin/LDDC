@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Any
 
 
 class QrcType(Enum):
@@ -8,12 +9,8 @@ class QrcType(Enum):
 
 class LyricsType(Enum):
     PlainText = 0
-    JSONVERBATIM = 1
-    JSONLINE = 2
-    LRC = 3
-    QRC = 4
-    KRC = 5
-    YRC = 6
+    VERBATIM = 1
+    LINEBYLINE = 2
 
 
 class LyricsProcessingError(Enum):
@@ -29,6 +26,10 @@ class LyricsFormat(Enum):
     ENHANCEDLRC = 2
     SRT = 3
     ASS = 4
+    QRC = 5
+    KRC = 6
+    YRC = 7
+    JSON = 8
 
 
 class SearchType(Enum):
@@ -43,9 +44,10 @@ class Source(Enum):
     QM = 1
     KG = 2
     NE = 3
+    Local = 4
 
     # 定义 Source 类的序列化方法
-    def __json__(self, obj: any) -> str:
+    def __json__(self, obj: Any) -> str:
         if isinstance(obj, Source):
             return str(obj.name)
         msg = f"Object of type {obj.__class__.__name__} is not JSON serializable"
