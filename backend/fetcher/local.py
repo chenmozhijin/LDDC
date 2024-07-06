@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import json
+import os
 import re
-from pathlib import Path
 
 from backend.lyrics import Lyrics
 from utils.enum import QrcType, Source
@@ -74,11 +74,11 @@ def json2lyrics(json_data: dict, lyrics: Lyrics) -> None:
 
 def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
     if data is None:
-        if Path(path).is_file():
+        if os.path.isfile(path):
             msg = f"没有找到歌词: {path}"
             raise LyricsNotFoundError(msg)
 
-        with Path(path).open('rb') as f:
+        with open(path, 'rb') as f:
             data = f.read()
 
     # 判断歌词格式
@@ -94,8 +94,8 @@ def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
             qrc_types[qrc_type] = data
             for qrc_type, qrc_data in qrc_types.items():
 
-                if not qrc_data and Path(path).is_file(f"{prefix}_qm{qrc_type}.qrc"):
-                    with Path(f"{prefix}_qm{qrc_type}.qrc").open('rb') as f:
+                if not qrc_data and os.path.isfile(path, f"{prefix}_qm{qrc_type}.qrc"):
+                    with open(f"{prefix}_qm{qrc_type}.qrc", 'rb') as f:
                         qrc_data_ = f.read()
                     if qrc_data_.startswith(QRC_MAGICHEADER):
                         qrc_data = qrc_data_  # noqa: PLW2901
