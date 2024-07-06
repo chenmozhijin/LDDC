@@ -1,25 +1,17 @@
 ################################################################################
 ## Form generated from reading UI file 'get_list_lyrics.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QMetaObject,
-)
-from PySide6.QtWidgets import (
-    QPlainTextEdit,
-    QProgressBar,
-    QPushButton,
-    QVBoxLayout,
-)
+from PySide6.QtCore import QCoreApplication, QMetaObject
+from PySide6.QtWidgets import QPlainTextEdit, QProgressBar, QPushButton, QVBoxLayout
 
 
 class Ui_get_list_lyrics:
-    def setupUi(self, get_list_lyrics) -> None:
+    def setupUi(self, get_list_lyrics):
         if not get_list_lyrics.objectName():
             get_list_lyrics.setObjectName("get_list_lyrics")
         get_list_lyrics.resize(900, 450)
@@ -50,15 +42,7 @@ class Ui_get_list_lyrics:
     # setupUi
 
     def retranslateUi(self, get_list_lyrics):
-        get_list_lyrics.setWindowTitle(
-            QCoreApplication.translate(
-                "get_list_lyrics",
-                "\u83b7\u53d6\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd",
-                None,
-            ),
-        )
-        self.pushButton.setText(
-            QCoreApplication.translate("get_list_lyrics", "\u53d6\u6d88", None),
-        )
+        get_list_lyrics.setWindowTitle(QCoreApplication.translate("get_list_lyrics", "\u83b7\u53d6\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd", None))
+        self.pushButton.setText(QCoreApplication.translate("get_list_lyrics", "\u53d6\u6d88", None))
 
     # retranslateUi

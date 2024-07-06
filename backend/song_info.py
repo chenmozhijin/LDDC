@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-import logging
 import os
 import re
 
 import mutagen
 from PySide6.QtCore import QCoreApplication
 
+from utils.logger import logger
 from utils.utils import read_unknown_encoding_file, time2ms
 
 file_extensions = ['3g2', 'aac', 'aif', 'ape', 'apev2', 'dff',
@@ -18,7 +18,7 @@ file_extensions = ['3g2', 'aac', 'aif', 'ape', 'apev2', 'dff',
 
 def get_audio_file_info(file_path: str) -> dict | str:
     if not os.path.isfile(file_path):
-        logging.error(f"未找到文件: {file_path}")
+        logger.error("未找到文件: %s", file_path)
         return QCoreApplication.translate("song_info", "未找到文件: ") + file_path
     try:
         if file_path.lower().split('.')[-1] in file_extensions:
@@ -65,7 +65,7 @@ def get_audio_file_info(file_path: str) -> dict | str:
                     return file_path + QCoreApplication.translate("song_info", " 无法获取歌曲标题,跳过")
                 return metadata
     except Exception as e:
-        logging.exception(f"{file_path}获取文件信息失败")
+        logger.exception("%s获取文件信息失败", file_path)
         return file_path + QCoreApplication.translate("song_info", "获取文件信息失败:") + str(e)
 
 
@@ -74,11 +74,11 @@ def get_audio_duration(file_path: str) -> str | None:
         audio = mutagen.File(file_path)
         return int(audio.info.length) if audio.info.length else None
     except Exception:
-        logging.exception(f"{file_path}获取文件时长失败")
+        logger.exception("%s获取文件时长失败", file_path)
         return None
 
 
-def parse_cue(file_path: str) -> tuple[list, str]:  # noqa: PLR0915
+def parse_cue(file_path: str) -> tuple[list, str]:  # noqa: PLR0915, C901, PLR0912
     file_content = read_unknown_encoding_file(file_path=file_path, sign_word=("FILE", "FILE"))
 
     if file_content is None:
@@ -188,7 +188,7 @@ def parse_cue(file_path: str) -> tuple[list, str]:  # noqa: PLR0915
                 else:
                     cuedata["files"][-1]["tracks"][-1]["replaygain_track_peak"] = re.findall(r'^    REM REPLAYGAIN_TRACK_PEAK (.*)', line)[0]
         else:
-            logging.warning(f"未知的行{line}")
+            logger.warning("解析cue时遇到未知的行: %s", line)
 
     songs = []
     audio_file_paths = []
@@ -207,7 +207,7 @@ def parse_cue(file_path: str) -> tuple[list, str]:  # noqa: PLR0915
 
         for i, track in enumerate(file["tracks"]):
             if "title" not in track:
-                logging.warning(f"未找到标题, 跳过第{i+1}首")
+                logger.warning("未找到标题, 跳过第%s首", i + 1)
                 continue
             songs.append({"title": track["title"],
                           "artist": None,

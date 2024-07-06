@@ -2,13 +2,11 @@ from PySide6.QtCore import QObject
 
 
 class ErrorMsgTranslator(QObject):
-    """
-    错误信息翻译器
-    """
+    """错误信息翻译器"""
 
     def translate(self, msg: str) -> str:
-        """
-        翻译错误信息
+        """翻译错误信息
+
         :param msg: 错误信息
         :return: 错误信息
         """
@@ -49,40 +47,35 @@ translator = ErrorMsgTranslator()
 
 
 class LyricsRequestError(Exception):
-    """
-    歌词请求错误
-    """
+    """歌词请求错误"""
+
     def __init__(self, msg: str) -> None:
         super().__init__(translator.translate(msg))
 
 
 class LyricsProcessingError(Exception):
-    """
-    歌词处理错误
-    """
+    """歌词处理错误"""
+
     def __init__(self, msg: str) -> None:
         super().__init__(translator.translate(msg))
 
 
 class LyricsNotFoundError(LyricsProcessingError):
-    """
-    歌词未找到错误
-    """
+    """歌词未找到错误"""
+
     def __init__(self, msg: str) -> None:
         super().__init__(translator.translate(msg))
 
 
 class LyricsDecryptError(LyricsProcessingError):
-    """
-    歌词解密错误
-    """
+    """歌词解密错误"""
+
     def __init__(self, msg: str) -> None:
         super().__init__(translator.translate(msg))
 
 
 class LyricsFormatError(LyricsProcessingError):
-    """
-    歌词格式错误
-    """
+    """歌词格式错误"""
+
     def __init__(self, msg: str) -> None:
         super().__init__(translator.translate(msg))

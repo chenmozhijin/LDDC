@@ -2,12 +2,11 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import json
 import os
-import sqlite3
 from typing import Any
 
 from PySide6.QtCore import QMutex, QMutexLocker
 
-from .paths import config_dir, data_dir, default_save_lyrics_dir
+from .paths import config_dir, default_save_lyrics_dir
 
 
 class Config(dict):
@@ -53,28 +52,25 @@ class Config(dict):
     def __getitem__(self, key: Any) -> Any:
         if self.mutex is None:
             return super().__getitem__(key)
-        self.mutex.lock()
-        value = super().__getitem__(key)
-        self.mutex.unlock()
-        return value
+        with QMutexLocker(self.mutex):
+            return super().__getitem__(key)
 
     def __setitem__(self, key: Any, value: Any) -> None:
         if self.mutex is None:
-            return super().__setitem__(key, value)
-        self.mutex.lock()
-        super().__setitem__(key, value)
-        self.write_config()
-        self.mutex.unlock()
-        return None
+            super().__setitem__(key, value)
+            return
+        with QMutexLocker(self.mutex):
+            super().__setitem__(key, value)
+            self.write_config()
 
     def __delitem__(self, key: Any) -> None:
         if self.mutex is None:
-            return super().__delitem__(key)
-        self.mutex.lock()
-        super().__delitem__(key)
-        self.write_config()
-        self.mutex.unlock()
-        return None
+            super().__delitem__(key)
+            return
+        with QMutexLocker(self.mutex):
+            super().__delitem__(key)
+            self.write_config()
+        return
 
 
 cfg = Config()

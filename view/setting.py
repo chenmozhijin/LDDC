@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import os
-from logging import Logger
 
 from PySide6.QtCore import SignalInstance
 from PySide6.QtWidgets import QFileDialog, QWidget
@@ -9,15 +8,14 @@ from PySide6.QtWidgets import QFileDialog, QWidget
 from ui.settings_ui import Ui_settings
 from utils.cache import cache
 from utils.data import cfg
+from utils.logger import logger
 from utils.translator import load_translation
-from utils.utils import str2log_level
 
 
 class SettingWidget(QWidget, Ui_settings):
 
-    def __init__(self, logger: Logger, widget_changed_signal: SignalInstance) -> None:
+    def __init__(self, widget_changed_signal: SignalInstance) -> None:
         super().__init__()
-        self.logger = logger
         self.setupUi(self)
         self.init_ui()
         self.widget_changed_signal = widget_changed_signal
@@ -69,7 +67,7 @@ class SettingWidget(QWidget, Ui_settings):
         self.log_level_comboBox.currentTextChanged.connect(
             lambda: cfg.setitem("log_level", self.log_level_comboBox.currentText()))
         self.log_level_comboBox.currentTextChanged.connect(
-            lambda: self.logger.setLevel(str2log_level(self.log_level_comboBox.currentText())))
+            lambda: logger.set_level(self.log_level_comboBox.currentText()))
 
         self.select_default_save_path_pushButton.clicked.connect(self.select_default_save_path)
 

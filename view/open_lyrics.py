@@ -1,4 +1,3 @@
-import logging
 import os
 
 from PySide6.QtWidgets import QFileDialog, QWidget
@@ -10,6 +9,7 @@ from backend.lyrics import Lyrics
 from ui.open_lyrics_ui import Ui_open_lyrics
 from utils.data import cfg
 from utils.enum import LyricsFormat, QrcType, Source
+from utils.logger import logger
 from utils.utils import get_lyrics_format_ext, read_unknown_encoding_file
 from view.msg_box import MsgBox
 
@@ -76,7 +76,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
                     MsgBox.warning(self, self.tr("警告"), self.tr("不支持的文件格式！"))
                     return
             except Exception as e:
-                logging.exception("打开失败")
+                logger.exception("打开失败")
                 MsgBox.critical(self, self.tr("警告"), self.tr("打开失败：") + str(e))
                 return
             if lyrics is None:
@@ -108,7 +108,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
             lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
         except Exception as e:
-            logging.exception("转换失败")
+            logger.exception("转换失败")
             MsgBox.critical(self, self.tr("错误"), self.tr("转换失败：") + str(e))
             return
         self.plainTextEdit.setPlainText(lrc)
@@ -119,7 +119,8 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             return
         type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
         lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
-        self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value()))
+        self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+                                        offset=self.offset_spinBox.value()))
 
     def change_lyrics_type(self) -> None:
         if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics):

@@ -1,18 +1,18 @@
-import logging
 from zlib import decompress
 
 from backend.decryptor.qmc1 import qmc1_decrypt
 from backend.decryptor.tripledes import DECRYPT, tripledes_crypt, tripledes_key_setup
 from utils.enum import QrcType
 from utils.error import LyricsDecryptError
+from utils.logger import logger
 
 QRC_KEY = b"!@#)(*$%123ZXC!@!@#)(NHL"
-KRC_KEY = b'@Gaw^2tGQ61-\xce\xd2ni'
+KRC_KEY = b"@Gaw^2tGQ61-\xce\xd2ni"
 
 
-def qrc_decrypt(encrypted_qrc: str | bytearray | bytes, qrc_type: QrcType) -> str:
+def qrc_decrypt(encrypted_qrc: str | bytearray | bytes, qrc_type: QrcType = QrcType.CLOUD) -> str:
     if encrypted_qrc is None or encrypted_qrc.strip() == "":
-        logging.error("没有可解密的数据")
+        logger.error("没有可解密的数据")
         msg = "没有可解密的数据"
         raise LyricsDecryptError(msg)
 
@@ -23,7 +23,7 @@ def qrc_decrypt(encrypted_qrc: str | bytearray | bytes, qrc_type: QrcType) -> st
     elif isinstance(encrypted_qrc, bytes):
         encrypted_text_byte = bytearray(encrypted_qrc)
     else:
-        logging.error("无效的加密数据类型")
+        logger.error("无效的加密数据类型")
         msg = "无效的加密数据类型"
         raise LyricsDecryptError(msg)
 
@@ -41,7 +41,7 @@ def qrc_decrypt(encrypted_qrc: str | bytearray | bytes, qrc_type: QrcType) -> st
 
         decrypted_qrc = decompress(data).decode("utf-8")
     except Exception as e:
-        logging.exception("解密失败")
+        logger.exception("解密失败")
         msg = "解密失败"
         raise LyricsDecryptError(msg) from e
     return decrypted_qrc
@@ -53,7 +53,7 @@ def krc_decrypt(encrypted_lyrics: bytearray | bytes) -> str:
     elif isinstance(encrypted_lyrics, bytearray):
         encrypted_data = encrypted_lyrics[4:]
     else:
-        logging.error("无效的加密数据类型")
+        logger.error("无效的加密数据类型")
         msg = "无效的加密数据类型"
         raise LyricsDecryptError(msg)
 
@@ -64,6 +64,6 @@ def krc_decrypt(encrypted_lyrics: bytearray | bytes) -> str:
 
         return decompress(decrypted_data).decode('utf-8')
     except Exception as e:
-        logging.exception("解密失败")
+        logger.exception("解密失败")
         msg = "解密失败"
         raise LyricsDecryptError(msg) from e

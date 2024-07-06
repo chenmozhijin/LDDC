@@ -5,13 +5,20 @@ from backend.decryptor import qrc_decrypt
 from backend.lyrics import Lyrics, LyricsData
 from utils.enum import QrcType
 from utils.error import LyricsProcessingError, LyricsRequestError
+from utils.logger import logger
 
 from .share import lrc2dict_list, plaintext2list
+
+QRC_PATTERN = re.compile(r'<Lyric_1 LyricType="1" LyricContent="(?P<content>.*?)"/>', re.DOTALL)
 
 
 def qrc2list(qrc: str) -> tuple[dict, list]:
     """将qrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
-    qrc = re.findall(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', qrc, re.DOTALL)[0]
+    qrc: re.Match = QRC_PATTERN.search(qrc)
+    if not qrc or not qrc.group("content"):
+        msg = "不支持的歌词格式"
+        raise LyricsProcessingError(msg)
+    qrc: str = qrc.group("content")
     qrc_lines = qrc.split('\n')
     tags = {}
     lrc_list: LyricsData = []
@@ -40,6 +47,17 @@ def qrc2list(qrc: str) -> tuple[dict, list]:
     return tags, lrc_list
 
 
+def qrc_str_parse(lyric: str) -> tuple[dict, list]:
+    if re.search(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', lyric, re.DOTALL):
+        return qrc2list(lyric)
+    if "[" in lyric and "]" in lyric:
+        try:
+            return lrc2dict_list(lyric, to_list=True)
+        except Exception:
+            logger.exception("尝试将歌词以lrc格式解析时失败,解析为纯文本")
+    return {}, plaintext2list(lyric)
+
+
 def get_lyrics(lyrics: Lyrics) -> None:
     response = qm_get_lyrics(lyrics.title, lyrics.artist, lyrics.album, lyrics.id, lyrics.duration)
     if isinstance(response, str):
@@ -55,13 +73,7 @@ def get_lyrics(lyrics: Lyrics) -> None:
             lyric = qrc_decrypt(encrypted_lyric, QrcType.CLOUD)
 
             if lyric is not None:
-                if re.search(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', lyric, re.DOTALL):
-                    tags, lyric = qrc2list(lyric)
-                elif "[" in lyric and "]" in lyric:
-                    tags, lyric = lrc2dict_list(lyric, to_list=True)
-                else:
-                    tags = {}
-                    lyric = plaintext2list(lyric)
+                tags, lyric = qrc_str_parse(lyric)
 
                 if key == "orig":
                     lyrics.tags = tags

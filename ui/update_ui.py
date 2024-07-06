@@ -41,7 +41,7 @@ class Ui_UpdateDialog:
         self.buttonBox.setObjectName("buttonBox")
         self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
         self.buttonBox.setStandardButtons(
-            QDialogButtonBox.StandardButton.No | QDialogButtonBox.StandardButton.Yes
+            QDialogButtonBox.StandardButton.No | QDialogButtonBox.StandardButton.Yes,
         )
 
         self.verticalLayout.addWidget(self.buttonBox)
@@ -56,14 +56,14 @@ class Ui_UpdateDialog:
 
     def retranslateUi(self, UpdateDialog):
         UpdateDialog.setWindowTitle(
-            QCoreApplication.translate("UpdateDialog", "Dialog", None)
+            QCoreApplication.translate("UpdateDialog", "Dialog", None),
         )
         self.label.setText(
             QCoreApplication.translate(
                 "UpdateDialog",
                 "\u53d1\u73b0\u65b0\u7248\u672c\uff0c\u662f\u5426\u524d\u5f80GitHub\u4e0b\u8f7d\u66f4\u65b0\uff1f",
                 None,
-            )
+            ),
         )
         self.textBrowser.setMarkdown("")
         self.textBrowser.setHtml(
@@ -78,7 +78,7 @@ class Ui_UpdateDialog:
                 "</style></head><body style=\" font-family:'Microsoft YaHei UI'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
                 '<p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><br /></p></body></html>',
                 None,
-            )
+            ),
         )
 
     # retranslateUi

@@ -29,11 +29,11 @@ def aes_decrypt(cipher_buffer: bytes, key: bytes) -> bytes:
 
 
 def eapi_params_encrypt(path: bytes, params: dict) -> str:
-    """
-    eapi接口参数加密
+    """eapi接口参数加密.
+
     :param path: url路径
     :param params: 明文参数
-    :return str: 请求data
+    :return str: 请求data.
     """
     params_bytes = json.dumps(params, separators=(',', ':')).encode()
     sign_src = b'nobody' + path + b'use' + params_bytes + b'md5forencrypt'
@@ -44,8 +44,8 @@ def eapi_params_encrypt(path: bytes, params: dict) -> str:
 
 
 def eapi_params_decrypt(encrypted_text: str) -> dict:
-    """
-    解密使用 _eapi_encrypt 函数加密的文本
+    """解密使用 _eapi_encrypt 函数加密的文本.
+
     :param crypto_text: 加密文本
     :return: 解密后的 dict 对象
     """

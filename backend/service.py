@@ -1,10 +1,8 @@
 import json
-import logging
 import re
 import sys
 import time
 from abc import abstractmethod
-from argparse import Namespace
 from random import SystemRandom
 
 import psutil
@@ -28,7 +26,9 @@ from PySide6.QtNetwork import (
 )
 
 from backend.lyrics import LyricsWord, MultiLyricsData
-from backend.worker import AutoLyricsFetcher
+from backend.worker import AutoLyricsFetcher  # noqa: F401
+from utils.args import args
+from utils.logger import DEBUG, logger
 from utils.paths import command_line
 from utils.threadpool import threadpool
 from view.desktop_lyrics import DesktopLyricsWidget
@@ -63,7 +63,7 @@ class ServiceInstanceBase(QRunnable):
         instance_dict_mutex.unlock()
 
     def run(self) -> None:
-        print(f"{self.instance_id} started")
+        logger.info("Service instance %s started", self.instance_id)
         self.loop = QEventLoop()
         self.loop.exec()
 
@@ -95,7 +95,7 @@ class LDDCService(QObject):
     handle_task = Signal(int, dict)
     instance_del = Signal()
 
-    def __init__(self, args: Namespace) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self.q_server = QLocalServer(self)
         self.q_server_name = "LDDCService"
@@ -104,9 +104,9 @@ class LDDCService(QObject):
         self.shared_memory.setKey("LDDCLOCK")
 
         self.clients: dict[int, tuple[QTcpSocket, bytearray]] = {}
-        self.start_service(args)
+        self.start_service()
 
-    def start_service(self, args: Namespace) -> None:
+    def start_service(self) -> None:
 
         if args.get_service_port and not self.shared_memory.attach():
             cmd = command_line.split(" ")
@@ -120,17 +120,17 @@ class LDDCService(QObject):
                 time.sleep(0.05)
                 wait_time += 0.05
                 if wait_time > 5:
-                    logging.error("LDDC服务启动失败")
+                    logger.error("LDDC服务启动失败")
                     sys.exit(1)
-            logging.info("LDDC服务启动成功")
+            logger.info("LDDC服务启动成功")
 
         if self.shared_memory.attach() or not self.shared_memory.create(1):
             # 说明已经有其他LDDC服务启动
-            logging.info("LDDC服务已经启动")
+            logger.info("LDDC服务已经启动")
             q_client = QLocalSocket()
             q_client.connectToServer(self.q_server_name)
             if not q_client.waitForConnected(1000):
-                logging.error("LDDC服务连接失败")
+                logger.error("LDDC服务连接失败")
                 sys.exit(1)
             if args.get_service_port:
                 message = "get_service_port"
@@ -140,19 +140,19 @@ class LDDCService(QObject):
                 message = "show"
             q_client.write(message.encode())
             q_client.flush()
-            logging.info(f"发送消息：{message}")
+            logger.info("发送消息：%s", message)
             if q_client.waitForReadyRead(1000):
                 response = q_client.readAll().data().decode()
-                logging.info(f"收到服务端消息：{response}")
+                logger.info("收到服务端消息：%s", response)
                 if args.get_service_port:
-                    print(response)
+                    print(response)  # 输出服务端监听的端口  # noqa: T201
                     sys.exit(0)
                 else:
                     self.show_signal.emit()
                     self.q_server.close()
                     sys.exit(0)
             else:
-                logging.error("LDDC服务连接失败")
+                logger.error("LDDC服务连接失败")
                 sys.exit(1)
         else:
             self.q_server.listen(self.q_server_name)
@@ -163,9 +163,9 @@ class LDDCService(QObject):
                 if self.socketserver.listen(QHostAddress("127.0.0.1"), port):
                     self.socket_port = port
                     break
-                logging.error(f"端口{port}被占用")
+                logger.error("端口%s被占用", port)
 
-            logging.info(f"LDDC服务启动成功, 端口: {self.socket_port}")
+            logger.info("LDDC服务启动成功, 端口: %s", self.socket_port)
             self.q_server.newConnection.connect(self.on_q_server_new_connection)
             self.socketserver.newConnection.connect(self.socket_on_new_connection)
 
@@ -186,7 +186,7 @@ class LDDCService(QObject):
 
     def q_server_read_client(self, client_connection: QLocalSocket) -> None:
         data = client_connection.readAll().data().decode()
-        logging.info(f"收到客户端消息：{data}")
+        logger.info("收到客户端消息:%s", data)
         match data:
             case "get_service_port":
                 client_connection.write(str(self.socket_port).encode())
@@ -198,7 +198,7 @@ class LDDCService(QObject):
                 client_connection.flush()
                 client_connection.disconnectFromServer()
             case _:
-                logging.error(f"未知消息：{data}")
+                logger.error("未知消息：%s", data)
 
     def socket_on_new_connection(self) -> None:
         client_socket = self.socketserver.nextPendingConnection()
@@ -212,9 +212,7 @@ class LDDCService(QObject):
         del self.clients[client_id]
 
     def socket_read_data(self, client_id: int) -> None:
-        """
-        处理客户端发送的数据(前4字节应为消息长度)
-        """
+        """处理客户端发送的数据(前4字节应为消息长度)"""
         client_socket = self.clients[client_id][0]
         if client_socket.bytesAvailable() > 0:
             self.clients[client_id][1].extend(client_socket.readAll().data())
@@ -237,13 +235,13 @@ class LDDCService(QObject):
         try:
             json_data = json.loads(data)
             if not isinstance(json_data, dict) or "task" not in json_data:
-                logging.error(f"数据格式错误：{data}")
+                logger.error("数据格式错误: %s", data)
                 return
         except json.JSONDecodeError:
-            logging.exception(f"JSON解码错误：{data}")
+            logger.exception("JSON解码错误: %s", data)
             return
-        print(f"收到客户端消息：{json.dumps(json_data, ensure_ascii=False, indent=4)}")
-        logging.debug(f"收到客户端消息：{json_data}")
+        if logger.level <= DEBUG:
+            logger.debug("收到客户端消息：%s", json.dumps(json_data, ensure_ascii=False, indent=4))
         if "id" not in json_data:
             match json_data["task"]:
                 case "new_desktop_lyrics_instance":
@@ -252,7 +250,7 @@ class LDDCService(QObject):
                     instance_dict[instance_id] = DesktopLyricsInstance(instance_id, json_data.get("pid"))
                     instance_dict_mutex.unlock()
                     threadpool.start(instance_dict[instance_id])
-                    print(f"创建新实例：{instance_id}")
+                    logger.info("创建新实例：%s", instance_id)
                     response = {"v": api_version, "id": instance_id}
                     self.send_response(client_id, json.dumps(response))
         elif json_data["id"] in instance_dict:
@@ -263,7 +261,7 @@ class LDDCService(QObject):
                 instance_dict[json_data["id"]].signals.handle_task.emit(json_data)
 
     def send_response(self, client_id: int, response: str) -> None:
-        print("send_response")
+        logger.debug("发送响应：%s", response)
         client_socket = self.clients[client_id][0]
         response_bytes = response.encode('utf-8')
         response_length = len(response_bytes)
@@ -286,23 +284,23 @@ class DesktopLyricsInstance(ServiceInstanceBase):
     def handle_task(self, task: dict) -> None:
         match task["task"]:
             case "chang_music":
-                print("chang_music")
+                logger.debug("chang_music")
             case "sync":
                 # 同步当前播放时间
                 playback_time = self.get_playback_time(task)
                 a = self.start_time
                 self.start_time = int(time.time() * 1000) - playback_time
-                print("sync, self.start_time:", self.start_time, "|", self.start_time - a)
+                logger.debug("sync, self.start_time: %s | %s", self.start_time, self.start_time - a)
 
             case "pause":
                 # 暂停歌词
-                print("pause")
+                logger.debug("pause")
                 if self.timer.isActive():
                     self.timer.stop()
 
             case "proceed":
                 # 继续歌词
-                print("proceed")
+                logger.debug("proceed")
                 playback_time = self.get_playback_time(task)
                 if playback_time is not None:
                     self.start_time = int(time.time() * 1000) - playback_time
@@ -310,10 +308,10 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                     self.start_time = int(time.time() * 1000) - self.current_time
                 if not self.timer.isActive():
                     self.timer.start(self.update_frequency)
-                print("proceed, self.start_time:", self.start_time)
+                logger.debug("proceed, self.start_time: %s", self.start_time)
 
             case "stop":
-                print("stop")
+                logger.debug("stop")
                 # 停止歌词
                 self.reset()
 
@@ -324,7 +322,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         if isinstance(playback_time, int) and isinstance(send_time, float):
             # 补偿网络延迟
             delay = (time.time() - send_time) * 1000
-            print("delay:", delay)
+            logger.debug("delay: %s ms", delay)
             if delay > 0:
                 playback_time = playback_time - round(delay)
         return playback_time
@@ -338,9 +336,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         super().run()
 
     def reset(self) -> None:
-        """
-        重置歌词
-        """
+        """重置歌词"""
         self.start_time = 0  # 当前unix时间 - 已播放的时间
         self.current_time = 0  # 当前已播放时间,单位:毫秒
         self.lyrics: MultiLyricsData = {}
@@ -349,10 +345,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         if self.timer.isActive():
             self.timer.stop()
 
-    def update_lyrics(self) -> None:
-        """
-        更新歌词
-        """
+    def update_lyrics(self) -> None:  # noqa: C901, PLR0912, PLR0915
+        """更新歌词"""
         self.current_time = int(time.time() * 1000) - self.start_time
         lyrics_to_display = {"l": [], "r": []}
         if not self.lyrics:
@@ -420,7 +414,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                         lyrics_lines.append((lyrics_data[index - 1][2], "l" if ((index - 1) % 2) == 0 else "r", 255))
                     elif index == 0:
                         # 第一个
-                        lyrics_lines.append((lyrics_data[index + 1][2], "l" if ((index + 1) % 2) == 0 else "r", 255 * self.current_time / lyrics_data[index + 1][0]))
+                        lyrics_lines.append(
+                            (lyrics_data[index + 1][2], "l" if ((index + 1) % 2) == 0 else "r", 255 * self.current_time / lyrics_data[index + 1][0]))
 
                     add2lyrics_to_display(lyrics_lines)
                     break
@@ -476,5 +471,6 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                     next_lyrics_lines = lyrics_data[after_lyrics_lines[0] + 1]
                     after_lyrics_index = after_lyrics_lines[0]
                     after_lyrics_lines = after_lyrics_lines[1]
-                    lyrics_lines.append((after_lyrics_lines[2], "l" if (after_lyrics_index % 2) == 0 else "r", 255 * self.current_time / after_lyrics_lines[0]))
+                    lyrics_lines.append(
+                        (after_lyrics_lines[2], "l" if (after_lyrics_index % 2) == 0 else "r", 255 * self.current_time / after_lyrics_lines[0]))
                     lyrics_lines.append((next_lyrics_lines[2], "l" if (next_lyrics_index % 2) == 0 else "r", 255 * self.current_time / next_lyrics_lines[0]))

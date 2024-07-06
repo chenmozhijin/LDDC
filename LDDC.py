@@ -1,11 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 __version__ = "v0.7.0-beta"
-import argparse
-import logging
-import os
+
 import sys
-import time
 
 from PySide6.QtCore import (
     QObject,
@@ -24,13 +21,11 @@ from backend.service import (
 )
 from backend.worker import CheckUpdate
 from ui.sidebar_window import SidebarButtonPosition, SidebarWindow
+from utils.args import args
 from utils.cache import cache, cache_version
-from utils.data import cfg, song_lyrics_db
+from utils.logger import logger
 from utils.threadpool import threadpool
 from utils.translator import apply_translation
-from utils.utils import (
-    str2log_level,
-)
 from view.about import AboutWidget
 from view.local_match import LocalMatchWidget
 from view.msg_box import MsgBox
@@ -38,22 +33,6 @@ from view.open_lyrics import OpenLyricsWidget
 from view.search import SearchWidget
 from view.setting import SettingWidget
 from view.update import UpdateQDialog
-
-current_directory = os.path.dirname(os.path.abspath(__file__))
-
-match sys.platform:
-    case "linux" | "darwin":
-        log_dir = os.path.expanduser("~/.config/LDDC/log")
-    case _:
-        log_dir = os.path.join(current_directory, "log")
-
-if not os.path.exists(log_dir):
-    os.mkdir(log_dir)
-logging.basicConfig(filename=os.path.join(log_dir, f'{time.strftime("%Y.%m.%d",time.localtime())}.log'),
-                    encoding="utf-8", format="[%(levelname)s]%(asctime)s\
-                          - %(module)s(%(lineno)d) - %(funcName)s:%(message)s")
-logger = logging.getLogger()
-logger.setLevel(str2log_level(cfg["log_level"]))
 
 res.resource_rc.qInitResources()
 
@@ -69,7 +48,7 @@ class MainWindow(SidebarWindow):
 
         self.search_widget = SearchWidget(self)
         self.local_match_widget = LocalMatchWidget()
-        self.settings_widget = SettingWidget(logger, self.widget_changed)
+        self.settings_widget = SettingWidget(self.widget_changed)
         self.about_widget = AboutWidget(__version__)
         self.open_lyrics_widget = OpenLyricsWidget()
         self.init_widgets()
@@ -157,11 +136,10 @@ class ExitManager(QObject):
             return False
 
     def exit(self) -> None:
-        logging.info("Exit...")
+        logger.info("Exit...")
         self.close_signal.emit()
         service_thread.quit()
         service_thread.wait()
-        song_lyrics_db.close()
 
         cache["version"] = cache_version
         cache.expire()
@@ -182,18 +160,15 @@ class ExitManager(QObject):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--get-service-port", action='store_true', dest='get_service_port')
-    parser.add_argument("--not-show", action='store_false', dest='show')
+
     app = QApplication(sys.argv)
 
     exit_manager = ExitManager()
 
-    args = parser.parse_args()
     show = args.show
     if args.get_service_port:
         show = False
-    service = LDDCService(args)
+    service = LDDCService()
     service_thread = QThread(app)
     service.moveToThread(service_thread)
     service_thread.start()

@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import json
-import logging
 import re
 from typing import NewType
 
@@ -11,6 +10,7 @@ from utils.enum import (
     LyricsType,
     Source,
 )
+from utils.logger import logger
 
 try:
     main = __import__("__main__")
@@ -60,10 +60,7 @@ def has_content(line: str) -> bool:
     content = re.sub(r"\[\d+:\d+\.\d+\]|\[\d+,\d+\]|<\d+:\d+\.\d+>", "", line).strip()
     if content in ("", "//"):
         return False
-    if len(content) == 2 and content[0].isupper() and content[1] == "：":
-        # 歌手标签行
-        return False
-    return True
+    return not (len(content) == 2 and content[0].isupper() and content[1] == "：")  # 歌手标签行
 
 
 def get_clear_lyric(lyric: str) -> str:
@@ -106,8 +103,8 @@ def lrclist2str(lrc_list: list, verbatim: bool = True) -> str:
 
 
 def linelist2str(line_list: LyricsLine, verbatim: bool = True, enhanced: bool = False) -> str:
-    """
-    将歌词行列表转换为LRC歌词字符串
+    """将歌词行列表转换为LRC歌词字符串
+
     :param line_list: 歌词行列表
     :param verbatim: 是否逐字模式
     :param Enhanced: 是否为增强格式歌词
@@ -161,7 +158,7 @@ def linelist2str(line_list: LyricsLine, verbatim: bool = True, enhanced: bool = 
         if line_list[1]:
             lrc_str += f"[{ms2formattime(line_list[1])}]"  # 添加尾首时间戳
     else:
-        logging.warning(f"转换为lrc时忽略行{line_list}")
+        logger.warning("转换为lrc时忽略行 %s", line_list)
     return lrc_str
 
 
@@ -190,9 +187,7 @@ def is_same_line(line1: LyricsLine, line2: LyricsLine) -> bool:
         return True
     clean2_line1 = re.sub(r'[(（][^）)]*[）)]', '', clean1_line1)
     clean2_line2 = re.sub(r'[(（][^）)]*[）)]', '', clean1_line2)
-    if clean2_line1 == clean2_line2 != "":
-        return True
-    return False
+    return clean2_line1 == clean2_line2 != ""
 
 
 def find_closest_match(list1: list, list2: list, list3: list | None = None, source: Source | None = None) -> list[tuple[list, list]]:
@@ -225,13 +220,13 @@ def find_closest_match(list1: list, list2: list, list3: list | None = None, sour
             list12 = list1
             list22 = list2
         if len(list12) == len(list22):
-            logging.info("qm/kg 匹配方法")
+            logger.info("qm/kg 匹配方法")
             for i, value in enumerate(list12):
                 merged_list.append((value, list22[i]))
             return merged_list
         list12, list22 = None, None
 
-    logging.info("other 匹配方法")
+    logger.info("other 匹配方法")
 
     for i, value in enumerate(list1):
         list1[i] = (value[0], value[1], tuple(value[2]))
@@ -271,9 +266,9 @@ def find_closest_match(list1: list, list2: list, list3: list | None = None, sour
                 else:
                     merged_dict[closest_lyrics22] = lyrics1
                     if abs(closest_timestamp22 - timestamp1) > 1000:
-                        logging.warning(f"{lyrics1}, {closest_lyrics22}匹配可能错误")
+                        logger.warning("%s, %s匹配可能错误", lyrics1, closest_lyrics22)
             else:
-                logging.warning(f"{lyrics1}无法匹配")
+                logger.warning("%s无法匹配", lyrics1)
 
         i += 1
 
@@ -289,10 +284,11 @@ def find_closest_match(list1: list, list2: list, list3: list | None = None, sour
 
 
 class Lyrics(dict):
+    INFO_KEYS = ("source", "title", "artist", "album", "id", "mid", "duration", "accesskey")
+
     def __init__(self, info: dict | None = None) -> None:
         if info is None:
             info = {}
-        logging.info(f"初始化{info}")
         self.source = info.get("source", None)
         self.title = info.get("title", None)
         self.artist = info.get("artist", None)
@@ -306,8 +302,8 @@ class Lyrics(dict):
         self.tags = {}
 
     def add_offset(self, multi_lyrics_data: MultiLyricsData, offset: int = 0) -> MultiLyricsData:
-        """
-        添加偏移量
+        """添加偏移量
+
         :param multi_lyrics_data:歌词
         :param offset:偏移量
         :return: 偏移后的歌词
@@ -332,16 +328,16 @@ class Lyrics(dict):
             for lrc_type, lrc_list in multi_lyrics_data.items()
         }
 
-    def get_merge_lrc(self, lyrics_order: list, lyrics_format: LyricsFormat = LyricsFormat.VERBATIMLRC, offset: int = 0) -> str:
-        """
-        合并歌词
+    def get_merge_lrc(self, lyrics_order: list, lyrics_format: LyricsFormat = LyricsFormat.VERBATIMLRC, offset: int = 0) -> str:  # noqa: C901, PLR0912, PLR0915
+        """合并歌词
+
         :param lyrics_order:歌词顺序,同时决定需要合并的类型
         :param lyrics_format:歌词格式
         :param offset:偏移量
         :return: 合并后的歌词
         """
         if len(lyrics_order) == 0:
-            logging.warning("没有需要合并的歌词")
+            logger.warning("没有需要合并的歌词")
             return ""
 
         lyrics_dict: MultiLyricsData = self.add_offset(MultiLyricsData(self), offset)
@@ -379,7 +375,8 @@ class Lyrics(dict):
                     if not has_content(line_str):
                         return ""
                     if orig_linelist[0] is not None:
-                        if re.search(end_time_pattern, line_str) or orig_linelist[1] is None or lyrics_format == LyricsFormat.LINEBYLINELRC:  # 检查是添加末尾时间戳
+                        if re.search(end_time_pattern, line_str) or orig_linelist[1] is None or lyrics_format == LyricsFormat.LINEBYLINELRC:
+                            # 检查是添加末尾时间戳
                             return f"[{ms2formattime(orig_linelist[0])}]{line_str}"
                         if lyrics_format == LyricsFormat.ENHANCEDLRC:
                             if len(line[2]) != 1:
@@ -426,14 +423,14 @@ class Lyrics(dict):
                         endtime = orig_linelist[1]
 
                     srt_lines.append(f"{sn}\n{ms2srt_timestamp(orig_linelist[0])} --> {ms2srt_timestamp(endtime)}\n")
-                    for lrc_type in lyrics_order:
-                        match lrc_type:
+                    for lang in lyrics_order:
+                        match lang:
                             case "orig":
                                 srt_lines.append("".join([word[2]for word in orig_linelist[2]]) + "\n")
                             case "ts" | "roma":
-                                if lrc_type not in mapping_tables:
+                                if lang not in mapping_tables:
                                     continue
-                                match_lines = [line for orig_line, line in mapping_tables[lrc_type] if orig_line == orig_linelist]
+                                match_lines = [line for orig_line, line in mapping_tables[lang] if orig_line == orig_linelist]
                                 if match_lines:
                                     match_line_str = "".join([word[2]for word in match_lines[0][2]])
                                     if has_content(match_line_str):
@@ -457,15 +454,14 @@ class Lyrics(dict):
                     "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle,"
                     " Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
                 ])
-                for lrc_type in lyrics_order:
-                    if lrc_type in mapping_tables or lrc_type == "orig":
-                        ass_lines.append(f"Style: {lrc_type},Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1")
+                ass_lines.extend([
+                    f"Style: {lrc_type},Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1" for lrc_type in self])
 
                 ass_lines.extend(["",
                                   "[Events]",
                                   "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text"])
-                for lrc_type in lyrics_order[::-1]:
-                    if lrc_type in mapping_tables or lrc_type == "orig":
+                for lang in lyrics_order[::-1]:
+                    if lang in self:
                         for i, orig_linelist in enumerate(lyrics_dict["orig"]):
                             ass_line = "Dialogue: 0,"
                             if orig_linelist[1] is None:
@@ -477,11 +473,11 @@ class Lyrics(dict):
                                     endtime = orig_linelist[0] + 10000  # 加十秒
                             else:
                                 endtime = orig_linelist[1]
-                            ass_line += f"{ms2ass_timestamp(orig_linelist[0])},{ms2ass_timestamp(endtime)},{lrc_type},,0,0,0,,"
-                            if lrc_type == "orig":
+                            ass_line += f"{ms2ass_timestamp(orig_linelist[0])},{ms2ass_timestamp(endtime)},{lang},,0,0,0,,"
+                            if lang == "orig":
                                 line = orig_linelist
                             else:
-                                match_lines = [line for orig_line, line in mapping_tables[lrc_type] if orig_line == orig_linelist]
+                                match_lines = [line for orig_line, line in mapping_tables[lang] if orig_line == orig_linelist]
                                 if not match_lines or not has_content("".join([word[2]for word in match_lines[0][2]])):
                                     continue
                                 line = match_lines[0]
@@ -504,9 +500,7 @@ class Lyrics(dict):
         return ""
 
     def get_full_timestamps_lyrics(self) -> MultiLyricsData | False:
-        """
-        获取完整时间戳的歌词
-        """
+        """获取完整时间戳的歌词"""
         multi_lyrics_data: MultiLyricsData = {}
         for lrc_type, lrc_data in self.items():
             multi_lyrics_data[lrc_type] = []
@@ -521,7 +515,7 @@ class Lyrics(dict):
                     elif index + 1 == len(lrc_data) and self.duration is not None:
                         lrc_line[1] = self.duration * 1000
                     elif index + 1 == len(lrc_data):
-                        logging.warning("歌词时间戳不完整，无法生成精准的完整时间戳的歌词")
+                        logger.warning("歌词时间戳不完整，无法生成精准的完整时间戳的歌词")
                         lrc_line[1] = lrc_line[0] + 10000  # 加十秒
                     else:
                         return False
@@ -538,7 +532,7 @@ class Lyrics(dict):
                         elif lrc_line[2][w_index + 1][0] is not None:
                             lrc_line[2][w_index][1] = lrc_line[2][w_index + 1][0]
                         else:
-                            logging.error("歌词逐字时间戳不完整，无法生成完整时间戳的歌词")
+                            logger.error("歌词逐字时间戳不完整，无法生成完整时间戳的歌词")
                             return False
 
                 multi_lyrics_data[lrc_type].append(lrc_line)

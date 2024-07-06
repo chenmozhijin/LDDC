@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import json
-import os
 import re
-from typing import Any
+from pathlib import Path
 
 from backend.lyrics import Lyrics
 from utils.enum import QrcType, Source
@@ -11,14 +10,14 @@ from utils.error import LyricsFormatError, LyricsNotFoundError, LyricsProcessing
 from utils.utils import read_unknown_encoding_file
 
 from .kg import krc2dict, krc_decrypt
-from .qm import qrc2list, qrc_decrypt
-from .share import lrc2dict_list, plaintext2list
+from .qm import qrc_decrypt, qrc_str_parse
+from .share import lrc2dict_list
 
 QRC_MAGICHEADER = b'\x98%\xb0\xac\xe3\x02\x83h\xe8\xfcl'
 KRC_MAGICHEADER = b'krc18'
 
 
-def json2lyrics(json_data: Any, lyrics: Lyrics) -> None:
+def json2lyrics(json_data: dict, lyrics: Lyrics) -> None:
     if not isinstance(json_data, dict):
         msg = "JSON歌词数据必须是一个字典"
         raise LyricsProcessingError(msg)
@@ -75,11 +74,11 @@ def json2lyrics(json_data: Any, lyrics: Lyrics) -> None:
 
 def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
     if data is None:
-        if os.path.isfile(path):
+        if Path(path).is_file():
             msg = f"没有找到歌词: {path}"
             raise LyricsNotFoundError(msg)
 
-        with open(path, 'rb') as f:
+        with Path(path).open('rb') as f:
             data = f.read()
 
     # 判断歌词格式
@@ -94,21 +93,16 @@ def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
             qrc_types = {"": None, "Roma": None, "ts": None}
             qrc_types[qrc_type] = data
             for qrc_type, qrc_data in qrc_types.items():
-                if not qrc_data and os.path.isfile(f"{prefix}_qm{qrc_type}.qrc"):
-                    with open(f"{prefix}_qm{qrc_type}.qrc", 'rb') as f:
+
+                if not qrc_data and Path(path).is_file(f"{prefix}_qm{qrc_type}.qrc"):
+                    with Path(f"{prefix}_qm{qrc_type}.qrc").open('rb') as f:
                         qrc_data_ = f.read()
                     if qrc_data_.startswith(QRC_MAGICHEADER):
                         qrc_data = qrc_data_  # noqa: PLW2901
 
                 if qrc_data:
                     lyric = qrc_decrypt(qrc_data, QrcType.LOCAL)
-                    if re.search(r'<Lyric_1 LyricType="1" LyricContent="(.*?)"/>', lyric, re.DOTALL):
-                        tags, lyric = qrc2list(lyric)
-                    elif "[" in lyric and "]" in lyric:
-                        tags, lyric = lrc2dict_list(lyric, to_list=True)
-                    else:
-                        tags = {}
-                        lyric = plaintext2list(lyric)
+                    tags, lyric = qrc_str_parse(lyric)
                     lyrics.tags.update(tags)
                     match qrc_type:
                         case "":
@@ -118,7 +112,7 @@ def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
                         case "ts":
                             lyrics["ts"] = lyric
         else:
-            lyrics.tags, lyric = qrc2list(qrc_decrypt(data))
+            lyrics.tags, lyric = qrc_str_parse(qrc_decrypt(qrc_data, QrcType.LOCAL))
             lyrics[0] = lyric
 
     elif data.startswith(KRC_MAGICHEADER):

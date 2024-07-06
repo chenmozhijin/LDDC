@@ -80,12 +80,11 @@ def list_max_difference(list1: list[str | list[str]], list2: list[str | list[str
 
 
 def artist_str2list(artist: str) -> tuple[list[str], list[set[str]]]:
-    """
-    将歌手字符串转换为列表
+    """将歌手字符串转换为列表
+
     :param artist: 歌手字符串
     :return: 歌手列表 ([组织名,...], [[歌手名, 歌手别名],...])
     """
-
     if all(len(s) == 1 for s in artist.split(" ")):
         artist = "".join(artist.split(" "))
 
@@ -218,7 +217,7 @@ def calculate_artist_score(artist1: str | list, artist2: str | list) -> float:
         score = max(score, list_max_difference(artists[list_index], artists[tuple_index][1]))
         if score == 1:
             return 100
-        score = max(score, text_difference("".join(artists[list_index]), "".join(artists[tuple_index][0] + [item for sublist in artists[tuple_index][1] for item in sublist])))
+        score = max(score, text_difference("".join(artists[list_index]), "".join(artists[tuple_index][0] + [a for sl in artists[tuple_index][1] for a in sl])))
 
         if len(artists[list_index]) == 1 and artists[tuple_index][0]:
             score = max(score, list_max_difference(artists[list_index], artists[tuple_index][0]) * 0.6)
@@ -226,9 +225,18 @@ def calculate_artist_score(artist1: str | list, artist2: str | list) -> float:
     return max(score * 100, 0)
 
 
+TITLE_TAG_PATTERN = re.compile(r"|".join([r"[-<(\[～]([～\]^)>-]*)[～\]^)>-]",  # noqa: FLY002
+                                          r"(\w+ ?(?:(?:solo |size )?ver(?:sion)?\.?|size|style|mix(?:ed)?|edit(?:ed)?|版|solo))",
+                                          r"(纯音乐|inst\.?(?:rumental)|off ?vocal(?: ?[Vv]er.)?)"]))
+
+
 def calculate_title_score(title1: str, title2: str) -> float:
     def get_tags(not_same: str) -> tuple[list, str]:
-        not_same_tags: list[tuple[str, str, str, str]] = re.findall(r"[-<(\[～]([～\]^)>-]*)[～\]^)>-]|(\w+ ?(?:(?:solo |size )?ver(?:sion)?\.?|size|style|mix(?:ed)?|edit(?:ed)?|版|solo))|(纯音乐|inst\.?(?:rumental)|off ?vocal(?: ?[Vv]er.)?)", not_same)
+        """获取标签
+
+        :param not_same: 两个标题不同的部分
+        """
+        not_same_tags: list[tuple[str, str, str, str]] = TITLE_TAG_PATTERN.findall(not_same)
         not_same_tags: list[str] = [item.strip() for tup in not_same_tags for item in tup if item]  # 去除空字符串与符号
         not_same_other = re.sub(r"|".join(not_same_tags) + r"|[-><)(\]\[～]", "", not_same)  # 获取非tags部分
 

@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import contextlib
-import logging
 from collections.abc import Iterable
+from pathlib import Path
 
 from chardet import detect
 
@@ -25,12 +25,13 @@ def time2ms(m: int | str, s: int | str, ms: int | str) -> int:
 
 
 def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | None = None, sign_word: Iterable[str] | None = None) -> str:
+    from utils.logger import logger
     """读取未知编码的文件"""
     file_content = None
     if not sign_word:
         sign_word = []
     if not file_data and file_path:
-        with open(file_path, 'rb') as f:
+        with Path(file_path).open('rb') as f:
             raw_data = f.read()
     elif file_data:
         raw_data = file_data
@@ -79,24 +80,8 @@ def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | 
         msg = "无法解码文件"
         raise UnicodeDecodeError(reason=msg, object=raw_data)
 
-    logging.debug(f"文件 {file_path} 解码成功,编码为 {encoding}")
+    logger.debug("文件 %s 解码成功,编码为 %s", file_path, encoding)
     return file_content
-
-
-def str2log_level(level: str) -> int:
-    match level:
-        case "NOTSET":
-            return 0
-        case "DEBUG":
-            return 10
-        case "INFO":
-            return 20
-        case "WARNING":
-            return 30
-        case "ERROR":
-            return 40
-        case "CRITICAL":
-            return 50
 
 
 def tuple_to_list(obj: any) -> any:
@@ -171,3 +156,7 @@ def compare_version_numbers(current_version: str, last_version: str) -> bool:
     if last_version == current_version and "beta" in current_version and "beta" not in last_version:
         return True
     return current_version < last_version
+
+
+def get_artist_str(artist: str | list, sep: str = "/") -> str:
+    return sep.join(artist) if isinstance(artist, list) else artist

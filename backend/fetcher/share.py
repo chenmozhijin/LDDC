@@ -20,16 +20,16 @@ def judge_lyrics_type(lyrics: LyricsData) -> LyricsType:
     return lyrics_type
 
 
-def lrc2dict_list(lrc: str, source: Source | None = None, to_list: bool = False) -> tuple[dict[str, str], MultiLyricsData | LyricsData]:  # noqa: PLR0915
+def lrc2dict_list(lrc: str, source: Source | None = None, to_list: bool = False) -> tuple[dict[str, str], MultiLyricsData | LyricsData]:  # noqa: C901, PLR0912, PLR0915
     lrc_lists: list[list] = [[]]
     start_time_lists: list[list] = [[]]
 
     def add_line_list(line_list: list[None | str | int | list]) -> None:
-        for i, _lrc_list in enumerate(lrc_lists):
+        for i, lrc_list in enumerate(lrc_lists):
             if line_list[0] not in start_time_lists[i]:
                 # 没有开始时间相同的歌词行
                 if line_list[0] is not None:
-                    lrc_lists[i].append((line_list[0], line_list[1], [tuple(word) for word in line_list[2]]))
+                    lrc_list.append((line_list[0], line_list[1], [tuple(word) for word in line_list[2]]))
                     start_time_lists[i].append(line_list[0])
                 break
         else:

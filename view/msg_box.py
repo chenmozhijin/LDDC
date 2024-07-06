@@ -13,8 +13,8 @@ _msg_boxs: list[tuple[QMessageBox, QWidget | None, Callable | None]] = []
 
 
 def button_clicked(button: QAbstractButton) -> None:
-    """
-    处理消息框的按钮点击事件的槽函数
+    """处理消息框的按钮点击事件的槽函数
+
     :param button: 按钮
     """
     msg_box: QMessageBox = button.parent().parent()
@@ -34,9 +34,10 @@ def button_clicked(button: QAbstractButton) -> None:
 
 class MsgBox(QObject):
 
-    def information(parent: QWidget | None, title: str, text: str) -> None:  # noqa: N805
-        """
-        创建一个信息消息框
+    @staticmethod
+    def information(parent: QWidget | None, title: str, text: str) -> None:
+        """创建一个信息消息框
+
         :param parent: 父窗口
         :param title: 标题
         :param text: 内容
@@ -53,9 +54,10 @@ class MsgBox(QObject):
         msg.show()
         _msg_boxs.append((msg, parent, None))
 
-    def warning(parent: QWidget | None, title: str, text: str) -> None:  # noqa: N805
-        """
-        创建一个警告消息框
+    @staticmethod
+    def warning(parent: QWidget | None, title: str, text: str) -> None:
+        """创建一个警告消息框
+
         :param parent: 父窗口
         :param title: 标题
         :param text: 内容
@@ -71,9 +73,10 @@ class MsgBox(QObject):
         msg.show()
         _msg_boxs.append((msg, parent, None))
 
-    def critical(parent: QWidget | None, title: str, text: str) -> None:  # noqa: N805
-        """
-        创建一个错误消息框
+    @staticmethod
+    def critical(parent: QWidget | None, title: str, text: str) -> None:
+        """创建一个错误消息框
+
         :param parent: 父窗口
         :param title: 标题
         :param text: 内容
@@ -89,9 +92,15 @@ class MsgBox(QObject):
         msg.show()
         _msg_boxs.append((msg, parent, None))
 
-    def question(parent: QWidget | None, title: str, text: str, button0: QMessageBox.StandardButton, button1: QMessageBox.StandardButton, func: Callable[[QMessageBox.StandardButton], Any]) -> None:  # noqa: N805, PLR0913
-        """
-        创建一个询问消息框
+    @staticmethod
+    def question(parent: QWidget | None,
+                 title: str,
+                 text: str,
+                 button0: QMessageBox.StandardButton,
+                 button1: QMessageBox.StandardButton,
+                 func: Callable[[QMessageBox.StandardButton], Any]) -> None:
+        """创建一个询问消息框
+
         :param parent: 父窗口
         :param title: 标题
         :param text: 内容

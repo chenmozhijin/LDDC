@@ -10,7 +10,7 @@ from backend.lyrics import Lyrics, LyricsData, MultiLyricsData
 
 
 def krc2dict(krc: str) -> tuple[dict, dict]:
-    """将明文krc转换为字典{歌词类型: [(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]}"""
+    """将明文krc转换为字典{歌词类型: [(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]}."""
     lrc_dict: MultiLyricsData = {}
     tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")
     tags: dict[str: str] = {}
@@ -52,7 +52,6 @@ def krc2dict(krc: str) -> tuple[dict, dict]:
             if language["type"] == 0:  # 逐字(罗马音)
                 offset = 0  # 用于跳过一些没有内容的行,它们不会存在与罗马音的字典中
                 for i, line in enumerate(orig_list):
-                    i = i - offset  # noqa: PLW2901
                     if "".join([w[2] for w in line[2]]) == "":
                         # 如果该行没有内容,则跳过
                         offset += 1
@@ -60,7 +59,7 @@ def krc2dict(krc: str) -> tuple[dict, dict]:
 
                     roma_line = (line[0], line[1], [])
                     for j, word in enumerate(line[2]):
-                        roma_line[2].append((word[0], word[1], language["lyricContent"][i][j]))
+                        roma_line[2].append((word[0], word[1], language["lyricContent"][i - offset][j]))
                     roma_list.append(roma_line)
             elif language["type"] == 1:  # 逐行(翻译)
                 for i, line in enumerate(orig_list):

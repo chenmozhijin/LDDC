@@ -217,8 +217,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.preview_plainTextEdit.setPlainText(self.tr("处理中..."))
 
     def update_result_table(self, result_type: tuple, result: list, clear: bool = True) -> None:
-        """
-        更新结果表格
+        """更新结果表格
+
         :param result_type: 结果类型(结果类型, 搜索类型)
         :param result: 结果(列表)
         """
@@ -291,7 +291,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
     @Slot(int, str, list)
     def show_songlist_result(self, taskid: int, result_type: str, result: list) -> None:
-        """
+        """显示歌单、专辑中的歌曲
+
         :param result_type: album或songlist
         """
         if taskid != self.taskid["results_table"]:
@@ -304,8 +305,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.songlist_result = {"type": result_type, "result": result}
 
     def get_songlist_result(self, result_type: str, info: dict) -> None:
-        """
-        获取歌单、专辑中的歌曲
+        """获取歌单、专辑中的歌曲
+
         :param result_type: album或songlist
         """
         self.reset_page_status()
@@ -451,7 +452,11 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                 table.setItem(last_row, 0, loading_item)
 
                 self.taskid["results_table"] += 1
-                worker = SearchWorker(self.taskid["results_table"], self.search_info['keyword'], self.search_info['search_type'], self.search_info['source'], self.search_info['page'] + 1)
+                worker = SearchWorker(self.taskid["results_table"],
+                                      self.search_info['keyword'],
+                                      self.search_info['search_type'],
+                                      self.search_info['source'],
+                                      self.search_info['page'] + 1)
                 worker.signals.result.connect(self.search_nextpage_result_slot)
                 worker.signals.error.connect(self.search_nextpage_error)
                 threadpool.start(worker)

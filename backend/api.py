@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import json
-import logging
 import random
 import re
 import time
@@ -11,6 +10,7 @@ import requests
 
 from utils.enum import SearchType, Source
 from utils.error import LyricsRequestError
+from utils.logger import DEBUG, logger
 
 from .decryptor.eapi import (
     eapi_params_encrypt,
@@ -23,7 +23,7 @@ def get_latest_version() -> tuple[bool, str, str]:
     try:
         latest_release = requests.get("https://api.github.com/repos/chenmozhijin/LDDC/releases/latest", timeout=5).json()
     except Exception as e:
-        logging.exception("获取最新版本信息时错误")
+        logger.exception("获取最新版本信息时错误")
         return False, str(e), ""
     else:
         if "tag_name" in latest_release:
@@ -63,10 +63,7 @@ def nesonglist2result(songlist: list) -> list:
     for song in songlist:
         info = song
         # 处理艺术家
-        artist = []
-        for singer in info['ar']:
-            if singer['name'] != "":
-                artist.append(singer['name'])
+        artist = [singer['name'] for singer in info['ar'] if singer['name'] != ""]
         results.append({
             'id': info['id'],
             'title': info['name'],
@@ -80,8 +77,8 @@ def nesonglist2result(songlist: list) -> list:
 
 
 def _eapi_request(path: str, params: dict) -> dict:
-    """
-    eapi接口请求
+    """eapi接口请求
+
     :param path: 请求的路径
     :param params: 请求参数
     :param method: 请求方法
@@ -110,8 +107,8 @@ def eapi_get_params_header() -> str:
 
 
 def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> dict:
-    """
-    网易云音乐搜索
+    """网易云音乐搜索
+
     :param keyword:关键字
     :param search_type搜索类型
     :param page页码(从1开始)
@@ -130,7 +127,7 @@ def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> dic
             param_type = "1006"
 
     params = {
-        "hlpretag": "<span class=\"s-fc2\">",
+        "hlpretag": '<span class="s-fc2">',
         "hlposttag": "</span>",
         "type": param_type,
         "queryCorrect": "true",
@@ -179,11 +176,12 @@ def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> dic
                         'source': Source.NE,
                     })
     except Exception as e:
-        logging.exception("网易云音乐搜索接口请求失败")
+        logger.exception("网易云音乐搜索接口请求失败")
         return str(e)
     else:
-        logging.info("搜索成功")
-        logging.debug(f"搜索结果：{json.dumps(results, ensure_ascii=False, indent=4)}")
+        logger.info("搜索成功")
+        if logger.level <= DEBUG:
+            logger.debug("搜索结果: %s", json.dumps(results, ensure_ascii=False, indent=4))
         return results
 
 
@@ -203,7 +201,7 @@ def ne_get_lyrics(songid: str | int) -> dict:
     try:
         data = _eapi_request("/eapi/song/lyric", params)
     except Exception as e:
-        logging.exception("请求歌词失败")
+        logger.exception("请求歌词失败")
         msg = f"请求歌词失败: {e}"
         raise LyricsRequestError(msg) from e
     return data
@@ -251,16 +249,16 @@ def ne_get_songlist(listid: str | int, list_type: str) -> str | list:
                         data = _eapi_request(path, params)
                         results.extend(nesonglist2result(data['songs']))
                     except Exception:
-                        logging.exception("网易云音乐接口请求失败")
+                        logger.exception("网易云音乐接口请求失败")
                         continue
                     break
 
         if count != len(results):
-            logging.error(f"获取到的歌曲数量与实际数量不一致,预期:{count}, 实际: {len(results)}")
+            logger.error("获取到的歌曲数量与实际数量不一致,预期: %s, 实际: %s", count, len(results))
             return "歌曲列表获取不完整"
 
     except Exception as e:
-        logging.exception("网易云音乐接口请求失败")
+        logger.exception("网易云音乐接口请求失败")
         return str(e)
     return results
 
@@ -270,10 +268,7 @@ def qmsonglist2result(songlist: list, list_type: str | None = None) -> list:
     for song in songlist:
         info = song["songInfo"] if list_type == "album" else song
         # 处理艺术家
-        artist = []
-        for singer in info['singer']:
-            if singer['name'] != "":
-                artist.append(singer['name'])
+        artist = [singer['name'] for singer in info['singer'] if singer['name'] != ""]
         results.append({
             'id': info['id'],
             'mid': info['mid'],
@@ -288,8 +283,8 @@ def qmsonglist2result(songlist: list, list_type: str | None = None) -> list:
 
 
 def qm_get_lyrics(title: str, artist: list[str], album: str, id_: int, duration: int) -> dict | str:
-    """
-    获取歌词
+    """获取歌词
+
     :param title: 歌曲名
     :param artist: 艺术家
     :param album: 专辑名
@@ -346,23 +341,23 @@ def qm_get_lyrics(title: str, artist: list[str], album: str, id_: int, duration:
         response.raise_for_status()
         data: dict = response.json()['music.musichallSong.PlayLyricInfo.GetPlayLyricInfo']['data']
     except Exception as e:
-        logging.exception("请求歌词失败")
+        logger.exception("请求歌词失败")
         msg = f"请求歌词失败: {e}"
         raise LyricsRequestError(msg) from e
     else:
-        logging.debug(f"请求qm歌词成功：{id_}, {json.dumps(data, ensure_ascii=False, indent=4)}")
+        if logger.level <= DEBUG:
+            logger.debug("请求qm歌词成功：%s, %s}", id_, json.dumps(data, ensure_ascii=False, indent=4))
         return data
 
 
 def qm_search(keyword: str, search_type: SearchType, page: int | str = 1) -> list | str:
-    """
-    QQ音乐搜索
+    """QQ音乐搜索
+
     :param keyword:关键字
     :param search_type搜索类型
     :param page页码(从1开始)
     :return: 搜索结果(list)或错误(str)
     """
-    logging.debug(f"开始搜索：{keyword}, 类型为{search_type}")
     if search_type not in (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM, SearchType.SONGLIST):
         return f"搜索类型错误,类型为{search_type}"
     data = json.dumps({
@@ -434,20 +429,21 @@ def qm_search(keyword: str, search_type: SearchType, page: int | str = 1) -> lis
                         'source': Source.QM,
                     })
     except requests.HTTPError as e:
-        logging.exception("请求搜索数据时错误")
+        logger.exception("请求搜索数据时错误")
         return str(e)
     except requests.RequestException as e:
-        logging.exception("请求搜索数据时错误")
+        logger.exception("请求搜索数据时错误")
         return str(e)
     except json.JSONDecodeError as e:
-        logging.exception("解析搜索结果时错误")
+        logger.exception("解析搜索结果时错误")
         return str(e)
     except Exception as e:
-        logging.exception("未知错误")
+        logger.exception("未知错误")
         return str(e)
     else:
-        logging.info("搜索成功")
-        logging.debug(f"搜索结果：{json.dumps(results, ensure_ascii=False, indent=4)}")
+        logger.info("搜索成功")
+        if logger.level <= DEBUG:
+            logger.debug("搜索结果: %s", json.dumps(results, ensure_ascii=False, indent=4))
         return results
 
 
@@ -479,24 +475,25 @@ def qm_get_album_song_list(album_mid: str) -> list | str:
         album_song_list = response_json["req_1"]["data"]["songList"]
         results = qmsonglist2result(album_song_list, "album")
         if response_json['req_1']['data']['totalNum'] != len(results):
-            logging.error("获取到的歌曲数量与实际数量不一致")
+            logger.error("获取到的歌曲数量与实际数量不一致")
             return "专辑歌曲获取不完整"
 
     except requests.HTTPError as e:
-        logging.exception("请求专辑数据时错误")
+        logger.exception("请求专辑数据时错误")
         return str(e)
     except requests.RequestException as e:
-        logging.exception("请求专辑数据时错误")
+        logger.exception("请求专辑数据时错误")
         return str(e)
     except json.JSONDecodeError as e:
-        logging.exception("解析专辑数据时错误")
+        logger.exception("解析专辑数据时错误")
         return str(e)
     except Exception as e:
-        logging.exception("未知错误")
+        logger.exception("未知错误")
         return str(e)
     else:
-        logging.info("获取专辑信息成功")
-        logging.debug(f"获取结果：{json.dumps(results, ensure_ascii=False, indent=4)}")
+        logger.info("获取专辑信息成功")
+        if logger.level <= DEBUG:
+            logger.debug("获取结果: %s", json.dumps(results, ensure_ascii=False, indent=4))
         return results
 
 
@@ -541,11 +538,11 @@ def qm_get_songlist_song_list(songlist_id: str) -> str | list:
         if response_json['req_0']['data']['total_song_num'] != len(results):
             return "获取歌曲列表失败, 返回的歌曲数量与实际数量不一致"
     except requests.exceptions.RequestException as e:
-        print(f"获取歌单失败 {e}")
+        logger.exception("获取歌单失败")
         return str(e)
     else:
-        logging.info(f"获取歌单成功, 数量: {len(results)}")
-        logging.debug(f"获取歌单成功,获取结果: {results}")
+        logger.info("获取歌单成功, 数量: %s", len(results))
+        logger.debug("获取歌单成功,获取结果: %s", results)
         return results
 
 
@@ -576,8 +573,8 @@ def kgsonglist2result(songlist: list, list_type: str = "search") -> list:
 
 
 def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str | list:
-    """
-    酷狗音乐搜索
+    """酷狗音乐搜索
+
     :param info:关键字
     :param search_type搜索类型
     :param page页码(从1开始)
@@ -591,8 +588,8 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
         duration = info.get("duration")
         hash_ = info.get("hash")
     else:
-        logging.error(f"输入参数类型错误,类型:{type(info)}")
-        return f"输入参数类型错误,类型:{type(info)}"
+        logger.error("输入参数类型错误,类型: %s", type(info).__name__)
+        return f"输入参数类型错误,类型:{type(info).__name__}"
     match search_type:
         case SearchType.SONG:
             url = f"http://{domain}/api/v3/search/song"
@@ -696,10 +693,11 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
                         "source": Source.KG,
                     })
     except Exception as e:
-        logging.exception("搜索时错误")
+        logger.exception("搜索时错误")
         return str(e)
     else:
-        logging.debug(f"搜索结果：{json.dumps(results, ensure_ascii=False, indent=4)}")
+        if logger.level <= DEBUG:
+            logger.debug("搜索结果：%s", json.dumps(results, ensure_ascii=False, indent=4))
         return results
 
 
@@ -738,10 +736,10 @@ def kg_get_songlist(listid: str | int, list_type: str) -> str | list:
         response_json = json.loads(re.findall(r"<!--KG_TAG_RES_START-->(.*)<!--KG_TAG_RES_END-->", response.text, re.DOTALL)[0])
         results = kgsonglist2result(response_json['data']['info'], "songlist")
     except Exception as e:
-        logging.exception("获取歌曲列表数据时错误")
+        logger.exception("获取歌曲列表数据时错误")
         return str(e)
     else:
-        logging.info("获取歌曲列表数据成功")
+        logger.info("获取歌曲列表数据成功")
         return results
 
 
@@ -761,9 +759,9 @@ def kg_get_lyrics(lyrsicid: str | int, access_key: str) -> list:
         response_json = response.json()
         krc = b64decode(response_json['content'])
     except Exception as e:
-        logging.exception("请求歌词失败")
+        logger.exception("请求歌词失败")
         msg = f"请求歌词失败: {e}"
         raise LyricsRequestError(msg) from e
     else:
-        logging.info("获取歌词数据成功")
+        logger.info("获取歌词数据成功")
         return krc

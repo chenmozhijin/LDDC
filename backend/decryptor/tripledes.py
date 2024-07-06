@@ -60,9 +60,9 @@ sbox = (
 )
 
 
-def bitnum(a: bytearray, b: int, c: int) -> int:
-    """
-    从字节串中提取指定位置的位,并左移指定偏移量。
+def bitnum(a: bytearray | bytes, b: int, c: int) -> int:
+    """从字节串中提取指定位置的位,并左移指定偏移量。
+
     :param a: 字节串
     :param b: 要提取的位索引
     :param c: 位提取后的偏移量
@@ -72,8 +72,8 @@ def bitnum(a: bytearray, b: int, c: int) -> int:
 
 
 def bitnum_intr(a: int, b: int, c: int) -> int:
-    """
-    从整数中提取指定位置的位,并左移指定偏移量。
+    """从整数中提取指定位置的位,并左移指定偏移量。
+
     :param a: 整数
     :param b: 要提取的位索引
     :param c: 位提取后的偏移量
@@ -83,8 +83,8 @@ def bitnum_intr(a: int, b: int, c: int) -> int:
 
 
 def bitnum_intl(a: int, b: int, c: int) -> int:
-    """
-    从整数中提取指定位置的位,并右移指定偏移量。
+    """从整数中提取指定位置的位,并右移指定偏移量。
+
     :param a: 整数
     :param b: 要提取的位索引
     :param c: 位提取后的偏移量
@@ -94,8 +94,8 @@ def bitnum_intl(a: int, b: int, c: int) -> int:
 
 
 def sbox_bit(a: int) -> int:
-    """
-    对输入整数进行位运算,重新组合位。
+    """对输入整数进行位运算,重新组合位。
+
     :param a: 整数
     :return: 重新组合后的位
     """
@@ -214,7 +214,7 @@ def crypt(input_data: bytearray, key: list) -> bytearray:
     return inverse_permutation(s0, s1)  # 逆置换
 
 
-def key_schedule(key: bytearray, mode: int) -> list[list[int]]:
+def key_schedule(key: bytes, mode: int) -> list[list[int]]:
     schedule = [[0] * 6 for _ in range(16)]
     key_rnd_shift = (1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1)
     key_perm_c = (56, 48, 40, 32, 24, 16, 8, 0, 57, 49, 41, 33, 25, 17, 9, 1, 58, 50, 42, 34, 26, 18, 10, 2, 59, 51, 43, 35)

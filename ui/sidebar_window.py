@@ -71,13 +71,13 @@ class SidebarWindow(QMainWindow):
         self.sidebar_widget.setFixedWidth(width)
 
     def add_widget(self, name: str, widget: QWidget, position: SidebarButtonPosition = SidebarButtonPosition.TOP, icon: None | QIcon = None) -> None:
-        '''
-        添加一个新页面到侧边栏中
+        """添加一个新页面到侧边栏中
+
         :param name: 页面的名称
         :param widget: 页面的内容
         :param position: 标签页按钮的位置,默认为顶部
         :return: None
-        '''
+        """
         button = QPushButton(name)
         button.setLayoutDirection(Qt.LeftToRight)
         if isinstance(icon, QIcon):
@@ -110,10 +110,7 @@ class SidebarWindow(QMainWindow):
         self.Total_Widgets += 1
 
     def clear_widgets(self) -> None:
-        '''
-        清空所有页面
-        :return: None
-        '''
+        """清空所有页面"""
         self.Widgets.clear()
         while self.sidebar.count():
             item = self.sidebar.takeAt(0)

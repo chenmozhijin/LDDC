@@ -26,8 +26,8 @@ class ProportionallyStretchedTableWidget(QTableWidget):
         self.itemChanged.connect(self.adapt_size)
 
     def set_proportions(self, props: list) -> None:
-        """
-        设置表格宽度的比例
+        """设置表格宽度的比例
+
         ::param : 比例列表
         当比例大于等于0小于等于1时,为比例
         当比例等于2时,自适应内容

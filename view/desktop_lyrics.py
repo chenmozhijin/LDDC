@@ -2,13 +2,14 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import sys
 
-from PySide6.QtCore import QEvent, QMutex, QPointF, QRectF, Qt
+from PySide6.QtCore import QEvent, QMutex, QObject, QPoint, QPointF, QRectF, Qt
 from PySide6.QtGui import (
     QBrush,
     QColor,
     QFont,
     QFontMetricsF,
     QLinearGradient,
+    QMouseEvent,
     QPainter,
     QPaintEvent,
     QPen,
@@ -21,58 +22,54 @@ desktop_lyrics_widgets = {}
 
 
 class TransparentWindow(QWidget):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.setWindowFlag(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)  # 将界面设置为无框
         self.setAttribute(Qt.WA_TranslucentBackground)  # 将界面属性设置为半透明
 
         self.setMouseTracking(True)  # 开启鼠标跟踪
-        self.initDrag()  # 初始化各拖拽状态
-        self.installEventFilter(self)  # 主窗口绑定事件过滤器
 
-    # 初始化各拖拽状态
-    def initDrag(self):
+        # 初始化各拖拽状态
         self._drag_position = None
         self._resize_direction = None
 
-    def eventFilter(self, obj, event):
+        self.installEventFilter(self)  # 主窗口绑定事件过滤器
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if event.type() == QEvent.Enter:
             self.setCursor(Qt.ArrowCursor)
         return super().eventFilter(obj, event)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
             self._drag_position = event.globalPosition().toPoint() - self.pos()
-            self._resize_direction = self.getResizeDirection(self._drag_position)
+            self._resize_direction = self.get_resize_direction(self._drag_position)
             event.accept()
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if event.buttons() == Qt.LeftButton and self._drag_position:
             if self._resize_direction == 'move':
                 self.move(event.globalPosition().toPoint() - self._drag_position)
             else:
-                self.resizeWindow(event)
+                self.resize_window(event)
             event.accept()
         else:
-            self.updateCursor(event)
+            cursor_pos = event.globalPosition().toPoint() - self.pos()
+            direction = self.get_resize_direction(cursor_pos)
+            cursor_shape = {
+                'bottom_right': Qt.SizeFDiagCursor,
+                'bottom': Qt.SizeVerCursor,
+                'right': Qt.SizeHorCursor,
+                'move': Qt.ArrowCursor,
+            }.get(direction, Qt.ArrowCursor)
+            self.setCursor(cursor_shape)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.LeftButton:
             self.initDrag()
 
-    def updateCursor(self, event):
-        cursor_pos = event.globalPosition().toPoint() - self.pos()
-        direction = self.getResizeDirection(cursor_pos)
-        cursor_shape = {
-            'bottom_right': Qt.SizeFDiagCursor,
-            'bottom': Qt.SizeVerCursor,
-            'right': Qt.SizeHorCursor,
-            'move': Qt.ArrowCursor
-        }.get(direction, Qt.ArrowCursor)
-        self.setCursor(cursor_shape)
-
-    def getResizeDirection(self, pos):
+    def get_resize_direction(self, pos: QPoint) -> str:
         margin = 5
         right = pos.x() > self.width() - margin
         bottom = pos.y() > self.height() - margin
@@ -84,7 +81,7 @@ class TransparentWindow(QWidget):
             return 'right'
         return 'move'
 
-    def resizeWindow(self, event):
+    def resize_window(self, event: QMouseEvent) -> None:
         if self._resize_direction == 'bottom_right':
             self.resize(event.globalPosition().x() - self.x(), event.globalPosition().y() - self.y())
         elif self._resize_direction == 'bottom':
@@ -107,7 +104,8 @@ class DesktopLyricsWidget(TransparentWindow):
         self.font_metrics = QFontMetricsF(self.text_font)
         self.font_height = self.font_metrics.height()
 
-        self.lyrics_to_display: MultiLyricsData = {"r": [], "l": []}  # 需要显示的歌词 {"左/右": [[已经播放过的歌词, (当前歌词字符, 显示比例), 未播放的歌词, 透明度]]}
+        # 需要显示的歌词 {"左/右": [[已经播放过的歌词, (当前歌词字符, 显示比例), 未播放的歌词, 透明度]]}
+        self.lyrics_to_display: MultiLyricsData = {"r": [], "l": []}
         self.lyrics_to_display_mutex = QMutex()
 
     def paintEvent(self, _event: QPaintEvent) -> None:
