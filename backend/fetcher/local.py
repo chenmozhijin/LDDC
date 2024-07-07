@@ -86,16 +86,14 @@ def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
         # QRC歌词格式
 
         # 做到打开任意qrc文件都会读取同一首歌其他类型的qrc
-        qrc_type = re.findall(r"^(.*)_qm(Roma|ts)?\.qrc$", path)
-        if qrc_type:
-            prefix = qrc_type[0][0]
-            qrc_type = qrc_type[0][1]
+        qrc_path = re.search(r"^(?P<prefix>.*)_qm(?P<qrc_type>Roma|ts)?\.qrc$", path)
+        if qrc_path:
             qrc_types = {"": None, "Roma": None, "ts": None}
-            qrc_types[qrc_type] = data
+            qrc_types[qrc_path.group("qrc_type")] = data
             for qrc_type, qrc_data in qrc_types.items():
 
-                if not qrc_data and os.path.isfile(f"{prefix}_qm{qrc_type}.qrc"):
-                    with open(f"{prefix}_qm{qrc_type}.qrc", 'rb') as f:
+                if not qrc_data and os.path.isfile(f"{qrc_path.group('prefix')}_qm{qrc_type}.qrc"):
+                    with open(f"{qrc_path.group('prefix')}_qm{qrc_type}.qrc", 'rb') as f:
                         qrc_data_ = f.read()
                     if qrc_data_.startswith(QRC_MAGICHEADER):
                         qrc_data = qrc_data_  # noqa: PLW2901
