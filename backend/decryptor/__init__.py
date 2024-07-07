@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 from zlib import decompress
 
 from backend.decryptor.qmc1 import qmc1_decrypt
