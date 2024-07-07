@@ -161,13 +161,13 @@ class LyricProcessingWorker(QRunnable):
     def run(self) -> None:
         if self.task["type"] == "get_merged_lyric":
             self.taskid = self.task["id"]
-            self.get_merged_lyric(self.task["song_info"], self.task["lyric_type"])
+            self.get_merged_lyric(self.task["song_info"], self.task["lyric_langs"])
 
         elif self.task["type"] == "get_lyric":
             self.taskid = self.task["id"]
             lyrics, from_cache = self.get_lyrics(self.task["song_info"])
-            if isinstance(lyrics, tuple):
-                self.signals.result.emit(self.taskid, {"error_str": lyrics[0], "error_type": lyrics[1]})
+            if isinstance(lyrics, Exception):
+                self.signals.result.emit(self.taskid, {"error_str": str(lyrics), "error_type": lyrics.__class__.__name__})
             else:
                 self.signals.result.emit(self.taskid, {"result": lyrics})
 
@@ -200,7 +200,7 @@ class LyricProcessingWorker(QRunnable):
                             continue
                         info = song_info
                         info.update(search_return[0])
-                from_cache = self.get_merged_lyric(info, self.task["lyric_type"])
+                from_cache = self.get_merged_lyric(info, self.task["lyric_langs"])
                 if not from_cache:  # 检查是否来自缓存
                     time.sleep(1)
         self.is_running = False
@@ -208,7 +208,7 @@ class LyricProcessingWorker(QRunnable):
     def stop(self) -> None:
         self.is_running = False
 
-    def get_lyrics(self, song_info: dict) -> tuple[None | Lyrics, bool]:
+    def get_lyrics(self, song_info: dict) -> tuple[Exception | Lyrics, bool]:
         logger.debug("开始获取歌词: %s", song_info['id'])
         from_cache = False
         lyrics = None
@@ -221,26 +221,27 @@ class LyricProcessingWorker(QRunnable):
                 error = e
                 continue
             except Exception as e:
-                song_name_str = QCoreApplication.translate("LyricProcess", "歌名:") + song_info["title"] if "title" in song_info else ""
-                msg = f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']}"
-                logger.exception(msg)
-                self.signals.error.emit(msg + "\n" + str(e))
+                logger.exception("获取歌词时发生错误, song_info: %s", song_info)
+                error = e
                 break
 
         if not lyrics:
             if error:
                 return error, from_cache
-            return "", from_cache
+            return Exception(), from_cache
         return lyrics, from_cache
 
-    def get_merged_lyric(self, song_info: dict, lyric_type: list) -> bool:
+    def get_merged_lyric(self, song_info: dict, lyric_langs: list) -> bool:
         logger.debug("开始获取合并歌词: %s", song_info.get('id', song_info.get('hash', '')))
         lyrics, from_cache = self.get_lyrics(song_info)
         if not isinstance(lyrics, Lyrics):
+            song_name_str = QCoreApplication.translate("LyricProcess", "歌名:") + song_info["title"] if "title" in song_info else ""
+            msg = f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']}"
+            logger.exception(msg)
+            self.signals.error.emit(f"{msg}\n{lyrics.__name__}: {lyrics!s}")  # 此时的 lyrics 是错误信息
             return from_cache
 
-        type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in lyric_type]
+        lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in lyric_langs]
 
         try:
             merged_lyric = lyrics.get_merge_lrc(lyrics_order, self.task["lyrics_format"], self.task.get("offset", 0))
@@ -535,7 +536,7 @@ class AutoLyricsFetcher(QRunnable):
 
     def __init__(self, info: dict, min_score: float = 60, source: list | None = None) -> None:
         super().__init__()
-        # print("--------------------------------------------------------------AutoLyricsFetcher init--------------------------------------------------------")
+        logger.debug("Init AutoLyricsFetcher, info: %s", info)
         self.info = info
         if source:
             self.source = source
@@ -643,7 +644,7 @@ class AutoLyricsFetcher(QRunnable):
                 self.obtained_lyrics.append((song_info, result))
             self.get_result()
         except Exception:
-            logger.exception("歌词结果处理失败")
+            logger.exception("歌词结果处理失败, 'orig_info': %s, 'self.obtained_lyrics': %s", self.info, self.obtained_lyrics)
             self.send_result({"state": "歌词结果处理失败", "orig_info": self.info})
 
     def get_result(self) -> None:

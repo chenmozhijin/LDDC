@@ -6,6 +6,7 @@ from typing import get_args
 from backend.lyrics import Lyrics, LyricsData
 from utils.cache import cache
 from utils.enum import Source
+from utils.error import LyricsProcessingError
 from utils.logger import logger
 
 from .kg import get_lyrics as kg_get_lyrics
@@ -110,6 +111,10 @@ def get_lyrics(
                 msg = "Local lyrics requires path"
                 raise ValueError(msg)
             local_get_lyrics(lyrics, path=kwargs["path"], data=kwargs.get("data"))
+
+    if not lyrics:
+        msg = "没有获取到可用的歌词"
+        raise LyricsProcessingError(msg)
 
     for key, lyric in lyrics.items():
         lyric: LyricsData

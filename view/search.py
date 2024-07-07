@@ -71,16 +71,16 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.results_tableWidget.verticalScrollBar().valueChanged.connect(self.results_table_scroll_changed)
         self.results_tableWidget.verticalScrollBar().rangeChanged.connect(self.results_table_scroll_changed)
 
-    def get_lyric_type(self) -> list:
+    def get_lyric_langs(self) -> list:
         """返回选择了的歌词类型的列表"""
-        lyric_type = []
+        lyric_langs = []
         if self.original_checkBox.isChecked():
-            lyric_type.append('orig')
+            lyric_langs.append('orig')
         if self.translate_checkBox.isChecked():
-            lyric_type.append('ts')
+            lyric_langs.append('ts')
         if self.romanized_checkBox.isChecked():
-            lyric_type.append("roma")
-        return lyric_type
+            lyric_langs.append("roma")
+        return lyric_langs
 
     def get_source(self) -> Source:
         """返回选择了的源"""
@@ -182,14 +182,14 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         if taskid != self.taskid["update_preview_lyric"]:
             return
         self.preview_info = {"info": result["info"]}
-        lyric_types_text = ""
+        lyric_langs_text = ""
         if "orig" in result['lrc'].types:
-            lyric_types_text += self.tr("原文") + f"({get_lrc_type(result['lrc'], 'orig')})"
+            lyric_langs_text += self.tr("原文") + f"({get_lrc_type(result['lrc'], 'orig')})"
         if "ts" in result['lrc'].types:
-            lyric_types_text += self.tr("、译文") + f"({get_lrc_type(result['lrc'], 'ts')})"
+            lyric_langs_text += self.tr("、译文") + f"({get_lrc_type(result['lrc'], 'ts')})"
         if "roma" in result['lrc'].types:
-            lyric_types_text += self.tr("、罗马音") + f"({get_lrc_type(result['lrc'], 'roma')})"
-        self.lyric_types_lineEdit.setText(lyric_types_text)
+            lyric_langs_text += self.tr("、罗马音") + f"({get_lrc_type(result['lrc'], 'roma')})"
+        self.lyric_langs_lineEdit.setText(lyric_langs_text)
         self.songid_lineEdit.setText(str(result['info']['id']))
 
         self.preview_plainTextEdit.setPlainText(result['merged_lyric'])
@@ -205,7 +205,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         worker = LyricProcessingWorker(
             {"type": "get_merged_lyric",
              "song_info": info,
-             "lyric_type": self.get_lyric_type(),
+             "lyric_langs": self.get_lyric_langs(),
              "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
              "id": self.taskid["update_preview_lyric"],
              "offset": self.offset_spinBox.value()})
@@ -541,7 +541,7 @@ class SearchWidget(SearchWidgetBase):
 
         worker = LyricProcessingWorker({"type": "get_list_lyrics",
                                         "song_info_list": self.songlist_result["result"],
-                                        "lyric_type": self.get_lyric_type(),
+                                        "lyric_langs": self.get_lyric_langs(),
                                         "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                                         "save_folder": save_folder,
                                         "lyrics_file_name_format": lyrics_file_name_format,
@@ -616,14 +616,13 @@ class SearchWidget(SearchWidgetBase):
             MsgBox.warning(self, self.tr('警告'), self.tr('歌词内容为空'))
             return
 
-        type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        lyrics_types = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+        lyric_langs = [lang for lang in cfg["lyrics_order"] if lang in self.get_lyric_langs()]
         # 获取已选择的歌词(用于替换占位符)
         save_folder, file_name = get_save_path(
             self.save_path_lineEdit.text(),
             cfg["lyrics_file_name_format"] + get_lyrics_format_ext(self.preview_info["info"]["lyrics_format"]),
             self.preview_info["info"],
-            lyrics_types)
+            lyric_langs)
 
         save_path = os.path.join(save_folder, file_name)
         try:

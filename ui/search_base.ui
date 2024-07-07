@@ -249,12 +249,12 @@
          <item>
           <widget class="QLabel" name="label_2">
            <property name="text">
-            <string>歌词类型</string>
+            <string>歌词语言</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="lyric_types_lineEdit">
+          <widget class="QLineEdit" name="lyric_langs_lineEdit">
            <property name="text">
             <string/>
            </property>

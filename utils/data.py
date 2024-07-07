@@ -18,7 +18,7 @@ class Config(dict):
             "log_level": "INFO",
             "lyrics_file_name_format": "%<artist> - %<title> (%<id>)",
             "default_save_path": default_save_lyrics_dir,
-            "lyrics_order": ["罗马音", "原文", "译文"],
+            "lyrics_order": ["roma", "orig", "ts"],
             "skip_inst_lyrics": True,
             "auto_select": True,
             "language": "auto",

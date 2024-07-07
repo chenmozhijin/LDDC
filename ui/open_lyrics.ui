@@ -29,7 +29,7 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>歌词类型:</string>
+        <string>歌词语言:</string>
        </property>
       </widget>
      </item>

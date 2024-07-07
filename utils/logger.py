@@ -39,13 +39,14 @@ class Logger:
 
         formatter = logging.Formatter('[%(levelname)s]%(asctime)s- %(module)s(%(lineno)d) - %(funcName)s:%(message)s')
         # 创建一个处理器,用于将日志写入文件
-        file_handler = logging.FileHandler(log_file)
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
         file_handler.setFormatter(formatter)
         self.__logger.addHandler(file_handler)
 
         if __debug__ and sys.gettrace() is not None and not args.get_service_port:
             # 调试时创建一个处理器,用于将日志输出到标准输出
-            console_handler = logging.StreamHandler()
+            console_handler = logging.StreamHandler(sys.stdout)
+            sys.stdout.reconfigure(encoding='utf-8')
             console_handler.setFormatter(formatter)
             self.__logger.addHandler(console_handler)
 

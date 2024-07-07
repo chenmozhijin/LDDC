@@ -24,7 +24,7 @@ class SettingWidget(QWidget, Ui_settings):
 
     def init_ui(self) -> None:
         self.lyrics_order_listWidget.clear()
-        self.lyrics_order_listWidget.addItems(cfg["lyrics_order"])
+        self.lyrics_order_listWidget.addItems([self.tr(o) for o in cfg["lyrics_order"]])
         self.lyrics_file_name_format_lineEdit.setText(cfg["lyrics_file_name_format"])
         self.default_save_path_lineEdit.setText(cfg["default_save_path"])
         self.log_level_comboBox.setCurrentText(cfg["log_level"])
@@ -100,11 +100,11 @@ class SettingWidget(QWidget, Ui_settings):
         for type_ in [self.lyrics_order_listWidget.item(i).text()
                       for i in range(self.lyrics_order_listWidget.count())]:
             if type_ == self.tr("罗马音"):
-                lyrics_order.append("罗马音")
+                lyrics_order.append("roma")
             elif type_ == self.tr("原文"):
-                lyrics_order.append("原文")
+                lyrics_order.append("orig")
             elif type_ == self.tr("译文"):
-                lyrics_order.append("译文")
+                lyrics_order.append("ts")
             else:
                 msg = "Unknown lyrics type"
                 raise ValueError(msg)

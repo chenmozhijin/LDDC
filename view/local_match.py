@@ -83,18 +83,17 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             MsgBox.warning(self, self.tr("警告"), self.tr("歌曲文件夹不存在！"))
             return
 
-        lyric_types = []
+        lyric_langs = []
         if self.original_checkBox.isChecked():
-            lyric_types.append("orig")
+            lyric_langs.append("orig")
         if self.translate_checkBox.isChecked():
-            lyric_types.append("ts")
+            lyric_langs.append("ts")
         if self.romanized_checkBox.isChecked():
-            lyric_types.append("roma")
-        type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in lyric_types]
+            lyric_langs.append("roma")
+        lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in lyric_langs]
 
-        if len(lyric_types) == 0:
-            MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一种歌词类型！"))
+        if len(lyric_langs) == 0:
+            MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一种歌词语言！"))
 
         match self.save_mode_comboBox.currentIndex():
             case 0:

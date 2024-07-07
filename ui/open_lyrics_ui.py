@@ -1,8 +1,7 @@
-
 ################################################################################
 ## Form generated from reading UI file 'open_lyrics.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -109,7 +108,6 @@ class Ui_open_lyrics:
 
         self.horizontalLayout_2.addWidget(self.lyricsformat_comboBox)
 
-
         self.verticalLayout.addLayout(self.horizontalLayout_2)
 
         self.horizontalLayout = QHBoxLayout()
@@ -136,18 +134,17 @@ class Ui_open_lyrics:
 
         self.horizontalLayout.addWidget(self.save_pushButton)
 
-
         self.verticalLayout.addLayout(self.horizontalLayout)
-
 
         self.retranslateUi(open_lyrics)
 
         QMetaObject.connectSlotsByName(open_lyrics)
+
     # setupUi
 
     def retranslateUi(self, open_lyrics):
         open_lyrics.setWindowTitle(QCoreApplication.translate("open_lyrics", "Form", None))
-        self.label.setText(QCoreApplication.translate("open_lyrics", "\u6b4c\u8bcd\u7c7b\u578b:", None))
+        self.label.setText(QCoreApplication.translate("open_lyrics", "\u6b4c\u8bcd\u8bed\u8a00:", None))
         self.original_checkBox.setText(QCoreApplication.translate("open_lyrics", "\u539f\u6587", None))
         self.translate_checkBox.setText(QCoreApplication.translate("open_lyrics", "\u8bd1\u6587", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("open_lyrics", "\u7f57\u9a6c\u97f3", None))
@@ -162,5 +159,5 @@ class Ui_open_lyrics:
         self.open_pushButton.setText(QCoreApplication.translate("open_lyrics", "\u6253\u5f00\u6b4c\u8bcd\u6587\u4ef6", None))
         self.convert_pushButton.setText(QCoreApplication.translate("open_lyrics", "\u8f6c\u6362\u683c\u5f0f", None))
         self.save_pushButton.setText(QCoreApplication.translate("open_lyrics", "\u4fdd\u5b58\u6b4c\u8bcd", None))
-    # retranslateUi
 
+    # retranslateUi

@@ -35,15 +35,15 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         self.lyricsformat_comboBox.currentIndexChanged.connect(self.update_lyrics)
         self.offset_spinBox.valueChanged.connect(self.update_lyrics)
 
-    def get_lyric_type(self) -> list:
-        lyric_type = []
+    def get_lyric_langs(self) -> list:
+        lyric_langs = []
         if self.original_checkBox.isChecked():
-            lyric_type.append('orig')
+            lyric_langs.append('orig')
         if self.translate_checkBox.isChecked():
-            lyric_type.append('ts')
+            lyric_langs.append('ts')
         if self.romanized_checkBox.isChecked():
-            lyric_type.append("roma")
-        return lyric_type
+            lyric_langs.append("roma")
+        return lyric_langs
 
     def open_file(self) -> None:
         def file_selected(file_path: str) -> None:
@@ -104,8 +104,8 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             return
         try:
             self.lyrics = get_lyrics(Source.Local, use_cache=False, path=self.path, data=self.data)
-            type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-            lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+
+            lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in self.get_lyric_langs()]
             lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
         except Exception as e:
             logger.exception("转换失败")
@@ -117,8 +117,8 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
     def update_lyrics(self) -> None:
         if not (self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics)):
             return
-        type_mapping = {"原文": "orig", "译文": "ts", "罗马音": "roma"}
-        lyrics_order = [type_mapping[type_] for type_ in cfg["lyrics_order"] if type_mapping[type_] in self.get_lyric_type()]
+
+        lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in self.get_lyric_langs()]
         self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                                         offset=self.offset_spinBox.value()))
 
