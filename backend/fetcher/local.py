@@ -94,7 +94,7 @@ def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
             qrc_types[qrc_type] = data
             for qrc_type, qrc_data in qrc_types.items():
 
-                if not qrc_data and os.path.isfile(path, f"{prefix}_qm{qrc_type}.qrc"):
+                if not qrc_data and os.path.isfile(f"{prefix}_qm{qrc_type}.qrc"):
                     with open(f"{prefix}_qm{qrc_type}.qrc", 'rb') as f:
                         qrc_data_ = f.read()
                     if qrc_data_.startswith(QRC_MAGICHEADER):
