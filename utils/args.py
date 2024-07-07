@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import argparse
 
 parser = argparse.ArgumentParser()

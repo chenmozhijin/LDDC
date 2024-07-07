@@ -1,10 +1,10 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 from .lyrics import Lyrics
 
 
 def merge_lyrics(lyrics1: Lyrics, lyrics2: Lyrics) -> Lyrics:
-    """
-    合并两个Lyrics对象
-    """
+    """合并两个Lyrics对象"""
     if lyrics1.lrc_isverbatim["orig"] is True:
         pass
     elif lyrics2.lrc_isverbatim["orig"] is True:
