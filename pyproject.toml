@@ -52,6 +52,8 @@ line-length = 159
 [tool.ruff.lint]
 select = [
     "ALL",
+
+    "CPY001",
 ]
 
 ignore = [
@@ -75,6 +77,8 @@ ignore = [
     "PTH",  # flake8-use-pathlib
     "FBT",  # flake8-boolean-trap
 ]
+preview = true
+explicit-preview-rules = true
 
 [tool.ruff.lint.pylint]
 max-branches = 25  # PLR0912
