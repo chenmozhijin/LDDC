@@ -299,9 +299,9 @@ def calculate_title_score(title1: str, title2: str) -> float:
     score2, score3 = 0, 0
     if tag1_no_match and tag2_no_match:
         for tag1 in tag1_no_match:
-            score2 += max([text_difference(tag1, tag2) for tag2 in tag2_no_match]) * (30 / len(tag1_no_match))
+            score2 += max(text_difference(tag1, tag2) for tag2 in tag2_no_match) * (30 / len(tag1_no_match))
 
         for tag2 in tag2_no_match:
-            score3 += max([text_difference(tag1, tag2) for tag1 in tag1_no_match]) * (30 / len(tag2_no_match))
+            score3 += max(text_difference(tag1, tag2) for tag1 in tag1_no_match) * (30 / len(tag2_no_match))
 
     return max(score1 * 0.7 + max(score2, score3), score0)
