@@ -52,11 +52,6 @@ def lrc2dict_list(lrc: str, source: Source | None = None, to_list: bool = False)
         if not line_data or not line_data.startswith("["):
             continue
 
-        tag_split_content = tag_split_pattern.findall(line)
-        if tag_split_content:  # 标签行
-            tags.update({tag_split_content[0][0]: tag_split_content[0][1]})
-            continue
-
         line_split_content: list[str] = line_split_pattern.findall(line)
         if line_split_content:  # 歌词行
             line_list: list[None | str | int | list] = [None, None, []]
@@ -123,6 +118,11 @@ def lrc2dict_list(lrc: str, source: Source | None = None, to_list: bool = False)
                     line_list[2] = [line_list[0], None, line_content]  # 开始时间, 结束时间, 歌词
 
             add_line_list(line_list)
+            continue
+
+        tag_split_content = tag_split_pattern.findall(line)
+        if tag_split_content:  # 标签行
+            tags.update({tag_split_content[0][0]: tag_split_content[0][1]})
 
     # 按起始时间排序
     for i, lrc_list in enumerate(lrc_lists):
@@ -131,6 +131,9 @@ def lrc2dict_list(lrc: str, source: Source | None = None, to_list: bool = False)
             if i_ != 0 and lrc_lists[i][i_ - 1][1] is None and line_list[0] is not None:
                 # 上一行歌词结束时间不存在, 当前行歌词开始时间存在, 则上一行歌词结束时间等于当前行歌词开始时间
                 lrc_lists[i][i_ - 1] = (lrc_lists[i][i_ - 1][0], line_list[0], lrc_lists[i][i_ - 1][2])
+
+        # 清除空行
+        lrc_lists[i] = [line for line in lrc_lists[i] if line[2]]
 
     lrc_lists: list[LyricsData]
 
