@@ -18,6 +18,8 @@ Timer: 100.0000
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, """
                "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding")
 
+DIALOGUE = "Dialogue: 0,{start},{end},{lang},,0,0,0,,{text}\n"
+
 
 def ms2ass_timestamp(ms: int) -> str:
     h, m, s, ms = get_divmod_time(ms)
@@ -63,6 +65,9 @@ def ass_converter(lyrics: Lyrics,
             continue
 
         for lyrics_line, lang in zip(get_lyrics_lines(lyrics_dict, lyrics_order, orig_i, orig_line, langs_mapping), lyrics_order, strict=False):
-            lyrics_texts[lang] += f"Dialogue: 0,{ms2ass_timestamp(orig_line[0])},{ms2ass_timestamp(orig_line[1])},{lang},,0,0,0,,{lyrics_line2asstext(lyrics_line)}\n"
+            lyrics_texts[lang] += DIALOGUE.format(start=ms2ass_timestamp(orig_line[0]),
+                                                  end=ms2ass_timestamp(orig_line[1]),
+                                                  lang=lang,
+                                                  text=lyrics_line2asstext(lyrics_line))
 
     return ass_text + "".join(lyrics_texts.values())
