@@ -290,7 +290,7 @@ class Ui_settings:
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u6b4c\u540d: %&lt;title&gt; \u827a\u672f\u5bb6: %&lt;artist&gt;</span></p>\n'
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; te'
                 'xt-indent:0px;"><span style=" font-size:8pt;">\u4e13\u8f91\u540d: %&lt;album&gt; \u6b4c\u66f2/\u6b4c\u8bcdid: %&lt;id&gt;</span></p>\n'
-                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u6b4c\u8bcd\u7c7b\u578b: %&lt;types&gt;</span></p></body></html>',
+                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u8bed\u8a00\u7c7b\u578b: %&lt;langs&gt;</span></p></body></html>',
                 None,
             )
         )

@@ -144,7 +144,7 @@ def replace_info_placeholders(text: str, info: dict, lyric_langs: list) -> str:
         "%<artist>": escape_filename("/".join(info["artist"]) if isinstance(info["artist"], list) else info["artist"]),
         "%<id>": escape_filename(str(info["id"])),
         "%<album>": escape_filename(info["album"]),
-        "%<types>": escape_filename("-".join(lyric_langs)),
+        "%<langs>": escape_filename("-".join(lyric_langs)),
     }
     return replace_placeholders(text, mapping_table)
 
