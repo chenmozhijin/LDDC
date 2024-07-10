@@ -51,10 +51,10 @@ def lyrics_line2str(lyrics_line: LyricsLine,
         case LyricsFormat.ENHANCEDLRC:
             symbols = ("<", ">")
 
-    last_end = lyrics_line[0]
+    last_end = lyrics_line[0] if lyrics_format == LyricsFormat.VERBATIMLRC else None
     for (start, end, word) in lyrics_line[2]:
         if start is not None and start != last_end:
-            text += f"{symbols[0]}{ms_converter(start)}{symbols[1]}"
+            text += f"{symbols[0]}{ms_converter(max(start, line_start_time))}{symbols[1]}"
 
         text += word
 
@@ -78,7 +78,7 @@ def lrc_converter(tags: dict[str, str],
     add_end_timestamp_line: bool = cfg["add_end_timestamp_line"]
 
     # 添加开头的ID标签
-    lrc_text = "\n".join(f"[{key}:{value}]" for key, value in tags.items() if key in ("al", "ar", "au", "by", "offset", "ti") and value) + "\n" if tags else ""
+    lrc_text = "\n".join(f"[{k}:{v}]" for k, v in tags.items() if k in ("al", "ar", "au", "by", "offset", "ti") and v) + "\n\n" if tags else ""
 
     for orig_i, orig_line in enumerate(lyrics_dict["orig"]):
 
