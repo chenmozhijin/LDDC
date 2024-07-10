@@ -27,7 +27,7 @@ from ui.search_base_ui import Ui_search_base
 from utils.data import cfg
 from utils.enum import LyricsFormat, LyricsType, SearchType, Source
 from utils.threadpool import threadpool
-from utils.utils import get_lyrics_format_ext, get_save_path, ms2formattime
+from utils.utils import get_artist_str, get_lyrics_format_ext, get_save_path, ms2formattime
 from view.get_list_lyrics import GetListLyrics
 from view.msg_box import MsgBox
 
@@ -567,7 +567,7 @@ class SearchWidget(SearchWidgetBase):
             else:
                 save_path = result['save_path']
                 save_folder = os.path.dirname(save_path)
-                text += self.tr("获取 {0} 歌词成功").format(f"{result['info']['title']} - {result['info']['artist']}")
+                text += self.tr("获取 {0} 歌词成功").format(f"{result['info']['title']} - {get_artist_str(result['info']['artist'])}")
                 if result['inst']:  # 检查是否为纯音乐,并且设置跳过纯音乐
                     text += self.tr("但歌曲为纯音乐,已跳过")
                 else:

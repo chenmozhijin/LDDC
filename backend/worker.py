@@ -184,7 +184,7 @@ class LyricProcessingWorker(QRunnable):
                         info = song_info
                     case Source.KG:
                         if self.skip_inst_lyrics and song_info['language'] in ["纯音乐", '伴奏']:
-                            self.signals.error.emit(f"{'/'.join(song_info['artist'])} - {song_info['title']} 为纯音乐,已跳过")  # song_info['artist']一定为list
+                            self.signals.error.emit(f"{get_artist_str(song_info['artist'])} - {song_info['title']} 为纯音乐,已跳过")
                             continue
                         search_return = kg_search({"keyword": f"{get_artist_str(song_info['artist'], sep='、')} - {song_info['title']}",
                                                    "duration": song_info["duration"],
@@ -487,7 +487,7 @@ class LocalMatchWorker(QRunnable):
                                 f.write(converted_lyrics)
                             msg = (f"{progress_str}" +
                                    QCoreApplication.translate("LocalMatch", "本地") + f": {simple_song_info_str} " +
-                                   QCoreApplication.translate("LocalMatch", "匹配") + f": {lrc_info['artist']} - {lrc_info['title']} " +
+                                   QCoreApplication.translate("LocalMatch", "匹配") + f": {get_artist_str(lrc_info['artist'])} - {lrc_info['title']} " +
                                    QCoreApplication.translate("LocalMatch", "成功保存到") + f"{save_path}")
                             self.signals.massage.emit(msg)
                         except Exception as e:
@@ -570,7 +570,7 @@ class AutoLyricsFetcher(QRunnable):
 
     def search(self) -> None:
         artist: list | str | None = self.info.get('artist')
-        keyword = f"{'/'.join(artist) if isinstance(artist, list) else artist} - {self.info['title'].strip()}" if artist else self.info["title"].strip()
+        keyword = f"{get_artist_str(artist)} - {self.info['title'].strip()}" if artist else self.info["title"].strip()
         for source in self.source:
             self.new_search_work(keyword, SearchType.SONG, source)
 
