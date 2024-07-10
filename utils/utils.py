@@ -30,8 +30,8 @@ def time2ms(m: int | str, s: int | str, ms: int | str) -> int:
 
 
 def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | None = None, sign_word: Iterable[str] | None = None) -> str:
-    from utils.logger import logger
     """读取未知编码的文件"""
+    from utils.logger import logger
     file_content = None
     if not sign_word:
         sign_word = []
