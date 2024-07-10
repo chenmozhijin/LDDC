@@ -41,7 +41,7 @@ match platform.system():
         data_dir = os.path.join(home, ".local", "share", "LDDC")
         cache_dir = os.path.join(home, ".cache", "LDDC")
         log_dir = os.path.join(data_dir, "logs")
-        default_save_lyrics_dir = os.path.join(home, "Documents", "LDDC", "Lyrics")
+        default_save_lyrics_dir = os.path.join(home, "Documents", "Lyrics")
     case 'Darwin':  # macOS
         home = os.path.expanduser("~")
 
@@ -49,13 +49,13 @@ match platform.system():
         data_dir = os.path.join(home, "Library", "Application Support", "LDDC")
         cache_dir = os.path.join(home, "Library", "Caches", "LDDC")
         log_dir = os.path.join(home, "Library", "Logs", "LDDC")
-        default_save_lyrics_dir = os.path.join(home, "Documents", "LDDC", "Lyrics")
+        default_save_lyrics_dir = os.path.join(home, "Documents", "Lyrics")
     case 'Windows':
         config_dir = os.path.join(get_win_path(csidl["roaming_appdata"]), "LDDC")
         data_dir = os.path.join(get_win_path(csidl["local_appdata"]), "LDDC")
         cache_dir = os.path.join(data_dir, "Cache")
         log_dir = os.path.join(data_dir, "Logs") if not __debug__ else os.path.join(main_path, "Logs")
-        default_save_lyrics_dir = os.path.join(get_win_path(csidl["documents"]), "LDDC", "Lyrics")
+        default_save_lyrics_dir = os.path.join(get_win_path(csidl["documents"]), "Lyrics")
     case _:
         msg = f"Unsupported platform: {platform.system()}"
         raise OSError(msg)
