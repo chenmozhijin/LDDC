@@ -52,6 +52,7 @@ from .api import (
     qm_search,
 )
 from .calculate import calculate_artist_score, calculate_title_score
+from .converter import convert2
 from .fetcher import get_lyrics
 from .lyrics import Lyrics
 from .song_info import file_extensions as audio_formats
@@ -159,9 +160,9 @@ class LyricProcessingWorker(QRunnable):
         self.is_running = True
 
     def run(self) -> None:
-        if self.task["type"] == "get_merged_lyric":
+        if self.task["type"] == "get_converted_lyrics":
             self.taskid = self.task["id"]
-            self.get_merged_lyric(self.task["song_info"], self.task["lyric_langs"])
+            self.get_converted_lyrics(self.task["song_info"], self.task["lyric_langs"])
 
         elif self.task["type"] == "get_lyric":
             self.taskid = self.task["id"]
@@ -200,7 +201,7 @@ class LyricProcessingWorker(QRunnable):
                             continue
                         info = song_info
                         info.update(search_return[0])
-                from_cache = self.get_merged_lyric(info, self.task["lyric_langs"])
+                from_cache = self.get_converted_lyrics(info, self.task["lyric_langs"])
                 if not from_cache:  # 检查是否来自缓存
                     time.sleep(1)
         self.is_running = False
@@ -231,7 +232,7 @@ class LyricProcessingWorker(QRunnable):
             return Exception(), from_cache
         return lyrics, from_cache
 
-    def get_merged_lyric(self, song_info: dict, lyric_langs: list) -> bool:
+    def get_converted_lyrics(self, song_info: dict, lyric_langs: list) -> bool:
         logger.debug("开始获取合并歌词: %s", song_info.get('id', song_info.get('hash', '')))
         lyrics, from_cache = self.get_lyrics(song_info)
         if not isinstance(lyrics, Lyrics):
@@ -244,18 +245,19 @@ class LyricProcessingWorker(QRunnable):
         lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in lyric_langs]
 
         try:
-            merged_lyric = lyrics.get_merge_lrc(lyrics_order, self.task["lyrics_format"], self.task.get("offset", 0))
+            converted_lyrics = convert2(lyrics, lyrics_order, self.task["lyrics_format"], self.task.get("offset", 0))
         except Exception as e:
             logger.exception("合并歌词失败")
             self.signals.error.emit(QCoreApplication.translate("LyricProcess", "合并歌词失败：{0}").format(str(e)))
+            return from_cache
 
         if not self.is_running:
             logger.debug("任务被取消")
             return from_cache
 
-        if self.task["type"] == "get_merged_lyric":
+        if self.task["type"] == "get_converted_lyrics":
             self.signals.result.emit(self.taskid,
-                                     {'info': {**song_info, 'lyrics_format': self.task["lyrics_format"]}, 'lrc': lyrics, 'merged_lyric': merged_lyric})
+                                     {'info': {**song_info, 'lyrics_format': self.task["lyrics_format"]}, 'lrc': lyrics, 'converted_lyrics': converted_lyrics})
 
         elif self.task["type"] == "get_list_lyrics":
             save_folder, file_name = get_save_path(self.task["save_folder"],
@@ -266,7 +268,7 @@ class LyricProcessingWorker(QRunnable):
             inst = bool(self.skip_inst_lyrics and len(lyrics["orig"]) != 0 and
                         (lyrics["orig"][0][2][0][2] == "此歌曲为没有填词的纯音乐，请您欣赏" or
                          lyrics["orig"][0][2][0][2] == "纯音乐，请欣赏"))
-            self.signals.result.emit(self.count, {'info': song_info, 'save_path': save_path, 'merged_lyric': merged_lyric, 'inst': inst})
+            self.signals.result.emit(self.count, {'info': song_info, 'save_path': save_path, 'converted_lyrics': converted_lyrics, 'inst': inst})
         logger.debug("发送结果信号")
         return from_cache
 
@@ -343,9 +345,6 @@ class LocalMatchWorker(QRunnable):
 
         self.skip_inst_lyrics = cfg["skip_inst_lyrics"]
         self.file_name_format = cfg["lyrics_file_name_format"]
-
-        self.LyricProcessingWorker = LyricProcessingWorker({"lyrics_format": infos["lyrics_format"]})
-        self.LyricProcessingWorker.signals.error.connect(self.lyric_processing_error)
 
         self.min_score = infos["min_score"]
 
@@ -452,7 +451,7 @@ class LocalMatchWorker(QRunnable):
                         lrc_info = result["result_info"]
                         lyrics: Lyrics = result["lyrics"]
                         # Step 4 合并歌词
-                        merged_lyric = lyrics.get_merge_lrc(self.lyrics_order, self.lyrics_format)
+                        converted_lyrics = convert2(lyrics, self.lyrics_order, self.lyrics_format)
                         # Step 5 保存歌词
                         match self.save_mode:
                             case LocalMatchSaveMode.MIRROR:
@@ -485,7 +484,7 @@ class LocalMatchWorker(QRunnable):
                             if not os.path.exists(os.path.dirname(save_path)):
                                 os.makedirs(os.path.dirname(save_path))
                             with open(save_path, "w", encoding="utf-8") as f:
-                                f.write(merged_lyric)
+                                f.write(converted_lyrics)
                             msg = (f"{progress_str}" +
                                    QCoreApplication.translate("LocalMatch", "本地") + f": {simple_song_info_str} " +
                                    QCoreApplication.translate("LocalMatch", "匹配") + f": {lrc_info['artist']} - {lrc_info['title']} " +

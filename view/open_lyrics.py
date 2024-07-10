@@ -4,6 +4,7 @@ import os
 
 from PySide6.QtWidgets import QFileDialog, QWidget
 
+from backend.converter import convert2
 from backend.decryptor import krc_decrypt, qrc_decrypt
 from backend.fetcher import get_lyrics
 from backend.fetcher.local import KRC_MAGICHEADER, QRC_MAGICHEADER
@@ -108,7 +109,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             self.lyrics = get_lyrics(Source.Local, use_cache=False, path=self.path, data=self.data)
 
             lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in self.get_lyric_langs()]
-            lrc = self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
+            lrc = convert2(self.lyrics, lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
         except Exception as e:
             logger.exception("转换失败")
             MsgBox.critical(self, self.tr("错误"), self.tr("转换失败：") + str(e))
@@ -121,7 +122,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             return
 
         lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in self.get_lyric_langs()]
-        self.plainTextEdit.setPlainText(self.lyrics.get_merge_lrc(lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+        self.plainTextEdit.setPlainText(convert2(self.lyrics, lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                                         offset=self.offset_spinBox.value()))
 
     def change_lyrics_type(self) -> None:

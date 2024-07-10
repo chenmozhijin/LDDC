@@ -30,6 +30,7 @@ class SettingWidget(QWidget, Ui_settings):
         self.log_level_comboBox.setCurrentText(cfg["log_level"])
         self.skip_inst_lyrics_checkBox.setChecked(cfg["skip_inst_lyrics"])
         self.auto_select_checkBox.setChecked(cfg["auto_select"])
+        self.add_end_timestamp_line_checkBox.setChecked(cfg["add_end_timestamp_line"])
         match cfg["language"]:
             case "auto":
                 self.language_comboBox.setCurrentIndex(0)
@@ -76,6 +77,9 @@ class SettingWidget(QWidget, Ui_settings):
 
         self.auto_select_checkBox.stateChanged.connect(
             lambda: cfg.setitem("auto_select", self.auto_select_checkBox.isChecked()))
+
+        self.add_end_timestamp_line_checkBox.stateChanged.connect(
+            lambda: cfg.setitem("add_end_timestamp_line", self.add_end_timestamp_line_checkBox.isChecked()))
 
         self.language_comboBox.currentIndexChanged.connect(self.language_comboBox_changed)
 

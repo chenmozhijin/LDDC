@@ -23,6 +23,7 @@ class Config(dict):
             "auto_select": True,
             "language": "auto",
             "lrc_ms_digit_count": 3,
+            "add_end_timestamp_line": True,
         }
 
         for key, value in cfg.items():

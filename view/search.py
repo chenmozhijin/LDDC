@@ -21,13 +21,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from backend.lyrics import Lyrics, ms2formattime
+from backend.lyrics import Lyrics
 from backend.worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
 from ui.search_base_ui import Ui_search_base
 from utils.data import cfg
 from utils.enum import LyricsFormat, LyricsType, SearchType, Source
 from utils.threadpool import threadpool
-from utils.utils import get_lyrics_format_ext, get_save_path
+from utils.utils import get_lyrics_format_ext, get_save_path, ms2formattime
 from view.get_list_lyrics import GetListLyrics
 from view.msg_box import MsgBox
 
@@ -192,7 +192,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.lyric_langs_lineEdit.setText(lyric_langs_text)
         self.songid_lineEdit.setText(str(result['info']['id']))
 
-        self.preview_plainTextEdit.setPlainText(result['merged_lyric'])
+        self.preview_plainTextEdit.setPlainText(result['converted_lyrics'])
 
     def update_preview_lyric(self, info: dict | None = None) -> None:
         """开始更新预览歌词"""
@@ -203,7 +203,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
         self.taskid["update_preview_lyric"] += 1
         worker = LyricProcessingWorker(
-            {"type": "get_merged_lyric",
+            {"type": "get_converted_lyrics",
              "song_info": info,
              "lyric_langs": self.get_lyric_langs(),
              "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
@@ -576,7 +576,7 @@ class SearchWidget(SearchWidgetBase):
                         if not os.path.exists(save_folder):
                             os.makedirs(save_folder)
                         with open(save_path, 'w', encoding='utf-8') as f:
-                            f.write(result['merged_lyric'])
+                            f.write(result['converted_lyrics'])
                     except Exception as e:
                         text += self.tr("但保存歌词失败,原因:") + str(e)
                     else:

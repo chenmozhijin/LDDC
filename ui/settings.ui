@@ -277,13 +277,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
       </item>
       <item>
        <layout class="QGridLayout" name="gridLayout_4">
-        <item row="0" column="0">
-         <widget class="QCheckBox" name="skip_inst_lyrics_checkBox">
-          <property name="text">
-           <string>保存专辑/歌单歌词/本地匹配时跳过纯音乐</string>
-          </property>
-         </widget>
-        </item>
         <item row="1" column="0">
          <widget class="QCheckBox" name="auto_select_checkBox">
           <property name="text">
@@ -291,7 +284,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="3" column="0">
          <layout class="QHBoxLayout" name="horizontalLayout_7">
           <item>
            <widget class="QLabel" name="label_6">
@@ -354,6 +347,20 @@ li.checked::marker { content: &quot;\2612&quot;; }
            </spacer>
           </item>
          </layout>
+        </item>
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="skip_inst_lyrics_checkBox">
+          <property name="text">
+           <string>保存专辑/歌单歌词/本地匹配时跳过纯音乐</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QCheckBox" name="add_end_timestamp_line_checkBox">
+          <property name="text">
+           <string>为逐行lrc歌词添加结束时间戳行</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>

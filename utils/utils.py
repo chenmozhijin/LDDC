@@ -8,6 +8,11 @@ from chardet import detect
 
 from .enum import LyricsFormat
 
+try:
+    version = __import__("__main__").__version__.replace("v", "")
+except Exception:
+    version = None
+
 
 def get_lyrics_format_ext(lyrics_format: LyricsFormat) -> str:
     match lyrics_format:
@@ -160,3 +165,12 @@ def compare_version_numbers(current_version: str, last_version: str) -> bool:
 
 def get_artist_str(artist: str | list, sep: str = "/") -> str:
     return sep.join(artist) if isinstance(artist, list) else artist
+
+
+def get_divmod_time(ms: int) -> tuple[int, int, int, int]:
+    return divmod(ms, 3600000)[0], divmod(ms, 60000)[0], *divmod(ms, 1000)
+
+
+def ms2formattime(ms: int) -> str:
+    _h, m, s, ms = get_divmod_time(ms)
+    return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"
