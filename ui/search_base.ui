@@ -20,6 +20,11 @@
       <widget class="QComboBox" name="source_comboBox">
        <item>
         <property name="text">
+         <string>聚合</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>QQ音乐</string>
         </property>
        </item>

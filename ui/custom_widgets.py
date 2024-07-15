@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QDropEvent, QResizeEvent
 from PySide6.QtWidgets import QHeaderView, QListWidget, QTableWidget, QWidget
@@ -35,7 +37,7 @@ class ProportionallyStretchedTableWidget(QTableWidget):
         self.props = props
 
     def adapt_size(self) -> None:
-        if not self.props:
+        if not self.props or len(self.props) != self.columnCount():
             return
         width = self.viewport().size().width()
         for i, prop in enumerate(self.props):

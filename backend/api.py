@@ -36,7 +36,7 @@ def get_latest_version() -> tuple[bool, str, str]:
 
 def logging_json_default(obj: Any) -> str:
     if hasattr(obj, '__json__'):
-        return obj.__json__()
+        return obj.__json__(obj)
     msg = f"Type {type(obj).__name__} not serializable"
     raise TypeError(msg)
 

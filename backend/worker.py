@@ -126,8 +126,10 @@ class SearchWorker(QRunnable):
             try:
                 result = search(self.keyword, self.search_type, self.source, self.info, self.page)
             except Exception as e:
+                logger.exception("搜索时遇到错误")
                 msg = f"搜索时遇到错误:\n{e.__class__.__name__}: {e!s}"
                 self.signals.error.emit(msg)
+                return
             self.signals.result.emit(self.taskid, self.search_type, result)
             logger.debug("发送结果信号")
         else:
@@ -136,12 +138,19 @@ class SearchWorker(QRunnable):
             self.error = "搜索时遇到错误:未知错误"
             self.search_task_finished = 0
             for task_id, source in enumerate(self.source):
-                self.search_task[task_id] = None
-                worker = SearchWorker(task_id, self.keyword, self.search_type, source, self.page, self.info)
-                worker.signals.result.connect(self.handle_search_result)
-                worker.signals.error.connect(self.handle_search_error)
-                threadpool.start(worker)
-            self.loop.exec()
+                cache_key = (self.search_type, source, self.keyword, self.info, self.page)
+                result = cache.get(cache_key)
+                if isinstance(result, list):
+                    self.handle_search_result(task_id, self.search_type, result)
+                else:
+                    self.search_task[task_id] = None
+                    worker = SearchWorker(task_id, self.keyword, self.search_type, source, self.page, self.info)
+                    worker.signals.result.connect(self.handle_search_result)
+                    worker.signals.error.connect(self.handle_search_error)
+                    threadpool.start(worker)
+
+            if self.search_task_finished != len(self.search_task):
+                self.loop.exec()
 
             results = [item for group in zip_longest(*self.search_task.values()) for item in group if item is not None]
             if results:
@@ -258,7 +267,8 @@ class LyricProcessingWorker(QRunnable):
 
         if self.task["type"] == "get_converted_lyrics":
             self.signals.result.emit(self.taskid,
-                                     {'info': {**song_info, 'lyrics_format': self.task["lyrics_format"]}, 'lrc': lyrics, 'converted_lyrics': converted_lyrics})
+                                     {'info': {**song_info, 'lyrics_format': self.task["lyrics_format"]},
+                                      'lyrics': lyrics, 'converted_lyrics': converted_lyrics})
 
         elif self.task["type"] == "get_list_lyrics":
             save_folder, file_name = get_save_path(self.task["save_folder"],
