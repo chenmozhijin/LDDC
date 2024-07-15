@@ -18,7 +18,7 @@ def get_full_timestamps_lyrics_data(data: LyricsData, end_time: int | None, only
     :param end_time: 歌曲结束时间
     :param only_line: 是否只推算行时间戳
     """
-    result: LyricsData = []
+    result = LyricsData([])
     for i, line in enumerate(data):
         line_start_time = line[2][0][0] if line[0] is None and line[2] and line[2][0][0] is not None else line[0]
         line_end_time = line[2][-1][1] if line[1] is None and line[2] and line[2][-1][1] is not None else line[1]
@@ -35,7 +35,7 @@ def get_full_timestamps_lyrics_data(data: LyricsData, end_time: int | None, only
                 line_end_time = data[i + 1][0]
 
         if only_line:
-            result.append((line_start_time, line_end_time, line[2]))
+            result.append(LyricsLine((line_start_time, line_end_time, line[2])))
 
         words = []
         for j, word in enumerate(line[2]):
@@ -55,7 +55,7 @@ def get_full_timestamps_lyrics_data(data: LyricsData, end_time: int | None, only
 
             words.append((word_start_time, word_end_time, word[2]))
 
-        result.append((line_start_time, line_end_time, words))
+        result.append(LyricsLine((line_start_time, line_end_time, words)))
     return result
 
 
@@ -95,19 +95,19 @@ class Lyrics(dict):
                 return max(time + offset, 0)
             return time
 
-        return {
-            lang: [
-                (
+        return MultiLyricsData({
+            lang: LyricsData([
+                LyricsLine((
                     _offset_time(lrc_line[0]),
                     _offset_time(lrc_line[1]),
-                    [(_offset_time(word[0]), _offset_time(word[1]), word[2]) for word in lrc_line[2]],
-                )
+                    [LyricsWord((_offset_time(word[0]), _offset_time(word[1]), word[2])) for word in lrc_line[2]],
+                ))
                 for lrc_line in lrc_list
-            ]
+            ])
             for lang, lrc_list in multi_lyrics_data.items()
-        }
+        })
 
-    def get_full_timestamps_lyrics(self) -> MultiLyricsData | False:
+    def get_full_timestamps_lyrics(self) -> "Lyrics":
         """获取完整时间戳的歌词"""
         full_timestamps_lyrics = Lyrics({"source": self.source,
                                          "title": self.title,

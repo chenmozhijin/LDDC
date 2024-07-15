@@ -49,11 +49,13 @@ class SidebarWindow(QMainWindow):
         self.sidebar.setContentsMargins(0, 10, 0, 10)
         self.Widgets.tabBar().hide()
 
-        self.__sidebar_spacer = QSpacerItem(40, 20, QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.__sidebar_spacer = QSpacerItem(40, 20, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.sidebar.addItem(self.__sidebar_spacer)
 
     def set_current_widget(self, index: int) -> None:
         current_button = self.sidebar.itemAt(index + 1).widget() if index >= self.Top_Widgets else self.sidebar.itemAt(index).widget()
+        if not isinstance(current_button, QPushButton):
+            return
         self.Widgets.setCurrentIndex(index)
         self.widget_changed.emit(index)
         current_button.setChecked(True)
@@ -79,7 +81,7 @@ class SidebarWindow(QMainWindow):
         :return: None
         """
         button = QPushButton(name)
-        button.setLayoutDirection(Qt.LeftToRight)
+        button.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         if isinstance(icon, QIcon):
             button.setIcon(icon)
         button.setCheckable(True)

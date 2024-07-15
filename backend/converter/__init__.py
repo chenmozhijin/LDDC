@@ -2,7 +2,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import json
 import re
-from typing import Literal
 
 from backend.lyrics import Lyrics, LyricsData, LyricsLine
 from utils.data import cfg
@@ -51,13 +50,14 @@ def find_closest_match(data1: LyricsData, data2: LyricsData, data3: LyricsData |
 
     if source in (Source.QM, Source.KG):
         if source == Source.QM:
-            data1 = [line for line in data1 if len(line[2]) != 0]
-            data2 = [line for line in data2 if len(line[2]) != 0]
+            data1 = LyricsData([line for line in data1 if len(line[2]) != 0])
+            data2 = LyricsData([line for line in data2 if len(line[2]) != 0])
 
         if len(data1) == len(data2):
             return {i: i for i in range(len(data1))}
 
-    time_difference_list = [(i1, i2, abs(line1[0] - line2[0])) for i1, line1 in enumerate(data1) for i2, line2 in enumerate(data2)]
+    time_difference_list = [(i1, i2, abs(s1 - s2)) for i1, (s1, e1, t1) in enumerate(data1) if isinstance(s1, int)
+                            for i2, (s2, e2, t2) in enumerate(data2) if isinstance(s2, int)]
     time_difference_list = sorted(time_difference_list, key=lambda x: x[2])
 
     matched = {}
@@ -74,7 +74,7 @@ def find_closest_match(data1: LyricsData, data2: LyricsData, data3: LyricsData |
 
 
 def convert2(lyrics: Lyrics,
-             langs: list[Literal["orig", "ts", "roma"]] | None,
+             langs: list[str] | None,
              lyrics_format: LyricsFormat = LyricsFormat.VERBATIMLRC,
              offset: int = 0) -> str:
     """将Lyrics实例转换为指定格式的字符串

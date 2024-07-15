@@ -30,6 +30,7 @@ from PySide6.QtNetwork import (
 from backend.lyrics import LyricsWord, MultiLyricsData
 from backend.worker import AutoLyricsFetcher  # noqa: F401
 from utils.args import args
+from utils.data import local_song_lyrics  # noqa: F401
 from utils.logger import DEBUG, logger
 from utils.paths import command_line
 from utils.threadpool import threadpool
@@ -92,6 +93,12 @@ def check_any_instance_alive() -> bool:
     return bool(instance_dict)
 
 
+class Client:
+    def __init__(self, socket: QTcpSocket | QLocalSocket) -> None:
+        self.socket = socket
+        self.buffer = bytearray()
+
+
 class LDDCService(QObject):
     show_signal = Signal()
     handle_task = Signal(int, dict)
@@ -105,7 +112,7 @@ class LDDCService(QObject):
         self.shared_memory = QSharedMemory(self)
         self.shared_memory.setKey("LDDCLOCK")
 
-        self.clients: dict[int, tuple[QTcpSocket, bytearray]] = {}
+        self.clients: dict[int, Client] = {}
         self.start_service()
 
     def start_service(self) -> None:
@@ -144,7 +151,10 @@ class LDDCService(QObject):
             q_client.flush()
             logger.info("发送消息：%s", message)
             if q_client.waitForReadyRead(1000):
-                response = q_client.readAll().data().decode()
+                response_data = q_client.readAll().data()
+                if isinstance(response_data, memoryview):
+                    response_data = response_data.tobytes()
+                response = response_data.decode()
                 logger.info("收到服务端消息：%s", response)
                 if args.get_service_port:
                     print(response)  # 输出服务端监听的端口  # noqa: T201
@@ -177,7 +187,8 @@ class LDDCService(QObject):
 
     def stop_service(self) -> None:
         self.q_server.close()
-        self.socketserver.close()
+        if self.socketserver:
+            self.socketserver.close()
         self.shared_memory.detach()
         self.check_any_instance_alive_timer.stop()
 
@@ -187,9 +198,12 @@ class LDDCService(QObject):
             client_connection.readyRead.connect(lambda: self.q_server_read_client(client_connection))
 
     def q_server_read_client(self, client_connection: QLocalSocket) -> None:
-        data = client_connection.readAll().data().decode()
-        logger.info("收到客户端消息:%s", data)
-        match data:
+        response_data = client_connection.readAll().data()
+        if isinstance(response_data, memoryview):
+            response_data = response_data.tobytes()
+        response = response_data.decode()
+        logger.info("收到客户端消息:%s", response)
+        match response:
             case "get_service_port":
                 client_connection.write(str(self.socket_port).encode())
                 client_connection.flush()
@@ -200,35 +214,37 @@ class LDDCService(QObject):
                 client_connection.flush()
                 client_connection.disconnectFromServer()
             case _:
-                logger.error("未知消息：%s", data)
+                logger.error("未知消息：%s", response)
 
     def socket_on_new_connection(self) -> None:
+        if not self.socketserver:
+            return
         client_socket = self.socketserver.nextPendingConnection()
         client_id = id(client_socket)
-        self.clients[client_id] = [client_socket, bytearray()]
+        self.clients[client_id] = Client(client_socket)
         client_socket.readyRead.connect(lambda: self.socket_read_data(client_id))
         client_socket.disconnected.connect(lambda: self.handle_disconnection(client_id))
 
     def handle_disconnection(self, client_id: int) -> None:
-        self.clients[client_id][0].deleteLater()
+        client_socket = self.clients[client_id].socket
+        if isinstance(client_socket, QTcpSocket):
+            client_socket.deleteLater()
         del self.clients[client_id]
 
     def socket_read_data(self, client_id: int) -> None:
         """处理客户端发送的数据(前4字节应为消息长度)"""
-        client_socket = self.clients[client_id][0]
-        if client_socket.bytesAvailable() > 0:
-            self.clients[client_id][1].extend(client_socket.readAll().data())
-            buffer = self.clients[client_id][1]
-            while not len(buffer) < 4:
+        if self.clients[client_id].socket.bytesAvailable() > 0:
+            self.clients[client_id].buffer.extend(self.clients[client_id].socket.readAll().data())
 
-                message_length = int.from_bytes(buffer[:4], byteorder='big')  # 获取消息长度(前四字节)
+            while not len(self.clients[client_id].buffer) < 4:
 
-                if len(buffer) < 4 + message_length:
+                message_length = int.from_bytes(self.clients[client_id].buffer[:4], byteorder='big')  # 获取消息长度(前四字节)
+
+                if len(self.clients[client_id].buffer) < 4 + message_length:
                     break
 
-                message_data = buffer[4:4 + message_length]
-                buffer = buffer[4 + message_length:]
-                self.clients[client_id][1] = buffer
+                message_data = self.clients[client_id].buffer[4:4 + message_length]
+                self.clients[client_id].buffer = self.clients[client_id].buffer[4 + message_length:]
 
                 self.handle_socket_message(message_data, client_id)
 
@@ -264,7 +280,7 @@ class LDDCService(QObject):
 
     def send_response(self, client_id: int, response: str) -> None:
         logger.debug("发送响应：%s", response)
-        client_socket = self.clients[client_id][0]
+        client_socket = self.clients[client_id].socket
         response_bytes = response.encode('utf-8')
         response_length = len(response_bytes)
         length_bytes = response_length.to_bytes(4, byteorder='big')
@@ -287,6 +303,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         match task["task"]:
             case "chang_music":
                 logger.debug("chang_music")
+
             case "sync":
                 # 同步当前播放时间
                 playback_time = self.get_playback_time(task)
@@ -309,7 +326,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                 else:
                     self.start_time = int(time.time() * 1000) - self.current_time
                 if not self.timer.isActive():
-                    self.timer.start(self.update_frequency)
+                    self.timer.start(int(self.update_frequency))
                 logger.debug("proceed, self.start_time: %s", self.start_time)
 
             case "stop":
@@ -327,6 +344,9 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             logger.debug("delay: %s ms", delay)
             if delay > 0:
                 playback_time = playback_time - round(delay)
+        else:
+            msg = "playback_time or send_time is not int or float"
+            raise TypeError(msg)
         return playback_time
 
     def run(self) -> None:
@@ -340,19 +360,18 @@ class DesktopLyricsInstance(ServiceInstanceBase):
     def reset(self) -> None:
         """重置歌词"""
         self.start_time = 0  # 当前unix时间 - 已播放的时间
-        self.current_time = 0  # 当前已播放时间,单位:毫秒
-        self.lyrics: MultiLyricsData = {}
+        self.current_time = 0.0  # 当前已播放时间,单位:毫秒
+        self.lyrics = MultiLyricsData({})
         self.order_lyrics = []
 
         if self.timer.isActive():
             self.timer.stop()
 
-    def update_lyrics(self) -> None:  # noqa: C901, PLR0912, PLR0915
+    def update_lyrics(self) -> None:  # noqa: PLR0915
         """更新歌词"""
-        self.current_time = int(time.time() * 1000) - self.start_time
+        self.current_time = time.time() * 1000 - self.start_time
         lyrics_to_display = {"l": [], "r": []}
-        if not self.lyrics:
-            return
+        return
 
         def add2lyrics_to_display(lyrics_lines: list[tuple[list[LyricsWord], str, int]]) -> None:
             for _lyrics_line, key, alpha in lyrics_lines:

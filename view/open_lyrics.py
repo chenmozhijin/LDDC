@@ -92,7 +92,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
 
         dialog = QFileDialog(self)
         dialog.setWindowTitle(self.tr("选取加密歌词"))
-        dialog.setFileMode(QFileDialog.ExistingFile)
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
         dialog.setNameFilter(self.tr("加密歌词(*.qrc *.krc *.lrc)"))
         dialog.fileSelected.connect(file_selected)
         dialog.open()
@@ -106,7 +106,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             MsgBox.warning(self, self.tr("警告"), self.tr("歌词内容不能为空！"))
             return
         try:
-            self.lyrics = get_lyrics(Source.Local, use_cache=False, path=self.path, data=self.data)
+            self.lyrics, _from_cache = get_lyrics(Source.Local, use_cache=False, path=self.path, data=self.data)
 
             lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in self.get_lyric_langs()]
             lrc = convert2(self.lyrics, lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
@@ -147,7 +147,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
 
         dialog = QFileDialog(self)
         dialog.setWindowTitle(self.tr("保存歌词"))
-        dialog.setFileMode(QFileDialog.AnyFile)
+        dialog.setFileMode(QFileDialog.FileMode.AnyFile)
         if self.lyrics_type == 'converted':
             ext = f'(*{get_lyrics_format_ext(LyricsFormat(self.lyricsformat_comboBox.currentIndex()))})'
             dialog.setNameFilter(self.tr("歌词文件 ") + ext)

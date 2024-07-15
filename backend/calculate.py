@@ -45,7 +45,7 @@ def text_difference(text1: str, text2: str) -> float:
     return differ.ratio()
 
 
-def list_max_difference(list1: list[str | list[str]], list2: list[str | list[str]], filter_empty: bool = True) -> float:
+def list_max_difference(orig_list1: list[str | list[str]], orig_list2: list[str | list[str]], filter_empty: bool = True) -> float:
     """计算两个列表中字符串的最大相似度"""
     def list_str_max_difference(l1: list[str], l2: list[str]) -> float:
         if filter_empty:
@@ -54,8 +54,8 @@ def list_max_difference(list1: list[str | list[str]], list2: list[str | list[str
             l2 = [item for item in l2 if item]
         return max(text_difference(text1, text2) for text1 in l1 for text2 in l2)
 
-    list1 = [[item] if not isinstance(item, list) else item for item in list1]
-    list2 = [[item] if not isinstance(item, list) else item for item in list2]
+    list1: list[list[str]] = [[item] if not isinstance(item, list) else item for item in orig_list1]
+    list2: list[list[str]] = [[item] if not isinstance(item, list) else item for item in orig_list2]
 
     if len(list1) >= len(list2) > 0:
         scores = [(i1, i2, list_str_max_difference(l1, l2)) for i1, l1 in enumerate(list1) for i2, l2 in enumerate(list2)]
@@ -81,7 +81,7 @@ def list_max_difference(list1: list[str | list[str]], list2: list[str | list[str
     return total_score / max(len(list1), len(list2))
 
 
-def artist_str2list(artist: str) -> tuple[list[str], list[set[str]]]:
+def artist_str2list(artist: str) -> tuple[list[str], list[list[str]]]:
     """将歌手字符串转换为列表
 
     :param artist: 歌手字符串
@@ -175,9 +175,9 @@ def artist_str2list(artist: str) -> tuple[list[str], list[set[str]]]:
     return groups, artists
 
 
-def calculate_artist_score(artist1: str | list, artist2: str | list) -> float:
+def calculate_artist_score(artist1: str | list[str], artist2: str | list[str]) -> float:
     score = 0
-    artists = [artist1, artist2]
+    artists: list = [artist1, artist2]
     for i, artist in enumerate(artists):
         if isinstance(artist, list):
             for a in artist:
@@ -238,7 +238,7 @@ def calculate_title_score(title1: str, title2: str) -> float:
 
         :param not_same: 两个标题不同的部分
         """
-        not_same_tags: list[tuple[str, str, str, str]] = TITLE_TAG_PATTERN.findall(not_same)
+        not_same_tags = TITLE_TAG_PATTERN.findall(not_same)
         not_same_tags: list[str] = [item.strip() for tup in not_same_tags for item in tup if item]  # 去除空字符串与符号
         not_same_other = re.sub(r"|".join(not_same_tags) + r"|[-><)(\]\[～]", "", not_same)  # 获取非tags部分
 

@@ -13,7 +13,10 @@ _main_window = None
 
 def load_translation() -> None:
     global translator  # noqa: PLW0603
-    QApplication.instance().removeTranslator(translator)
+    app = QApplication.instance()
+    if not app:
+        return
+    app.removeTranslator(translator)
     translator = QTranslator()
     lang = cfg.get("language")
     match lang:
@@ -26,9 +29,9 @@ def load_translation() -> None:
                 translator.load(":/i18n/LDDC_en.qm")
         case "en":
             translator.load(":/i18n/LDDC_en.qm")
-    QApplication.instance().installTranslator(translator)
+    app.installTranslator(translator)
     if _main_window is not None:
-        _main_window.retranslateUi()
+        _main_window.retranslateUi()  # type: ignore[reportAttributeAccessIssue]
 
 
 def apply_translation(main_window: QWidget) -> None:

@@ -54,7 +54,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             path_line_edit.setText(os.path.normpath(save_path))
         dialog = QFileDialog(self)
         dialog.setWindowTitle(self.tr("选择文件夹"))
-        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setFileMode(QFileDialog.FileMode.Directory)
         dialog.fileSelected.connect(file_selected)
         dialog.open()
 

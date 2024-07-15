@@ -22,7 +22,7 @@ def get_audio_file_info(file_path: str) -> dict | str:
         return QCoreApplication.translate("song_info", "未找到文件: ") + file_path
     try:
         if file_path.lower().split('.')[-1] in file_extensions:
-            audio = mutagen.File(file_path, easy=True)
+            audio = mutagen.File(file_path, easy=True)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
             if audio is not None and audio.tags is not None:
                 if "title" in audio and "�" not in str(audio["title"][0]):
                     title = str(audio["title"][0])
@@ -63,29 +63,27 @@ def get_audio_file_info(file_path: str) -> dict | str:
                 }
                 if metadata["title"] is None:
                     return file_path + QCoreApplication.translate("song_info", " 无法获取歌曲标题,跳过")
-                return metadata
+
     except Exception as e:
         logger.exception("%s获取文件信息失败", file_path)
         return file_path + QCoreApplication.translate("song_info", "获取文件信息失败:") + str(e)
+    else:
+        return metadata
 
 
-def get_audio_duration(file_path: str) -> str | None:
+def get_audio_duration(file_path: str) -> int | None:
     try:
-        audio = mutagen.File(file_path)
-        return int(audio.info.length) if audio.info.length else None
+        audio = mutagen.File(file_path)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
+        return int(audio.info.length) if audio.info.length else None  # type: ignore[reportOptionalMemberAccess]
     except Exception:
         logger.exception("%s获取文件时长失败", file_path)
         return None
 
 
-def parse_cue(file_path: str) -> tuple[list, str]:  # noqa: PLR0915, C901, PLR0912
+def parse_cue(file_path: str) -> tuple[list, list]:  # noqa: PLR0915, C901, PLR0912
     file_content = read_unknown_encoding_file(file_path=file_path, sign_word=("FILE", "FILE"))
 
-    if file_content is None:
-        msg = "无法解码文件"
-        raise UnicodeDecodeError(msg)
-
-    cuedata = {"files": []}
+    cuedata: dict = {"files": []}
     for line in file_content.splitlines():
         if line.startswith('TITLE'):  # 标题
             if '"' in line:

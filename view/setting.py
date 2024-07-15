@@ -45,7 +45,7 @@ class SettingWidget(QWidget, Ui_settings):
             self.default_save_path_lineEdit.setText(os.path.normpath(path))
         dialog = QFileDialog(self)
         dialog.setWindowTitle(self.tr("选择默认保存路径"))
-        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setFileMode(QFileDialog.FileMode.Directory)
         dialog.fileSelected.connect(file_selected)
         dialog.open()
 

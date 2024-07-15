@@ -43,16 +43,16 @@ class SearchType(Enum):
 
 
 class Source(Enum):
-    QM = 1
-    KG = 2
-    NE = 3
-    Local = 4
+    QM = 0
+    KG = 1
+    NE = 2
+    Local = 100
 
     # 定义 Source 类的序列化方法
-    def __json__(self, obj: Any) -> str:
-        if isinstance(obj, Source):
-            return str(obj.name)
-        msg = f"Object of type {obj.__class__.__name__} is not JSON serializable"
+    def __json__(self, o: Any) -> str:
+        if isinstance(o, Source):
+            return str(o.name)
+        msg = f"Object of type {o.__class__.__name__} is not JSON serializable"
         raise TypeError(msg)
 
 

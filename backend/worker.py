@@ -4,6 +4,7 @@ import json
 import os
 import re
 import time
+from itertools import zip_longest
 
 from PySide6.QtCore import (
     QCoreApplication,
@@ -46,15 +47,14 @@ from .api import (
     kg_get_songlist,
     kg_search,
     ne_get_songlist,
-    ne_search,
     qm_get_album_song_list,
     qm_get_songlist_song_list,
-    qm_search,
 )
 from .calculate import calculate_artist_score, calculate_title_score
 from .converter import convert2
 from .fetcher import get_lyrics
 from .lyrics import Lyrics
+from .searcher import search
 from .song_info import file_extensions as audio_formats
 from .song_info import get_audio_file_info, parse_cue
 
@@ -95,55 +95,59 @@ class SearchSignal(QObject):
 
 class SearchWorker(QRunnable):
 
-    def __init__(self, taskid: int, keyword: str | dict, search_type: SearchType, source: Source, page: int | str = 1) -> None:
+    def __init__(self,
+                 taskid: int,
+                 keyword: str,
+                 search_type: SearchType,
+                 source: Source | list[Source],
+                 page: int | str = 1,
+                 info: dict | None = None) -> None:
         super().__init__()
         self.taskid = taskid
         self.keyword = keyword  # str: 关键字, dict: 歌曲信息
         self.search_type = search_type
         self.source = source
+        self.info = info
         self.page = int(page)
         self.signals = SearchSignal()
 
-    def run(self) -> None:
-        logger.debug("开始搜索")
-        if isinstance(self.keyword, dict):
-            keyword = {"keyword": f"{get_artist_str(self.keyword['artist'], sep='、')} - {self.keyword['title']}",
-                       "duration": self.keyword["duration"], "hash": self.keyword["hash"]}
-        else:
-            keyword = self.keyword
-        if ("serach", str(keyword), self.search_type, self.source, self.page) in cache:
-            logger.debug("从缓存中获取搜索结果,类型:%s, 关键字:%s", self.search_type, keyword)
-            search_return = cache[("serach", str(keyword), self.search_type, self.source, self.page)]
-        else:
-            for _i in range(3):
-                match self.source:
-                    case Source.QM:
-                        search_return = qm_search(keyword, self.search_type, self.page)
-                    case Source.KG:
-                        if isinstance(keyword, dict) and self.search_type == SearchType.LYRICS:
-                            search_return = kg_search(keyword, SearchType.LYRICS)
-                        else:
-                            search_return = kg_search(keyword, self.search_type, self.page)
-                    case Source.NE:
-                        search_return = ne_search(keyword, self.search_type, self.page)
-                if isinstance(search_return, str):
-                    continue
-                break
-            if isinstance(search_return, str):
-                self.signals.error.emit(search_return)
-                return
-            if not search_return:
-                self.signals.error.emit("没有任何结果")
-                return
-            cache[("serach", str(keyword), self.search_type, self.source, self.page)] = search_return
+    def handle_search_result(self, task_id: int, _search_type: SearchType, result: list) -> None:
+        self.search_task_finished += 1
+        self.search_task[task_id] = result
+        if self.search_task_finished == len(self.search_task):
+            self.loop.exit()
 
-        if self.source == Source.KG and isinstance(self.keyword, dict) and self.search_type == SearchType.LYRICS:
-            # 为歌词搜索结果添加歌曲信息(歌词保存需要)
-            result = [dict(self.keyword, **item) for item in search_return]
+    def handle_search_error(self, error: str) -> None:
+        self.search_task_finished += 1
+        self.error = error
+
+    def run(self) -> None:
+        if isinstance(self.source, Source):
+            try:
+                result = search(self.keyword, self.search_type, self.source, self.info, self.page)
+            except Exception as e:
+                msg = f"搜索时遇到错误:\n{e.__class__.__name__}: {e!s}"
+                self.signals.error.emit(msg)
+            self.signals.result.emit(self.taskid, self.search_type, result)
+            logger.debug("发送结果信号")
         else:
-            result = search_return
-        self.signals.result.emit(self.taskid, self.search_type, result)
-        logger.debug("发送结果信号")
+            self.loop = QEventLoop()
+            self.search_task = {}
+            self.error = "搜索时遇到错误:未知错误"
+            self.search_task_finished = 0
+            for task_id, source in enumerate(self.source):
+                self.search_task[task_id] = None
+                worker = SearchWorker(task_id, self.keyword, self.search_type, source, self.page, self.info)
+                worker.signals.result.connect(self.handle_search_result)
+                worker.signals.error.connect(self.handle_search_error)
+                threadpool.start(worker)
+            self.loop.exec()
+
+            results = [item for group in zip_longest(*self.search_task.values()) for item in group if item is not None]
+            if results:
+                self.signals.result.emit(self.taskid, self.search_type, results)
+            else:
+                self.signals.error.emit(self.error)
 
 
 class LyricProcessingSignal(QObject):
@@ -186,10 +190,7 @@ class LyricProcessingWorker(QRunnable):
                         if self.skip_inst_lyrics and song_info['language'] in ["纯音乐", '伴奏']:
                             self.signals.error.emit(f"{get_artist_str(song_info['artist'])} - {song_info['title']} 为纯音乐,已跳过")
                             continue
-                        search_return = kg_search({"keyword": f"{get_artist_str(song_info['artist'], sep='、')} - {song_info['title']}",
-                                                   "duration": song_info["duration"],
-                                                   "hash": song_info["hash"]},
-                                                  SearchType.LYRICS)
+                        search_return = kg_search(f"{get_artist_str(song_info['artist'], sep='、')} - {song_info['title']}", SearchType.LYRICS, song_info)
                         if isinstance(search_return, str):
                             self.signals.error.emit(QCoreApplication.translate("LyricProcess", "搜索歌词时出现错误{0}").format(search_return))
                             continue
@@ -216,7 +217,7 @@ class LyricProcessingWorker(QRunnable):
         error = None
         for _ in range(3):
             try:
-                lyrics, from_cache = get_lyrics(**song_info, return_cache_status=True)
+                lyrics, from_cache = get_lyrics(**song_info)
                 break
             except LyricsRequestError as e:
                 error = e
@@ -239,7 +240,7 @@ class LyricProcessingWorker(QRunnable):
             song_name_str = QCoreApplication.translate("LyricProcess", "歌名:") + song_info["title"] if "title" in song_info else ""
             msg = f"获取歌词失败：{song_name_str}, 源:{song_info['source']}, id: {song_info['id']}"
             logger.exception(msg)
-            self.signals.error.emit(f"{msg}\n{lyrics.__name__}: {lyrics!s}")  # 此时的 lyrics 是错误信息
+            self.signals.error.emit(f"{msg}\n{lyrics.__class__.__name__}: {lyrics!s}")  # 此时的 lyrics 是错误信息
             return from_cache
 
         lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in lyric_langs]
@@ -335,7 +336,7 @@ class LocalMatchWorker(QRunnable):
         self.save_path: str = infos["save_path"]
         self.save_mode: LocalMatchSaveMode = infos["save_mode"]
         self.fliename_mode: LocalMatchFileNameMode = infos["flienmae_mode"]
-        self.lyrics_order: list[str] = infos["lyrics_order"]
+        self.langs: list[str] = infos["lyrics_order"]
         self.lyrics_format: LyricsFormat = infos["lyrics_format"]
         self.source: list[Source] = infos["source"]
 
@@ -440,6 +441,8 @@ class LocalMatchWorker(QRunnable):
     def handle_fetch_result(self, result: dict[str, dict | Lyrics | str]) -> None:
         try:
             song_info = result["orig_info"]
+            if not isinstance(song_info, dict):
+                return
 
             simple_song_info_str = f"{get_artist_str(song_info['artist'])} - {song_info['title']}" if "artist" in song_info else song_info["title"]
             progress_str = f"[{self.current_index}/{self.total_index}]"
@@ -449,9 +452,12 @@ class LocalMatchWorker(QRunnable):
                     if self.skip_inst_lyrics is False or result.get("is_inst") is False:
                         # 不是纯音乐或不要跳过纯音乐
                         lrc_info = result["result_info"]
-                        lyrics: Lyrics = result["lyrics"]
+                        lyrics = result["lyrics"]
+                        if not isinstance(lrc_info, dict) or not isinstance(lyrics, Lyrics):
+                            return
+
                         # Step 4 合并歌词
-                        converted_lyrics = convert2(lyrics, self.lyrics_order, self.lyrics_format)
+                        converted_lyrics = convert2(lyrics, self.langs, self.lyrics_format)
                         # Step 5 保存歌词
                         match self.save_mode:
                             case LocalMatchSaveMode.MIRROR:
@@ -471,13 +477,13 @@ class LocalMatchWorker(QRunnable):
                                 if song_info["type"] == "cue":
                                     save_folder = os.path.join(save_folder, os.path.splitext(os.path.basename(song_info["file_path"]))[0])
                                     save_filename = escape_filename(
-                                        replace_info_placeholders(self.file_name_format, lrc_info, self.lyrics_order)) + ext
+                                        replace_info_placeholders(self.file_name_format, lrc_info, self.langs)) + ext
                                 else:
                                     save_filename = os.path.splitext(os.path.basename(song_info["file_path"]))[0] + ext
 
                             case LocalMatchFileNameMode.FORMAT:
                                 save_filename = escape_filename(
-                                    replace_info_placeholders(self.file_name_format, lrc_info, self.lyrics_order)) + ext
+                                    replace_info_placeholders(self.file_name_format, lrc_info, self.langs)) + ext
 
                         save_path = os.path.join(save_folder, save_filename)
                         try:
@@ -553,19 +559,19 @@ class AutoLyricsFetcher(QRunnable):
 
         self.result = None
 
-    def new_search_work(self, keyword: str, search_type: SearchType, source: Source) -> None:
+    def new_search_work(self, keyword: str, search_type: SearchType, source: Source, info: dict | None = None) -> None:
         task_id = len(self.search_task)
         self.search_task[task_id] = (keyword, search_type, source)
-        worker = SearchWorker(task_id, *self.search_task[task_id])
-        worker.signals.result.connect(self.handle_search_result, Qt.BlockingQueuedConnection)
-        worker.signals.error.connect(self.handle_search_error, Qt.BlockingQueuedConnection)
+        worker = SearchWorker(task_id, *self.search_task[task_id], info=info)
+        worker.signals.result.connect(self.handle_search_result, Qt.ConnectionType.BlockingQueuedConnection)
+        worker.signals.error.connect(self.handle_search_error, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
 
     def new_get_work(self, song_info: dict) -> None:
         task_id = len(self.get_task)
         self.get_task[task_id] = song_info
         worker = LyricProcessingWorker({"id": task_id, "song_info": song_info, "type": "get_lyric"})
-        worker.signals.result.connect(self.handle_get_result, Qt.BlockingQueuedConnection)
+        worker.signals.result.connect(self.handle_get_result, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
 
     def search(self) -> None:
@@ -610,14 +616,17 @@ class AutoLyricsFetcher(QRunnable):
                     score_info.append((score, info))
 
             score_info = sorted(score_info, key=lambda x: x[0], reverse=True)
-            best: dict = score_info[0] if score_info else None
+            best: tuple | None = score_info[0] if score_info else None
             if best:
                 best_info = best[1]
                 best_info['score'] = best[0]
                 logger.info("关键词: %s 搜索结果: %s", keyword, best)
                 if source == Source.KG and search_type == SearchType.SONG:
                     #  对酷狗音乐搜索到的歌曲搜索歌词
-                    self.new_search_work(best_info, SearchType.LYRICS, Source.KG)
+                    self.new_search_work(f"{get_artist_str(self.info.get('artist')), '、'} - {self.info['title'].strip()}",
+                                         SearchType.LYRICS,
+                                         Source.KG,
+                                         info=best_info)
                 else:
                     self.new_get_work(best_info)
             elif keyword == f"{get_artist_str(self.info.get('artist'))} - {self.info['title'].strip()}":
@@ -631,7 +640,7 @@ class AutoLyricsFetcher(QRunnable):
         finally:
             self.get_result()
 
-    def handle_get_result(self, task_id: int, result: list) -> None:
+    def handle_get_result(self, task_id: int, result: dict) -> None:
         try:
             self.get_task_finished += 1
             if "error_type" in result:
@@ -639,8 +648,8 @@ class AutoLyricsFetcher(QRunnable):
                     self.errors.append(result["error_str"])
             else:
                 song_info: dict = self.get_task[task_id]
-                result: Lyrics = result["result"]
-                self.obtained_lyrics.append((song_info, result))
+                result_lyrics: Lyrics = result["result"]
+                self.obtained_lyrics.append((song_info, result_lyrics))
             self.get_result()
         except Exception:
             logger.exception("歌词结果处理失败, 'orig_info': %s, 'self.obtained_lyrics': %s", self.info, self.obtained_lyrics)

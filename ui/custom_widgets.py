@@ -40,11 +40,12 @@ class ProportionallyStretchedTableWidget(QTableWidget):
         width = self.viewport().size().width()
         for i, prop in enumerate(self.props):
             if prop == HeaderViewResizeMode.ResizeToContents:
-                self.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+                self.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeMode.ResizeToContents)
                 width -= self.columnWidth(i)
         for i in range(self.columnCount()):
             if 0 <= self.props[i] <= 1:
-                self.horizontalHeader().setSectionResizeMode(i, QHeaderView.Interactive)
+
+                self.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
                 self.setColumnWidth(i, self.props[i] * width)
 
     def resizeEvent(self, event: QResizeEvent) -> None:

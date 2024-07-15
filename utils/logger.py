@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
+import io
 import logging
 import os
 import sys
@@ -29,6 +30,9 @@ def str2log_level(level: str) -> int:
             return ERROR
         case "CRITICAL":
             return CRITICAL
+        case _:
+            msg = f"Invalid log level: {level}"
+            raise ValueError(msg)
 
 
 class Logger:
@@ -46,7 +50,8 @@ class Logger:
         if __debug__ and sys.gettrace() is not None and not args.get_service_port:
             # 调试时创建一个处理器,用于将日志输出到标准输出
             console_handler = logging.StreamHandler(sys.stdout)
-            sys.stdout.reconfigure(encoding='utf-8')
+            if isinstance(sys.stdout, io.TextIOWrapper):
+                sys.stdout.reconfigure(encoding='utf-8')
             console_handler.setFormatter(formatter)
             self.__logger.addHandler(console_handler)
 

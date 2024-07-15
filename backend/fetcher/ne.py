@@ -3,15 +3,16 @@
 import re
 
 from backend.api import ne_get_lyrics
-from backend.lyrics import Lyrics, LyricsData
+from backend.lyrics import Lyrics, LyricsData, LyricsLine, LyricsWord
 from utils.enum import Source
+from utils.error import LyricsRequestError
 
-from .share import lrc2dict_list, plaintext2list
+from .share import lrc2list, plaintext2list
 
 
 def yrc2list(yrc: str) -> list:
     """将yrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
-    lrc_list: LyricsData = []
+    lrc_list = LyricsData([])
 
     line_split_pattern = re.compile(r'^\[(\d+),(\d+)\](.*)$')  # 逐行匹配
     wrods_split_pattern = re.compile(r'(?:\[\d+,\d+\])?\((\d+),(\d+),\d+\)((?:.(?!\d+,\d+,\d+\)))*)')  # 逐字匹配
@@ -24,20 +25,23 @@ def yrc2list(yrc: str) -> list:
         if not line_split_content:
             continue
         line_start_time, line_duration, line_content = line_split_content[0]
-        lrc_list.append((int(line_start_time), int(line_start_time) + int(line_duration), []))
+        lrc_list.append(LyricsLine((int(line_start_time), int(line_start_time) + int(line_duration), [])))
 
         wrods_split_content = re.findall(wrods_split_pattern, line_content)
         if not wrods_split_content:
-            lrc_list[-1][2].append((int(line_start_time), int(line_start_time) + int(line_duration), line_content))
+            lrc_list[-1][2].append(LyricsWord((int(line_start_time), int(line_start_time) + int(line_duration), line_content)))
             continue
 
         for word_start_time, word_duration, word_content in wrods_split_content:
-            lrc_list[-1][2].append((int(word_start_time), int(word_start_time) + int(word_duration), word_content))
+            lrc_list[-1][2].append(LyricsWord((int(word_start_time), int(word_start_time) + int(word_duration), word_content)))
 
     return lrc_list
 
 
 def get_lyrics(lyrics: Lyrics) -> None:
+    if lyrics.id is None:
+        msg = "Lyrics id is None"
+        raise LyricsRequestError(msg)
     response = ne_get_lyrics(lyrics.id)
     tags = {}
     if lyrics.artist:
@@ -70,6 +74,6 @@ def get_lyrics(lyrics: Lyrics) -> None:
             if value == 'yrc':
                 lyrics[key] = yrc2list(response[value]['lyric'])
             elif "[" in response[value]['lyric'] and "]" in response[value]['lyric']:
-                lyrics[key] = lrc2dict_list(response[value]['lyric'], source=Source.NE, to_list=True)[1]
+                lyrics[key] = lrc2list(response[value]['lyric'], source=Source.NE)[1]
             else:
                 lyrics[key] = plaintext2list(response[value]['lyric'])

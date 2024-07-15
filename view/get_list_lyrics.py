@@ -11,13 +11,13 @@ from view.msg_box import MsgBox
 class GetListLyrics(QDialog, Ui_get_list_lyrics):
     closed = Signal()
 
-    def __init__(self, parent: QWidget = None) -> None:
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setupUi(self)
         self.ask_to_close = False
 
     def question_slot(self, but: QMessageBox.StandardButton) -> None:
-        if but == QMessageBox.Yes:
+        if but == QMessageBox.StandardButton.Yes:
             self.ask_to_close = False
             self.close()
 
@@ -25,7 +25,7 @@ class GetListLyrics(QDialog, Ui_get_list_lyrics):
         if self.ask_to_close:
             arg__1.ignore()
             MsgBox.question(self, self.tr("提示"), self.tr("是否要退出获取专辑/歌单歌词？"),
-                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No, self.question_slot)
+                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No, self.question_slot)
         else:
             self.closed.emit()
             super().closeEvent(arg__1)

@@ -2,14 +2,14 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import re
 
-from backend.lyrics import LyricsData, MultiLyricsData
+from backend.lyrics import LyricsLine, MultiLyricsData
 
 
 def get_lyrics_lines(lyrics_dict: MultiLyricsData,
                      lyrics_order: list[str],
                      orig_i: int,
-                     orig_line: LyricsData,
-                     langs_mapping: dict[str, dict[int, int]]) -> list[LyricsData]:
+                     orig_line: LyricsLine,
+                     langs_mapping: dict[str, dict[int, int]]) -> list[LyricsLine]:
     """获取歌词同一句歌词所有语言类型的行列表"""
     lyrics_lines = []
     for lang in lyrics_order:

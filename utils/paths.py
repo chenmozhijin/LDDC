@@ -84,7 +84,7 @@ def __update_info() -> None:
                 isinstance(info["version"], str)):
 
             command_line = info.get("Command Line")
-            if '"' in command_line:
+            if isinstance(command_line, str) and '"' in command_line:
                 old_path = re.sub(r'[^ ]* "([^"]*?)"', r'\1', command_line)
                 if '"' in old_path:
                     old_path = None

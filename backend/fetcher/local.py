@@ -11,7 +11,7 @@ from utils.utils import read_unknown_encoding_file
 
 from .kg import krc2dict, krc_decrypt
 from .qm import qrc_decrypt, qrc_str_parse
-from .share import lrc2dict_list
+from .share import lrc2dict
 
 QRC_MAGICHEADER = b'\x98%\xb0\xac\xe3\x02\x83h\xe8\xfcl'
 KRC_MAGICHEADER = b'krc18'
@@ -43,7 +43,7 @@ def json2lyrics(json_data: dict, lyrics: Lyrics) -> None:
         if key in ("id", "duration") and not isinstance(value, int):
             msg = f"JSON歌词数据中包含值类型不正确的键: {key}"
 
-        if key == "source":
+        if key == "source" and isinstance(value, str):
             lyrics.source = Source.__members__.get(value)
             if lyrics.source is None:
                 msg = f"JSON歌词数据中包含不正确的值: {value}"
@@ -72,9 +72,9 @@ def json2lyrics(json_data: dict, lyrics: Lyrics) -> None:
             lyrics[key].append((line[0], line[1], [tuple(word) for word in line[2]]))
 
 
-def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
+def get_lyrics(lyrics: Lyrics, path: str | None, data: bytes | None = None) -> None:
     if data is None:
-        if os.path.isfile(path):
+        if not path or not os.path.isfile(path):
             msg = f"没有找到歌词: {path}"
             raise LyricsNotFoundError(msg)
 
@@ -82,14 +82,13 @@ def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
             data = f.read()
 
     # 判断歌词格式
-    if data.startswith(QRC_MAGICHEADER):
+    if data.startswith(QRC_MAGICHEADER) and path:
         # QRC歌词格式
 
         # 做到打开任意qrc文件都会读取同一首歌其他类型的qrc
         qrc_path = re.search(r"^(?P<prefix>.*)_qm(?P<qrc_type>Roma|ts)?\.qrc$", path)
         if qrc_path:
-            qrc_types = {"": None, "Roma": None, "ts": None}
-            qrc_types[qrc_path.group("qrc_type")] = data
+            qrc_types = {qrc_path.group("qrc_type"): data, **{k: None for k in ("", "Roma", "ts") if k != qrc_path.group("qrc_type")}}
             for qrc_type, qrc_data in qrc_types.items():
 
                 if not qrc_data and os.path.isfile(f"{qrc_path.group('prefix')}_qm{qrc_type}.qrc"):
@@ -109,8 +108,8 @@ def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
                             lyrics["roma"] = lyric
                         case "ts":
                             lyrics["ts"] = lyric
-        else:
-            lyrics.tags, lyric = qrc_str_parse(qrc_decrypt(qrc_data, QrcType.LOCAL))
+        elif data:
+            lyrics.tags, lyric = qrc_str_parse(qrc_decrypt(data, QrcType.LOCAL))
             lyrics[0] = lyric
 
     elif data.startswith(KRC_MAGICHEADER):
@@ -125,11 +124,11 @@ def get_lyrics(lyrics: Lyrics, path: str, data: bytes | None = None) -> None:
             json_data = json.loads(data)
             json2lyrics(json_data, lyrics)
         except Exception:
-            if path.lower().split('.')[-1] == 'lrc':
+            if path and path.lower().split('.')[-1] == 'lrc':
                 # LRC歌词格式
                 try:
                     file_text = read_unknown_encoding_file(file_data=data, sign_word=("[", "]", ":"))
-                    lyrics.tags, multi_lyrics_data = lrc2dict_list(file_text)
+                    lyrics.tags, multi_lyrics_data = lrc2dict(file_text)
                     lyrics.update(multi_lyrics_data)
                 except UnicodeDecodeError:
                     msg = f"不支持的歌词格式: {path}"

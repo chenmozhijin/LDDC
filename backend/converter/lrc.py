@@ -54,7 +54,7 @@ def lyrics_line2str(lyrics_line: LyricsLine,
     last_end = lyrics_line[0] if lyrics_format == LyricsFormat.VERBATIMLRC else None
     for (start, end, word) in lyrics_line[2]:
         if start is not None and start != last_end:
-            text += f"{symbols[0]}{ms_converter(max(start, line_start_time))}{symbols[1]}"
+            text += f"{symbols[0]}{ms_converter(max(start, line_start_time if line_start_time else start))}{symbols[1]}"
 
         text += word
 

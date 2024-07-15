@@ -32,8 +32,9 @@ def lyrics_line2asstext(lyrics_line: LyricsLine) -> str:
     if len(lyrics_line[2]) == 1:
         return "".join([word[2]for word in lyrics_line[2] if word[2] != ""])
     for word in lyrics_line[2]:
-        if word[0] is not None and word[1] is not None:
-            k = abs(word[1] - word[0]) // 10
+        word_start, word_end = word[0], word[1]
+        if word_start is not None and word_end is not None:
+            k = abs(word_end - word_start) // 10
         else:
             return "".join([word[2]for word in lyrics_line[2] if word[2] != ""])
         ass_text += r"{\kf" + str(k) + "}" + word[2]
@@ -60,13 +61,13 @@ def ass_converter(lyrics: Lyrics,
 
     lyrics_texts = {lang: "" for lang in lyrics_order[::-1]}
     for orig_i, orig_line in enumerate(lyrics_orig):
-
-        if orig_line[0] is None or orig_line[1] is None:
+        orig_start, orig_end = orig_line[0], orig_line[1]
+        if orig_start is None or orig_end is None:
             continue
 
         for lyrics_line, lang in zip(get_lyrics_lines(lyrics_dict, lyrics_order, orig_i, orig_line, langs_mapping), lyrics_order, strict=False):
-            lyrics_texts[lang] += DIALOGUE.format(start=ms2ass_timestamp(orig_line[0]),
-                                                  end=ms2ass_timestamp(orig_line[1]),
+            lyrics_texts[lang] += DIALOGUE.format(start=ms2ass_timestamp(orig_start),
+                                                  end=ms2ass_timestamp(orig_end),
                                                   lang=lang,
                                                   text=lyrics_line2asstext(lyrics_line))
 

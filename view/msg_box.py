@@ -17,7 +17,10 @@ def button_clicked(button: QAbstractButton) -> None:
 
     :param button: 按钮
     """
-    msg_box: QMessageBox = button.parent().parent()
+    msg_box = button.parent().parent()
+    if not isinstance(msg_box, QMessageBox):
+        return
+
     for index, (box, parent, func) in enumerate(_msg_boxs):  # noqa: B007
         if box == msg_box:
             break
@@ -25,7 +28,7 @@ def button_clicked(button: QAbstractButton) -> None:
         return
     if isinstance(parent, QWidget):
         parent.setFocus()
-    if msg_box.property("msg_type") == "question":
+    if isinstance(func, Callable):
         with contextlib.suppress(Exception):
             func(msg_box.standardButton(button))
 
@@ -43,13 +46,11 @@ class MsgBox(QObject):
         :param text: 内容
         """
         msg = QMessageBox(parent)
-        msg.setWindowModality(Qt.NonModal)
-        msg.setIcon(QMessageBox.Information)
+        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg.setIcon(QMessageBox.Icon.Information)
         msg.setWindowTitle(title)
         msg.setText(text)
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.setDefaultButton(QMessageBox.Ok)
-        msg.setProperty("msg_type", "information")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.buttonClicked.connect(button_clicked)
         msg.show()
         _msg_boxs.append((msg, parent, None))
@@ -63,12 +64,12 @@ class MsgBox(QObject):
         :param text: 内容
         """
         msg = QMessageBox(parent)
-        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg.setIcon(QMessageBox.Icon.Warning)
         msg.setWindowTitle(title)
         msg.setText(text)
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.setDefaultButton(QMessageBox.Ok)
-        msg.setProperty("msg_type", "warning")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.setDefaultButton(QMessageBox.StandardButton.Ok)
         msg.buttonClicked.connect(button_clicked)
         msg.show()
         _msg_boxs.append((msg, parent, None))
@@ -82,12 +83,12 @@ class MsgBox(QObject):
         :param text: 内容
         """
         msg = QMessageBox(parent)
-        msg.setIcon(QMessageBox.Critical)
+        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg.setIcon(QMessageBox.Icon.Critical)
         msg.setWindowTitle(title)
         msg.setText(text)
-        msg.setStandardButtons(QMessageBox.Ok)
-        msg.setDefaultButton(QMessageBox.Ok)
-        msg.setProperty("msg_type", "critical")
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.setDefaultButton(QMessageBox.StandardButton.Ok)
         msg.buttonClicked.connect(button_clicked)
         msg.show()
         _msg_boxs.append((msg, parent, None))
@@ -109,13 +110,13 @@ class MsgBox(QObject):
         :param func: 按键回调函数,调用时会按键类型
         """
         msg = QMessageBox(parent)
-        msg.setIcon(QMessageBox.Question)
+        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg.setIcon(QMessageBox.Icon.Question)
         msg.setWindowTitle(title)
         msg.setText(text)
         msg.setStandardButtons(button0)
         msg.setDefaultButton(button1)
         msg.buttonClicked.connect(lambda: None)
-        msg.setProperty("msg_type", "question")
         msg.buttonClicked.connect(button_clicked)
         msg.show()
         _msg_boxs.append((msg, parent, func))

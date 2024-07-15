@@ -2,11 +2,12 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import json
 import os
+import sqlite3
 from typing import Any
 
 from PySide6.QtCore import QMutex, QMutexLocker
 
-from .paths import config_dir, default_save_lyrics_dir
+from .paths import config_dir, data_dir, default_save_lyrics_dir
 
 
 class Config(dict):
@@ -75,3 +76,72 @@ class Config(dict):
 
 
 cfg = Config()
+
+
+class LocalSongLyricsDB:
+    def __init__(self) -> None:
+        self.mutex = QMutex()
+        self.path = os.path.join(data_dir, "local_song_lyrics.db")
+        self.conn = sqlite3.connect(self.path)
+        self.init_db()
+
+    def init_db(self) -> None:
+        with QMutexLocker(self.mutex):
+            cur = self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS songs (
+                    id INTEGER PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    artist TEXT NOT NULL,
+                    album TEXT NOT NULL,
+                    duration INTEGER NOT NULL,
+                    song_path TEXT NOT NULL,
+                    track_number TEXT,
+                    lyrics_path TEXT NOT NULL,
+                    config TEXT,
+                    UNIQUE (title, artist, album, duration, song_path, track_number)
+                )
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_title_artist_album_duration_song_path_track_number
+                ON songs (title, artist, album, duration, song_path, track_number)
+            """)
+            self.conn.commit()
+
+    def set_song(self,
+                 title: str,
+                 artist: str,
+                 album: str,
+                 duration: int,
+                 song_path: str,
+                 track_number: str | None,
+                 lyrics_path: str,
+                 config: dict) -> None:
+        with QMutexLocker(self.mutex):
+            self.conn.execute("""
+                INSERT OR REPLACE INTO songs (title, artist, album, duration, song_path, track_number, lyrics_path, config)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (title, artist, album, duration, song_path, track_number, lyrics_path, json.dumps(config, ensure_ascii=False)))
+            self.conn.commit()
+
+    def query(self,
+              title: str,
+              artist: str,
+              album: str,
+              duration: int,
+              song_path: str,
+              track_number: str | None) -> dict[str, str] | None:
+        with QMutexLocker(self.mutex):
+            cur = self.conn.execute("""
+                SELECT lyrics_path, config FROM songs WHERE title = ? AND artist = ? AND album = ? AND duration = ? AND song_path = ? AND track_number = ?
+            """, (title, artist, album, duration, song_path, track_number))
+            result = cur.fetchone()
+        if result:
+            return {"lyrics_path": result[0], "config": json.loads(result[1])}
+        return None
+
+    def close(self) -> None:
+        with QMutexLocker(self.mutex):
+            self.conn.close()
+
+
+local_song_lyrics = LocalSongLyricsDB()

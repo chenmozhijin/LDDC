@@ -108,6 +108,7 @@ class Ui_search_base:
 
         self.return_toolButton = QToolButton(self.layoutWidget_2)
         self.return_toolButton.setObjectName("return_toolButton")
+        self.return_toolButton.setEnabled(False)
         self.return_toolButton.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.return_toolButton.setAutoRaise(False)
         self.return_toolButton.setArrowType(Qt.ArrowType.LeftArrow)

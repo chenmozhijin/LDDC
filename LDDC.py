@@ -121,9 +121,9 @@ class MainWindow(SidebarWindow):
         self.activateWindow()
 
         # 在其他线程调用时self.raise_()没有用
-        self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
         self.show()
-        self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, False)
         self.show()
 
         self.setFocus()
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     service_thread.start()
     service.instance_del.connect(exit_manager.close_event)
 
-    exit_manager.close_signal.connect(service.stop_service, Qt.BlockingQueuedConnection)
+    exit_manager.close_signal.connect(service.stop_service, Qt.ConnectionType.BlockingQueuedConnection)
 
     main_window = MainWindow()
     service.show_signal.connect(main_window.show_window)

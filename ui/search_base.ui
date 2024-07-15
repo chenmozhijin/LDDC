@@ -153,6 +153,9 @@
        </item>
        <item>
         <widget class="QToolButton" name="return_toolButton">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>返回</string>
          </property>

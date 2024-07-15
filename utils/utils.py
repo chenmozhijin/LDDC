@@ -7,6 +7,7 @@ from pathlib import Path
 from chardet import detect
 
 from .enum import LyricsFormat
+from .error import DecodingError
 
 try:
     version = __import__("__main__").__version__.replace("v", "")
@@ -22,6 +23,9 @@ def get_lyrics_format_ext(lyrics_format: LyricsFormat) -> str:
             return ".srt"
         case LyricsFormat.ASS:
             return ".ass"
+        case _:
+            msg = f"Unknown lyrics format: {lyrics_format}"
+            raise ValueError(msg)
 
 
 def time2ms(m: int | str, s: int | str, ms: int | str) -> int:
@@ -45,7 +49,7 @@ def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | 
         raise ValueError(msg)
 
     detect_result = detect(raw_data)
-    if detect_result['confidence'] > 0.7:
+    if detect_result['confidence'] > 0.7 and detect_result['encoding']:
         encoding = detect_result['encoding'].replace('gb2312', 'gb18030').replace('gbk', 'gb18030')  # gbk is a subset of gb18030
         with contextlib.suppress(Exception):
             file_content = raw_data.decode(encoding)
@@ -83,16 +87,10 @@ def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | 
 
     if file_content is None:
         msg = "无法解码文件"
-        raise UnicodeDecodeError(reason=msg, object=raw_data)
+        raise DecodingError(msg)
 
     logger.debug("文件 %s 解码成功,编码为 %s", file_path, encoding)
     return file_content
-
-
-def tuple_to_list(obj: any) -> any:
-    if isinstance(obj, list | tuple):
-        return [tuple_to_list(item) for item in obj]
-    return obj
 
 
 def replace_placeholders(text: str, mapping_table: dict) -> str:
@@ -156,14 +154,16 @@ def get_save_path(folder: str, file_name_format: str, info: dict, lyric_langs: l
 
 
 def compare_version_numbers(current_version: str, last_version: str) -> bool:
-    last_version = tuple(int(i.split("-")[0]) for i in last_version.replace("v", "").split("."))
-    current_version = tuple(int(i.split("-")[0]) for i in current_version.replace("v", "").split("."))
-    if last_version == current_version and "beta" in current_version and "beta" not in last_version:
+    last_version_tuple = tuple(int(i.split("-")[0]) for i in last_version.replace("v", "").split("."))
+    current_version_tuple = tuple(int(i.split("-")[0]) for i in current_version.replace("v", "").split("."))
+    if last_version_tuple == current_version_tuple and "beta" in current_version and "beta" not in last_version:
         return True
-    return current_version < last_version
+    return current_version_tuple < last_version_tuple
 
 
-def get_artist_str(artist: str | list, sep: str = "/") -> str:
+def get_artist_str(artist: str | list | None, sep: str = "/") -> str:
+    if artist is None:
+        return ""
     return sep.join(artist) if isinstance(artist, list) else artist
 
 

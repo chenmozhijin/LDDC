@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import re
 
-from backend.lyrics import LyricsData, MultiLyricsData
+from backend.lyrics import LyricsData, LyricsLine, LyricsWord, MultiLyricsData
 from utils.enum import LyricsType, Source
 from utils.utils import time2ms
 
@@ -20,22 +20,22 @@ def judge_lyrics_type(lyrics: LyricsData) -> LyricsType:
     return lyrics_type
 
 
-def lrc2dict_list(lrc: str, source: Source | None = None, to_list: bool = False) -> tuple[dict[str, str], MultiLyricsData | LyricsData]:  # noqa: C901, PLR0912, PLR0915
-    lrc_lists: list[list] = [[]]
+def _lrc2list_list(lrc: str, source: Source | None = None) -> tuple[dict[str, str], list[LyricsData]]:
+    lrc_lists: list[LyricsData] = [LyricsData([])]
     start_time_lists: list[list] = [[]]
 
-    def add_line_list(line_list: list[None | str | int | list]) -> None:
+    def add_line(line: LyricsLine) -> None:
         for i, lrc_list in enumerate(lrc_lists):
-            if line_list[0] not in start_time_lists[i]:
+            if line[0] not in start_time_lists[i]:
                 # 没有开始时间相同的歌词行
-                if line_list[0] is not None:
-                    lrc_list.append((line_list[0], line_list[1], [tuple(word) for word in line_list[2]]))
-                    start_time_lists[i].append(line_list[0])
+                if line[0] is not None:
+                    lrc_list.append(line)
+                    start_time_lists[i].append(line[0])
                 break
         else:
-            if line_list[2]:
-                lrc_lists.append([(line_list[0], line_list[1], [tuple(word) for word in line_list[2]])])
-                start_time_lists.append([line_list[0]])
+            if line[2]:
+                lrc_lists.append(LyricsData([line]))
+                start_time_lists.append([line[0]])
 
     tags = {}
 
@@ -47,46 +47,45 @@ def lrc2dict_list(lrc: str, source: Source | None = None, to_list: bool = False)
     multi_line_split_pattern = re.compile(r"^((?:\[\d+:\d+\.\d+\]){2,})(.*)$")
     timestamps_pattern = re.compile(r"\[(\d+):(\d+).(\d+)\]")
 
-    for line in lrc.splitlines():
-        line_data = line.strip()
+    for line_str in lrc.splitlines():
+        line_data = line_str.strip()
         if not line_data or not line_data.startswith("["):
             continue
 
-        line_split_content: list[str] = line_split_pattern.findall(line)
+        line_split_content: list[str] = line_split_pattern.findall(line_str)
         if line_split_content:  # 歌词行
-            line_list: list[None | str | int | list] = [None, None, []]
             m, s, ms, line_content = line_split_content[0]
-            line_list[0] = time2ms(m, s, ms)
+            start, end, words = time2ms(m, s, ms), None, []
 
             if source == Source.NE:
                 # 如果转换的是网易云歌词且这一行有开头有几个连在一起的时间戳表示这几个时间戳的行都是这个歌词
-                multi_line_split_content = multi_line_split_pattern.findall(line)
+                multi_line_split_content = multi_line_split_pattern.findall(line_str)
                 if multi_line_split_content:
                     # 歌词行开头有多个时间戳
                     timestamps, line_content = multi_line_split_content
                     for m, s, ms in timestamps_pattern.findall(timestamps):
-                        line_list: list[None | str | int | list] = [None, None, []]
-                        line_list[0] = time2ms(m, s, ms)
-                        add_line_list(line_list)
+                        start = time2ms(m, s, ms)
+                        add_line(LyricsLine((start, None, [LyricsWord((start, None, line_content))])))
+                    continue
 
-            if line_content.strip().startswith("<") and line_content.strip().endswith(">"):
+            if "<" in line_content and ">" in line_content:
                 # 歌词行为增强格式
-                enhanced_word_split_content: list[str] = enhanced_word_split_pattern.findall(line_content)
+                enhanced_word_split_content: list[str] | None = enhanced_word_split_pattern.findall(line_content)
                 if enhanced_word_split_content:
-                    for s_m, s_s, s_ms, word, e_m, e_s, e_ms in enhanced_word_split_content:
-                        word_list = [time2ms(s_m, s_s, s_ms), None, word]  # 开始时间, 结束时间, 歌词
+                    for s_m, s_s, s_ms, word_str, e_m, e_s, e_ms in enhanced_word_split_content:
+                        word_start, word_end = time2ms(s_m, s_s, s_ms), None
                         if e_m and e_s and e_ms:
                             # 结束时间存在(即行末)
-                            word_list[1] = time2ms(e_m, e_s, e_ms)
-                            line_list[1] = word_list[1]
+                            word_end = time2ms(e_m, e_s, e_ms)
+                            end = word_end
 
                         # 添加上一字的结束时间
-                        if line_list[2]:
-                            line_list[2][-1][1] = word_list[0]
+                        if words:  # 上一字存在
+                            words[-1][1] = word_start
 
                         # 添加歌词字到歌词行
-                        if word:
-                            line_list[2].append(word_list)
+                        if word_str:
+                            words.append(LyricsWord((word_start, word_end, word_str)))
             else:
                 enhanced_word_split_content = None
 
@@ -96,77 +95,80 @@ def lrc2dict_list(lrc: str, source: Source | None = None, to_list: bool = False)
                 if word_split_content:
                     # 逐字
 
-                    for w_i, (word, e_m, e_s, e_ms) in enumerate(word_split_content):
-                        word_list = [None, None, word]  # 开始时间, 结束时间, 歌词
+                    for w_i, (word_str, e_m, e_s, e_ms) in enumerate(word_split_content):
+                        word_start, word_end = None, None
                         if e_m and e_s and e_ms:
                             # 结束时间存在
-                            word_list[1] = time2ms(e_m, e_s, e_ms)
+                            word_end = time2ms(e_m, e_s, e_ms)
                             if w_i == len(word_split_content) - 1:
                                 # 当前歌词为最后一行歌词
-                                line_list[1] = word_list[1]
+                                end = word_end
 
                         # 添加开始时间
-                        if not line_list[2]:
-                            word_list[0] = line_list[0]
-                        else:
-                            word_list[0] = line_list[2][-1][1]
+                        word_start = start if not words else words[-1][1]
 
                         # 添加歌词字到歌词行
-                        if word:
-                            line_list[2].append(word_list)
+                        if word_str:
+                            words.append(LyricsWord((word_start, word_end, word_str)))
                 elif line_content.strip():
-                    line_list[2] = [line_list[0], None, line_content]  # 开始时间, 结束时间, 歌词
+                    words = [LyricsWord((start, None, line_content))]  # 开始时间, 结束时间, 歌词
 
-            add_line_list(line_list)
+            add_line(LyricsLine((start, end, words)))
             continue
 
-        tag_split_content = tag_split_pattern.findall(line)
+        tag_split_content = tag_split_pattern.findall(line_str)
         if tag_split_content:  # 标签行
             tags.update({tag_split_content[0][0]: tag_split_content[0][1]})
 
     # 按起始时间排序
     for i, lrc_list in enumerate(lrc_lists):
-        lrc_lists[i] = sorted(lrc_list, key=lambda x: x[0])
-        for i_, line_list in enumerate(lrc_lists[i]):
-            if i_ != 0 and lrc_lists[i][i_ - 1][1] is None and line_list[0] is not None:
+        lrc_lists[i] = LyricsData(sorted((line for line in lrc_list if line[0] is not None), key=lambda x: x[0]))  # type: ignore[]
+        for i_, line in enumerate(lrc_lists[i]):
+            if i_ != 0 and lrc_lists[i][i_ - 1][1] is None and line[0] is not None:
                 # 上一行歌词结束时间不存在, 当前行歌词开始时间存在, 则上一行歌词结束时间等于当前行歌词开始时间
-                lrc_lists[i][i_ - 1] = (lrc_lists[i][i_ - 1][0], line_list[0], lrc_lists[i][i_ - 1][2])
+                lrc_lists[i][i_ - 1] = LyricsLine((lrc_lists[i][i_ - 1][0], line[0], lrc_lists[i][i_ - 1][2]))
 
         # 清除空行
-        lrc_lists[i] = [line for line in lrc_lists[i] if line[2]]
+        lrc_lists[i] = LyricsData([line for line in lrc_lists[i] if line[2]])
 
-    lrc_lists: list[LyricsData]
+    return tags, lrc_lists
 
-    if to_list:
-        # 合并为一个LyricsData
-        for i, lrc_list in enumerate(lrc_lists):
-            if i == 0:
-                continue
-            for line_list1 in lrc_list:
-                for line_list2 in reversed(lrc_lists[0]):
-                    if line_list1[0] == line_list2[0]:
-                        # 歌词行起始时间相同,向后插入
-                        lrc_lists[0].insert(lrc_lists[0].index(line_list2) + 1, line_list1)
-                        break
-        return tags, lrc_lists[0]
+
+def lrc2dict(lrc: str, source: Source | None = None) -> tuple[dict[str, str], MultiLyricsData]:
+    tags, lrc_lists = _lrc2list_list(lrc, source)
 
     if not lrc_lists:
-        return None, {}
+        return {}, MultiLyricsData({})
     if len(lrc_lists) == 1:
-        return tags, {"orig": lrc_lists[0]}
+        return tags, MultiLyricsData({"orig": lrc_lists[0]})
 
     type0 = judge_lyrics_type(lrc_lists[0])
     type1 = judge_lyrics_type(lrc_lists[1])
 
     if len(lrc_lists) == 2:
         if type0 == LyricsType.VERBATIM and type1 == LyricsType.VERBATIM:
-            return tags, {"roma": lrc_lists[0], "orig": lrc_lists[1]}
-        return tags, {"orig": lrc_lists[0], "ts": lrc_lists[1]}
-    return tags, {"roma": lrc_lists[0], "orig": lrc_lists[1], "ts": lrc_lists[2]}
+            return tags, MultiLyricsData({"roma": lrc_lists[0], "orig": lrc_lists[1]})
+        return tags, MultiLyricsData({"orig": lrc_lists[0], "ts": lrc_lists[1]})
+    return tags, MultiLyricsData({"roma": lrc_lists[0], "orig": lrc_lists[1], "ts": lrc_lists[2]})
 
 
-def plaintext2list(plaintext: str) -> list[list[None, None, list[None, None, str]]]:
-    lrc_list: LyricsData = []
+def lrc2list(lrc: str, source: Source | None = None) -> tuple[dict[str, str], LyricsData]:
+    tags, lrc_lists = _lrc2list_list(lrc, source)
+    # 合并为一个LyricsData
+    for i, lrc_list in enumerate(lrc_lists):
+        if i == 0:
+            continue
+        for line_list1 in lrc_list:
+            for line_list2 in reversed(lrc_lists[0]):
+                if line_list1[0] == line_list2[0]:
+                    # 歌词行起始时间相同,向后插入
+                    lrc_lists[0].insert(lrc_lists[0].index(line_list2) + 1, line_list1)
+                    break
+    return tags, lrc_lists[0]
+
+
+def plaintext2list(plaintext: str) -> LyricsData:
+    lrc_list = LyricsData([])
     for line in plaintext.splitlines():
-        lrc_list.append((None, None, [(None, None, line)]))
+        lrc_list.append(LyricsLine((None, None, [LyricsWord((None, None, line))])))
     return lrc_list

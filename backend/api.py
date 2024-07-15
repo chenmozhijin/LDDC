@@ -5,6 +5,7 @@ import random
 import re
 import time
 from base64 import b64decode, b64encode
+from typing import Any
 
 import requests
 
@@ -33,7 +34,11 @@ def get_latest_version() -> tuple[bool, str, str]:
         return False, f"获取最新版本信息失败, 响应: {latest_release}", ""
 
 
-json.JSONEncoder.default = Source.__json__
+def logging_json_default(obj: Any) -> str:
+    if hasattr(obj, '__json__'):
+        return obj.__json__()
+    msg = f"Type {type(obj).__name__} not serializable"
+    raise TypeError(msg)
 
 
 QMD_headers = {
@@ -84,11 +89,11 @@ def _eapi_request(path: str, params: dict) -> dict:
     :param method: 请求方法
     :return dict: 请求结果
     """
-    params = eapi_params_encrypt(path.replace("eapi", "api").encode(), params)
+    encrypted_params = eapi_params_encrypt(path.replace("eapi", "api").encode(), params)
     headers = NeteaseCloudMusic_headers.copy()
     # headers.update({"Content-Length": str(len(params))})
     url = "https://music.163.com" + path
-    response = requests.post(url, headers=headers, data=params, timeout=4)
+    response = requests.post(url, headers=headers, data=encrypted_params, timeout=4)
     response.raise_for_status()
     data = eapi_response_decrypt(response.content)
     return json.loads(data)
@@ -106,7 +111,7 @@ def eapi_get_params_header() -> str:
     }, ensure_ascii=False, separators=(',', ':'))
 
 
-def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> dict:
+def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> list:
     """网易云音乐搜索
 
     :param keyword:关键字
@@ -138,51 +143,46 @@ def ne_search(keyword: str, search_type: SearchType, page: str | int = 1) -> dic
         "e_r": True,
         "header": eapi_get_params_header(),
     }
-    try:
-        data = _eapi_request("/eapi/cloudsearch/pc", params)
-        if 'result' not in data:
-            return []
-        match search_type:
-            case SearchType.SONG:
-                if 'songs' not in data['result']:
-                    return []
-                results = nesonglist2result(data['result']['songs'])
-            case SearchType.ALBUM:
-                if 'albums' not in data['result']:
-                    return []
-                results = []
-                for album in data['result']['albums']:
-                    results.append({
-                        'id': album['id'],
-                        'name': album['name'],
-                        'pic': album['picUrl'],  # 专辑封面
-                        'count': album['size'],  # 歌曲数量
-                        'time': time.strftime('%Y-%m-%d', time.localtime(album['publishTime'] // 1000)),
-                        'artist': album['artists'][0]["name"] if album['artists'] else "",
-                        'source': Source.NE,
-                    })
-            case SearchType.SONGLIST:
-                if 'playlists' not in data['result']:
-                    return []
-                results = []
-                for songlist in data['result']['playlists']:
-                    results.append({
-                        'id': songlist['id'],
-                        'name': songlist['name'],
-                        'pic': songlist['coverImgUrl'],  # 歌单封面
-                        'count': songlist['trackCount'],  # 歌曲数量
-                        'time': "",
-                        'creator': songlist['creator']['nickname'],
-                        'source': Source.NE,
-                    })
-    except Exception as e:
-        logger.exception("网易云音乐搜索接口请求失败")
-        return str(e)
-    else:
-        logger.info("搜索成功")
-        if logger.level <= DEBUG:
-            logger.debug("搜索结果: %s", json.dumps(results, ensure_ascii=False, indent=4))
-        return results
+    data = _eapi_request("/eapi/cloudsearch/pc", params)
+    if 'result' not in data:
+        return []
+    match search_type:
+        case SearchType.SONG:
+            if 'songs' not in data['result']:
+                return []
+            results = nesonglist2result(data['result']['songs'])
+        case SearchType.ALBUM:
+            if 'albums' not in data['result']:
+                return []
+            results = []
+            for album in data['result']['albums']:
+                results.append({
+                    'id': album['id'],
+                    'name': album['name'],
+                    'pic': album['picUrl'],  # 专辑封面
+                    'count': album['size'],  # 歌曲数量
+                    'time': time.strftime('%Y-%m-%d', time.localtime(album['publishTime'] // 1000)),
+                    'artist': album['artists'][0]["name"] if album['artists'] else "",
+                    'source': Source.NE,
+                })
+        case SearchType.SONGLIST:
+            if 'playlists' not in data['result']:
+                return []
+            results = []
+            for songlist in data['result']['playlists']:
+                results.append({
+                    'id': songlist['id'],
+                    'name': songlist['name'],
+                    'pic': songlist['coverImgUrl'],  # 歌单封面
+                    'count': songlist['trackCount'],  # 歌曲数量
+                    'time': "",
+                    'creator': songlist['creator']['nickname'],
+                    'source': Source.NE,
+                })
+    logger.info("搜索成功")
+    if logger.level <= DEBUG:
+        logger.debug("搜索结果: %s", json.dumps(results, default=logging_json_default, ensure_ascii=False, indent=4))
+    return results
 
 
 def ne_get_lyrics(songid: str | int) -> dict:
@@ -339,18 +339,18 @@ def qm_get_lyrics(title: str, artist: list[str], album: str, id_: int, duration:
     try:
         response = requests.post('https://u.y.qq.com/cgi-bin/musicu.fcg', headers=QMD_headers, data=data, timeout=10)
         response.raise_for_status()
-        data: dict = response.json()['music.musichallSong.PlayLyricInfo.GetPlayLyricInfo']['data']
+        response_data: dict = response.json()['music.musichallSong.PlayLyricInfo.GetPlayLyricInfo']['data']
     except Exception as e:
         logger.exception("请求歌词失败")
         msg = f"请求歌词失败: {e}"
         raise LyricsRequestError(msg) from e
     else:
         if logger.level <= DEBUG:
-            logger.debug("请求qm歌词成功：%s, %s}", id_, json.dumps(data, ensure_ascii=False, indent=4))
-        return data
+            logger.debug("请求qm歌词成功：%s, %s}", id_, json.dumps(response_data, default=logging_json_default, ensure_ascii=False, indent=4))
+        return response_data
 
 
-def qm_search(keyword: str, search_type: SearchType, page: int | str = 1) -> list | str:
+def qm_search(keyword: str, search_type: SearchType, page: int | str = 1) -> list:
     """QQ音乐搜索
 
     :param keyword:关键字
@@ -359,7 +359,8 @@ def qm_search(keyword: str, search_type: SearchType, page: int | str = 1) -> lis
     :return: 搜索结果(list)或错误(str)
     """
     if search_type not in (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM, SearchType.SONGLIST):
-        return f"搜索类型错误,类型为{search_type}"
+        msg = f"搜索类型错误,类型为{search_type}"
+        raise ValueError(msg)
     data = json.dumps({
         "comm": {
             "g_tk": 997034911,
@@ -384,67 +385,53 @@ def qm_search(keyword: str, search_type: SearchType, page: int | str = 1) -> lis
             },
         },
     }, ensure_ascii=False).encode("utf-8")
-    try:
-        response = requests.post('https://u.y.qq.com/cgi-bin/musicu.fcg', headers=QMD_headers, data=data, timeout=3)
-        response.raise_for_status()
-        infos = response.json()['req_0']['data']['body']
-        results = []
-        match search_type:
+    response = requests.post('https://u.y.qq.com/cgi-bin/musicu.fcg', headers=QMD_headers, data=data, timeout=3)
+    response.raise_for_status()
+    infos = response.json()['req_0']['data']['body']
+    results = []
+    match search_type:
 
-            case SearchType.SONG:
-                results = qmsonglist2result(infos['song']['list'])
+        case SearchType.SONG:
+            results = qmsonglist2result(infos['song']['list'])
 
-            case SearchType.ALBUM:
-                for album in infos['album']['list']:
-                    results.append({
-                        'id': album['albumID'],
-                        'mid': album['albumMID'],
-                        'name': album['albumName'],
-                        'pic': album['albumPic'],  # 专辑封面
-                        'count': album['song_count'],  # 歌曲数量
-                        'time': album['publicTime'],
-                        'artist': album['singerName'],
-                        'source': Source.QM,
-                    })
+        case SearchType.ALBUM:
+            for album in infos['album']['list']:
+                results.append({
+                    'id': album['albumID'],
+                    'mid': album['albumMID'],
+                    'name': album['albumName'],
+                    'pic': album['albumPic'],  # 专辑封面
+                    'count': album['song_count'],  # 歌曲数量
+                    'time': album['publicTime'],
+                    'artist': album['singerName'],
+                    'source': Source.QM,
+                })
 
-            case SearchType.SONGLIST:
-                for songlist in infos['songlist']['list']:
-                    results.append({
-                        'id': songlist['dissid'],
-                        'name': songlist['dissname'],
-                        'pic': songlist['imgurl'],  # 歌单封面
-                        'count': songlist['song_count'],  # 歌曲数量
-                        'time': songlist['createtime'],
-                        'creator': songlist['creator']['name'],
-                        'source': Source.QM,
-                    })
+        case SearchType.SONGLIST:
+            for songlist in infos['songlist']['list']:
+                results.append({
+                    'id': songlist['dissid'],
+                    'name': songlist['dissname'],
+                    'pic': songlist['imgurl'],  # 歌单封面
+                    'count': songlist['song_count'],  # 歌曲数量
+                    'time': songlist['createtime'],
+                    'creator': songlist['creator']['name'],
+                    'source': Source.QM,
+                })
 
-            case SearchType.ARTIST:
-                for artist in infos['singer']['list']:
-                    results.append({
-                        'id': artist['singerID'],
-                        'name': artist['singerName'],
-                        'pic': artist['singerPic'],  # 艺术家图片
-                        'count': artist['songNum'],  # 歌曲数量
-                        'source': Source.QM,
-                    })
-    except requests.HTTPError as e:
-        logger.exception("请求搜索数据时错误")
-        return str(e)
-    except requests.RequestException as e:
-        logger.exception("请求搜索数据时错误")
-        return str(e)
-    except json.JSONDecodeError as e:
-        logger.exception("解析搜索结果时错误")
-        return str(e)
-    except Exception as e:
-        logger.exception("未知错误")
-        return str(e)
-    else:
-        logger.info("搜索成功")
-        if logger.level <= DEBUG:
-            logger.debug("搜索结果: %s", json.dumps(results, ensure_ascii=False, indent=4))
-        return results
+        case SearchType.ARTIST:
+            for artist in infos['singer']['list']:
+                results.append({
+                    'id': artist['singerID'],
+                    'name': artist['singerName'],
+                    'pic': artist['singerPic'],  # 艺术家图片
+                    'count': artist['songNum'],  # 歌曲数量
+                    'source': Source.QM,
+                })
+    logger.info("搜索成功")
+    if logger.level <= DEBUG:
+        logger.debug("搜索结果: %s", json.dumps(results, default=logging_json_default, ensure_ascii=False, indent=4))
+    return results
 
 
 def qm_get_album_song_list(album_mid: str) -> list | str:
@@ -493,7 +480,7 @@ def qm_get_album_song_list(album_mid: str) -> list | str:
     else:
         logger.info("获取专辑信息成功")
         if logger.level <= DEBUG:
-            logger.debug("获取结果: %s", json.dumps(results, ensure_ascii=False, indent=4))
+            logger.debug("获取结果: %s", json.dumps(results, default=logging_json_default, ensure_ascii=False, indent=4))
         return results
 
 
@@ -572,24 +559,17 @@ def kgsonglist2result(songlist: list, list_type: str = "search") -> list:
     return results
 
 
-def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str | list:
+def kg_search(keyword: str, search_type: SearchType, info: dict | None = None, page: int = 1) -> list[dict[str, Any]]:
     """酷狗音乐搜索
 
+    :param info:关键字
     :param info:关键字
     :param search_type搜索类型
     :param page页码(从1开始)
     :return: 搜索结果(list)或错误(str)
     """
     domain = random.choice(["mobiles.kugou.com", "msearchcdn.kugou.com", "mobilecdnbj.kugou.com", "msearch.kugou.com"])  # noqa: S311
-    if isinstance(info, str):
-        keyword = info
-    elif isinstance(info, dict):
-        keyword = info.get("keyword")
-        duration = info.get("duration")
-        hash_ = info.get("hash")
-    else:
-        logger.error("输入参数类型错误,类型: %s", type(info).__name__)
-        return f"输入参数类型错误,类型:{type(info).__name__}"
+
     match search_type:
         case SearchType.SONG:
             url = f"http://{domain}/api/v3/search/song"
@@ -636,69 +616,68 @@ def kg_search(info: str | dict, search_type: SearchType, page: int = 1) -> str |
                 "with_res_tag": "1",
             }
         case SearchType.LYRICS:
+            if not info:
+                msg = "错误: 缺少参数info"
+                raise ValueError(msg)
             url = "http://lyrics.kugou.com/search"
             params = {
                 "ver": 1,
                 "man": "yes",
                 "client": "pc",
                 "keyword": keyword,
-                "duration": duration,
-                "hash": hash_,
+                "duration": info["duration"],
+                "hash": info["hash"],
             }
         case _:
-            return f"错误: 未知搜索类型{search_type!s}"
-    try:
-        response = requests.get(url, params=params, timeout=3)
-        response.raise_for_status()
-        if search_type == SearchType.LYRICS:
-            response_json = response.json()
-        else:
-            response_json = json.loads(re.findall(r"<!--KG_TAG_RES_START-->(.*)<!--KG_TAG_RES_END-->", response.text, re.DOTALL)[0])
-        match search_type:
-            case SearchType.SONG:
-                results = kgsonglist2result(response_json['data']['info'])
-            case SearchType.SONGLIST:
-                results = []
-                for songlist in response_json['data']['info']:
-                    results.append({
-                        'id': songlist['specialid'],
-                        'name': songlist['specialname'],
-                        'pic': songlist['imgurl'],  # 歌单封面
-                        'count': songlist['songcount'],  # 歌曲数量
-                        'time': songlist['publishtime'],
-                        'creator': songlist['nickname'],
-                        'source': Source.KG,
-                    })
-            case SearchType.ALBUM:
-                results = []
-                for album in response_json['data']['info']:
-                    results.append({
-                        'id': album['albumid'],
-                        'name': album['albumname'],
-                        'pic': album['imgurl'],  # 专辑封面
-                        'count': album['songcount'],  # 歌曲数量
-                        'time': album['publishtime'],
-                        'artist': album['singername'],
-                        'source': Source.KG,
-                    })
-            case SearchType.LYRICS:
-                results = []
-                for lyric in response_json['candidates']:
-                    results.append({
-                        "id": lyric['id'],
-                        "accesskey": lyric['accesskey'],
-                        "duration": lyric['duration'],
-                        "creator": lyric['nickname'],
-                        "score": lyric['score'],
-                        "source": Source.KG,
-                    })
-    except Exception as e:
-        logger.exception("搜索时错误")
-        return str(e)
+            msg = f"错误: 未知搜索类型{search_type!s}"
+            raise ValueError(msg)
+    response = requests.get(url, params=params, timeout=3)
+    response.raise_for_status()
+    if search_type == SearchType.LYRICS:
+        response_json = response.json()
     else:
-        if logger.level <= DEBUG:
-            logger.debug("搜索结果：%s", json.dumps(results, ensure_ascii=False, indent=4))
-        return results
+        response_json = json.loads(re.findall(r"<!--KG_TAG_RES_START-->(.*)<!--KG_TAG_RES_END-->", response.text, re.DOTALL)[0])
+    match search_type:
+        case SearchType.SONG:
+            results = kgsonglist2result(response_json['data']['info'])
+        case SearchType.SONGLIST:
+            results = []
+            for songlist in response_json['data']['info']:
+                results.append({
+                    'id': songlist['specialid'],
+                    'name': songlist['specialname'],
+                    'pic': songlist['imgurl'],  # 歌单封面
+                    'count': songlist['songcount'],  # 歌曲数量
+                    'time': songlist['publishtime'],
+                    'creator': songlist['nickname'],
+                    'source': Source.KG,
+                })
+        case SearchType.ALBUM:
+            results = []
+            for album in response_json['data']['info']:
+                results.append({
+                    'id': album['albumid'],
+                    'name': album['albumname'],
+                    'pic': album['imgurl'],  # 专辑封面
+                    'count': album['songcount'],  # 歌曲数量
+                    'time': album['publishtime'],
+                    'artist': album['singername'],
+                    'source': Source.KG,
+                })
+        case SearchType.LYRICS:
+            results = []
+            for lyric in response_json['candidates']:
+                results.append({
+                    "id": lyric['id'],
+                    "accesskey": lyric['accesskey'],
+                    "duration": lyric['duration'],
+                    "creator": lyric['nickname'],
+                    "score": lyric['score'],
+                    "source": Source.KG,
+                })
+    if logger.level <= DEBUG:
+        logger.debug("搜索结果：%s", json.dumps(results, default=logging_json_default, ensure_ascii=False, indent=4))
+    return results
 
 
 def kg_get_songlist(listid: str | int, list_type: str) -> str | list:
@@ -743,7 +722,7 @@ def kg_get_songlist(listid: str | int, list_type: str) -> str | list:
         return results
 
 
-def kg_get_lyrics(lyrsicid: str | int, access_key: str) -> list:
+def kg_get_lyrics(lyrsicid: str | int, access_key: str) -> bytes:
     url = "https://lyrics.kugou.com/download"
     params = {
         "ver": 1,

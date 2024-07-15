@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import os
+from typing import Any
 
 from PySide6.QtCore import (
     QModelIndex,
@@ -33,17 +34,15 @@ from view.msg_box import MsgBox
 
 
 class SearchWidgetBase(QWidget, Ui_search_base):
-    def __init__(self, main_window: QWidget) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self.setupUi(self)
-        self.return_toolButton.setEnabled(False)
-        self.main_window = main_window
         self.connect_signals()
         self.search_type = SearchType.SONG
 
         self.songlist_result = None
         self.reset_page_status()
-        self.search_info = {'keyword': None, 'search_type': None, 'source': None, 'page': None}  # 搜索的信息
+        self.search_info: dict[str, Any] | None = None  # 搜索的信息
         self.search_result = None
         self.search_lyrics_result = None
         self.preview_info = None
@@ -91,6 +90,9 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                 return Source.KG
             case 2:
                 return Source.NE
+            case _:
+                msg = "Invalid source"
+                raise ValueError(msg)
 
     @Slot(str)
     def search_type_changed(self, index: int) -> None:
@@ -178,6 +180,9 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                     return self.tr("逐字")
                 case LyricsType.LINEBYLINE:
                     return self.tr("逐行")
+                case _:
+                    msg = f"Invalid LyricsType: {lrc.types[lrc_type]}"
+                    raise ValueError(msg)
 
         if taskid != self.taskid["update_preview_lyric"]:
             return
@@ -356,8 +361,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.reset_page_status()
         self.taskid["results_table"] += 1
         worker = SearchWorker(self.taskid["results_table"],
-                              info,
-                              SearchType.LYRICS, info['source'], 1)
+                              f"{get_artist_str(info.get('artist')), '、'} - {info['title'].strip()}",
+                              SearchType.LYRICS, info['source'], 1, info)
         worker.signals.result.connect(self.search_lyrics_result_slot)
         worker.signals.error.connect(self.search_lyrics_error_slot)
         threadpool.start(worker)
@@ -369,10 +374,16 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         result_type = table.property("result_type")
         match result_type[0]:
             case "search":  # 如果结果表格显示的是搜索结果
+                if not self.search_result:
+                    return
                 info = self.search_result["result"][row]
             case "album" | "songlist":  # 如果结果表格显示的是专辑、歌单的列表
+                if not self.songlist_result:
+                    return
                 info = self.songlist_result["result"][row]
             case "lyrics":  # 如果结果表格显示的是歌词的搜索结果
+                if not self.search_lyrics_result:
+                    return
                 info = self.search_lyrics_result[row]
             case _:
                 return
@@ -398,7 +409,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
     @Slot(int, SearchType, list)
     def search_nextpage_result_slot(self, taskid: int, search_type: SearchType, result: list) -> None:
-        if taskid != self.taskid["results_table"]:
+        if taskid != self.taskid["results_table"] or not self.search_info or not self.search_result:
             return
         self.get_next_page = False
 
@@ -438,7 +449,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
             if (result_type[0] == "search" and
                 not self.get_next_page and
                 self.search_result is not None and
-                    not self.all_results_obtained):
+                not self.all_results_obtained and
+                    self.search_info):
                 self.get_next_page = True
 
                 # 创建加载中的 QTableWidgetItem
@@ -464,12 +476,13 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
 class SearchWidget(SearchWidgetBase):
     def __init__(self, main_window: QWidget) -> None:
-        super().__init__(main_window)
+        super().__init__()
         self.setup_ui()
         self.resize(1050, 600)
         self.select_path_pushButton.clicked.connect(self.select_savepath)
         self.save_preview_lyric_pushButton.clicked.connect(self.save_preview_lyric)
         self.save_list_lyrics_pushButton.clicked.connect(self.save_list_lyrics)
+        self.main_window = main_window
 
     def setup_ui(self) -> None:
 
@@ -507,8 +520,8 @@ class SearchWidget(SearchWidgetBase):
 
         but_h = self.control_verticalLayout.sizeHint().height() - self.control_verticalSpacer.sizeHint().height() * 0.8
 
-        self.save_preview_lyric_pushButton.setMinimumSize(QSize(0, but_h))
-        self.save_list_lyrics_pushButton.setMinimumSize(QSize(0, but_h))
+        self.save_preview_lyric_pushButton.setMinimumSize(QSize(0, int(but_h)))
+        self.save_list_lyrics_pushButton.setMinimumSize(QSize(0, int(but_h)))
 
         self.bottom_horizontalLayout.addWidget(self.save_list_lyrics_pushButton)
         self.bottom_horizontalLayout.addWidget(self.save_preview_lyric_pushButton)
@@ -532,7 +545,8 @@ class SearchWidget(SearchWidgetBase):
         """保存专辑、歌单中的所有歌词"""
         result_type = self.results_tableWidget.property("result_type")
         if (result_type is None or
-                result_type[0] not in ["album", "songlist"]):
+            result_type[0] not in ["album", "songlist"] or
+                not self.songlist_result):
             MsgBox.warning(self, self.tr('警告'), self.tr('请先选择一个专辑或歌单'))
             return
 
@@ -560,11 +574,11 @@ class SearchWidget(SearchWidgetBase):
 
         def get_list_lyrics_update(count: int | str, result: dict | None = None) -> None:
             text = ""
-            if result is None:
-                error = count[:]
+            if result is None or isinstance(count, str):
+                error = count[:] if isinstance(count, str) else ""
                 count = self.get_list_lyrics_box.progressBar.value() + 1
                 self.get_list_lyrics_box.plainTextEdit.appendPlainText(error)
-            else:
+            elif result:
                 save_path = result['save_path']
                 save_folder = os.path.dirname(save_path)
                 text += self.tr("获取 {0} 歌词成功").format(f"{result['info']['title']} - {get_artist_str(result['info']['artist'])}")
@@ -640,6 +654,6 @@ class SearchWidget(SearchWidgetBase):
             self.save_path_lineEdit.setText(os.path.normpath(save_path))
         dialog = QFileDialog(self)
         dialog.setWindowTitle(self.tr("选择保存路径"))
-        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setFileMode(QFileDialog.FileMode.Directory)
         dialog.fileSelected.connect(file_selected)
         dialog.open()

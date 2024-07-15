@@ -44,14 +44,12 @@ QUERY_PARAMS = ("title", "artist", "album", "mid", "accesskey", "id", "duration"
 def get_lyrics(
     source: Source,
     use_cache: bool = True,
-    return_cache_status: bool = False,
-    **kwargs: str | int,
-) -> Lyrics:
+    **kwargs: str | int | bytearray | bytes | None,
+) -> tuple[Lyrics, bool]:
     """获取歌词
 
     :param source: 歌词源
     :param use_cache: 是否使用缓存
-    :param return_cache_status: 是否返回缓存状态
     :param title: 歌曲名
     :param artist: 歌手名
     :param album: 专辑名
@@ -61,31 +59,27 @@ def get_lyrics(
     :param accesskey: 歌曲访问密钥
     :param path: 本地歌词路径
     :param data: 歌词数据
-    :return: 歌词
+    :return: (歌词, 是否使用缓存)
     """
     logger.debug("Fetching lyrics for %s", kwargs)
     # 检查参数类型
     for key, arg in kwargs.items():
         msg = None
         if key in TYPE_MAPPING and not isinstance(arg, TYPE_MAPPING[key]):
-            if isinstance(TYPE_MAPPING[key], type):
-                expected_type_str = TYPE_MAPPING[key].__name__
-            else:
-                expected_type_str = " or ".join([t.__name__ for t in get_args(TYPE_MAPPING[key])])
+            expected_type = TYPE_MAPPING[key]
+            expected_type_str = " or ".join([t.__name__ for t in get_args(expected_type)]) if isinstance(expected_type, UnionType) else expected_type.__name__
             msg = f"Invalid type for {key}: expected {expected_type_str}, got {type(arg).__name__}"
 
         if msg:
             raise TypeError(msg)
 
-    query = {"source": source, **{arg: kwargs[arg] for arg in kwargs if arg in QUERY_PARAMS}}
-    query = {key: query[key] for key in sorted(query)}
+    cache_key = {"source": source, **{arg: kwargs[arg] for arg in kwargs if arg in QUERY_PARAMS}}
+    cache_key = tuple((key, cache_key[key]) for key in sorted(cache_key))
     if use_cache:
-        lyrics = cache.get(query)
-        if lyrics:
-            logger.debug("Using cache for %s", query)
-            if return_cache_status:
-                return lyrics, True
-            return lyrics
+        lyrics = cache.get(cache_key)
+        if isinstance(lyrics, Lyrics):
+            logger.debug("Using cache for %s", cache_key)
+            return lyrics, True
     # 创建歌词对象
     lyrics = Lyrics({"source": source, **{arg[0]: arg[1] for arg in kwargs.items() if arg[0] in Lyrics.INFO_KEYS}})
 
@@ -107,10 +101,21 @@ def get_lyrics(
                 raise ValueError(msg)
             ne_get_lyrics(lyrics)
         case Source.Local:
-            if "path" not in kwargs:
-                msg = "Local lyrics requires path"
+            data = kwargs.get("data")
+            path = kwargs.get("path")
+            if not data and not path:
+                msg = "Local lyrics requires data or path"
                 raise ValueError(msg)
-            local_get_lyrics(lyrics, path=kwargs["path"], data=kwargs.get("data"))
+
+            if isinstance(data, bytearray | bytes | None) and isinstance(path, str | None):
+                local_get_lyrics(lyrics, path=path, data=data)
+
+            elif not isinstance(data, bytearray | bytes | None):
+                msg = f"Invalid type for data: expected bytearray or bytes, got {type(data).__name__}"
+                raise TypeError(msg)
+            elif not isinstance(path, str | None):
+                msg = f"Invalid type for path: expected str or None, got {type(path).__name__}"
+                raise TypeError(msg)
 
     if not lyrics:
         msg = "没有获取到可用的歌词"
@@ -121,12 +126,10 @@ def get_lyrics(
         lyrics.types[key] = judge_lyrics_type(lyric)
 
     # 缓存歌词
-    logger.debug("缓存歌词 query: %s", query)
+    logger.debug("缓存歌词 query: %s", cache_key)
     if source != Source.Local:
-        cache.set(query, lyrics, expire=14400)
+        cache.set(cache_key, lyrics, expire=14400)
     else:
-        cache.set(query, lyrics, expire=10)
+        cache.set(cache_key, lyrics, expire=10)
 
-    if return_cache_status:
-        return lyrics, False
-    return lyrics
+    return lyrics, False
