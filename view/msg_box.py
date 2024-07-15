@@ -38,6 +38,18 @@ def button_clicked(button: QAbstractButton) -> None:
 class MsgBox(QObject):
 
     @staticmethod
+    def init_msg_box(parent: QWidget | None, title: str, text: str) -> QMessageBox:
+        """初始化消息框"""
+        msg = QMessageBox(parent)
+        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg.setWindowTitle(title)
+        msg.setText(text)
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.setDefaultButton(QMessageBox.StandardButton.Ok)
+        msg.buttonClicked.connect(button_clicked)
+        return msg
+
+    @staticmethod
     def information(parent: QWidget | None, title: str, text: str) -> None:
         """创建一个信息消息框
 
@@ -45,13 +57,8 @@ class MsgBox(QObject):
         :param title: 标题
         :param text: 内容
         """
-        msg = QMessageBox(parent)
-        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg = MsgBox.init_msg_box(parent, title, text)
         msg.setIcon(QMessageBox.Icon.Information)
-        msg.setWindowTitle(title)
-        msg.setText(text)
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.buttonClicked.connect(button_clicked)
         msg.show()
         _msg_boxs.append((msg, parent, None))
 
@@ -63,14 +70,8 @@ class MsgBox(QObject):
         :param title: 标题
         :param text: 内容
         """
-        msg = QMessageBox(parent)
-        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg = MsgBox.init_msg_box(parent, title, text)
         msg.setIcon(QMessageBox.Icon.Warning)
-        msg.setWindowTitle(title)
-        msg.setText(text)
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.setDefaultButton(QMessageBox.StandardButton.Ok)
-        msg.buttonClicked.connect(button_clicked)
         msg.show()
         _msg_boxs.append((msg, parent, None))
 
@@ -82,14 +83,8 @@ class MsgBox(QObject):
         :param title: 标题
         :param text: 内容
         """
-        msg = QMessageBox(parent)
-        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg = MsgBox.init_msg_box(parent, title, text)
         msg.setIcon(QMessageBox.Icon.Critical)
-        msg.setWindowTitle(title)
-        msg.setText(text)
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        msg.setDefaultButton(QMessageBox.StandardButton.Ok)
-        msg.buttonClicked.connect(button_clicked)
         msg.show()
         _msg_boxs.append((msg, parent, None))
 
