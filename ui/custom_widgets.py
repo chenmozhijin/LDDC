@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
-from PySide6.QtCore import Signal
-from PySide6.QtGui import QDropEvent, QResizeEvent
-from PySide6.QtWidgets import QHeaderView, QListWidget, QTableWidget, QWidget
+from PySide6.QtCore import QEvent, Signal
+from PySide6.QtGui import QCursor, QDropEvent, QHelpEvent, QResizeEvent
+from PySide6.QtWidgets import QHeaderView, QListWidget, QTableWidget, QTableWidgetItem, QToolTip, QWidget
 
 
 class HeaderViewResizeMode:
@@ -26,6 +26,8 @@ class ProportionallyStretchedTableWidget(QTableWidget):
         super().__init__(parent)
         self.props = []
         self.itemChanged.connect(self.adapt_size)
+
+        self.setMouseTracking(True)
 
     def set_proportions(self, props: list) -> None:
         """设置表格宽度的比例
@@ -53,3 +55,13 @@ class ProportionallyStretchedTableWidget(QTableWidget):
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self.adapt_size()
+
+    def event(self, event: QEvent) -> bool:
+        if event.type() == QEvent.Type.ToolTip and isinstance(event, QHelpEvent):
+            item = self.itemAt(event.x(), event.y() - self.horizontalHeader().height())
+            if isinstance(item, QTableWidgetItem):
+                text = item.text().strip()  # 考虑表头的高度
+                if text:
+                    QToolTip.showText(QCursor.pos(), text, self)
+            return True
+        return super().event(event)
