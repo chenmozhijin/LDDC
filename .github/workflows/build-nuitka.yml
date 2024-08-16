@@ -238,7 +238,12 @@ jobs:
               if: ${{ matrix.os == 'windows-latest' }}
               run: |
                 cd dist/exe/output/
-                7z a -tzip -mx=9 ../../../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}.zip LDDC
+                7z a -tzip -mx=9 ../../../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}-onefile.zip LDDC
+                cd ../../..
+                Rename-Item -Path "build/LDDC.dist" -NewName "LDDC"
+                cd build
+                7z a -tzip -mx=9 ../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}.zip LDDC
+
 
             - name: Upload
               uses: actions/upload-artifact@v4
