@@ -69,6 +69,8 @@ class CheckUpdate(QRunnable):
         super().__init__()
         self.isAuto = is_auto
         self.name = name
+        if repo.startswith("https://github.com/"):
+            repo = repo[len("https://github.com/"):]
         self.repo = repo
         self.version = version
         self.signals = CheckUpdateSignal()

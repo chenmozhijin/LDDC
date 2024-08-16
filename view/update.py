@@ -10,7 +10,7 @@ from backend.worker import CheckUpdate
 from ui.update_ui import Ui_UpdateDialog
 from utils.thread import threadpool
 
-dialog = None
+dialogs = []
 
 
 class UpdateQDialog(QDialog, Ui_UpdateDialog):
@@ -31,12 +31,13 @@ class UpdateQDialog(QDialog, Ui_UpdateDialog):
         if self.buttonBox.standardButton(button) == QDialogButtonBox.StandardButton.Yes:
             QDesktopServices.openUrl(QUrl(f"https://github.com/{self.repo}/releases/latest"))
         self.close()
+        self.deleteLater()
 
 
 def show_new_version_dialog(name: str, repo: str, new_version: str, body: str) -> None:
-    global dialog  # noqa: PLW0603
     dialog = UpdateQDialog(name, repo, new_version, body)
     dialog.show()
+    dialogs.append(dialog)
 
 
 def check_update(is_auto: bool, name: str, repo: str, version: str) -> None:

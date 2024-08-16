@@ -46,6 +46,7 @@ from utils.paths import auto_save_dir, command_line
 from utils.thread import in_main_thread, threadpool
 from utils.utils import escape_filename, get_artist_str, has_content
 from view.desktop_lyrics import DesktopLyrics, DesktopLyricsWidget
+from view.update import check_update
 
 random = SystemRandom()
 api_version = 1
@@ -321,7 +322,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
     def __init__(self, service: LDDCService, instance_id: int, json_data: dict, client_id: int) -> None:
         super().__init__(service, instance_id, client_id, json_data.get("pid"))
-        info = json_data.get("info", {})  # 客户端信息  # noqa: F841
+        self.client_info = json_data.get("info", {})  # 客户端信息
         self.available_tasks = json_data.get("available_tasks", [])  # 客户端可用的任务
 
         # 初始化实例变量
@@ -330,6 +331,12 @@ class DesktopLyricsInstance(ServiceInstanceBase):
     def run(self) -> None:
         # 初始化界面
         in_main_thread(self.init_widget)
+        if "name" in self.client_info and "repo" in self.client_info and "ver" in self.client_info:
+            repo = self.client_info["repo"]
+            name = self.client_info["name"]
+            ver = self.client_info["ver"]
+            if isinstance(repo, str) and isinstance(name, str) and isinstance(ver, str):
+                in_main_thread(check_update, True, name, repo, ver)
 
         # 初始化定时器
         self.timer = QTimer()
