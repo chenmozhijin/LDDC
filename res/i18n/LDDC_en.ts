@@ -998,7 +998,7 @@
         <location filename="../../view/search.py" line="254"/>
         <location filename="../../view/search.py" line="256"/>
         <source>专辑</source>
-        <translation></translation>
+        <translation>Album</translation>
     </message>
     <message>
         <location filename="../../view/search.py" line="253"/>
