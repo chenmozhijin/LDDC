@@ -28,7 +28,7 @@ class MainWindow(SidebarWindow):
 
     def init(self) -> None:
         self.setWindowTitle("LDDC")
-        self.resize(1050, 600)
+        self.resize(1060, 600)
         self.setWindowIcon(QIcon(":/LDDC/img/icon/logo.png"))
         self.set_sidebar_width(100)
 

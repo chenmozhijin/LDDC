@@ -43,7 +43,7 @@
         <x>0</x>
         <y>0</y>
         <width>1161</width>
-        <height>903</height>
+        <height>980</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -622,6 +622,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 <property name="text">
                  <string>提示：字体大小通过拉伸窗口调节</string>
                 </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
                </widget>
               </item>
               <item row="3" column="1">
@@ -670,36 +673,36 @@ li.checked::marker { content: &quot;\2612&quot;; }
           <item row="1" column="2">
            <widget class="QComboBox" name="log_level_comboBox">
             <property name="currentIndex">
-             <number>1</number>
+             <number>0</number>
             </property>
             <item>
              <property name="text">
-              <string>CRITICAL</string>
+              <string notr="true">CRITICAL</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>ERROR</string>
+              <string notr="true">ERROR</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>WARNING</string>
+              <string notr="true">WARNING</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>INFO</string>
+              <string notr="true">INFO</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>DEBUG</string>
+              <string notr="true">DEBUG</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>NOTSET</string>
+              <string notr="true">NOTSET</string>
              </property>
             </item>
            </widget>

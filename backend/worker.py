@@ -448,7 +448,7 @@ class LocalMatchWorker(QRunnable):
                 self.signals.massage.emit(QCoreApplication.translate("LocalMatch", "正在搜索并获取歌词..."))
                 self.fetch_next_lyrics()
             else:
-                self.signals.massage.emit(QCoreApplication.translate("LocalMatch", "没有找到歌曲可查找歌词的歌曲"))
+                self.signals.massage.emit(QCoreApplication.translate("LocalMatch", "没有找到可查找歌词的歌曲"))
                 self.signals.finished.emit()
         except Exception as e:
             logger.exception("搜索歌词时错误")
@@ -856,7 +856,7 @@ class LocalSongLyricsDBWorker(QRunnable):
             if i % frequency == 0:
                 self.signals.progress.emit(i, data_len)
 
-        return QCoreApplication.translate("LocalSongLyricsDB", "清理成功, 共清理了 {} 条数据").format(count)
+        return QCoreApplication.translate("LocalSongLyricsDB", "清理成功, 共清理了 {0} 条数据").format(count)
 
     def del_all(self) -> str:
         local_song_lyrics.del_all()
@@ -888,4 +888,4 @@ class LocalSongLyricsDBWorker(QRunnable):
                 count += 1
             if i % frequency == 0:
                 self.signals.progress.emit(i, data_len)
-        return QCoreApplication.translate("LocalSongLyricsDB", "修改成功, 共修改了 {} 条数据").format(count)
+        return QCoreApplication.translate("LocalSongLyricsDB", "修改成功, 共修改了 {0} 条数据").format(count)

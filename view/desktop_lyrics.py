@@ -510,7 +510,7 @@ class LyricsText(QWidget):
         self.unplayed_chars_cache = LimitedSizeDict(4)
 
         self.lyrics = DesktopLyrics(([], []))
-        self.update_lyrics(DesktopLyrics(([(self.tr("欢迎使用LDDC桌面歌词"), "", 0, "", 255, [(0, 12, "Welcome to LDDC Desktop Lyrics")])], [])))
+        self.update_lyrics(DesktopLyrics(([("欢迎使用LDDC桌面歌词", "", 0, "", 255, [(0, 12, "Welcome to LDDC Desktop Lyrics")])], [])))
 
     def clear_chars_cache(self, font: QFont) -> None:
         for _i in range(2):

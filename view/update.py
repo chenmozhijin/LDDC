@@ -19,9 +19,8 @@ class UpdateQDialog(QDialog, Ui_UpdateDialog):
         super().__init__()
         self.setupUi(self)
         self.setWindowModality(Qt.WindowModality.NonModal)
-        self.setWindowTitle(self.tr("发现新版本"))
         self.repo = repo
-        self.label.setText(self.tr('{}发现新版本{}，是否前往GitHub下载更新?').format(name, new_version))
+        self.label.setText(self.tr('{0}发现新版本{1}，是否前往GitHub下载更新?').format(name, new_version))
         body = re.sub(r'!\[[^\]]*?\]\([^\)]*\)\s*', "", body)  # 去除图片链接
         self.textBrowser.setMarkdown(body)
         self.buttonBox.clicked.connect(self.button_clicked)
