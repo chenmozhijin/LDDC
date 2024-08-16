@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
+# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
+# SPDX-License-Identifier: GPL-3.0-only
 
 from backend.lyrics import MultiLyricsData, get_full_timestamps_lyrics_data
 from utils.utils import get_divmod_time

@@ -1,8 +1,8 @@
 # 参考原C代码:
 # https://github.com/jixunmoe/qmc-decode/blob/master/src/qmc_crypto.c
 
-# SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
+# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
+# SPDX-License-Identifier: GPL-3.0-only
 
 PRIVKey = [
     0xc3, 0x4a, 0xd6, 0xca, 0x90, 0x67, 0xf7, 0x52,
