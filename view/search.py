@@ -338,8 +338,14 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                     worker = GetSongListWorker(self.taskid["results_table"], result_type, info['mid'], info['source'])
                 case Source.KG | Source.NE:
                     worker = GetSongListWorker(self.taskid["results_table"], result_type, info['id'], info['source'])
+                case _:
+                    msg = "Unknown source"
+                    raise ValueError(msg)
         elif result_type == "songlist":
             worker = GetSongListWorker(self.taskid["results_table"], result_type, info['id'], info['source'])
+        else:
+            msg = "Unknown result_type"
+            raise ValueError(msg)
         worker.signals.result.connect(self.show_songlist_result)
         worker.signals.error.connect(self.get_songlist_error)
         threadpool.start(worker)

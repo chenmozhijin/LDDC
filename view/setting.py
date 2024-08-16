@@ -136,13 +136,13 @@ class SettingWidget(QWidget, Ui_settings):
         )
 
         self.played_add_color_button.clicked.connect(lambda: self.played_color_list.open_color_dialog())
-        self.played_del_color_button.clicked.connect(lambda: self.played_color_list.del_selected())
+        self.played_del_color_button.clicked.connect(self.played_color_list.del_selected)
         self.played_color_list.color_changed.connect(
             lambda: cfg.setitem("desktop_lyrics_played_colors", self.played_color_list.get_colors()),
         )
 
         self.unplayed_add_color_button.clicked.connect(lambda: self.unplayed_color_list.open_color_dialog())
-        self.unplayed_del_color_button.clicked.connect(lambda: self.unplayed_color_list.del_selected())
+        self.unplayed_del_color_button.clicked.connect(self.unplayed_color_list.del_selected)
         self.unplayed_color_list.color_changed.connect(
             lambda: cfg.setitem("desktop_lyrics_unplayed_colors", self.unplayed_color_list.get_colors()),
         )
