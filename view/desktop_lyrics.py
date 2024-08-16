@@ -560,7 +560,7 @@ class LyricsText(QWidget):
             if query not in self.pens:
                 gradient = QLinearGradient(0, y, 0, y + height)
                 for i, color in enumerate(colors):
-                    gradient.setColorAt(i / (len(self.played_colors) - 1), QColor(*color))
+                    gradient.setColorAt(i / (len(colors) - 1), QColor(*color))
                 self.pens[query] = QPen(QBrush(gradient), 0)
             return self.pens[query]
         y = 0
