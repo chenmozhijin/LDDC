@@ -13,7 +13,10 @@ from copy import deepcopy
 from random import SystemRandom
 from typing import Literal
 
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from PySide6.QtCore import (
     QCoreApplication,
     QEventLoop,
@@ -92,6 +95,8 @@ instance_dict_mutex = QMutex()
 
 
 def clean_dead_instance() -> bool:
+    if not psutil:
+        return False
     to_stop = []
     instance_dict_mutex.lock()
     for instance_id, instance in instance_dict.items():
