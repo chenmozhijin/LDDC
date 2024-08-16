@@ -71,8 +71,8 @@ jobs:
               id: info
               shell: bash
               run: |
-                echo "copyright=Copyright (C) $(python setup.py --task get_year) 沉默の金" >> $GITHUB_OUTPUT
-                echo "version=$(python setup.py --task get_version)" >> $GITHUB_OUTPUT
+                echo "copyright=Copyright (C) $(python build_helper.py --task get_year) 沉默の金" >> $GITHUB_OUTPUT
+                echo "version=$(python build_helper.py --task get_version)" >> $GITHUB_OUTPUT
                 cat $GITHUB_OUTPUT
 
             #- name: Build Executable
