@@ -30,7 +30,7 @@ class AboutWidget(QWidget, Ui_about):
     def connect_signals(self) -> None:
         self.github_pushButton.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/chenmozhijin/LDDC")))
         self.githubissues_pushButton.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/chenmozhijin/LDDC/issues")))
-        self.checkupdate_pushButton.clicked.connect(lambda: check_update(False, self.tr("CheckUpdate", "LDDC主程序"), "chenmozhijin/LDDC", __version__))
+        self.checkupdate_pushButton.clicked.connect(lambda: check_update(False, self.tr("LDDC主程序"), "chenmozhijin/LDDC", __version__))
 
     def retranslateUi(self, about: QWidget) -> None:
         super().retranslateUi(about)
