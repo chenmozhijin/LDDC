@@ -134,7 +134,7 @@ class LDDCService(QObject):
     def start_service(self) -> None:
 
         if args.get_service_port and not self.shared_memory.attach():
-            cmd = shlex.split(command_line)
+            cmd = shlex.split(command_line, posix=False)
             arguments = [re.sub(r'"([^"]+)"', r'\1', arg) for arg in [cmd[0]] + ([*cmd[1:], "--not-show"] if len(cmd) > 1 else ["--not-show"])]
 
             # 注意在调试模式下无法新建一个独立进程
@@ -329,7 +329,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.available_tasks = json_data.get("available_tasks", [])  # 客户端可用的任务
 
         # 初始化实例变量
-        self.taskids: dict[str, int] = {"fetch": 0}  # 任务ID 用于防止旧任务的结果覆盖新任务的结果
+        # 任务ID 用于防止旧任务的结果覆盖新任务的结果
+        self.taskid = 0
 
     def run(self) -> None:
         # 初始化界面
@@ -432,6 +433,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             case "chang_music":
                 # 更换歌曲
                 logger.debug("chang_music")
+                self.taskid += 1  # 防止自动搜索把上一首歌的歌词关联到这一首歌上
 
                 title = task.get("title")
                 artist = task.get("artist")
@@ -486,9 +488,9 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                     if isinstance(title, str):
                         # 如果找不到,则自动获取歌词
                         self.widget.update_lyrics.emit(DesktopLyrics(([("自动获取歌词中...", "", 0, "", 255, [])], [])))
-                        self.taskids["fetch"] += 1
+                        self.taskid += 1
                         worker = AutoLyricsFetcher({"title": title, "artist": artist, "album": album, "duration": duration / 1000},
-                                                   min_score=55, source=[Source[s] for s in cfg["desktop_lyrics_sources"]], taskid=self.taskids["fetch"])
+                                                   min_score=55, source=[Source[s] for s in cfg["desktop_lyrics_sources"]], taskid=self.taskid)
                         worker.signals.result.connect(self.handle_fetch_result)
                         threadpool.start(worker)
                     else:
@@ -537,7 +539,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
     def handle_fetch_result(self, result: dict[str, dict | Lyrics | str | int | bool]) -> None:
         """处理自动获取歌词的结果"""
-        if result.get("taskid") != self.taskids["fetch"]:
+        if result.get("taskid") != self.taskid:
             # 任务id不匹配,忽略
             return
 
@@ -568,7 +570,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             self.set_inst()
         else:
             self.config["inst"] = False
-            self.taskids["fetch"] += 1  # 更新任务id防止自动搜索比手动选择慢时覆盖结果
+            self.taskid += 1  # 更新任务id防止自动搜索比手动选择慢时覆盖结果
             self.set_lyrics(lyrics)
             if lyrics.source != Source.Local:
                 # 生成文件名
@@ -642,7 +644,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
     def auto_search_fail(self, msg: str) -> None:
         self.show_artist_title(msg)
-        QTimer.singleShot(3000, lambda taskid=self.taskids["fetch"]: self.show_artist_title() if taskid == self.taskids["fetch"] else None)
+        QTimer.singleShot(3000, lambda taskid=self.taskid: self.show_artist_title() if taskid == self.taskid else None)
 
     def show_artist_title(self, msg: str = "") -> None:
         """显示歌手-歌曲名与msg
