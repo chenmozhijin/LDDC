@@ -16,7 +16,7 @@ from backend.worker import LocalMatchWorker
 from ui.local_match_ui import Ui_local_match
 from utils.data import cfg
 from utils.enum import LocalMatchFileNameMode, LocalMatchSaveMode, LyricsFormat, Source
-from utils.threadpool import threadpool
+from utils.thread import threadpool
 from view.msg_box import MsgBox
 
 
@@ -34,6 +34,8 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.save_mode_changed(self.save_mode_comboBox.currentIndex())
 
         self.save_path_lineEdit.setText(cfg["default_save_path"])
+
+        self.source_listWidget.set_soures(["QM", "KG"])
 
     def connect_signals(self) -> None:
         self.song_path_pushButton.clicked.connect(lambda: self.select_path(self.song_path_lineEdit))
@@ -92,7 +94,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             lyric_langs.append("ts")
         if self.romanized_checkBox.isChecked():
             lyric_langs.append("roma")
-        lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in lyric_langs]
+        langs_order = [lang for lang in cfg["langs_order"] if lang in lyric_langs]
 
         if len(lyric_langs) == 0:
             MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一种歌词语言！"))
@@ -117,14 +119,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 MsgBox.critical(self, self.tr("错误"), self.tr("歌词文件名错误！"))
                 return
 
-        source = []
-        for source_type in [self.source_listWidget.item(i).text() for i in range(self.source_listWidget.count())]:
-            if source_type == self.tr("QQ音乐") and self.qm_checkBox.isChecked():
-                source.append(Source.QM)
-            elif source_type == self.tr("酷狗音乐") and self.kg_checkBox.isChecked():
-                source.append(Source.KG)
-            elif source_type == self.tr("网易云音乐") and self.ne_checkBox.isChecked():
-                source.append(Source.NE)
+        source = [Source[k] for k in self.source_listWidget.get_data()]
         if len(source) == 0:
             MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一个源！"))
             return
@@ -143,7 +138,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 "min_score": self.min_score_spinBox.value(),
                 "save_mode": save_mode,
                 "flienmae_mode": flienmae_mode,
-                "lyrics_order": lyrics_order,
+                "langs_order": langs_order,
                 "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                 "source": source,
             },

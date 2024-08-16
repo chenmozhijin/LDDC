@@ -63,6 +63,10 @@ def get_audio_file_info(file_path: str) -> dict | str:
                 }
                 if metadata["title"] is None:
                     return file_path + QCoreApplication.translate("song_info", " 无法获取歌曲标题,跳过")
+            else:
+                return file_path + QCoreApplication.translate("song_info", " 无法获取歌曲信息,跳过")
+        else:
+            return file_path + QCoreApplication.translate("song_info", " 文件格式不支持,跳过")
 
     except Exception as e:
         logger.exception("%s获取文件信息失败", file_path)

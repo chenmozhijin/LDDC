@@ -295,7 +295,6 @@ class Ui_search_base:
     # setupUi
 
     def retranslateUi(self, search_base):
-        search_base.setWindowTitle(QCoreApplication.translate("search_base", "Form", None))
         self.source_comboBox.setItemText(0, QCoreApplication.translate("search_base", "\u805a\u5408", None))
         self.source_comboBox.setItemText(1, QCoreApplication.translate("search_base", "QQ\u97f3\u4e50", None))
         self.source_comboBox.setItemText(2, QCoreApplication.translate("search_base", "\u9177\u72d7\u97f3\u4e50", None))

@@ -20,9 +20,13 @@ from .decryptor.eapi import (
 )
 
 
-def get_latest_version() -> tuple[bool, str, str]:
+def gh_get_latest_version(repo: str) -> tuple[bool, str, str]:
+    """获取GitHub仓库最新版本信息"""
+    if repo.count("/") != 1 or not repo.replace("/", "").isalpha():
+        logger.error("仓库信息格式错误")
+        return False, "仓库信息格式错误", ""
     try:
-        latest_release = requests.get("https://api.github.com/repos/chenmozhijin/LDDC/releases/latest", timeout=5).json()
+        latest_release = requests.get(f"https://api.github.com/repos/{repo}/releases/latest", timeout=5).json()
     except Exception as e:
         logger.exception("获取最新版本信息时错误")
         return False, str(e), ""

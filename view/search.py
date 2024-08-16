@@ -6,12 +6,13 @@ from typing import Any
 from PySide6.QtCore import (
     QModelIndex,
     QSize,
+    QTimer,
     Slot,
 )
 from PySide6.QtGui import (
     QFont,
 )
-from PySide6.QtWidgets import QApplication, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy, QTableWidgetItem, QWidget
+from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy, QTableWidgetItem, QWidget
 
 from backend.converter import convert2
 from backend.lyrics import Lyrics
@@ -19,15 +20,15 @@ from backend.worker import GetSongListWorker, LyricProcessingWorker, SearchWorke
 from ui.search_base_ui import Ui_search_base
 from utils.data import cfg
 from utils.enum import LyricsFormat, LyricsType, SearchType, Source
-from utils.threadpool import threadpool
+from utils.thread import threadpool
 from utils.utils import get_artist_str, get_lyrics_format_ext, get_save_path, ms2formattime
 from view.get_list_lyrics import GetListLyrics
 from view.msg_box import MsgBox
 
 
 class SearchWidgetBase(QWidget, Ui_search_base):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
         self.setupUi(self)
         self.connect_signals()
         self.search_type = SearchType.SONG
@@ -62,6 +63,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
         self.results_tableWidget.verticalScrollBar().valueChanged.connect(self.results_table_scroll_changed)
         self.results_tableWidget.verticalScrollBar().rangeChanged.connect(self.results_table_scroll_changed)
+
+        cfg.lyrics_changed.connect(self.update_preview_lyric)
 
     def get_lyric_langs(self) -> list:
         """返回选择了的歌词类型的列表"""
@@ -126,11 +129,14 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.search_pushButton.setText(self.tr('搜索'))
         self.search_pushButton.setEnabled(True)
         self.return_toolButton.setEnabled(False)
+        if not result:
+            MsgBox.warning(self, self.tr("错误"), self.tr("没有搜索到相关结果"))
+            return
         self.update_result_table(("search", search_type), result)
 
         self.search_result = {"type": search_type, "result": result}
         self.result_path = ["search"]
-        self.results_table_scroll_changed()
+        QTimer.singleShot(100, self.results_table_scroll_changed)
 
     @Slot(str)
     def search_error_slot(self, error: str) -> None:
@@ -190,7 +196,10 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         if "roma" in result['lyrics'].types:
             lyric_langs_text += self.tr("、罗马音") + f"({get_lrc_type(result['lyrics'], 'roma')})"
         self.lyric_langs_lineEdit.setText(lyric_langs_text)
-        self.songid_lineEdit.setText(str(result['info']['id']))
+        if 'id' in result['info']:
+            self.songid_lineEdit.setText(str(result['info']['id']))
+        else:
+            self.songid_lineEdit.setText("")
 
         self.preview_plainTextEdit.setPlainText(result['converted_lyrics'])
 
@@ -202,13 +211,16 @@ class SearchWidgetBase(QWidget, Ui_search_base):
             if isinstance(lyrics, Lyrics):
                 # 直接在主线程更新还快一些
                 self.taskid["update_preview_lyric"] += 1
-                result = {"info": self.preview_lyric_result["info"], 'lyrics': lyrics,
-                          'converted_lyrics': convert2(lyrics,
-                                                       self.get_lyric_langs(),
-                                                       LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
-                                                       self.offset_spinBox.value())}
-                self.update_preview_lyric_result_slot(self.taskid["update_preview_lyric"], result)
-                return
+                info = self.preview_lyric_result["info"]
+                if info is not None:
+                    info["lyrics_format"] = LyricsFormat(self.lyricsformat_comboBox.currentIndex())
+                    result = {"info": self.preview_lyric_result["info"], 'lyrics': lyrics,
+                              'converted_lyrics': convert2(lyrics,
+                                                           self.get_lyric_langs(),
+                                                           LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+                                                           self.offset_spinBox.value())}
+                    self.update_preview_lyric_result_slot(self.taskid["update_preview_lyric"], result)
+                    return
             info = self.preview_lyric_result["info"]
         elif not isinstance(info, dict) and self.preview_lyric_result is None:
             return
@@ -243,12 +255,12 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                                SearchType.SONGLIST: ([self.tr("歌单"), self.tr("创建者"), self.tr("歌曲数量"), self.tr("创建时间")], [0.6, 0.4, 2, 2]),
                                SearchType.LYRICS: ([self.tr("歌曲"), self.tr("艺术家"), self.tr("专辑"), self.tr("时长")], [0.4, 0.2, 0.4, 2])}
 
-        is_multi_source = False if len(result) <= 1 or "source" not in result[0] else any(item["source"] != result[0]["source"] for item in result[1:])
+        show_source = bool(result_type[1] == SearchType.SONG and self.search_info and isinstance(self.search_info["source"], list))
 
-        headers = headers_proportions[result_type[1]][0] + ([self.tr("来源")] if is_multi_source else [])
+        headers = headers_proportions[result_type[1]][0] + ([self.tr("来源")] if show_source else [])
         table.setColumnCount(len(headers))
         table.setHorizontalHeaderLabels(headers)
-        table.set_proportions(headers_proportions[result_type[1]][1] + ([2] if is_multi_source else []))
+        table.set_proportions(headers_proportions[result_type[1]][1] + ([2] if show_source else []))
 
         def add_items(texts: list[str]) -> None:
             table.insertRow(table.rowCount())
@@ -266,27 +278,27 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                     artist = "/".join(song["artist"]) if isinstance(song["artist"], list) else song["artist"]
 
                     add_items([name, artist, song["album"], '{:02d}:{:02d}'.format(*divmod(song['duration'], 60))] +
-                              ([str(song["source"])] if is_multi_source else []))
+                              ([str(song["source"])] if show_source else []))
 
                 table.setProperty("result_type", (result_type[0], "songs"))
 
             case SearchType.ALBUM:
                 for album in result:
-                    add_items([album["name"], album["artist"], album["time"], str(album["count"])] + ([str(album["source"])] if is_multi_source else []))
+                    add_items([album["name"], album["artist"], album["time"], str(album["count"])] + ([str(album["source"])] if show_source else []))
 
                 table.setProperty("result_type", (result_type[0], "album"))
 
             case SearchType.SONGLIST:
                 for songlist in result:
                     add_items([songlist["name"], songlist["creator"], songlist["time"], str(songlist["count"])] +
-                              ([str(songlist["source"])] if is_multi_source else []))
+                              ([str(songlist["source"])] if show_source else []))
 
                 table.setProperty("result_type", (result_type[0], "songlist"))
 
             case SearchType.LYRICS:
                 for lyric in result:
                     add_items([str(lyric["id"]), lyric["creator"], ms2formattime(int(lyric["duration"])), str(lyric["score"])] +
-                              ([str(lyric["source"])] if is_multi_source else []))
+                              ([str(lyric["source"])] if show_source else []))
 
                 table.setProperty("result_type", (result_type[0], "lyrics"))
 
@@ -415,18 +427,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
             return
         self.get_next_page = False
 
-        self.search_info['page'] += 1
         last_row = self.results_tableWidget.rowCount() - 1
-        self.results_tableWidget.removeRow(last_row)
-
-        self.update_result_table(("search", search_type), result, False)
-        self.search_result["result"].extend(result)
-
-    @Slot(str)
-    def search_nextpage_error(self, error: str) -> None:
-        self.get_next_page = False
-        last_row = self.results_tableWidget.rowCount() - 1
-        if error == "没有任何结果":
+        if not result:
             self.all_results_obtained = True
 
             # 创建"没有更多结果"的 QTableWidgetItem
@@ -434,13 +436,22 @@ class SearchWidgetBase(QWidget, Ui_search_base):
             nomore_item.setTextAlignment(0x0004 | 0x0080)  # 设置水平和垂直居中对齐
             self.results_tableWidget.setItem(last_row, 0, nomore_item)
         else:
+            self.search_info['page'] += 1
             self.results_tableWidget.removeRow(last_row)
-            MsgBox.critical(self, self.tr("错误"), error)
+
+            self.update_result_table(("search", search_type), result, False)
+            self.search_result["result"].extend(result)
+
+    @Slot(str)
+    def search_nextpage_error(self, error: str) -> None:
+        self.get_next_page = False
+        last_row = self.results_tableWidget.rowCount() - 1
+        self.results_tableWidget.removeRow(last_row)
+        MsgBox.critical(self, self.tr("错误"), error)
 
     def results_table_scroll_changed(self) -> None:
         # 判断是否已经滚动到了底部或消失
         results_table_scroll = self.results_tableWidget.verticalScrollBar()
-        QApplication.processEvents()
 
         value = results_table_scroll.value()
         max_value = results_table_scroll.maximum()
@@ -530,11 +541,11 @@ class SearchWidget(SearchWidgetBase):
         self.bottom_horizontalLayout.addWidget(self.save_list_lyrics_pushButton)
         self.bottom_horizontalLayout.addWidget(self.save_preview_lyric_pushButton)
 
-        self.retranslate_ui()
+        self.retranslateUi()
 
-    def retranslate_ui(self, search_base: SearchWidgetBase | None = None) -> None:
+    def retranslateUi(self, search_base: SearchWidgetBase | None = None) -> None:
         super().retranslateUi(self)
-        if search_base:
+        if search_base is not None:
             return
         self.label_title.setText(self.tr("搜索"))
         self.label_sub_title.setText(self.tr("从云端搜索并下载歌词"))
@@ -554,7 +565,7 @@ class SearchWidget(SearchWidgetBase):
             MsgBox.warning(self, self.tr('警告'), self.tr('请先选择一个专辑或歌单'))
             return
 
-        lyrics_file_name_format = cfg["lyrics_file_name_format"]
+        lyrics_file_name_fmt = cfg["lyrics_file_name_fmt"]
         save_folder = self.save_path_lineEdit.text()
 
         worker = LyricProcessingWorker({"type": "get_list_lyrics",
@@ -562,7 +573,7 @@ class SearchWidget(SearchWidgetBase):
                                         "lyric_langs": self.get_lyric_langs(),
                                         "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                                         "save_folder": save_folder,
-                                        "lyrics_file_name_format": lyrics_file_name_format,
+                                        "lyrics_file_name_fmt": lyrics_file_name_fmt,
                                         })
 
         def pushButton_clicked_slot() -> None:
@@ -634,11 +645,11 @@ class SearchWidget(SearchWidgetBase):
             MsgBox.warning(self, self.tr('警告'), self.tr('歌词内容为空'))
             return
 
-        lyric_langs = [lang for lang in cfg["lyrics_order"] if lang in self.get_lyric_langs()]
+        lyric_langs = [lang for lang in cfg["langs_order"] if lang in self.get_lyric_langs()]
         # 获取已选择的歌词(用于替换占位符)
         save_folder, file_name = get_save_path(
             self.save_path_lineEdit.text(),
-            cfg["lyrics_file_name_format"] + get_lyrics_format_ext(self.preview_lyric_result["info"]["lyrics_format"]),
+            cfg["lyrics_file_name_fmt"] + get_lyrics_format_ext(self.preview_lyric_result["info"]["lyrics_format"]),
             self.preview_lyric_result["info"],
             lyric_langs)
 

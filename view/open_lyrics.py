@@ -38,6 +38,8 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         self.lyricsformat_comboBox.currentIndexChanged.connect(self.update_lyrics)
         self.offset_spinBox.valueChanged.connect(self.update_lyrics)
 
+        cfg.lyrics_changed.connect(self.update_lyrics)
+
     def get_lyric_langs(self) -> list:
         lyric_langs = []
         if self.original_checkBox.isChecked():
@@ -91,9 +93,9 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             self.plainTextEdit.setPlainText(lyrics)
 
         dialog = QFileDialog(self)
-        dialog.setWindowTitle(self.tr("选取加密歌词"))
+        dialog.setWindowTitle(self.tr("打开本地歌词"))
         dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-        dialog.setNameFilter(self.tr("加密歌词(*.qrc *.krc *.lrc)"))
+        dialog.setNameFilter(self.tr("歌词文件(*.qrc *.krc *.lrc)"))
         dialog.fileSelected.connect(file_selected)
         dialog.open()
 
@@ -108,8 +110,8 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         try:
             self.lyrics, _from_cache = get_lyrics(Source.Local, use_cache=False, path=self.path, data=self.data)
 
-            lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in self.get_lyric_langs()]
-            lrc = convert2(self.lyrics, lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
+            langs_order = [lang for lang in cfg["langs_order"] if lang in self.get_lyric_langs()]
+            lrc = convert2(self.lyrics, langs_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
         except Exception as e:
             logger.exception("转换失败")
             MsgBox.critical(self, self.tr("错误"), self.tr("转换失败：") + str(e))
@@ -121,8 +123,8 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         if not (self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics)):
             return
 
-        lyrics_order = [lang for lang in cfg["lyrics_order"] if lang in self.get_lyric_langs()]
-        self.plainTextEdit.setPlainText(convert2(self.lyrics, lyrics_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+        langs_order = [lang for lang in cfg["langs_order"] if lang in self.get_lyric_langs()]
+        self.plainTextEdit.setPlainText(convert2(self.lyrics, langs_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                                         offset=self.offset_spinBox.value()))
 
     def change_lyrics_type(self) -> None:

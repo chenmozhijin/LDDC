@@ -3,14 +3,9 @@
 import json
 import os
 import platform
-import re
 import sys
 
-from utils.utils import compare_version_numbers
-
-main = __import__("__main__")
-main_path = os.path.dirname(os.path.abspath(main.__file__))
-
+from .version import __version__
 
 csidl = {
     "desktop": 0,
@@ -54,11 +49,14 @@ match platform.system():
         config_dir = os.path.join(get_win_path(csidl["roaming_appdata"]), "LDDC")
         data_dir = os.path.join(get_win_path(csidl["local_appdata"]), "LDDC")
         cache_dir = os.path.join(data_dir, "Cache")
-        log_dir = os.path.join(data_dir, "Logs") if not __debug__ else os.path.join(main_path, "Logs")
+        log_dir = os.path.join(data_dir, "Logs")
         default_save_lyrics_dir = os.path.join(get_win_path(csidl["documents"]), "Lyrics")
     case _:
         msg = f"Unsupported platform: {platform.system()}"
         raise OSError(msg)
+
+
+auto_save_dir = os.path.join(data_dir, "auto_save")
 
 
 def create_directories(dirs: list[str]) -> None:
@@ -67,38 +65,16 @@ def create_directories(dirs: list[str]) -> None:
             os.makedirs(directory)
 
 
-create_directories([config_dir, data_dir, cache_dir, log_dir])
+create_directories([config_dir, data_dir, cache_dir, log_dir, auto_save_dir])
 info_path = os.path.join(data_dir, "info.json")
 self_path = sys.argv[0]
-command_line = self_path if self_path.endswith(".exe") else f'{sys.executable} "{self_path}"'
+command_line = self_path if "__compiled__" in globals() or hasattr(sys, '_MEIPASS') else f'"{sys.executable}" "{self_path}"'
 
 
 def __update_info() -> None:
-    if os.path.exists(info_path):
-        with open(info_path, encoding="utf-8") as f:
-            info = json.load(f)
-
-        if (isinstance(info, dict) and
-            "version" in info and
-            "Command Line" in info and
-                isinstance(info["version"], str)):
-
-            command_line = info.get("Command Line")
-            if isinstance(command_line, str) and '"' in command_line:
-                old_path = re.sub(r'[^ ]* "([^"]*?)"', r'\1', command_line)
-                if '"' in old_path:
-                    old_path = None
-            else:
-                old_path = command_line
-
-            try:
-                if old_path and os.path.exists(old_path) and not compare_version_numbers(info["version"], main.__version__):
-                    return
-            except Exception:  # noqa: S110
-                pass
-
+    """更新info.json文件"""
     info = {
-        "version": main.__version__,
+        "version": __version__,
         "Command Line": command_line,
     }
     with open(info_path, "w", encoding="utf-8") as f:

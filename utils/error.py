@@ -88,3 +88,10 @@ class DecodingError(Exception):
 
     def __init__(self, msg: str) -> None:
         super().__init__(translator.translate(msg))
+
+
+class LyricsUnavailableError(Exception):
+    """获取的歌词不可用"""
+
+    def __init__(self, msg: str) -> None:
+        super().__init__(translator.translate(msg))

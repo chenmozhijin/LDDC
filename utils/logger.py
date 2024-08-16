@@ -75,4 +75,3 @@ class Logger:
 
 
 logger = Logger()
-logger.debug('This is a debug message')

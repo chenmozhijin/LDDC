@@ -6,7 +6,7 @@ from typing import get_args
 from backend.lyrics import Lyrics, LyricsData
 from utils.cache import cache
 from utils.enum import Source
-from utils.error import LyricsProcessingError
+from utils.error import LyricsUnavailableError
 from utils.logger import logger
 
 from .kg import get_lyrics as kg_get_lyrics
@@ -73,13 +73,14 @@ def get_lyrics(
         if msg:
             raise TypeError(msg)
 
-    cache_key = {"source": source, **{arg: kwargs[arg] for arg in kwargs if arg in QUERY_PARAMS}}
-    cache_key = tuple((key, cache_key[key]) for key in sorted(cache_key))
-    if use_cache:
-        lyrics = cache.get(cache_key)
-        if isinstance(lyrics, Lyrics):
-            logger.debug("Using cache for %s", cache_key)
-            return lyrics, True
+    if source != Source.Local:
+        cache_key = {"source": source, **{arg: kwargs[arg] for arg in kwargs if arg in QUERY_PARAMS}}
+        cache_key = tuple((key, cache_key[key]) for key in sorted(cache_key))
+        if use_cache:
+            lyrics = cache.get(cache_key)
+            if isinstance(lyrics, Lyrics):
+                logger.debug("Using cache for %s", cache_key)
+                return lyrics, True
     # 创建歌词对象
     lyrics = Lyrics({"source": source, **{arg[0]: arg[1] for arg in kwargs.items() if arg[0] in Lyrics.INFO_KEYS}})
 
@@ -119,17 +120,15 @@ def get_lyrics(
 
     if not lyrics:
         msg = "没有获取到可用的歌词"
-        raise LyricsProcessingError(msg)
+        raise LyricsUnavailableError(msg)
 
     for key, lyric in lyrics.items():
         lyric: LyricsData
         lyrics.types[key] = judge_lyrics_type(lyric)
 
     # 缓存歌词
-    logger.debug("缓存歌词 query: %s", cache_key)
     if source != Source.Local:
+        logger.debug("缓存歌词 query: %s", cache_key)
         cache.set(cache_key, lyrics, expire=14400)
-    else:
-        cache.set(cache_key, lyrics, expire=10)
 
     return lyrics, False

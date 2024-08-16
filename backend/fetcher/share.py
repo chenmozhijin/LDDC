@@ -62,7 +62,7 @@ def _lrc2list_list(lrc: str, source: Source | None = None) -> tuple[dict[str, st
                 multi_line_split_content = multi_line_split_pattern.findall(line_str)
                 if multi_line_split_content:
                     # 歌词行开头有多个时间戳
-                    timestamps, line_content = multi_line_split_content
+                    timestamps, line_content = multi_line_split_content[0]
                     for m, s, ms in timestamps_pattern.findall(timestamps):
                         start = time2ms(m, s, ms)
                         add_line(LyricsLine((start, None, [LyricsWord((start, None, line_content))])))

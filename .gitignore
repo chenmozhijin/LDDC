@@ -141,3 +141,5 @@ test.py
 test/
 plugins/
 Logs/
+
+update_ts.ps1

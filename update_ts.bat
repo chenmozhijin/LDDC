@@ -1,1 +1,0 @@
-pyside6-lupdate . LDDC.py view\search.py view\get_list_lyrics.py view\encrypted_lyrics.py view\local_match.py backend\worker.py view\setting.py backend\lyrics.py backend\song_info.py utils\error.py -ts res\i18n\LDDC_en.ts

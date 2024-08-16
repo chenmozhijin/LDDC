@@ -1,22 +1,14 @@
 ################################################################################
 ## Form generated from reading UI file 'update.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.0
+## Created by: Qt User Interface Compiler version 6.7.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (
-    QCoreApplication,
-    QMetaObject,
-    Qt,
-)
-from PySide6.QtWidgets import (
-    QDialogButtonBox,
-    QLabel,
-    QTextBrowser,
-    QVBoxLayout,
-)
+from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QDialogButtonBox, QLabel, QTextBrowser, QVBoxLayout
 
 
 class Ui_UpdateDialog:
@@ -24,6 +16,9 @@ class Ui_UpdateDialog:
         if not UpdateDialog.objectName():
             UpdateDialog.setObjectName("UpdateDialog")
         UpdateDialog.resize(538, 322)
+        icon = QIcon()
+        icon.addFile(":/LDDC/img/icon/logo.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        UpdateDialog.setWindowIcon(icon)
         self.verticalLayout = QVBoxLayout(UpdateDialog)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label = QLabel(UpdateDialog)
@@ -40,9 +35,7 @@ class Ui_UpdateDialog:
         self.buttonBox = QDialogButtonBox(UpdateDialog)
         self.buttonBox.setObjectName("buttonBox")
         self.buttonBox.setOrientation(Qt.Orientation.Horizontal)
-        self.buttonBox.setStandardButtons(
-            QDialogButtonBox.StandardButton.No | QDialogButtonBox.StandardButton.Yes,
-        )
+        self.buttonBox.setStandardButtons(QDialogButtonBox.StandardButton.No | QDialogButtonBox.StandardButton.Yes)
 
         self.verticalLayout.addWidget(self.buttonBox)
 
@@ -55,15 +48,11 @@ class Ui_UpdateDialog:
     # setupUi
 
     def retranslateUi(self, UpdateDialog):
-        UpdateDialog.setWindowTitle(
-            QCoreApplication.translate("UpdateDialog", "Dialog", None),
-        )
+        UpdateDialog.setWindowTitle(QCoreApplication.translate("UpdateDialog", "\u53d1\u73b0\u65b0\u7248\u672c", None))
         self.label.setText(
             QCoreApplication.translate(
-                "UpdateDialog",
-                "\u53d1\u73b0\u65b0\u7248\u672c\uff0c\u662f\u5426\u524d\u5f80GitHub\u4e0b\u8f7d\u66f4\u65b0\uff1f",
-                None,
-            ),
+                "UpdateDialog", "\u53d1\u73b0\u65b0\u7248\u672c\uff0c\u662f\u5426\u524d\u5f80GitHub\u4e0b\u8f7d\u66f4\u65b0\uff1f", None
+            )
         )
         self.textBrowser.setMarkdown("")
         self.textBrowser.setHtml(
@@ -78,7 +67,7 @@ class Ui_UpdateDialog:
                 "</style></head><body style=\" font-family:'Microsoft YaHei UI'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
                 '<p style="-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><br /></p></body></html>',
                 None,
-            ),
+            )
         )
 
     # retranslateUi

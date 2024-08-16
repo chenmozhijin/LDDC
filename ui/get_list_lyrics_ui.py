@@ -6,7 +6,8 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import QCoreApplication, QMetaObject
+from PySide6.QtCore import QCoreApplication, QMetaObject, QSize
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QPlainTextEdit, QProgressBar, QPushButton, QVBoxLayout
 
 
@@ -15,6 +16,9 @@ class Ui_get_list_lyrics:
         if not get_list_lyrics.objectName():
             get_list_lyrics.setObjectName("get_list_lyrics")
         get_list_lyrics.resize(900, 450)
+        icon = QIcon()
+        icon.addFile(":/LDDC/img/icon/logo.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        get_list_lyrics.setWindowIcon(icon)
         self.verticalLayout = QVBoxLayout(get_list_lyrics)
         self.verticalLayout.setObjectName("verticalLayout")
         self.plainTextEdit = QPlainTextEdit(get_list_lyrics)

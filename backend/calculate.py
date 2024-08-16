@@ -3,6 +3,9 @@
 import re
 from difflib import SequenceMatcher
 
+from backend.lyrics import LyricsData, LyricsLine
+from utils.enum import Source
+
 symbol_map = {
     '（': '(',
     '）': ')',
@@ -196,7 +199,8 @@ def calculate_artist_score(artist1: str | list[str], artist2: str | list[str]) -
         score = list_max_difference(artists[0][0] + artists[0][1], artists[1][0] + artists[1][1])
         if score == 1:
             return 100
-        score = max(score, text_difference("".join(artists[0][0] + artists[0][1]), "".join(artists[1][0] + artists[1][1])))
+        score = max(score, text_difference("".join(artists[0][0]) + "".join("".join(a) for a in artists[0][1]),
+                                           "".join(artists[1][0]) + "".join("".join(a) for a in artists[1][1])))
         if (not artists[0][1] and artists[0][0] and artists[1][0]) or (not artists[1][1] and artists[1][0] and artists[0][0]):
             # 只有组织名
             score = max(score, list_max_difference(artists[0][1], artists[1][1]) * 0.6)
@@ -305,3 +309,64 @@ def calculate_title_score(title1: str, title2: str) -> float:
             score3 += max(text_difference(tag1, tag2) for tag1 in tag1_no_match) * (30 / len(tag2_no_match))
 
     return max(score1 * 0.7 + max(score2, score3), score0)
+
+
+CHECK_SAME_LINE_CLEAN_PATTERN = re.compile(r'[(（][^）)]*[）)]|\s+')
+
+
+def is_same_line(line1: LyricsLine, line2: LyricsLine) -> bool:
+    """检查行是否近似相同"""
+    line1_str = "".join([word[2]for word in line1[2]])
+    line2_str = "".join([word[2]for word in line2[2]])
+    if line1_str == line2_str:
+        return True
+    cleaned_line1 = CHECK_SAME_LINE_CLEAN_PATTERN.sub('', line1_str)
+    cleaned_line2 = CHECK_SAME_LINE_CLEAN_PATTERN.sub('', line2_str)
+    return cleaned_line1 == cleaned_line2 != ""
+
+
+def find_closest_match(data1: LyricsData, data2: LyricsData, data3: LyricsData | None = None, source: Source | None = None) -> dict[int, int]:
+    """为原文匹配其他语言类型的歌词
+
+    :param data1: 原文歌词
+    :param data2: 其他语言类型的歌词
+    :param data3: 原文歌词(逐行,仅ne源需要)
+    :param source: 歌词来源
+    :return: 匹配结果(引索)
+    """
+    if source == Source.NE and data3:
+        data3_matched = find_closest_match(data3, data2, source=Source.NE)
+        matched = {}
+        for i1, line1 in enumerate(data1):
+            for i3, i2 in data3_matched.items():
+                if is_same_line(line1, data3[i3]):
+                    matched[i1] = i2
+                    data3_matched.pop(i3)
+                    break
+        if matched:
+            return matched
+        matched = {}
+
+    if source in (Source.QM, Source.KG):
+        if source == Source.QM:
+            data1 = LyricsData([line for line in data1 if len(line[2]) != 0])
+            data2 = LyricsData([line for line in data2 if len(line[2]) != 0])
+
+        if len(data1) == len(data2):
+            return {i: i for i in range(len(data1))}
+
+    time_difference_list = [(i1, i2, abs(s1 - s2)) for i1, (s1, e1, t1) in enumerate(data1) if isinstance(s1, int)
+                            for i2, (s2, e2, t2) in enumerate(data2) if isinstance(s2, int)]
+    time_difference_list = sorted(time_difference_list, key=lambda x: x[2])
+
+    matched = {}
+    used_i1, used_i2 = set(), set()
+    for i1, i2, _diff in time_difference_list:
+        if i1 not in used_i1 and i2 not in used_i2:
+            used_i1.add(i1)
+            used_i2.add(i2)
+            matched[i1] = i2
+            if len(used_i1) == len(data1) or len(used_i2) == len(data2):
+                break
+
+    return matched

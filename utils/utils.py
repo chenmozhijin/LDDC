@@ -1,18 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import contextlib
+import re
+from collections import OrderedDict
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Any
 
 from chardet import detect
 
 from .enum import LyricsFormat
 from .error import DecodingError
-
-try:
-    version = __import__("__main__").__version__.replace("v", "")
-except Exception:
-    version = None
 
 
 def get_lyrics_format_ext(lyrics_format: LyricsFormat) -> str:
@@ -30,6 +28,8 @@ def get_lyrics_format_ext(lyrics_format: LyricsFormat) -> str:
 
 def time2ms(m: int | str, s: int | str, ms: int | str) -> int:
     """时间转毫秒"""
+    if isinstance(ms, str) and len(ms) == 2:
+        ms += "0"
     return (int(m) * 60 + int(s)) * 1000 + int(ms)
 
 
@@ -153,14 +153,6 @@ def get_save_path(folder: str, file_name_format: str, info: dict, lyric_langs: l
     return folder, file_name
 
 
-def compare_version_numbers(current_version: str, last_version: str) -> bool:
-    last_version_tuple = tuple(int(i.split("-")[0]) for i in last_version.replace("v", "").split("."))
-    current_version_tuple = tuple(int(i.split("-")[0]) for i in current_version.replace("v", "").split("."))
-    if last_version_tuple == current_version_tuple and "beta" in current_version and "beta" not in last_version:
-        return True
-    return current_version_tuple < last_version_tuple
-
-
 def get_artist_str(artist: str | list | None, sep: str = "/") -> str:
     if artist is None:
         return ""
@@ -168,9 +160,30 @@ def get_artist_str(artist: str | list | None, sep: str = "/") -> str:
 
 
 def get_divmod_time(ms: int) -> tuple[int, int, int, int]:
-    return divmod(ms, 3600000)[0], divmod(ms, 60000)[0], *divmod(ms, 1000)
+    total_s, ms = divmod(ms, 1000)
+    h, remainder = divmod(total_s, 3600)
+    return h, *divmod(remainder, 60), ms
 
 
 def ms2formattime(ms: int) -> str:
     _h, m, s, ms = get_divmod_time(ms)
     return f"{int(m):02d}:{int(s):02d}.{int(ms):03d}"
+
+
+class LimitedSizeDict(OrderedDict):
+    def __init__(self, max_size: int, *args: Any, **kwargs: Any) -> None:
+        self.max_size = max_size
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        if len(self) >= self.max_size:
+            self.popitem(last=False)  # 删除最早插入的项目
+        super().__setitem__(key, value)
+
+
+def has_content(line: str) -> bool:
+    """检查是否有实际内容"""
+    content = re.sub(r"\[\d+:\d+\.\d+\]|\[\d+,\d+\]|<\d+:\d+\.\d+>", "", line).strip()
+    if content in ("", "//"):
+        return False
+    return not (len(content) == 2 and content[0].isupper() and content[1] == "：")  # 歌手标签行

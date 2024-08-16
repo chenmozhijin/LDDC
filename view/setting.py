@@ -2,13 +2,15 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
 import os
 
-from PySide6.QtCore import SignalInstance
-from PySide6.QtWidgets import QFileDialog, QWidget
+from PySide6.QtCore import Qt, QUrl, SignalInstance
+from PySide6.QtGui import QDesktopServices, QFont, QFontDatabase
+from PySide6.QtWidgets import QFileDialog, QListWidgetItem, QWidget
 
 from ui.settings_ui import Ui_settings
 from utils.cache import cache
 from utils.data import cfg
 from utils.logger import logger
+from utils.paths import log_dir
 from utils.translator import load_translation
 
 
@@ -23,9 +25,20 @@ class SettingWidget(QWidget, Ui_settings):
         self.connect_signals()
 
     def init_ui(self) -> None:
-        self.lyrics_order_listWidget.clear()
-        self.lyrics_order_listWidget.addItems([self.tr(o) for o in cfg["lyrics_order"]])
-        self.lyrics_file_name_format_lineEdit.setText(cfg["lyrics_file_name_format"])
+        self.langs_order_listWidget.clear()
+        for o in cfg["langs_order"]:
+            item = QListWidgetItem()
+            item.setData(Qt.ItemDataRole.UserRole, o)
+            match o:
+                case "roma":
+                    item.setText(self.tr("罗马音"))
+                case "orig":
+                    item.setText(self.tr("原文"))
+                case "ts":
+                    item.setText(self.tr("译文"))
+            self.langs_order_listWidget.addItem(item)
+
+        self.lyrics_file_name_fmt_lineEdit.setText(cfg["lyrics_file_name_fmt"])
         self.default_save_path_lineEdit.setText(cfg["default_save_path"])
         self.log_level_comboBox.setCurrentText(cfg["log_level"])
         self.skip_inst_lyrics_checkBox.setChecked(cfg["skip_inst_lyrics"])
@@ -39,6 +52,26 @@ class SettingWidget(QWidget, Ui_settings):
             case "zh-Hans":
                 self.language_comboBox.setCurrentIndex(2)
         self.lrc_ms_digit_count_spinBox.setValue(cfg["lrc_ms_digit_count"])
+        self.last_ref_line_time_sty_comboBox.setCurrentIndex(cfg["last_ref_line_time_sty"])
+        self.auto_check_update_checkBox.setChecked(cfg["auto_check_update"])
+
+        # 桌面歌词部分
+        self.played_color_list.set_colors(cfg["desktop_lyrics_played_colors"])
+        self.unplayed_color_list.set_colors(cfg["desktop_lyrics_unplayed_colors"])
+
+        self.lang_type_list.set_langs(cfg["desktop_lyrics_default_langs"], cfg["desktop_lyrics_langs_order"])
+        self.source_list.set_soures(cfg["desktop_lyrics_sources"])
+
+        self.font_comboBox.addItems(QFontDatabase.families())
+        if cfg["desktop_lyrics_font_family"] in QFontDatabase.families():
+            self.font_comboBox.setCurrentText(cfg["desktop_lyrics_font_family"])
+        else:
+            self.font_comboBox.setCurrentText(QFont().family())
+
+        self.auto_frame_rate_checkBox.setChecked(bool(cfg["desktop_lyrics_refresh_rate"] == -1))
+        self.frame_rate_spinBox.setDisabled(self.auto_frame_rate_checkBox.isChecked())
+        if cfg["desktop_lyrics_refresh_rate"] >= 0:
+            self.frame_rate_spinBox.setValue(cfg["desktop_lyrics_refresh_rate"])
 
     def select_default_save_path(self) -> None:
         def file_selected(path: str) -> None:
@@ -57,10 +90,14 @@ class SettingWidget(QWidget, Ui_settings):
         self.update_cache_size()
 
     def connect_signals(self) -> None:
-        self.lyrics_order_listWidget.droped.connect(self.lyrics_order_changed)
 
-        self.lyrics_file_name_format_lineEdit.textChanged.connect(
-            lambda: cfg.setitem("lyrics_file_name_format", self.lyrics_file_name_format_lineEdit.text()))
+        self.langs_order_listWidget.droped.connect(
+            lambda: cfg.setitem("langs_order",
+                                [self.langs_order_listWidget.item(i).data(Qt.ItemDataRole.UserRole) for i in range(self.langs_order_listWidget.count())]),
+        )
+
+        self.lyrics_file_name_fmt_lineEdit.textChanged.connect(
+            lambda: cfg.setitem("lyrics_file_name_fmt", self.lyrics_file_name_fmt_lineEdit.text()))
 
         self.default_save_path_lineEdit.textChanged.connect(
             lambda: cfg.setitem("default_save_path", self.default_save_path_lineEdit.text()))
@@ -87,7 +124,54 @@ class SettingWidget(QWidget, Ui_settings):
             lambda: cfg.setitem("lrc_ms_digit_count", self.lrc_ms_digit_count_spinBox.value()),
         )
 
+        self.last_ref_line_time_sty_comboBox.currentIndexChanged.connect(
+            lambda: cfg.setitem("last_ref_line_time_sty", self.last_ref_line_time_sty_comboBox.currentIndex()),
+        )
+
         self.clear_cache_pushButton.clicked.connect(self.clear_cache)
+        self.restore2default_pushButton.clicked.connect(lambda: (cfg.reset(), self.init_ui()))
+        self.open_log_dir_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(log_dir)))
+        self.auto_check_update_checkBox.stateChanged.connect(
+            lambda: cfg.setitem("auto_check_update", self.auto_check_update_checkBox.isChecked()),
+        )
+
+        self.played_add_color_button.clicked.connect(lambda: self.played_color_list.open_color_dialog())
+        self.played_del_color_button.clicked.connect(lambda: self.played_color_list.del_selected())
+        self.played_color_list.color_changed.connect(
+            lambda: cfg.setitem("desktop_lyrics_played_colors", self.played_color_list.get_colors()),
+        )
+
+        self.unplayed_add_color_button.clicked.connect(lambda: self.unplayed_color_list.open_color_dialog())
+        self.unplayed_del_color_button.clicked.connect(lambda: self.unplayed_color_list.del_selected())
+        self.unplayed_color_list.color_changed.connect(
+            lambda: cfg.setitem("desktop_lyrics_unplayed_colors", self.unplayed_color_list.get_colors()),
+        )
+
+        self.lang_type_list.data_changed.connect(
+            lambda: cfg.setitem("desktop_lyrics_default_langs", self.lang_type_list.get_data()),
+        )
+        self.lang_type_list.data_changed.connect(
+            lambda: cfg.setitem("desktop_lyrics_langs_order", self.lang_type_list.get_order()),
+        )
+        self.source_list.data_changed.connect(
+            lambda: cfg.setitem("desktop_lyrics_sources", self.source_list.get_data()),
+        )
+
+        self.auto_frame_rate_checkBox.stateChanged.connect(
+            lambda: (cfg.setitem("desktop_lyrics_refresh_rate", -1 if self.auto_frame_rate_checkBox.isChecked() else self.frame_rate_spinBox.value()),
+                     self.frame_rate_spinBox.setDisabled(self.auto_frame_rate_checkBox.isChecked())),
+        )
+
+        self.frame_rate_spinBox.valueChanged.connect(
+            lambda: cfg.setitem("desktop_lyrics_refresh_rate", self.frame_rate_spinBox.value()),
+        )
+
+        self.font_comboBox.currentIndexChanged.connect(
+            lambda: cfg.setitem("desktop_lyrics_font_family", self.font_comboBox.currentText()),
+        )
+
+        from .local_song_lyrics_db_manager import local_song_lyrics_db_manager
+        self.show_local_song_lyrics_db_manager_button.clicked.connect(local_song_lyrics_db_manager.show)
 
     def language_comboBox_changed(self, index: int) -> None:
         match index:
@@ -98,19 +182,4 @@ class SettingWidget(QWidget, Ui_settings):
             case 2:
                 cfg.setitem("language", "zh-Hans")
         load_translation()
-
-    def lyrics_order_changed(self) -> None:
-        lyrics_order = []
-        for type_ in [self.lyrics_order_listWidget.item(i).text()
-                      for i in range(self.lyrics_order_listWidget.count())]:
-            if type_ == self.tr("罗马音"):
-                lyrics_order.append("roma")
-            elif type_ == self.tr("原文"):
-                lyrics_order.append("orig")
-            elif type_ == self.tr("译文"):
-                lyrics_order.append("ts")
-            else:
-                msg = "Unknown lyrics type"
-                raise ValueError(msg)
-
-        cfg.setitem("lyrics_order", lyrics_order)
+        self.init_ui()

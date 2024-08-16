@@ -15,11 +15,11 @@ def ms2srt_timestamp(ms: int) -> str:
 
 def srt_converter(lyrics_dict: MultiLyricsData,
                   langs_mapping: dict[str, dict[int, int]],
-                  lyrics_order: list[str],
+                  langs_order: list[str],
                   duration: int | None) -> str:
 
     srt_text = ""
-    lyrics_orig = get_full_timestamps_lyrics_data(lyrics_dict["orig"], end_time=duration * 1000 if duration is not None else None, only_line=True)
+    lyrics_orig = get_full_timestamps_lyrics_data(lyrics_dict["orig"], duration=duration * 1000 if duration is not None else None, only_line=True)
 
     for orig_i, orig_line in enumerate(lyrics_orig):
         orig_start, orig_end = orig_line[0], orig_line[1]
@@ -27,7 +27,7 @@ def srt_converter(lyrics_dict: MultiLyricsData,
             continue
         srt_text += f"{orig_i + 1}\n{ms2srt_timestamp(orig_start)} --> {ms2srt_timestamp(orig_end)}\n"
 
-        for lyrics_line in get_lyrics_lines(lyrics_dict, lyrics_order, orig_i, orig_line, langs_mapping):
+        for lyrics_line, _ in get_lyrics_lines(lyrics_dict, langs_order, orig_i, orig_line, langs_mapping):
             srt_text += "".join([word[2] for word in lyrics_line[2] if word[2] != ""]) + "\n"
 
         srt_text += "\n"

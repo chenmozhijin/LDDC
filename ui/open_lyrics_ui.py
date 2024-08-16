@@ -143,7 +143,6 @@ class Ui_open_lyrics:
     # setupUi
 
     def retranslateUi(self, open_lyrics):
-        open_lyrics.setWindowTitle(QCoreApplication.translate("open_lyrics", "Form", None))
         self.label.setText(QCoreApplication.translate("open_lyrics", "\u6b4c\u8bcd\u8bed\u8a00:", None))
         self.original_checkBox.setText(QCoreApplication.translate("open_lyrics", "\u539f\u6587", None))
         self.translate_checkBox.setText(QCoreApplication.translate("open_lyrics", "\u8bd1\u6587", None))

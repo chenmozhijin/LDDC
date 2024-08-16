@@ -7,6 +7,7 @@ from collections.abc import Callable
 from typing import Any
 
 from PySide6.QtCore import QObject, Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QAbstractButton, QMessageBox, QWidget
 
 _msg_boxs: list[tuple[QMessageBox, QWidget | None, Callable | None]] = []
@@ -32,6 +33,8 @@ def button_clicked(button: QAbstractButton) -> None:
         with contextlib.suppress(Exception):
             func(msg_box.standardButton(button))
 
+    msg_box.destroy()
+    msg_box.deleteLater()
     _msg_boxs.pop(index)
 
 
@@ -41,7 +44,11 @@ class MsgBox(QObject):
     def init_msg_box(parent: QWidget | None, title: str, text: str) -> QMessageBox:
         """初始化消息框"""
         msg = QMessageBox(parent)
-        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg.setWindowIcon(QIcon(":/LDDC/img/icon/logo.png"))
+        if parent is not None:
+            msg.setWindowModality(Qt.WindowModality.WindowModal)
+        else:
+            msg.setWindowModality(Qt.WindowModality.NonModal)
         msg.setWindowTitle(title)
         msg.setText(text)
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
@@ -105,7 +112,9 @@ class MsgBox(QObject):
         :param func: 按键回调函数,调用时会按键类型
         """
         msg = QMessageBox(parent)
-        msg.setWindowModality(Qt.WindowModality.NonModal)
+        msg.setWindowIcon(QIcon(":/LDDC/img/icon/logo.png"))
+        if parent is not None:
+            msg.setWindowModality(Qt.WindowModality.WindowModal)
         msg.setIcon(QMessageBox.Icon.Question)
         msg.setWindowTitle(title)
         msg.setText(text)
