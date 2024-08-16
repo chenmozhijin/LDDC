@@ -4,6 +4,7 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 import time
 from abc import abstractmethod
@@ -18,7 +19,6 @@ from PySide6.QtCore import (
     QEventLoop,
     QMutex,
     QObject,
-    QProcess,
     QRunnable,
     QSharedMemory,
     Qt,
@@ -135,11 +135,14 @@ class LDDCService(QObject):
 
         if args.get_service_port and not self.shared_memory.attach():
             cmd = shlex.split(command_line)
-            program = cmd[0]
-            arguments = (*cmd[1:], "--not-show") if len(cmd) > 1 else "--not-show"
-            arguments = tuple(re.sub(r'"([^"]+)"', r'\1', arg) for arg in arguments)
+            arguments = [re.sub(r'"([^"]+)"', r'\1', arg) for arg in [cmd[0]] + ([*cmd[1:], "--not-show"] if len(cmd) > 1 else ["--not-show"])]
 
-            QProcess.startDetached(program, arguments)  # 注意在调试模式下无法新建一个独立进程
+            # 注意在调试模式下无法新建一个独立进程
+            logger.info("在独立进程中启动LDDC服务,  命令行参数：%s", arguments)
+            subprocess.Popen(arguments,  # noqa: S603
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             close_fds=True, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS)
+
             wait_time = 0
             while not self.shared_memory.attach():
                 time.sleep(0.05)
