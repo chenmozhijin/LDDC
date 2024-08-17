@@ -56,6 +56,7 @@ jobs:
               run: |
                 sudo apt-get update
                 sudo apt-get install libegl1 upx
+                
 
             - name: Install create-dmg/upx
               if: ${{ matrix.os == 'macos-latest' }}
@@ -114,7 +115,7 @@ jobs:
                 pyinstaller --onedir --contents-directory . --clean --windowed --name LDDC --specpath dist/spec --distpath dist/dist --workpath dist/build --icon $(pwd)/res/img/icon/$icon_filename $target_arch LDDC.py
 
             - name: create dmg
-              if: ${{ matrix.os == 'macos-latest' }}
+              if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-13' }}
               run: |
                 create-dmg \
                   --volname "LDDC" \

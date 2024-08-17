@@ -68,6 +68,13 @@ jobs:
               run: |
                 choco install upx 7zip -y
 
+            # Remove problematic brew libs if Intel Mac https://github.com/Nuitka/Nuitka/issues/2853#issuecomment-2119520735
+            - name: Remove problematic brew libs
+              run: |
+                brew remove --force --ignore-dependencies openssl@3
+                brew cleanup openssl@3
+              if: runner.os == 'macos' && matrix.arch == 'i386'
+
             - name: mkdir
               run: |
                 mkdir -p dist
