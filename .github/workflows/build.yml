@@ -102,7 +102,7 @@ jobs:
                 if ${{ matrix.os == 'ubuntu-latest' }} || ${{ matrix.os == 'windows-latest' }}
                 then
                   icon_filename="logo.ico"
-                elif ${{ matrix.os == 'macos-latest' }}
+                elif ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-13' }}
                 then
                   icon_filename="logo.icns"
                 fi
