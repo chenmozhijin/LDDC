@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>获取专辑/歌单歌词</string>
   </property>
+  <property name="windowIcon">
+   <iconset resource="../res/resource.qrc">
+    <normaloff>:/LDDC/img/icon/logo.png</normaloff>:/LDDC/img/icon/logo.png</iconset>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QPlainTextEdit" name="plainTextEdit">
@@ -40,6 +44,8 @@
    </item>
   </layout>
  </widget>
- <resources/>
+ <resources>
+  <include location="../res/resource.qrc"/>
+ </resources>
  <connections/>
 </ui>

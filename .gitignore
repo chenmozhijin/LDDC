@@ -138,3 +138,8 @@ data.db
 *.psd
 cache/
 test.py
+test/
+plugins/
+Logs/
+
+update_ts.ps1

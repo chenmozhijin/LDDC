@@ -1,5 +1,5 @@
-# SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金
+# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
+# SPDX-License-Identifier: GPL-3.0-only
 from enum import Enum
 
 from PySide6.QtCore import Qt, Signal
@@ -49,11 +49,13 @@ class SidebarWindow(QMainWindow):
         self.sidebar.setContentsMargins(0, 10, 0, 10)
         self.Widgets.tabBar().hide()
 
-        self.__sidebar_spacer = QSpacerItem(40, 20, QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.__sidebar_spacer = QSpacerItem(40, 20, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         self.sidebar.addItem(self.__sidebar_spacer)
 
     def set_current_widget(self, index: int) -> None:
         current_button = self.sidebar.itemAt(index + 1).widget() if index >= self.Top_Widgets else self.sidebar.itemAt(index).widget()
+        if not isinstance(current_button, QPushButton):
+            return
         self.Widgets.setCurrentIndex(index)
         self.widget_changed.emit(index)
         current_button.setChecked(True)
@@ -71,15 +73,15 @@ class SidebarWindow(QMainWindow):
         self.sidebar_widget.setFixedWidth(width)
 
     def add_widget(self, name: str, widget: QWidget, position: SidebarButtonPosition = SidebarButtonPosition.TOP, icon: None | QIcon = None) -> None:
-        '''
-        添加一个新页面到侧边栏中
+        """添加一个新页面到侧边栏中
+
         :param name: 页面的名称
         :param widget: 页面的内容
         :param position: 标签页按钮的位置,默认为顶部
         :return: None
-        '''
+        """
         button = QPushButton(name)
-        button.setLayoutDirection(Qt.LeftToRight)
+        button.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         if isinstance(icon, QIcon):
             button.setIcon(icon)
         button.setCheckable(True)
@@ -110,10 +112,7 @@ class SidebarWindow(QMainWindow):
         self.Total_Widgets += 1
 
     def clear_widgets(self) -> None:
-        '''
-        清空所有页面
-        :return: None
-        '''
+        """清空所有页面"""
         self.Widgets.clear()
         while self.sidebar.count():
             item = self.sidebar.takeAt(0)

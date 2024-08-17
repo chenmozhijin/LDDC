@@ -21,11 +21,21 @@
 - [x] Save path with various placeholders for arbitrary combinations
 - [x] Support for opening locally encrypted lyrics
 - [x] Multi-platform support
+- [x] Desktop Lyrics (currently only supports foobar2000: [foo_lddc](https://github.com/chenmozhijin/foo_lddc))
+    1. Multi-threaded automatic search to quickly match lyrics (most lyrics are in word-for-word style)
+    2. Supports displaying lyrics in karaoke style
+    3. Supports displaying the original text, translation, and romanization in separate lines
+    4. Supports fade in/out effects, and automatically matches the screen refresh rate to ensure smoothness
+    5. Supports manual selection of lyrics through a window similar to the search interface
+    6. Caches characters to achieve low resource usage
+    7. Supports custom gradient colors for characters
 
 ## Preview
 
 ![image](img/en_1.jpg)
 ![image](img/en_2.jpg)
+
+![gif](img/desktop_lyrics.gif)
 
 ## Usage
 
@@ -37,7 +47,7 @@ Some functionalities are implemented with reference to the following projects:
 
 ### Lyrics Decryption
 
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=Lyricify-Lyrics-Helper)](https://github.com/WXRIW/Lyricify-Lyrics-Helper)
+[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=QQMusicDecoder)](https://github.com/WXRIW/QQMusicDecoder)
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=jixunmoe&repo=qmc-decode)](https://github.com/jixunmoe/qmc-decode)
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=parakeet-rs&repo=libparakeet)](https://github.com/parakeet-rs/libparakeet)
 

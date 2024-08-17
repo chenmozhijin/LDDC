@@ -1,0 +1,90 @@
+[project]
+name = "LDDC"
+dynamic = ["version"]
+dependencies = [
+    "PySide6",
+    "requests",
+    "mutagen",
+    "diskcache",
+    "chardet",
+    "cryptography",
+    "psutil",
+]
+requires-python = ">= 3.10"
+description = "A lyrics acquisition tool"
+readme = "README.md"
+authors = [
+    {name = "沉默の金", email = "cmzj@cmzj.org"}
+]
+license = {file = "LICENSE"}
+keywords = ["lyrics","music","download","acquisition","tool"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Environment :: MacOS X ",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: X11 Applications :: Qt",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: Chinese (Simplified)",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+homepage = "https://github.com/chenmozhijin/LDDC"
+repository = "https://github.com/chenmozhijin/LDDC"
+documentation = "https://github.com/chenmozhijin/LDDC/wiki"
+tracker = "https://github.com/chenmozhijin/LDDC/issues"
+
+[tool.setuptools.dynamic]
+version = {attr = "LDDC.__version__"}
+
+[tool.ruff]
+target-version = "py310"
+line-length = 159
+
+[tool.ruff.lint]
+select = [
+    "ALL",
+
+    "CPY001",
+]
+
+ignore = [
+    "ANN401",  # any-type
+    "BLE001",  # blind-except
+    "D100",  # undocumented-public-module
+    "D101",  # undocumented-public-class
+    "D102",  # undocumented-public-method
+    "D103",  # undocumented-public-function
+    "D104",  # undocumented-public-package
+    "D105",  # undocumented-magic-method
+    "D107",  # undocumented-public-init
+    "D400",  # ends-in-period
+    "D415",  # ends-in-punctuation
+    "ERA001",  # commented-out-code
+    "PLR2004",  # magic-value-comparison
+    "Q000",  # bad-quotes-inline-string
+    "RUF001",  # ambiguous-unicode-character-string
+    "N802",  # invalid-function-name
+
+    "PTH",  # flake8-use-pathlib
+    "FBT",  # flake8-boolean-trap
+]
+preview = true
+explicit-preview-rules = true
+
+[tool.ruff.lint.pylint]
+max-branches = 25  # PLR0912
+max-returns = 15  # PLR0911
+max-statements = 75  # PLR0915
+max-args = 10  # PLR0913
+
+[tool.ruff.lint.mccabe]
+max-complexity = 30  # C901
