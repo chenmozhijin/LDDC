@@ -22,11 +22,11 @@
 - [x] Support for opening locally encrypted lyrics
 - [x] Multi-platform support
 - [x] Desktop Lyrics (currently only supports foobar2000: [foo_lddc](https://github.com/chenmozhijin/foo_lddc))
-    1. Multithreaded fast automatic lyrics matching (mostly word-by-word)
-    2. Accurate word-by-word karaoke-style lyrics
+    1. Multi-threaded automatic search to quickly match lyrics (most lyrics are in word-for-word style)
+    2. Supports displaying lyrics in karaoke style
     3. Supports displaying the original text, translation, and romanization in separate lines
-    4. Supports fade in/out, automatically matches screen refresh rate for smooth display
-    5. Supports manually selecting lyrics and adding offsets (similar to the search interface)
+    4. Supports fade in/out effects, and automatically matches the screen refresh rate to ensure smoothness
+    5. Supports manual selection of lyrics through a window similar to the search interface
     6. Caches characters to achieve low resource usage
     7. Supports custom gradient colors for characters
 
