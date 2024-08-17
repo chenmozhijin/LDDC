@@ -52,7 +52,7 @@ jobs:
                 # pip install imageio
             
             - name: Install EGL/upx
-              if: ${{ matrix.os == 'ubuntu-latest' }}
+              if: ${{ runner.os == 'Linux' }}
               run: |
                 sudo apt-get update
                 sudo apt-get install libegl1 upx
@@ -64,7 +64,7 @@ jobs:
                 brew install create-dmg upx 
 
             - name: Install upx/7zip
-              if: ${{ matrix.os == 'windows-latest' }}
+              if: ${{ runner.os == 'Windows' }}
               run: |
                 choco install upx 7zip -y
             
@@ -100,10 +100,10 @@ jobs:
             - name: Build Executable
               shell: bash
               run: |
-                if ${{ matrix.os == 'ubuntu-latest' }} || ${{ matrix.os == 'windows-latest' }}
+                if ${{ runner.os == 'Linux' }} || ${{ runner.os == 'Windows' }}
                 then
                   icon_filename="logo.ico"
-                elif ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-13' }}
+                elif ${{ runner.os == 'macOS' }}
                 then
                   icon_filename="logo.icns"
                 fi
@@ -115,7 +115,7 @@ jobs:
                 pyinstaller --onedir --contents-directory . --clean --windowed --name LDDC --specpath dist/spec --distpath dist/dist --workpath dist/build --icon $(pwd)/res/img/icon/$icon_filename $target_arch LDDC.py
 
             - name: create dmg
-              if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-13' }}
+              if: ${{ runner.os == 'macOS' }}
               run: |
                 create-dmg \
                   --volname "LDDC" \
@@ -132,7 +132,7 @@ jobs:
                 mv dist/LDDC.dmg upload/LDDC-${{ steps.info.outputs.version }}-${{ steps.arch.outputs.arch }}.dmg
 
             - name: create deb package
-              if: ${{ matrix.os == 'ubuntu-latest' }}
+              if: ${{ runner.os == 'Linux' }}
               run: |
                 cd dist
                 mkdir -p deb/DEBIAN
@@ -171,7 +171,7 @@ jobs:
                 mv dist/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb upload/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
 
             - name: prepare create exe
-              if: ${{ matrix.os == 'windows-latest' }} 
+              if: ${{ runner.os == 'Windows' }} 
               run: |
                 New-Item -ItemType Directory -Force -Path dist/exe/main/
                 New-Item -ItemType Directory -Force -Path dist/exe/main/other/
@@ -180,7 +180,7 @@ jobs:
                 Remove-Item -Path dist/exe/other/LDDC.exe -Force
 
             - name: Generate evb
-              if: ${{ matrix.os == 'windows-latest' }}
+              if: ${{ runner.os == 'Windows' }}
               uses: chenmozhijin/generate-evb@master
               with:
                 inputExe: "dist/exe/main/LDDC.exe"
@@ -191,7 +191,7 @@ jobs:
                 compressFiles: false
 
             - name: create exe
-              if: ${{ matrix.os == 'windows-latest' }}
+              if: ${{ runner.os == 'Windows' }}
               run: |
                 New-Item -Path "dist\exe\chen" -ItemType Directory -Force
                 New-Item -Path "dist\exe\tools" -ItemType Directory -Force
@@ -221,7 +221,7 @@ jobs:
                     dist/
 
             - name: Compress exe
-              if: ${{ matrix.os == 'windows-latest' }}
+              if: ${{ runner.os == 'Windows' }}
               run: |
                 New-Item -Path upload -ItemType Directory
                 cd dist/exe/output/

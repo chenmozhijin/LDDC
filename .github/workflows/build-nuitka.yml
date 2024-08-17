@@ -53,18 +53,18 @@ jobs:
                 pip install imageio
             
             - name: Install EGL/upx
-              if: ${{ matrix.os == 'ubuntu-latest' }}
+              if: ${{ runner.os == 'Linux' }}
               run: |
                 sudo apt-get update
                 sudo apt-get install libegl1 upx
 
             - name: Install create-dmg/upx
-              if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-13' }}
+              if: ${{ runner.os == 'macOS' }}
               run: |
                 brew install create-dmg upx 
 
             - name: Install upx/7zip
-              if: ${{ matrix.os == 'windows-latest' }}
+              if: ${{ runner.os == 'Windows' }}
               run: |
                 choco install upx 7zip -y
 
@@ -73,7 +73,7 @@ jobs:
               run: |
                 brew remove --force --ignore-dependencies openssl@3
                 brew cleanup openssl@3
-              if: runner.os == 'macos' && matrix.arch == 'i386'
+              if: runner.os == 'macOS' && runner.arch == 'X64'
 
             - name: mkdir
               run: |
@@ -90,7 +90,7 @@ jobs:
 
             - name: Build Executable
               uses: Nuitka/Nuitka-Action@main
-              if : ${{ matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest' || matrix.os == 'macos-13'}}
+              if : ${{ runner.os == 'Linux' || runner.os == 'macOS'}}
               with:
                 nuitka-version: main
                 script-name: LDDC.py
@@ -111,7 +111,7 @@ jobs:
 
             - name: Build Executable
               uses: Nuitka/Nuitka-Action@main
-              if : ${{ matrix.os == 'windows-latest' }}
+              if : ${{ runner.os == 'Windows' }}
               with:
                 nuitka-version: main
                 script-name: LDDC.py
@@ -137,7 +137,7 @@ jobs:
                   report.xml
 
             - name: create dmg
-              if: ${{ matrix.os == 'macos-latest' || matrix.os == 'macos-13' }}
+              if: ${{ runner.os == 'macOS' }}
               run: |
                 create-dmg \
                   --volname "LDDC" \
@@ -153,7 +153,7 @@ jobs:
                 mv dist/LDDC.dmg upload/LDDC-${{ steps.info.outputs.version }}-${{ steps.arch.outputs.arch }}.dmg
 
             - name: create deb package
-              if: ${{ matrix.os == 'ubuntu-latest' }}
+              if: ${{ runner.os == 'Linux' }}
               run: |
                 cd dist
                 mkdir -p deb/DEBIAN
@@ -191,7 +191,7 @@ jobs:
                 mv dist/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb upload/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
 
             - name: prepare create exe
-              if: ${{ matrix.os == 'windows-latest' }} 
+              if: ${{ runner.os == 'Windows' }} 
               run: |
                 New-Item -ItemType Directory -Force -Path dist/exe/main/
                 New-Item -ItemType Directory -Force -Path dist/exe/main/other/
@@ -200,7 +200,7 @@ jobs:
                 Remove-Item -Path dist/exe/other/LDDC.exe -Force
 
             - name: Generate evb
-              if: ${{ matrix.os == 'windows-latest' }}
+              if: ${{ runner.os == 'Windows' }}
               uses: chenmozhijin/generate-evb@master
               with:
                 inputExe: "dist/exe/main/LDDC.exe"
@@ -211,7 +211,7 @@ jobs:
                 compressFiles: false
 
             - name: create exe
-              if: ${{ matrix.os == 'windows-latest' }}
+              if: ${{ runner.os == 'Windows' }}
               run: |
                 New-Item -Path "dist\exe\chen" -ItemType Directory -Force
                 New-Item -Path "dist\exe\tools" -ItemType Directory -Force
@@ -242,7 +242,7 @@ jobs:
                     build/
 
             - name: Compress exe
-              if: ${{ matrix.os == 'windows-latest' }}
+              if: ${{ runner.os == 'Windows' }}
               run: |
                 cd dist/exe/output/
                 7z a -tzip -mx=9 ../../../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}-onefile.zip LDDC
