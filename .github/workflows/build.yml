@@ -105,8 +105,12 @@ jobs:
                 elif ${{ matrix.os == 'macos-latest' }}
                 then
                   icon_filename="logo.icns"
-                fi
-                pyinstaller --onedir --contents-directory . --clean --windowed --name LDDC --specpath dist/spec --distpath dist/dist --workpath dist/build --icon $(pwd)/res/img/icon/$icon_filename LDDC.py
+                  if [[ ${{ matrix.arch }} == 'x64' ]]; then
+                    target_arch="x86_64"
+                  elif [[ ${{ matrix.arch }} == 'arm64' ]]; then
+                    target_arch="arm64"
+                  fi
+                pyinstaller --onedir --contents-directory . --clean --windowed --name LDDC --specpath dist/spec --distpath dist/dist --workpath dist/build --icon $(pwd)/res/img/icon/$icon_filename --target-arch $target_arch LDDC.py
 
             - name: create dmg
               if: ${{ matrix.os == 'macos-latest' }}
