@@ -255,7 +255,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                                SearchType.SONGLIST: ([self.tr("歌单"), self.tr("创建者"), self.tr("歌曲数量"), self.tr("创建时间")], [0.6, 0.4, 2, 2]),
                                SearchType.LYRICS: ([self.tr("歌曲"), self.tr("艺术家"), self.tr("专辑"), self.tr("时长")], [0.4, 0.2, 0.4, 2])}
 
-        show_source = bool(result_type[1] == SearchType.SONG and self.search_info and isinstance(self.search_info["source"], list))
+        show_source = bool(result_type[0] == "search" and self.search_info and isinstance(self.search_info["source"], list))
 
         headers = headers_proportions[result_type[1]][0] + ([self.tr("来源")] if show_source else [])
         table.setColumnCount(len(headers))
