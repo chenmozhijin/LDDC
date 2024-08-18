@@ -13,10 +13,7 @@ from copy import deepcopy
 from random import SystemRandom
 from typing import Literal
 
-try:
-    import psutil
-except ImportError:
-    psutil = None
+import psutil
 from PySide6.QtCore import (
     QCoreApplication,
     QEventLoop,
@@ -76,6 +73,10 @@ class ServiceInstanceBase(QRunnable):
     def handle_task(self, task: dict) -> None:
         ...
 
+    @abstractmethod
+    def init(self) -> None:
+        ...
+
     def stop(self) -> None:
         self.loop.quit()
         logger.info("Service instance %s stopped", self.instance_id)
@@ -87,6 +88,7 @@ class ServiceInstanceBase(QRunnable):
         logger.info("Service instance %s started", self.instance_id)
         self.signals.handle_task.connect(self.handle_task)
         self.loop = QEventLoop()
+        self.init()
         self.loop.exec()
 
 
@@ -95,8 +97,6 @@ instance_dict_mutex = QMutex()
 
 
 def clean_dead_instance() -> bool:
-    if not psutil:
-        return False
     to_stop = []
     instance_dict_mutex.lock()
     for instance_id, instance in instance_dict.items():
@@ -337,7 +337,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         # 任务ID 用于防止旧任务的结果覆盖新任务的结果
         self.taskid = 0
 
-    def run(self) -> None:
+    def init(self) -> None:
         # 初始化界面
         in_main_thread(self.init_widget)
         if "name" in self.client_info and "repo" in self.client_info and "ver" in self.client_info:
@@ -366,7 +366,6 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.widget.menu.action_unlink_lyrics.triggered.connect(self.unlink_lyrics)
 
         cfg.desktop_lyrics_changed.connect(self.cfg_changed_slot)
-        super().run()
 
     def init_widget(self) -> None:
         """初始化界面(主线程)"""
