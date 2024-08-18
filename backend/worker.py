@@ -242,6 +242,7 @@ class LyricProcessingWorker(QRunnable):
             except LyricsUnavailableError as e:
                 logger.warning("歌词不可用: %s", e)
                 error = e
+                break
             except Exception as e:
                 logger.exception("获取歌词时发生错误, song_info: %s", song_info)
                 error = e
