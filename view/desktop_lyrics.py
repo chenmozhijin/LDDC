@@ -824,7 +824,10 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
         key, value = k_v
         match key:
             case "desktop_lyrics_font_family":
-                self.lyrics_text.text_font.setFamily(value)
+                if value:
+                    self.lyrics_text.text_font.setFamily(value)
+                else:
+                    self.lyrics_text.text_font.setFamily(QFont().defaultFamily())
                 self.lyrics_text.clear_cache()
                 self.lyrics_text.update()
             case "desktop_lyrics_played_colors":
