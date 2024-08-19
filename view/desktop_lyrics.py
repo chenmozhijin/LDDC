@@ -165,6 +165,9 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
                                                        LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                                                        self.offset_spinBox.value())}
                 self.update_preview_lyric_result_slot(self.taskid["update_preview_lyric"], result)
+            else:
+                self.preview_plainTextEdit.setPlainText("")
+                self.preview_lyric_result = None
 
             if isinstance(langs, list):
                 if "orig" in langs:

@@ -169,6 +169,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         """更新预览歌词错误时调用"""
         MsgBox.critical(self, self.tr("获取预览歌词错误"), error)
         self.preview_plainTextEdit.setPlainText("")
+        self.preview_lyric_result = None
 
     @Slot(int, dict)
     def update_preview_lyric_result_slot(self, taskid: int, result: dict) -> None:
