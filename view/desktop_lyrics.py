@@ -152,6 +152,8 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
             if isinstance(offset, int):
                 self.offset_spinBox.setValue(offset)
             if keyword:
+                self.source_comboBox.setCurrentIndex(0)
+                self.search_type_comboBox.setCurrentIndex(0)
                 self.search_keyword_lineEdit.setText(keyword)
                 self.search()
 
