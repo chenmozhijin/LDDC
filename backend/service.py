@@ -425,9 +425,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             case "start":
                 # 开始播放
                 logger.debug("start")
-                playback_time = self.get_playback_time(task)
-                if playback_time is not None:
-                    self.start_time = int(time.time() * 1000)
+                if (playback_time := self.get_playback_time(task)) is not None:
+                    self.start_time = int(time.time() * 1000) - playback_time
                 else:
                     self.start_time = int(time.time() * 1000) - self.current_time
                 if not self.timer.isActive():
@@ -456,6 +455,9 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                         not isinstance(track, int | str | None)):
                     logger.error("task:chang_music, invalid data")
                     return
+
+                if (playback_time := self.get_playback_time(task)) is not None:
+                    self.start_time = int(time.time() * 1000) - playback_time
 
                 self.song_info = {"title": title, "artist": artist, "album": album, "duration": duration, "song_path": song_path,
                                   "track_number": str(track) if isinstance(track, int) else track}
