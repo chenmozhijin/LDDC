@@ -97,7 +97,6 @@ jobs:
                 standalone: true
                 onefile: false
                 report: true
-                show-scons: true
                 enable-plugins: pyside6
                 product-name: "LDDC"
                 file-version: ${{ steps.info.outputs.version }}
@@ -119,8 +118,7 @@ jobs:
                 script-name: LDDC.py
                 standalone: true
                 onefile: false
-                report: true
-                show-scons: true
+                report: nuitka-report.xml
                 enable-plugins: pyside6
                 product-name: "LDDC"
                 file-version: ${{ steps.info.outputs.version }}
@@ -138,7 +136,7 @@ jobs:
                 name: ${{ runner.os }} - ${{ matrix.arch }} report
                 path: |
                   nuitka-crash-report.xml
-                  report.xml
+                  nuitka-report.xml
 
             - name: create dmg
               if: ${{ runner.os == 'macOS' }}
