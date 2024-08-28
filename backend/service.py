@@ -626,20 +626,20 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         if self.song_info:
             self.config["inst"] = True
             self.widget.new_lyrics.emit({"inst": True})
-            self.show_artist_title(QCoreApplication.translate("DesktopLyrics", "纯音乐，请欣赏"))
-            self.unlink_lyrics()
+            self.unlink_lyrics(QCoreApplication.translate("DesktopLyrics", "纯音乐，请欣赏"))
 
     def set_auto_search(self, is_disable: bool | None = None) -> None:
         if self.song_info:
             self.config["disable_auto_search"] = is_disable if is_disable is not None else bool(not self.config.get("disable_auto_search"))
             self.update_db_data()
 
-    def unlink_lyrics(self) -> None:
+    def unlink_lyrics(self, msg: str = "") -> None:
         if self.song_info:
             self.lyrics_path = None
             self.lyrics = None
             self.offseted_lyrics = None
             self.update_db_data()
+            self.show_artist_title(msg)
 
     def update_db_data(self) -> None:
         local_song_lyrics.set_song(**self.song_info, lyrics_path=self.lyrics_path, config={k: v for k, v in self.config.items()
