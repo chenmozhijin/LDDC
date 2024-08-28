@@ -40,10 +40,10 @@ def convert2(lyrics: Lyrics,
                 if key == "source":
                     value: Source
                     json_dict["info"][key] = value.name
-                else:
+                elif value is not None:
                     json_dict["info"][key] = value
 
-            return json.dumps(json_dict, ensure_ascii=False)
+        return json.dumps(json_dict, ensure_ascii=False)
 
     if not langs:
         return ""
