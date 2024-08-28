@@ -85,6 +85,9 @@ def get_audio_file_infos(file_path: str) -> list[dict]:
 
 
 def get_audio_duration(file_path: str) -> int | None:
+    if not os.path.isfile(file_path):
+        logger.error("未找到文件: %s", file_path)
+        return None
     try:
         audio = mutagen.File(file_path)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
         return int(audio.info.length) if audio.info.length else None  # type: ignore[reportOptionalMemberAccess]
@@ -116,6 +119,11 @@ def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[l
                 cuedata['songwriter'] = re.findall(r'^SONGWRITER "(.*)"', line)[0]
             else:
                 cuedata['songwriter'] = re.findall(r'^SONGWRITER (.*)', line)[0]
+        elif line.startswith("CATALOG"):  # 唯一 EAN 编号
+            if '"' in line:
+                cuedata['catalog'] = re.findall(r'^CATALOG "(.*)"', line)[0]
+            else:
+                cuedata['catalog'] = re.findall(r'^CATALOG (.*)', line)[0]
         elif line.startswith("REM"):  # 注释(扩展命令)
             if line.startswith("REM GENRE"):  # 分类
                 if '"' in line:
@@ -137,11 +145,6 @@ def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[l
                     cuedata['comment'] = re.findall(r'^REM COMMENT "(.*)"', line)[0]
                 else:
                     cuedata['comment'] = re.findall(r'^REM COMMENT (.*)', line)[0]
-            elif line.startswith("CATALOG"):  # 指定唱片的唯一 EAN 编号
-                if '"' in line:
-                    cuedata['catalog'] = re.findall(r'^CATALOG "(.*)"', line)[0]
-                else:
-                    cuedata['catalog'] = re.findall(r'^CATALOG (.*)', line)[0]
             elif line.startswith("CDTEXTFILE"):  # CD-TEXT 信息文件
                 if '"' in line:
                     cuedata['cdtextfile'] = re.findall(r'^CDTEXTFILE "(.*)"', line)[0]
@@ -165,8 +168,9 @@ def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[l
             index = re.findall(r'^    INDEX (\d+)', line)[0]
             if index == "00":  # 空档
                 pass
-            cuedata["files"][-1]["tracks"][-1]["index"] = index
-            cuedata["files"][-1]["tracks"][-1]["begintime"] = re.findall(r'^    INDEX \d+ (\d+:\d+:\d+)', line)[0]
+            if cuedata["files"][-1]["tracks"]:
+                cuedata["files"][-1]["tracks"][-1]["index"] = index
+                cuedata["files"][-1]["tracks"][-1]["begintime"] = re.findall(r'^    INDEX \d+ (\d+:\d+:\d+)', line)[0]
         elif line.startswith("  PREGAP"):  # 轨段前的空白时间
             cuedata["files"][-1]["tracks"][-1]["pregap"] = re.findall(r'^    PREGAP (\d+:\d+:\d+)', line)[0]
         elif line.startswith("  POSTGAP"):  # 轨段后的空白时间
@@ -210,11 +214,17 @@ def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[l
 
         # 处理音频文件路径
         audio_file_path = os.path.join(file_dir, file["filename"])
-        if not os.path.exists(audio_file_path) and file_path:
+        if not os.path.exists(audio_file_path):
             for file_extension in file_extensions:
-                if os.path.exists(os.path.splitext(file_path)[0] + "." + file_extension):
-                    audio_file_path = os.path.splitext(file_path)[0] + "." + file_extension
+                if file_path and (
+                    (audio_file_path := os.path.join(os.path.dirname(file_path), os.path.splitext(file["filename"])[0] + "." + file_extension))
+                    and os.path.exists(audio_file_path) or
+                    (audio_file_path := os.path.splitext(file_path)[0] + "." + file_extension)
+                        and os.path.exists(audio_file_path)):
                     break
+            else:
+                logger.warning("未找到音频文件: %s", file["filename"])
+                audio_file_path = ""
 
         if os.path.exists(audio_file_path):
             audio_file_paths.append(audio_file_path)

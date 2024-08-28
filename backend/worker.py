@@ -410,7 +410,7 @@ class LocalMatchWorker(QRunnable):
                                 logger.warning("没有在cue文件 %s 解析到歌曲", file_path)
                                 self.signals.error.emit(QCoreApplication.translate("LocalMatch", "没有在cue文件 {0} 解析到歌曲").format(file_path), 0)
                         except Exception as e:
-                            logger.exception("处理cue文件时错误")
+                            logger.exception("处理cue文件时错误 file:%s", file_path)
                             self.signals.error.emit(f"处理cue文件时错误:{e}", 0)
                     elif file.lower().split(".")[-1] in audio_formats:
                         file_path = os.path.join(root, file)
