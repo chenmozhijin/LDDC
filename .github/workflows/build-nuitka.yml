@@ -96,7 +96,7 @@ jobs:
                 script-name: LDDC.py
                 standalone: true
                 onefile: false
-                report: true
+                report: nuitka-report.xml
                 enable-plugins: pyside6
                 product-name: "LDDC"
                 file-version: ${{ steps.info.outputs.version }}
