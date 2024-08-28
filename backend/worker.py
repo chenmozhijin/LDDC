@@ -769,7 +769,7 @@ class AutoLyricsFetcher(QRunnable):
 
         result = {"status": "成功", "orig_info": self.info, "lyrics": result, "is_inst": is_inst, "result_info": info}
         if self.return_search_result:
-            result["search_result"] = self.search_result
+            result["search_result"] = {s: self.search_result[s] for s in self.source}
         self.send_result(result)
 
     def send_result(self, result: dict) -> None:

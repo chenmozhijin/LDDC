@@ -45,7 +45,7 @@ def search(keyword: str,
                 case Source.KG:
                     if search_type == SearchType.LYRICS and info:
                         results = kg_search(keyword=keyword, info=info, search_type=SearchType.LYRICS)
-                        results = [{**info, **item} for item in results]
+                        results = [{**info, **item, "duration": info["duration"]} for item in results]
                     elif search_type != SearchType.LYRICS:
                         results = kg_search(keyword=keyword, search_type=search_type, page=page)
                     else:

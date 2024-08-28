@@ -791,7 +791,10 @@ class SearchWidget(SearchWidgetBase):
             self.search_result_slot(self.taskid["results_table"], SearchType.SONG,
                                     [result["result_info"],
                                      *[item for group in zip_longest(*(k_i[1] for k_i in search_result.values())) for item in group
-                                       if item is not None and item != result["result_info"]]])
+                                       if item is not None and
+                                       (item.get("id") != result["result_info"].get("id") or
+                                       item.get("mid") != result["result_info"].get("mid") or
+                                       item.get("source") != result["result_info"].get("source"))]])
             self.results_tableWidget.selectRow(0)
 
         else:
