@@ -662,7 +662,7 @@ class AutoLyricsFetcher(QRunnable):
                     self.search_result[source] = (keyword, infos)
                 if source == Source.KG and search_type == SearchType.SONG:
                     # 对酷狗音乐搜索到的歌曲搜索歌词
-                    self.new_search_work(f"{get_artist_str(self.info.get('artist')), '、'} - {self.info['title'].strip()}",
+                    self.new_search_work(f"{get_artist_str(self.info.get('artist'), '、')} - {self.info['title'].strip()}",
                                          SearchType.LYRICS,
                                          Source.KG,
                                          info=best_info)

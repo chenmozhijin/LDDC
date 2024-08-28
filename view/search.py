@@ -394,7 +394,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.reset_page_status()
         self.taskid["results_table"] += 1
         worker = SearchWorker(self.taskid["results_table"],
-                              f"{get_artist_str(info.get('artist')), '、'} - {info['title'].strip()}",
+                              f"{get_artist_str(info.get('artist'), '、')} - {info['title'].strip()}",
                               SearchType.LYRICS, info['source'], 1, info)
         worker.signals.result.connect(self.search_lyrics_result_slot)
         worker.signals.error.connect(self.search_lyrics_error_slot)
