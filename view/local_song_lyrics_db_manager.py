@@ -80,8 +80,6 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
 
         self.data_table.set_proportions([0.3, 0.2, 0.1, 2, 0.2, 2, 0.1, 0.1])
         self.id_map = {}
-        self.data_table.verticalScrollBar().valueChanged.connect(self.table_scroll_changed)
-        self.data_table.verticalScrollBar().rangeChanged.connect(self.table_scroll_changed)
 
         self.delete_button.clicked.connect(self.del_item)
         self.delete_all_button.clicked.connect(lambda: self.run_task("del_all"))
@@ -91,15 +89,12 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
         self.restore_button.clicked.connect(lambda: self.run_select_path_task("restore"))
 
     def reset_table(self) -> None:
-        self.all_data = local_song_lyrics.get_all()
-        self.id_map = {i: item[0] for i, item in enumerate(self.all_data)}
+        data = local_song_lyrics.get_all()
+        self.id_map = {i: item[0] for i, item in enumerate(data)}
         self.data_table.setRowCount(0)
         self.data_table.setColumnCount(8)
         self.data_table.setHorizontalHeaderLabels([self.tr('歌曲名'), self.tr('艺术家'), self.tr('专辑'), self.tr("时长"), self.tr("歌曲路径"),
                                                    self.tr("音轨号"), self.tr("歌词路径"), self.tr("配置")])
-        self.set_table_data(self.all_data[:20])
-
-    def set_table_data(self, data: list[tuple[int, str, str, str, int, str, int, str, dict[str, Any]]]) -> None:
         for i, (_id, title, artist, album, duration, song_path, track_number, lyrics_path, config) in enumerate(data, self.data_table.rowCount()):
             self.data_table.insertRow(i)
             self.data_table.setItem(i, 0, QTableWidgetItem(title))
@@ -110,16 +105,6 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
             self.data_table.setItem(i, 5, QTableWidgetItem(track_number))
             self.data_table.setItem(i, 6, QTableWidgetItem(lyrics_path))
             self.data_table.setItem(i, 7, QTableWidgetItem(str(config)))
-
-    def table_scroll_changed(self) -> None:
-        # 判断是否已经滚动到了底部或消失
-        results_table_scroll = self.data_table.verticalScrollBar()
-
-        value = results_table_scroll.value()
-        max_value = results_table_scroll.maximum()
-        if value == max_value and self.data_table.rowCount() != len(self.all_data):
-            self.set_table_data(
-                self.all_data[self.data_table.rowCount():self.data_table.rowCount() + min(20, len(self.all_data) - self.data_table.rowCount())])
 
     def del_item(self) -> None:
         if not self.data_table.selectionModel().hasSelection():
