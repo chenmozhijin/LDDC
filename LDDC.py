@@ -37,9 +37,9 @@ if __name__ == "__main__":
 
     exit_manager.close_signal.connect(service.stop_service, Qt.ConnectionType.BlockingQueuedConnection)
 
-    from view.main_window import main_window
     load_translation(False)
     if show:
+        from view.main_window import main_window
         main_window.show()
     from utils.data import cfg
     if cfg["auto_check_update"]:
