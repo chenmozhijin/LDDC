@@ -2,11 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import os
 import re
+from itertools import zip_longest
 from typing import Any
 
 from PySide6.QtCore import (
     QModelIndex,
     QSize,
+    Qt,
     QTimer,
     Slot,
 )
@@ -16,7 +18,7 @@ from PySide6.QtGui import (
     QFont,
 )
 from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy, QTableWidgetItem, QWidget
-from itertools import zip_longest
+
 from backend.converter import convert2
 from backend.lyrics import Lyrics
 from backend.song_info import get_audio_file_infos, parse_cue_from_file
@@ -206,6 +208,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.lyric_langs_lineEdit.setText(lyric_langs_text)
         if 'id' in result['info']:
             self.songid_lineEdit.setText(str(result['info']['id']))
+        elif result["lyrics"].id is not None:
+            self.songid_lineEdit.setText(str(result["lyrics"].id))
         else:
             self.songid_lineEdit.setText("")
 
@@ -448,7 +452,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
             # 创建"没有更多结果"的 QTableWidgetItem
             nomore_item = QTableWidgetItem(self.tr("没有更多结果"))
-            nomore_item.setTextAlignment(0x0004 | 0x0080)  # 设置水平和垂直居中对齐
+            nomore_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)  # 设置水平和垂直居中对齐
             self.results_tableWidget.setItem(last_row, 0, nomore_item)
         else:
             self.search_info['page'] += 1
@@ -699,15 +703,15 @@ class SearchWidget(SearchWidgetBase):
         # 获取拖动的文件信息
         mime = event.mimeData()
 
-        path, track = None, None
+        path, track, index = None, None, None
         # 特殊适配
         if 'application/x-qt-windows-mime;value="ACL.FileURIs"' in mime.formats():
             # AIMP
             data = mime.data('application/x-qt-windows-mime;value="ACL.FileURIs"')
             path = bytearray(data.data()[20:-4]).decode('UTF-16')
             if path.split(":")[-1].isdigit():
-                track = path.split(":")[-1]
-                path = "".join(path.split(":")[:-1])
+                index = path.split(":")[-1]
+                path = ":".join(path.split(":")[:-1])
         elif ('text/plain' in mime.formats() and
               # foobar2000
               (matched := re.fullmatch(r"(?:(?P<artist>.*?) - )?\[(?P<album>.*?) (?:CD\d+/\d+ )?#(?P<track>\d+)\] (?P<title>.*)", mime.text())) is not None):
@@ -720,18 +724,24 @@ class SearchWidget(SearchWidgetBase):
                 logger.exception(e)
                 MsgBox.critical(self, "错误", "无法获取文件路径")
                 return
-        if path.lower().endswith('.cue') and isinstance(track, str | int):
+        if path.lower().endswith('.cue') and (isinstance(track, str | int) or index is not None):
             try:
                 songs, _audio_file_paths = parse_cue_from_file(path)
             except Exception as e:
                 MsgBox.critical(self, "错误", f"解析文件 {path} 失败: {e}")
                 return
-            for song in songs:
-                if song["track"] is not None and int(song["track"]) == int(track):
-                    break
-            else:
-                MsgBox.critical(self, "错误", f"文件 {path} 中没有找到第 {track} 轨歌曲")
-                return
+            if index is not None:
+                if int(index) + 1 >= len(songs):
+                    MsgBox.critical(self, "错误", f"文件 {path} 中没有找到第 {index} 轨歌曲")
+                    return
+                song = songs[int(index)]
+            elif isinstance(track, str | int):
+                for song in songs:
+                    if song["track"] is not None and int(song["track"]) == int(track):
+                        break
+                else:
+                    MsgBox.critical(self, "错误", f"文件 {path} 中没有找到第 {track} 轨歌曲")
+                    return
         else:
             try:
                 songs = get_audio_file_infos(path)
@@ -751,26 +761,36 @@ class SearchWidget(SearchWidgetBase):
                 MsgBox.critical(self, "错误", f"解析文件 {path} 失败: {e}")
                 return
 
+        if not song['title']:
+            MsgBox.warning(self, "警告", "没有获取到歌曲标题,无法自动搜索")
+
         worker = AutoLyricsFetcher(song, taskid=tuple(self.taskid.values()), return_search_result=True)
         worker.signals.result.connect(self.auto_fetch_slot)
         threadpool.start(worker)
+        self.preview_lyric_result = None
+        self.preview_plainTextEdit.setPlainText(self.tr("正在自动获取 {0} 的歌词...").format(
+            f"{song['artist']} - {song['title']}" if song['artist'] and len(song['title']) * 2 > len(song['artist']) else song['title']))
 
     def auto_fetch_slot(self, result: dict) -> None:
         if result.get("taskid") != tuple(self.taskid.values()):
+            if result.get("taskid", (0, -1))[1] == self.taskid["update_preview_lyric"]:
+                self.preview_plainTextEdit.setPlainText("")
             return
 
         if result.get("status") == "成功":
             self.preview_lyric_result = {"info": result["result_info"], "lyrics": result["lyrics"]}
             self.update_preview_lyric()
+
+            self.reset_page_status()
             self.source_comboBox.setCurrentIndex(0)
             self.search_type_comboBox.setCurrentIndex(0)
-            search_result_: dict[Source, tuple[str, list[dict]]] = result["search_result"]
-            keyword = search_result_[result["result_info"]["source"]][0]
-            self.search_info = {'keyword': keyword, 'search_type': SearchType.SONG, 'source': list(search_result_.keys()), 'page': 1}
+            search_result: dict[Source, tuple[str, list[dict]]] = result["search_result"]
+            keyword = search_result[result["result_info"]["source"]][0]
+            self.search_info = {'keyword': keyword, 'search_type': SearchType.SONG, 'source': list(search_result.keys()), 'page': 1}
             self.search_keyword_lineEdit.setText(keyword)
             self.search_result_slot(self.taskid["results_table"], SearchType.SONG,
                                     [result["result_info"],
-                                     *[item for group in zip_longest(*(k_i[1] for k_i in search_result_.values())) for item in group
+                                     *[item for group in zip_longest(*(k_i[1] for k_i in search_result.values())) for item in group
                                        if item is not None and item != result["result_info"]]])
             self.results_tableWidget.selectRow(0)
 
