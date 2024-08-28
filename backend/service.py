@@ -238,8 +238,10 @@ class LDDCService(QObject):
                 client_connection.flush()
                 client_connection.disconnectFromServer()
             case "show":
-                from view.main_window import main_window
-                in_main_thread(main_window.show_window)
+                def show_main_window() -> None:
+                    from view.main_window import main_window
+                    main_window.show_window()
+                in_main_thread(show_main_window)
                 client_connection.write(b"message_received")
                 client_connection.flush()
                 client_connection.disconnectFromServer()
