@@ -61,7 +61,7 @@ jobs:
             - name: Install create-dmg/upx
               if: ${{ runner.os == 'macOS' }}
               run: |
-                brew install create-dmg upx 
+                brew install create-dmg
 
             - name: Install upx/7zip
               if: ${{ runner.os == 'Windows' }}
@@ -88,7 +88,7 @@ jobs:
                 echo "version=$(python build_helper.py --task get_version)" >> $GITHUB_OUTPUT
                 cat $GITHUB_OUTPUT
 
-            - name: Build Executable
+            - name: Build Executable(Linux/macOS)
               uses: Nuitka/Nuitka-Action@main
               if : ${{ runner.os == 'Linux' || runner.os == 'macOS'}}
               with:
@@ -96,6 +96,8 @@ jobs:
                 script-name: LDDC.py
                 standalone: true
                 onefile: false
+                report: true
+                show-scons: true
                 enable-plugins: pyside6
                 product-name: "LDDC"
                 file-version: ${{ steps.info.outputs.version }}
@@ -109,7 +111,7 @@ jobs:
                 macos-create-app-bundle: true
                 macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
 
-            - name: Build Executable
+            - name: Build Executable(Windows)
               uses: Nuitka/Nuitka-Action@main
               if : ${{ runner.os == 'Windows' }}
               with:
@@ -117,6 +119,8 @@ jobs:
                 script-name: LDDC.py
                 standalone: true
                 onefile: false
+                report: true
+                show-scons: true
                 enable-plugins: pyside6
                 product-name: "LDDC"
                 file-version: ${{ steps.info.outputs.version }}
