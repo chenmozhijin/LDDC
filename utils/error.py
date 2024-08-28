@@ -42,6 +42,18 @@ class ErrorMsgTranslator(QObject):
 
                 if "不支持的歌词格式" in msg:
                     msg = msg.replace("不支持的歌词格式", self.tr("不支持的歌词格式"))
+
+                if "无法获取歌曲标题" in msg:
+                    msg = msg.replace("无法获取歌曲标题", self.tr("无法获取歌曲标题"))
+
+                if "无法获取歌曲信息" in msg:
+                    msg = msg.replace("无法获取歌曲信息", self.tr("无法获取歌曲信息"))
+
+                if "文件格式不支持" in msg:
+                    msg = msg.replace("文件格式不支持", self.tr("文件格式不支持"))
+
+                if "获取文件信息失败" in msg:
+                    msg = msg.replace("获取文件信息失败", self.tr("获取文件信息失败"))
         return msg
 
 
@@ -92,6 +104,13 @@ class DecodingError(Exception):
 
 class LyricsUnavailableError(Exception):
     """获取的歌词不可用"""
+
+    def __init__(self, msg: str) -> None:
+        super().__init__(translator.translate(msg))
+
+
+class GetSongInfoError(Exception):
+    """获取歌曲信息错误"""
 
     def __init__(self, msg: str) -> None:
         super().__init__(translator.translate(msg))

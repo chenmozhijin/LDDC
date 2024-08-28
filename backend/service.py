@@ -13,10 +13,7 @@ from copy import deepcopy
 from random import SystemRandom
 from typing import Literal
 
-try:
-    import psutil
-except ImportError:
-    psutil = None
+import psutil
 from PySide6.QtCore import (
     QCoreApplication,
     QEventLoop,
@@ -76,6 +73,10 @@ class ServiceInstanceBase(QRunnable):
     def handle_task(self, task: dict) -> None:
         ...
 
+    @abstractmethod
+    def init(self) -> None:
+        ...
+
     def stop(self) -> None:
         self.loop.quit()
         logger.info("Service instance %s stopped", self.instance_id)
@@ -87,6 +88,7 @@ class ServiceInstanceBase(QRunnable):
         logger.info("Service instance %s started", self.instance_id)
         self.signals.handle_task.connect(self.handle_task)
         self.loop = QEventLoop()
+        self.init()
         self.loop.exec()
 
 
@@ -95,8 +97,6 @@ instance_dict_mutex = QMutex()
 
 
 def clean_dead_instance() -> bool:
-    if not psutil:
-        return False
     to_stop = []
     instance_dict_mutex.lock()
     for instance_id, instance in instance_dict.items():
@@ -238,8 +238,10 @@ class LDDCService(QObject):
                 client_connection.flush()
                 client_connection.disconnectFromServer()
             case "show":
-                from view.main_window import main_window
-                in_main_thread(main_window.show_window)
+                def show_main_window() -> None:
+                    from view.main_window import main_window
+                    main_window.show_window()
+                in_main_thread(show_main_window)
                 client_connection.write(b"message_received")
                 client_connection.flush()
                 client_connection.disconnectFromServer()
@@ -337,7 +339,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         # 任务ID 用于防止旧任务的结果覆盖新任务的结果
         self.taskid = 0
 
-    def run(self) -> None:
+    def init(self) -> None:
         # 初始化界面
         in_main_thread(self.init_widget)
         if "name" in self.client_info and "repo" in self.client_info and "ver" in self.client_info:
@@ -366,7 +368,6 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.widget.menu.action_unlink_lyrics.triggered.connect(self.unlink_lyrics)
 
         cfg.desktop_lyrics_changed.connect(self.cfg_changed_slot)
-        super().run()
 
     def init_widget(self) -> None:
         """初始化界面(主线程)"""
@@ -426,9 +427,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             case "start":
                 # 开始播放
                 logger.debug("start")
-                playback_time = self.get_playback_time(task)
-                if playback_time is not None:
-                    self.start_time = int(time.time() * 1000)
+                if (playback_time := self.get_playback_time(task)) is not None:
+                    self.start_time = int(time.time() * 1000) - playback_time
                 else:
                     self.start_time = int(time.time() * 1000) - self.current_time
                 if not self.timer.isActive():
@@ -457,6 +457,9 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                         not isinstance(track, int | str | None)):
                     logger.error("task:chang_music, invalid data")
                     return
+
+                if (playback_time := self.get_playback_time(task)) is not None:
+                    self.start_time = int(time.time() * 1000) - playback_time
 
                 self.song_info = {"title": title, "artist": artist, "album": album, "duration": duration, "song_path": song_path,
                                   "track_number": str(track) if isinstance(track, int) else track}
@@ -625,20 +628,20 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         if self.song_info:
             self.config["inst"] = True
             self.widget.new_lyrics.emit({"inst": True})
-            self.show_artist_title(QCoreApplication.translate("DesktopLyrics", "纯音乐，请欣赏"))
-            self.unlink_lyrics()
+            self.unlink_lyrics(QCoreApplication.translate("DesktopLyrics", "纯音乐，请欣赏"))
 
     def set_auto_search(self, is_disable: bool | None = None) -> None:
         if self.song_info:
             self.config["disable_auto_search"] = is_disable if is_disable is not None else bool(not self.config.get("disable_auto_search"))
             self.update_db_data()
 
-    def unlink_lyrics(self) -> None:
+    def unlink_lyrics(self, msg: str = "") -> None:
         if self.song_info:
             self.lyrics_path = None
             self.lyrics = None
             self.offseted_lyrics = None
             self.update_db_data()
+            self.show_artist_title(msg)
 
     def update_db_data(self) -> None:
         local_song_lyrics.set_song(**self.song_info, lyrics_path=self.lyrics_path, config={k: v for k, v in self.config.items()

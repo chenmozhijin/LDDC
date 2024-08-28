@@ -42,7 +42,6 @@ class ProportionallyStretchedTableWidget(QTableWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.props = []
-        self.itemChanged.connect(self.adapt_size)
 
         self.setMouseTracking(True)
 

@@ -1,29 +1,37 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 import os
+import re
+from itertools import zip_longest
 from typing import Any
 
 from PySide6.QtCore import (
     QModelIndex,
     QSize,
+    Qt,
     QTimer,
     Slot,
 )
 from PySide6.QtGui import (
+    QDragEnterEvent,
+    QDropEvent,
     QFont,
 )
 from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSizePolicy, QTableWidgetItem, QWidget
 
 from backend.converter import convert2
 from backend.lyrics import Lyrics
-from backend.worker import GetSongListWorker, LyricProcessingWorker, SearchWorker
+from backend.song_info import get_audio_file_infos, parse_cue_from_file
+from backend.worker import AutoLyricsFetcher, GetSongListWorker, LyricProcessingWorker, SearchWorker
 from ui.search_base_ui import Ui_search_base
 from utils.data import cfg
 from utils.enum import LyricsFormat, LyricsType, SearchType, Source
+from utils.logger import logger
 from utils.thread import threadpool
 from utils.utils import get_artist_str, get_lyrics_format_ext, get_save_path, ms2formattime
-from view.get_list_lyrics import GetListLyrics
-from view.msg_box import MsgBox
+
+from .get_list_lyrics import GetListLyrics
+from .msg_box import MsgBox
 
 
 class SearchWidgetBase(QWidget, Ui_search_base):
@@ -162,6 +170,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         worker.signals.error.connect(self.search_error_slot)
         threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
+        self.results_tableWidget.setColumnCount(0)
         self.results_tableWidget.setProperty("result_type", (None, None))
 
     @Slot(str)
@@ -169,6 +178,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         """更新预览歌词错误时调用"""
         MsgBox.critical(self, self.tr("获取预览歌词错误"), error)
         self.preview_plainTextEdit.setPlainText("")
+        self.preview_lyric_result = None
 
     @Slot(int, dict)
     def update_preview_lyric_result_slot(self, taskid: int, result: dict) -> None:
@@ -198,6 +208,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.lyric_langs_lineEdit.setText(lyric_langs_text)
         if 'id' in result['info']:
             self.songid_lineEdit.setText(str(result['info']['id']))
+        elif result["lyrics"].id is not None:
+            self.songid_lineEdit.setText(str(result["lyrics"].id))
         else:
             self.songid_lineEdit.setText("")
 
@@ -255,7 +267,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                                SearchType.SONGLIST: ([self.tr("歌单"), self.tr("创建者"), self.tr("歌曲数量"), self.tr("创建时间")], [0.6, 0.4, 2, 2]),
                                SearchType.LYRICS: ([self.tr("歌曲"), self.tr("艺术家"), self.tr("专辑"), self.tr("时长")], [0.4, 0.2, 0.4, 2])}
 
-        show_source = bool(result_type[1] == SearchType.SONG and self.search_info and isinstance(self.search_info["source"], list))
+        show_source = bool(result_type[0] == "search" and self.search_info and isinstance(self.search_info["source"], list))
 
         headers = headers_proportions[result_type[1]][0] + ([self.tr("来源")] if show_source else [])
         table.setColumnCount(len(headers))
@@ -350,6 +362,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         worker.signals.error.connect(self.get_songlist_error)
         threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
+        self.results_tableWidget.setColumnCount(0)
         self.result_path.append("songlist")
 
     @Slot(str)
@@ -381,7 +394,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.reset_page_status()
         self.taskid["results_table"] += 1
         worker = SearchWorker(self.taskid["results_table"],
-                              f"{get_artist_str(info.get('artist')), '、'} - {info['title'].strip()}",
+                              f"{get_artist_str(info.get('artist'), '、')} - {info['title'].strip()}",
                               SearchType.LYRICS, info['source'], 1, info)
         worker.signals.result.connect(self.search_lyrics_result_slot)
         worker.signals.error.connect(self.search_lyrics_error_slot)
@@ -439,7 +452,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
             # 创建"没有更多结果"的 QTableWidgetItem
             nomore_item = QTableWidgetItem(self.tr("没有更多结果"))
-            nomore_item.setTextAlignment(0x0004 | 0x0080)  # 设置水平和垂直居中对齐
+            nomore_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)  # 设置水平和垂直居中对齐
             self.results_tableWidget.setItem(last_row, 0, nomore_item)
         else:
             self.search_info['page'] += 1
@@ -504,6 +517,7 @@ class SearchWidget(SearchWidgetBase):
         self.save_preview_lyric_pushButton.clicked.connect(self.save_preview_lyric)
         self.save_list_lyrics_pushButton.clicked.connect(self.save_list_lyrics)
         self.main_window = main_window
+        self.setAcceptDrops(True)  # 启用拖放功能
 
     def setup_ui(self) -> None:
 
@@ -678,3 +692,110 @@ class SearchWidget(SearchWidgetBase):
         dialog.setFileMode(QFileDialog.FileMode.Directory)
         dialog.fileSelected.connect(file_selected)
         dialog.open()
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()  # 接受拖动操作
+        else:
+            event.ignore()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        # 获取拖动的文件信息
+        mime = event.mimeData()
+
+        path, track, index = None, None, None
+        # 特殊适配
+        if 'application/x-qt-windows-mime;value="ACL.FileURIs"' in mime.formats():
+            # AIMP
+            data = mime.data('application/x-qt-windows-mime;value="ACL.FileURIs"')
+            path = bytearray(data.data()[20:-4]).decode('UTF-16')
+            if path.split(":")[-1].isdigit():
+                index = path.split(":")[-1]
+                path = ":".join(path.split(":")[:-1])
+        elif ('text/plain' in mime.formats() and
+              # foobar2000
+              (matched := re.fullmatch(r"(?:(?P<artist>.*?) - )?\[(?P<album>.*?) (?:CD\d+/\d+ )?#(?P<track>\d+)\] (?P<title>.*)", mime.text())) is not None):
+            track = matched.group('track')
+
+        if not path:
+            try:
+                path = mime.urls()[0].toLocalFile()
+            except Exception as e:
+                logger.exception(e)
+                MsgBox.critical(self, "错误", "无法获取文件路径")
+                return
+        if path.lower().endswith('.cue') and (isinstance(track, str | int) or index is not None):
+            try:
+                songs, _audio_file_paths = parse_cue_from_file(path)
+            except Exception as e:
+                MsgBox.critical(self, "错误", f"解析文件 {path} 失败: {e}")
+                return
+            if index is not None:
+                if int(index) + 1 >= len(songs):
+                    MsgBox.critical(self, "错误", f"文件 {path} 中没有找到第 {index} 轨歌曲")
+                    return
+                song = songs[int(index)]
+            elif isinstance(track, str | int):
+                for song in songs:
+                    if song["track"] is not None and int(song["track"]) == int(track):
+                        break
+                else:
+                    MsgBox.critical(self, "错误", f"文件 {path} 中没有找到第 {track} 轨歌曲")
+                    return
+        else:
+            try:
+                songs = get_audio_file_infos(path)
+                if len(songs) == 1:
+                    song = songs[0]
+                elif isinstance(track, str | int):
+                    for song in songs:
+                        if song["track"] is not None and int(song["track"]) == int(track):
+                            break
+                    else:
+                        MsgBox.critical(self, "错误", f"文件 {path} 中没有找到第 {track} 轨歌曲")
+                        return
+                else:
+                    MsgBox.critical(self, "错误", f"文件 {path} 中包含多个歌曲")
+            except Exception as e:
+                logger.exception(e)
+                MsgBox.critical(self, "错误", f"解析文件 {path} 失败: {e}")
+                return
+
+        if not song['title']:
+            MsgBox.warning(self, "警告", "没有获取到歌曲标题,无法自动搜索")
+
+        worker = AutoLyricsFetcher(song, taskid=tuple(self.taskid.values()), return_search_result=True)
+        worker.signals.result.connect(self.auto_fetch_slot)
+        threadpool.start(worker)
+        self.preview_lyric_result = None
+        self.preview_plainTextEdit.setPlainText(self.tr("正在自动获取 {0} 的歌词...").format(
+            f"{song['artist']} - {song['title']}" if song['artist'] and len(song['title']) * 2 > len(song['artist']) else song['title']))
+
+    def auto_fetch_slot(self, result: dict) -> None:
+        if result.get("taskid") != tuple(self.taskid.values()):
+            if result.get("taskid", (0, -1))[1] == self.taskid["update_preview_lyric"]:
+                self.preview_plainTextEdit.setPlainText("")
+            return
+
+        if result.get("status") == "成功":
+            self.preview_lyric_result = {"info": result["result_info"], "lyrics": result["lyrics"]}
+            self.update_preview_lyric()
+
+            self.reset_page_status()
+            self.source_comboBox.setCurrentIndex(0)
+            self.search_type_comboBox.setCurrentIndex(0)
+            search_result: dict[Source, tuple[str, list[dict]]] = result["search_result"]
+            keyword = search_result[result["result_info"]["source"]][0]
+            self.search_info = {'keyword': keyword, 'search_type': SearchType.SONG, 'source': list(search_result.keys()), 'page': 1}
+            self.search_keyword_lineEdit.setText(keyword)
+            self.search_result_slot(self.taskid["results_table"], SearchType.SONG,
+                                    [result["result_info"],
+                                     *[item for group in zip_longest(*(k_i[1] for k_i in search_result.values())) for item in group
+                                       if item is not None and
+                                       (item.get("id") != result["result_info"].get("id") or
+                                       item.get("mid") != result["result_info"].get("mid") or
+                                       item.get("source") != result["result_info"].get("source"))]])
+            self.results_tableWidget.selectRow(0)
+
+        else:
+            MsgBox.critical(self, "错误", result["status"])

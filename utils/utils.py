@@ -1,7 +1,9 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 import contextlib
+import locale
 import re
+import sys
 from collections import OrderedDict
 from collections.abc import Iterable
 from pathlib import Path
@@ -48,15 +50,31 @@ def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | 
         msg = "file_path and file_data cannot be both None"
         raise ValueError(msg)
 
-    detect_result = detect(raw_data)
-    if detect_result['confidence'] > 0.7 and detect_result['encoding']:
-        encoding = detect_result['encoding'].replace('gb2312', 'gb18030').replace('gbk', 'gb18030')  # gbk is a subset of gb18030
-        with contextlib.suppress(Exception):
-            file_content = raw_data.decode(encoding)
-            for sign in sign_word:
-                if sign not in file_content:
-                    file_content = None
-                    break
+    with contextlib.suppress(Exception):
+        if sys.version_info >= (3, 11):
+            encoding = locale.getencoding()
+        else:
+            encoding = locale.getpreferredencoding(False)
+        if encoding in ("chinese", "csiso58gb231280", "euc-cn", "euccn", "eucgb2312-cn", "gb2312-1980", "gb2312-80", "iso-ir-58", "936", "cp936", "ms936"):
+            encoding = "gb18030"
+        file_content = raw_data.decode(encoding)
+        for sign in sign_word:
+            if sign not in file_content:
+                file_content = None
+                break
+        if encoding == "gb18030" and file_content and "锘縍EM" in file_content:  # 修复编码检测错误
+            file_content = None
+
+    if file_content is None:
+        detect_result = detect(raw_data)
+        if detect_result['confidence'] > 0.7 and detect_result['encoding']:
+            encoding = detect_result['encoding'].replace('gb2312', 'gb18030').replace('gbk', 'gb18030')  # gbk is a subset of gb18030
+            with contextlib.suppress(Exception):
+                file_content = raw_data.decode(encoding)
+                for sign in sign_word:
+                    if sign not in file_content:
+                        file_content = None
+                        break
 
     if file_content is None:
         encodings = ("utf_8", "gb18030", "shift_jis", "cp949", "big5", "big5hkscs",

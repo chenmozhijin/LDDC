@@ -41,9 +41,9 @@ class SidebarWindow(QMainWindow):
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)  # 设置外边距为0
         self.horizontalLayout.setSpacing(0)
 
-        self.sidebar_widget = QWidget()
+        self.sidebar_widget = QWidget(self)
         self.sidebar = QVBoxLayout(self.sidebar_widget)
-        self.Widgets = QTabWidget()
+        self.Widgets = QTabWidget(self)
         self.horizontalLayout.addWidget(self.sidebar_widget)
         self.horizontalLayout.addWidget(self.Widgets)
         self.sidebar.setContentsMargins(0, 10, 0, 10)
@@ -80,7 +80,7 @@ class SidebarWindow(QMainWindow):
         :param position: 标签页按钮的位置,默认为顶部
         :return: None
         """
-        button = QPushButton(name)
+        button = QPushButton(name, self.sidebar_widget)
         button.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         if isinstance(icon, QIcon):
             button.setIcon(icon)
@@ -108,6 +108,7 @@ class SidebarWindow(QMainWindow):
         elif position == SidebarButtonPosition.BOTTOM:
             self.sidebar.addWidget(button)
             self.Bottom_Widgets += 1
+        widget.setParent(self.Widgets)
         self.Widgets.addTab(widget, "")
         self.Total_Widgets += 1
 

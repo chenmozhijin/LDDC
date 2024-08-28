@@ -54,7 +54,7 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
         self.setWindowFlags(Qt.WindowType.Window)
         self.setup_ui()
         self.resize(1050, 600)
-        self.setWindowTitle("选择歌词")
+        self.setWindowTitle(self.tr("选择歌词"))
         self.setWindowIcon(QIcon(":/LDDC/img/icon/logo.png"))
 
         self.path = ""
@@ -152,19 +152,17 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
             if isinstance(offset, int):
                 self.offset_spinBox.setValue(offset)
             if keyword:
+                self.source_comboBox.setCurrentIndex(0)
+                self.search_type_comboBox.setCurrentIndex(0)
                 self.search_keyword_lineEdit.setText(keyword)
                 self.search()
 
             if isinstance(lyrics, Lyrics):
-                self.taskid["update_preview_lyric"] += 1
-                info = lyrics.get_info()
-                info["lyrics_format"] = LyricsFormat(self.lyricsformat_comboBox.currentIndex())
-                result = {"info": info, 'lyrics': lyrics,
-                          'converted_lyrics': convert2(lyrics,
-                                                       self.get_lyric_langs(),
-                                                       LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
-                                                       self.offset_spinBox.value())}
-                self.update_preview_lyric_result_slot(self.taskid["update_preview_lyric"], result)
+                self.preview_lyric_result = {"info": lyrics.get_info(), "lyrics": lyrics}
+                self.update_preview_lyric()
+            else:
+                self.preview_plainTextEdit.setPlainText("")
+                self.preview_lyric_result = None
 
             if isinstance(langs, list):
                 if "orig" in langs:
@@ -197,7 +195,7 @@ class DesktopLyricsMenu(QMenu):
         self._parent = parent
 
         self.action_select = QAction(self.tr('选择歌词'), self)
-        self.action_set_inst = QAction(self.tr('设置为纯音乐'), self)
+        self.action_set_inst = QAction(self.tr('标记为纯音乐'), self)
         self.actino_set_auto_search = QAction(self.tr('禁用自动搜索(仅本曲)'), self)
         self.action_unlink_lyrics = QAction(self.tr('取消歌词关联'), self)
         self.action_show_local_song_lyrics_db_manager = QAction(self.tr('歌词关联管理器'), self)
@@ -824,7 +822,10 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
         key, value = k_v
         match key:
             case "desktop_lyrics_font_family":
-                self.lyrics_text.text_font.setFamily(value)
+                if value:
+                    self.lyrics_text.text_font.setFamily(value)
+                else:
+                    self.lyrics_text.text_font.setFamily(QFont().defaultFamily())
                 self.lyrics_text.clear_cache()
                 self.lyrics_text.update()
             case "desktop_lyrics_played_colors":

@@ -4,8 +4,8 @@ import os
 import re
 
 import mutagen
-from PySide6.QtCore import QCoreApplication
 
+from utils.error import GetSongInfoError
 from utils.logger import logger
 from utils.utils import read_unknown_encoding_file, time2ms
 
@@ -16,20 +16,25 @@ file_extensions = ['3g2', 'aac', 'aif', 'ape', 'apev2', 'dff',
                    'wav', 'wma', 'wv']
 
 
-def get_audio_file_info(file_path: str) -> dict | str:
+def get_audio_file_infos(file_path: str) -> list[dict]:
     if not os.path.isfile(file_path):
         logger.error("未找到文件: %s", file_path)
-        return QCoreApplication.translate("song_info", "未找到文件: ") + file_path
+        msg = f"未找到文件: {file_path}"
+        raise GetSongInfoError(msg)
     try:
         if file_path.lower().split('.')[-1] in file_extensions:
             audio = mutagen.File(file_path, easy=True)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
-            if audio is not None and audio.tags is not None:
+            if audio is not None:
+                if "cuesheet" in audio:
+                    return parse_cue(audio["cuesheet"][0], os.path.dirname(file_path))[0]
+
                 if "title" in audio and "�" not in str(audio["title"][0]):
                     title = str(audio["title"][0])
                 elif "TIT2" in audio and "�" not in str(audio["TIT2"][0]):
                     title = str(audio["TIT2"][0])
                 else:
-                    return file_path + QCoreApplication.translate("song_info", " 无法获取歌曲标题,跳过")
+                    msg = f"{file_path} 无法获取歌曲标题"
+                    raise GetSongInfoError(msg)
 
                 if "artist" in audio and "�" not in str(audio["artist"][0]):
                     artist = str(audio["artist"][0])
@@ -62,20 +67,27 @@ def get_audio_file_info(file_path: str) -> dict | str:
                     "file_path": file_path,
                 }
                 if metadata["title"] is None:
-                    return file_path + QCoreApplication.translate("song_info", " 无法获取歌曲标题,跳过")
+                    msg = f"{file_path} 无法获取歌曲标题"
+                    raise GetSongInfoError(msg)
             else:
-                return file_path + QCoreApplication.translate("song_info", " 无法获取歌曲信息,跳过")
+                msg = f"{file_path} 无法获取歌曲信息"
+                raise GetSongInfoError(msg)
         else:
-            return file_path + QCoreApplication.translate("song_info", " 文件格式不支持,跳过")
+            msg = f"{file_path} 文件格式不支持"
+            raise GetSongInfoError(msg)
 
-    except Exception as e:
+    except mutagen.MutagenError as e:    # type: ignore[reportPrivateImportUsage] mutagen中的MutagenError被误定义为私有 quodlibet/mutagen#647
         logger.exception("%s获取文件信息失败", file_path)
-        return file_path + QCoreApplication.translate("song_info", "获取文件信息失败:") + str(e)
+        msg = f"获取文件信息失败:{e.__class__.__name__}: {e!s}"
+        raise GetSongInfoError(msg) from e
     else:
-        return metadata
+        return [metadata]
 
 
 def get_audio_duration(file_path: str) -> int | None:
+    if not os.path.isfile(file_path):
+        logger.error("未找到文件: %s", file_path)
+        return None
     try:
         audio = mutagen.File(file_path)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
         return int(audio.info.length) if audio.info.length else None  # type: ignore[reportOptionalMemberAccess]
@@ -84,11 +96,14 @@ def get_audio_duration(file_path: str) -> int | None:
         return None
 
 
-def parse_cue(file_path: str) -> tuple[list, list]:  # noqa: PLR0915, C901, PLR0912
+def parse_cue_from_file(file_path: str) -> tuple[list, list]:
     file_content = read_unknown_encoding_file(file_path=file_path, sign_word=("FILE", "FILE"))
+    return parse_cue(data=file_content, file_dir=os.path.dirname(file_path), file_path=file_path)
 
+
+def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[list, list]:  # noqa: PLR0915, C901, PLR0912
     cuedata: dict = {"files": []}
-    for line in file_content.splitlines():
+    for line in data.splitlines():
         if line.startswith('TITLE'):  # 标题
             if '"' in line:
                 cuedata['title'] = re.findall(r'^TITLE "(.*)"', line)[0]
@@ -104,6 +119,11 @@ def parse_cue(file_path: str) -> tuple[list, list]:  # noqa: PLR0915, C901, PLR0
                 cuedata['songwriter'] = re.findall(r'^SONGWRITER "(.*)"', line)[0]
             else:
                 cuedata['songwriter'] = re.findall(r'^SONGWRITER (.*)', line)[0]
+        elif line.startswith("CATALOG"):  # 唯一 EAN 编号
+            if '"' in line:
+                cuedata['catalog'] = re.findall(r'^CATALOG "(.*)"', line)[0]
+            else:
+                cuedata['catalog'] = re.findall(r'^CATALOG (.*)', line)[0]
         elif line.startswith("REM"):  # 注释(扩展命令)
             if line.startswith("REM GENRE"):  # 分类
                 if '"' in line:
@@ -125,11 +145,6 @@ def parse_cue(file_path: str) -> tuple[list, list]:  # noqa: PLR0915, C901, PLR0
                     cuedata['comment'] = re.findall(r'^REM COMMENT "(.*)"', line)[0]
                 else:
                     cuedata['comment'] = re.findall(r'^REM COMMENT (.*)', line)[0]
-            elif line.startswith("CATALOG"):  # 指定唱片的唯一 EAN 编号
-                if '"' in line:
-                    cuedata['catalog'] = re.findall(r'^CATALOG "(.*)"', line)[0]
-                else:
-                    cuedata['catalog'] = re.findall(r'^CATALOG (.*)', line)[0]
             elif line.startswith("CDTEXTFILE"):  # CD-TEXT 信息文件
                 if '"' in line:
                     cuedata['cdtextfile'] = re.findall(r'^CDTEXTFILE "(.*)"', line)[0]
@@ -153,8 +168,9 @@ def parse_cue(file_path: str) -> tuple[list, list]:  # noqa: PLR0915, C901, PLR0
             index = re.findall(r'^    INDEX (\d+)', line)[0]
             if index == "00":  # 空档
                 pass
-            cuedata["files"][-1]["tracks"][-1]["index"] = index
-            cuedata["files"][-1]["tracks"][-1]["begintime"] = re.findall(r'^    INDEX \d+ (\d+:\d+:\d+)', line)[0]
+            if cuedata["files"][-1]["tracks"]:
+                cuedata["files"][-1]["tracks"][-1]["index"] = index
+                cuedata["files"][-1]["tracks"][-1]["begintime"] = re.findall(r'^    INDEX \d+ (\d+:\d+:\d+)', line)[0]
         elif line.startswith("  PREGAP"):  # 轨段前的空白时间
             cuedata["files"][-1]["tracks"][-1]["pregap"] = re.findall(r'^    PREGAP (\d+:\d+:\d+)', line)[0]
         elif line.startswith("  POSTGAP"):  # 轨段后的空白时间
@@ -197,12 +213,18 @@ def parse_cue(file_path: str) -> tuple[list, list]:  # noqa: PLR0915, C901, PLR0
     for file in cuedata["files"]:
 
         # 处理音频文件路径
-        audio_file_path = os.path.join(os.path.dirname(file_path), file["filename"])
+        audio_file_path = os.path.join(file_dir, file["filename"])
         if not os.path.exists(audio_file_path):
             for file_extension in file_extensions:
-                if os.path.exists(os.path.splitext(file_path)[0] + "." + file_extension):
-                    audio_file_path = os.path.splitext(file_path)[0] + "." + file_extension
+                if file_path and (
+                    (audio_file_path := os.path.join(os.path.dirname(file_path), os.path.splitext(file["filename"])[0] + "." + file_extension))
+                    and os.path.exists(audio_file_path) or
+                    (audio_file_path := os.path.splitext(file_path)[0] + "." + file_extension)
+                        and os.path.exists(audio_file_path)):
                     break
+            else:
+                logger.warning("未找到音频文件: %s", file["filename"])
+                audio_file_path = ""
 
         if os.path.exists(audio_file_path):
             audio_file_paths.append(audio_file_path)
@@ -218,6 +240,7 @@ def parse_cue(file_path: str) -> tuple[list, list]:  # noqa: PLR0915, C901, PLR0
                           "duration": None,
                           "type": "cue",
                           "file_path": audio_file_path,
+                          "track": track.get("id"),
                           })
 
             if "performer" in track and track["performer"].strip() != "":

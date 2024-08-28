@@ -57,7 +57,7 @@ from .fetcher import get_lyrics
 from .lyrics import Lyrics
 from .searcher import search
 from .song_info import file_extensions as audio_formats
-from .song_info import get_audio_file_info, parse_cue
+from .song_info import get_audio_file_infos, parse_cue_from_file
 
 
 class CheckUpdateSignal(QObject):
@@ -242,6 +242,7 @@ class LyricProcessingWorker(QRunnable):
             except LyricsUnavailableError as e:
                 logger.warning("歌词不可用: %s", e)
                 error = e
+                break
             except Exception as e:
                 logger.exception("获取歌词时发生错误, song_info: %s", song_info)
                 error = e
@@ -400,7 +401,7 @@ class LocalMatchWorker(QRunnable):
                     if file.lower().endswith('.cue'):
                         file_path = os.path.join(root, file)
                         try:
-                            songs, cue_audio_file_paths = parse_cue(file_path)
+                            songs, cue_audio_file_paths = parse_cue_from_file(file_path)
                             if len(songs) > 0:
                                 song_infos.extend(songs)
                                 cue_audio_files.extend(cue_audio_file_paths)
@@ -409,7 +410,7 @@ class LocalMatchWorker(QRunnable):
                                 logger.warning("没有在cue文件 %s 解析到歌曲", file_path)
                                 self.signals.error.emit(QCoreApplication.translate("LocalMatch", "没有在cue文件 {0} 解析到歌曲").format(file_path), 0)
                         except Exception as e:
-                            logger.exception("处理cue文件时错误")
+                            logger.exception("处理cue文件时错误 file:%s", file_path)
                             self.signals.error.emit(f"处理cue文件时错误:{e}", 0)
                     elif file.lower().split(".")[-1] in audio_formats:
                         file_path = os.path.join(root, file)
@@ -432,12 +433,12 @@ class LocalMatchWorker(QRunnable):
                 if not self.is_running:
                     self.signals.finished.emit()
                     return
-                song_info = get_audio_file_info(audio_file_path)
-                if isinstance(song_info, str):
-                    self.signals.error.emit(song_info, 0)
+                try:
+                    song_infos.extend(get_audio_file_infos(audio_file_path))
+                except Exception as e:
+                    logger.exception("读取歌曲文件信息时错误")
+                    self.signals.error.emit(f"读取歌曲文件信息时错误:{e}", 0)
                     continue
-                if isinstance(song_info, dict):
-                    song_infos.append(song_info)
 
             # Step 3 根据信息搜索并获取歌词
             if logger.level <= DEBUG:
@@ -558,7 +559,11 @@ class AutoLyricsFetcherSignal(QObject):
 
 class AutoLyricsFetcher(QRunnable):
 
-    def __init__(self, info: dict, min_score: float = 60, source: list[Source] | None = None, taskid: int | None = None) -> None:
+    def __init__(self, info: dict,
+                 min_score: float = 60,
+                 source: list[Source] | None = None,
+                 taskid: int | tuple | None = None,
+                 return_search_result: bool = False) -> None:
         super().__init__()
         logger.debug("Init AutoLyricsFetcher, info: %s", info)
         self.info = info
@@ -576,6 +581,9 @@ class AutoLyricsFetcher(QRunnable):
         self.errors = []
         self.min_score = min_score
         self.obtained_lyrics: list[tuple[dict, Lyrics]] = []
+        self.return_search_result = return_search_result
+        if return_search_result:
+            self.search_result = {}
 
         self.result = None
 
@@ -650,9 +658,11 @@ class AutoLyricsFetcher(QRunnable):
                 best_info = best[1]
                 best_info['score'] = best[0]
                 logger.info("关键词: %s 搜索结果: %s", keyword, best)
+                if self.return_search_result:
+                    self.search_result[source] = (keyword, infos)
                 if source == Source.KG and search_type == SearchType.SONG:
-                    #  对酷狗音乐搜索到的歌曲搜索歌词
-                    self.new_search_work(f"{get_artist_str(self.info.get('artist')), '、'} - {self.info['title'].strip()}",
+                    # 对酷狗音乐搜索到的歌曲搜索歌词
+                    self.new_search_work(f"{get_artist_str(self.info.get('artist'), '、')} - {self.info['title'].strip()}",
                                          SearchType.LYRICS,
                                          Source.KG,
                                          info=best_info)
@@ -757,7 +767,10 @@ class AutoLyricsFetcher(QRunnable):
         else:
             is_inst = False
 
-        self.send_result({"status": "成功", "orig_info": self.info, "lyrics": result, "is_inst": is_inst, "result_info": info})
+        result = {"status": "成功", "orig_info": self.info, "lyrics": result, "is_inst": is_inst, "result_info": info}
+        if self.return_search_result:
+            result["search_result"] = {s: self.search_result[s] for s in self.source}
+        self.send_result(result)
 
     def send_result(self, result: dict) -> None:
         self.result = result

@@ -37,11 +37,6 @@ def json2lyrics(json_data: dict, lyrics: Lyrics) -> None:
     for key, value in json_data["info"].items():
         key: str
         value: str | int
-        if key in ("source", "title", "artist", "album", "mid", "accesskey") and not isinstance(value, str):
-            msg = f"JSON歌词数据中包含值类型不正确的键: {key}"
-            raise LyricsProcessingError(msg)
-        if key in ("id", "duration") and not isinstance(value, int):
-            msg = f"JSON歌词数据中包含值类型不正确的键: {key}"
 
         if key == "source" and isinstance(value, str):
             lyrics.source = Source.__members__.get(value)
@@ -49,6 +44,12 @@ def json2lyrics(json_data: dict, lyrics: Lyrics) -> None:
                 msg = f"JSON歌词数据中包含不正确的值: {value}"
                 raise LyricsProcessingError(msg)
 
+        elif ((key in ("source", "title", "album", "mid", "accesskey") and not isinstance(value, str)) or
+                (key == "duration" and not isinstance(value, int)) or
+                (key == "artist" and not isinstance(value, str | list)) or
+                (key == "id" and not isinstance(value, str | int))):
+            msg = f"JSON歌词数据中包含值类型不正确的键: {key}"
+            raise LyricsProcessingError(msg)
         else:
             setattr(lyrics, key, value)
 
