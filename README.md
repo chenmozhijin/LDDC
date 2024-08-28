@@ -13,6 +13,7 @@
 ## 功能
 
 - [x] 搜索QQ音乐、酷狗音乐、网易云音乐的单曲、专辑、歌单
+- [x] 拖动歌曲到搜索界面自动搜索并匹配歌词
 - [x] 一键下载整个 专辑、歌单 的歌词
 - [x] 一键为本地歌曲文件匹配歌词
 - [x] 支持保存为多种格式(逐字lrc、逐行lrc、增强型lrc、srt、ass)
@@ -32,9 +33,21 @@
 
 ## 预览
 
+### 拖拽歌曲快速匹配歌词
+
+![gif](img/drop.gif)
+
+### 搜索界面
+
 ![image](img/zh_1.jpg)
+
+### 打开歌词/本地匹配/设置界面
+
 ![image](img/zh_2.jpg)
 
+### 桌面歌词
+
+![image](img/zh_3.jpg)
 ![gif](img/desktop_lyrics.gif)
 
 ## 使用方法
@@ -49,7 +62,6 @@
 
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=QQMusicDecoder)](https://github.com/WXRIW/QQMusicDecoder)
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=jixunmoe&repo=qmc-decode)](https://github.com/jixunmoe/qmc-decode)
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=parakeet-rs&repo=libparakeet)](https://github.com/parakeet-rs/libparakeet)
 
 ### 音乐平台api
 

@@ -13,6 +13,7 @@
 ## Features
 
 - [x] Search for singles, albums, and playlists on QQ Music, Kugou Music, and NetEase Cloud Music
+- [x] Drag the song to the search interface to automatically search and match the lyrics
 - [x] One-click download of lyrics for entire albums and playlists
 - [x] One-click match lyrics for local song files
 - [x] Support for saving in multiple formats (verbatim lrc,line by line lrc,Enhanced LRC, srt, ass)
@@ -32,9 +33,21 @@
 
 ## Preview
 
+### Drag songs to quickly match lyrics
+
+![gif](img/drop.gif)
+
+### Search interface
+
 ![image](img/en_1.jpg)
+
+### Open the lyrics/local matching/settings interface
+
 ![image](img/en_2.jpg)
 
+### Desktop Lyrics
+
+![image](img/en_3.jpg)
 ![gif](img/desktop_lyrics.gif)
 
 ## Usage
@@ -49,7 +62,6 @@ Some functionalities are implemented with reference to the following projects:
 
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=QQMusicDecoder)](https://github.com/WXRIW/QQMusicDecoder)
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=jixunmoe&repo=qmc-decode)](https://github.com/jixunmoe/qmc-decode)
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=parakeet-rs&repo=libparakeet)](https://github.com/parakeet-rs/libparakeet)
 
 ### Music Platform APIs
 
