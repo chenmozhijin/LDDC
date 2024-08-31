@@ -5,3 +5,4 @@ diskcache
 chardet
 cryptography
 psutil
+pyobjc; sys_platform == 'darwin'
