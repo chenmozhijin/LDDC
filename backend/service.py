@@ -136,6 +136,9 @@ class LDDCService(QObject):
         self.clients: dict[int, Client] = {}
         self.start_service()
 
+        from utils.exit_manager import exit_manager
+        exit_manager.close_signal.connect(self.stop_service, Qt.ConnectionType.BlockingQueuedConnection)
+
     def start_service(self) -> None:
 
         if args.get_service_port and not self.shared_memory.attach():
@@ -312,6 +315,7 @@ class LDDCService(QObject):
                 instance_dict[json_data["id"]].signals.handle_task.emit(json_data)
 
     def socket_send_message(self, client_id: int, response: str) -> None:
+        """向客户端发送消息(前4字节应为消息长度)"""
         logger.debug("%s 发送响应：%s", client_id, response)
         if client_id not in self.clients:
             logger.error("客户端ID不存在：%s, self.clients: %s", client_id, self.clients)
@@ -396,7 +400,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                 keyword += get_artist_str(self.song_info["artist"])
             if self.song_info.get("title"):
                 if keyword:
-                    if len(keyword) > len(self.song_info["title"]):
+                    if len(keyword) > len(self.song_info["title"]) * 2:
                         keyword = ""
                     else:
                         keyword += " - "
@@ -423,51 +427,46 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
     def handle_task(self, task: dict) -> None:
         """处理客户端发送的任务"""
+        # 同步播放时间
+        if isinstance((playback_time := task.get("playback_time")), int):  # 单位为毫秒
+            if isinstance((send_time := task.get("send_time")), float):  # 单位为秒
+                delay = (time.time() - send_time) * 1000
+
+                if delay > 0:
+                    playback_time -= round(delay)
+            last_start_time = self.start_time
+            self.start_time = int(time.time() * 1000) - playback_time
+            logger.info("同步播放时间 playback_time:%s|%s| delay:%s", playback_time, last_start_time - self.start_time, delay)
+
+        # 处理任务
+        logger.debug("instance %s handle task: %s", self.instance_id, task)
         match task["task"]:
             case "start":
                 # 开始播放
-                logger.debug("start")
-                if (playback_time := self.get_playback_time(task)) is not None:
-                    self.start_time = int(time.time() * 1000) - playback_time
-                else:
-                    self.start_time = int(time.time() * 1000) - self.current_time
                 if not self.timer.isActive():
                     self.timer.start()
 
                 self.widget.set_playing(True)
             case "chang_music":
                 # 更换歌曲
-                logger.debug("chang_music")
                 self.taskid += 1  # 防止自动搜索把上一首歌的歌词关联到这一首歌上
 
-                title = task.get("title")
-                artist = task.get("artist")
-                album = task.get("album")
-                duration = task.get("duration")
-                song_path = task.get("path")
-                track = task.get("track")
                 lyrics = None
                 self.reset()
                 self.widget.new_lyrics.emit({})
-                if (not isinstance(title, str | None) or
-                    not isinstance(artist, str | None) or
-                    not isinstance(album, str | None) or
-                    not isinstance(duration, int) or
-                    not isinstance(song_path, str | None) or
-                        not isinstance(track, int | str | None)):
+                # 处理歌曲信息
+                song_info = {k: task.get(k) for k in ("title", "artist", "album", "duration", "path", "track")}
+
+                if (any((not isinstance(song_info[k], str | None)) for k in ("title", "artist", "album", "path")) or
+                        not isinstance(song_info["duration"], int) or not isinstance(song_info["track"], int | str | None)):
                     logger.error("task:chang_music, invalid data")
                     return
 
-                if (playback_time := self.get_playback_time(task)) is not None:
-                    self.start_time = int(time.time() * 1000) - playback_time
-
-                self.song_info = {"title": title, "artist": artist, "album": album, "duration": duration, "song_path": song_path,
-                                  "track_number": str(track) if isinstance(track, int) else track}
+                self.song_info = {**{k: v for k, v in song_info.items() if k in ("title", "artist", "album", "duration")}, "song_path": song_info["path"],
+                                  "track_number": str(song_info["track"]) if isinstance(song_info["track"], int) else song_info["track"]}
                 # 先在关联数据库中查找
                 self.to_select(True)
-                query_result = local_song_lyrics.query(**self.song_info)
-
-                if query_result is not None:
+                if (query_result := local_song_lyrics.query(**self.song_info)) is not None:
                     lyrics_path, config = query_result
 
                     try:
@@ -481,64 +480,54 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
                     if self.config.get("inst"):
                         self.set_inst()
-                        in_main_thread(self.widget.menu.actino_set_auto_search.setChecked, bool(self.config.get("disable_auto_search")))
-                        return
-
-                    try:
-                        lyrics, _from_cache = get_lyrics(Source.Local, path=lyrics_path)
-                        self.lyrics_path = lyrics_path
-                    except Exception:
-                        logger.exception("读取歌词时错误,lyrics_path: %s", lyrics_path)
+                    else:
+                        try:
+                            lyrics, _from_cache = get_lyrics(Source.Local, path=lyrics_path)
+                            self.lyrics_path = lyrics_path
+                        except Exception:
+                            logger.exception("读取歌词时错误,lyrics_path: %s", lyrics_path)
 
                 if isinstance(lyrics, Lyrics):
                     self.set_lyrics(lyrics)
                 elif not self.config.get("disable_auto_search"):
-                    if isinstance(title, str):
+                    if isinstance(self.song_info["title"], str):
                         # 如果找不到,则自动获取歌词
-                        self.widget.update_lyrics.emit(DesktopLyrics(([("自动获取歌词中...", "", 0, "", 255, [])], [])))
+                        self.widget.update_lyrics.emit(
+                            DesktopLyrics(([(QCoreApplication.translate("DesktopLyrics", "自动获取歌词中..."), "", 0, "", 255, [])], [])),
+                        )
                         self.taskid += 1
-                        worker = AutoLyricsFetcher({"title": title, "artist": artist, "album": album, "duration": duration / 1000},
+                        info = self.song_info.copy()
+                        info["duration"] = info["duration"] / 1000
+                        worker = AutoLyricsFetcher(info,
                                                    min_score=55, source=[Source[s] for s in cfg["desktop_lyrics_sources"]], taskid=self.taskid)
                         worker.signals.result.connect(self.handle_fetch_result)
                         threadpool.start(worker)
                     else:
                         # 没有标题无法自动获取歌词
-                        self.auto_search_fail("无法自动获取歌词")
+                        self.auto_search_fail(QCoreApplication.translate("DesktopLyrics", "没有获取到标题信息, 无法自动获取歌词"))
                 else:
                     self.show_artist_title()
 
                 in_main_thread(self.widget.menu.actino_set_auto_search.setChecked, bool(self.config.get("disable_auto_search")))
 
             case "sync":
-                # 同步当前播放时间
-                playback_time = self.get_playback_time(task)
-                a = self.start_time
-                self.start_time = int(time.time() * 1000) - playback_time
-                logger.debug("sync, self.start_time: %s | %s", self.start_time, self.start_time - a)
+                # 同步歌词
                 self.update_lyrics()
 
             case "pause":
                 # 暂停歌词
-                logger.debug("pause")
                 if self.timer.isActive():
                     self.timer.stop()
                 self.widget.set_playing(False)
 
             case "proceed":
                 # 继续歌词
-                logger.debug("proceed")
-                playback_time = self.get_playback_time(task)
-                if playback_time is not None:
-                    self.start_time = int(time.time() * 1000) - playback_time
-                else:
-                    self.start_time = int(time.time() * 1000) - self.current_time
                 if not self.timer.isActive():
                     self.timer.start()
                 logger.debug("proceed, self.start_time: %s", self.start_time)
                 self.widget.set_playing(True)
 
             case "stop":
-                logger.debug("stop")
                 # 停止歌词
                 self.reset()
                 if self.timer.isActive():
@@ -559,7 +548,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                     return
                 result['status'] = QCoreApplication.translate("DesktopLyrics", "自动获取的歌词为纯文本，无法显示")
 
-        self.auto_search_fail(f"自动获取歌词失败:{result.get('status')}")
+        self.auto_search_fail(QCoreApplication.translate("DesktopLyrics", "自动获取歌词失败:{0}").format(result.get("status")))
         logger.error("自动获取歌词失败: %s", result.get("status"))
 
     def select_lyrics(self, lyrics: Lyrics, path: str | None = None, langs: list[str] | None = None, offset: int = 0, is_inst: bool = False) -> None:
@@ -815,26 +804,11 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             add(current_lines[0], "current")
 
         else:
-            # 找到多行歌词
+            # 找到多行歌词(显示两行以上会导致淡入淡出错误)
             for line in current_lines:
                 add(line, "current")
 
         self.widget.update_lyrics.emit(DesktopLyrics((left, right)))
-
-    def get_playback_time(self, task: dict) -> float:
-        # 获取当前播放时间
-        playback_time = task.get("playback_time")  # 单位为毫秒
-        send_time = task.get("send_time")
-        if isinstance(playback_time, int) and isinstance(send_time, float):
-            # 补偿网络延迟
-            delay = (time.time() - send_time) * 1000
-            logger.debug("delay: %s ms", delay)
-            if delay > 0:
-                playback_time = playback_time - round(delay)
-        else:
-            msg = "playback_time or send_time is not int or float"
-            raise TypeError(msg)
-        return playback_time
 
     def update_refresh_rate(self) -> None:
         """更新刷新率,使其与屏幕刷新率同步"""
@@ -845,6 +819,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             self.timer.setInterval(interval)
 
     def cfg_changed_slot(self, k_v: tuple) -> None:
+        """处理配置变更"""
         key, value = k_v
         match key:
             case "desktop_lyrics_default_langs":

@@ -39,7 +39,6 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         super().__init__(parent)
         self.setupUi(self)
         self.connect_signals()
-        self.search_type = SearchType.SONG
 
         self.songlist_result = None
         self.reset_page_status()
@@ -58,7 +57,6 @@ class SearchWidgetBase(QWidget, Ui_search_base):
     def connect_signals(self) -> None:
         self.search_keyword_lineEdit.returnPressed.connect(self.search)
         self.search_pushButton.clicked.connect(self.search)
-        self.search_type_comboBox.currentIndexChanged.connect(self.search_type_changed)
         self.results_tableWidget.doubleClicked.connect(self.select_results)
 
         self.translate_checkBox.stateChanged.connect(self.update_preview_lyric)
@@ -90,26 +88,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         match self.source_comboBox.currentIndex():
             case 0:
                 return [Source.QM, Source.KG, Source.NE]
-            case 1:
-                return Source.QM
-            case 2:
-                return Source.KG
-            case 3:
-                return Source.NE
             case _:
-                msg = "Invalid source"
-                raise ValueError(msg)
-
-    @Slot(str)
-    def search_type_changed(self, index: int) -> None:
-        """搜索类型改变"""
-        match index:
-            case 0:
-                self.search_type = SearchType.SONG
-            case 1:
-                self.search_type = SearchType.ALBUM
-            case 2:
-                self.search_type = SearchType.SONGLIST
+                return Source(self.source_comboBox.currentIndex())
 
     def result_return(self) -> None:
         """返回"""
@@ -164,8 +144,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.search_pushButton.setText(self.tr('正在搜索...'))
         self.search_pushButton.setEnabled(False)
         self.taskid["results_table"] += 1
-        self.search_info = {'keyword': keyword, 'search_type': self.search_type, 'source': self.get_source(), 'page': 1}
-        worker = SearchWorker(self.taskid["results_table"], keyword, self.search_type, self.get_source(), 1)
+        self.search_info = {'keyword': keyword, 'search_type': SearchType(self.search_type_comboBox.currentIndex()), 'source': self.get_source(), 'page': 1}
+        worker = SearchWorker(self.taskid["results_table"], keyword, SearchType(self.search_type_comboBox.currentIndex()), self.get_source(), 1)
         worker.signals.result.connect(self.search_result_slot)
         worker.signals.error.connect(self.search_error_slot)
         threadpool.start(worker)
@@ -485,11 +465,12 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                 not self.all_results_obtained and
                 self.search_info and
                     table.rowCount() > 0):
+
                 self.get_next_page = True
 
                 # 创建加载中的 QTableWidgetItem
                 loading_item = QTableWidgetItem(self.tr("加载中..."))
-                loading_item.setTextAlignment(0x0004 | 0x0080)  # 设置水平和垂直居中对齐
+                loading_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)  # 设置水平和垂直居中对齐
 
                 # 设置合并单元格
                 table.insertRow(table.rowCount())
@@ -509,14 +490,13 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
 
 class SearchWidget(SearchWidgetBase):
-    def __init__(self, main_window: QWidget) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self.setup_ui()
         self.resize(1050, 600)
         self.select_path_pushButton.clicked.connect(self.select_savepath)
         self.save_preview_lyric_pushButton.clicked.connect(self.save_preview_lyric)
         self.save_list_lyrics_pushButton.clicked.connect(self.save_list_lyrics)
-        self.main_window = main_window
         self.setAcceptDrops(True)  # 启用拖放功能
 
     def setup_ui(self) -> None:
@@ -636,15 +616,13 @@ class SearchWidget(SearchWidgetBase):
 
             if count == self.get_list_lyrics_box.progressBar.maximum():
                 set_no_running()
-                MsgBox.information(self.main_window, self.tr("提示"), self.tr("获取歌词完成"))
+                MsgBox.information(self, self.tr("提示"), self.tr("获取歌词完成"))
 
         self.get_list_lyrics_box = GetListLyrics(self)
-        self.main_window.setEnabled(False)
         self.get_list_lyrics_box.ask_to_close = True
         self.get_list_lyrics_box.progressBar.setValue(0)
         self.get_list_lyrics_box.pushButton.setText(self.tr("取消"))
         self.get_list_lyrics_box.pushButton.clicked.connect(pushButton_clicked_slot)
-        self.get_list_lyrics_box.closed.connect(lambda: self.main_window.setEnabled(True))
         self.get_list_lyrics_box.progressBar.setMaximum(len(self.songlist_result["result"]))
         self.get_list_lyrics_box.plainTextEdit.setPlainText("")
         self.get_list_lyrics_box.show()
@@ -799,3 +777,4 @@ class SearchWidget(SearchWidgetBase):
 
         else:
             MsgBox.critical(self, "错误", result["status"])
+            self.preview_plainTextEdit.setPlainText("")

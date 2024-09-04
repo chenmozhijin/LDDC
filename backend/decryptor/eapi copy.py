@@ -6,7 +6,7 @@ import hashlib
 import json
 from base64 import b64decode, b64encode
 
-from pyaes import AESModeOfOperationECB
+import pyaes
 
 
 def pkcs7_pad(data: bytes, block_size: int = 16) -> bytes:
@@ -27,19 +27,20 @@ def aes_encrypt(data: str | bytes, key: bytes) -> bytes:
     if isinstance(data, str):
         data = data.encode()
     padded_data = pkcs7_pad(data)  # Ensure the data is padded
-    aes = AESModeOfOperationECB(key)  # Using ECB mode
+    aes = pyaes.AESModeOfOperationECB(key)  # Using ECB mode
     encrypted_data = b''
     for i in range(0, len(padded_data), 16):
-        encrypted_data += aes.encrypt(padded_data[i:i + 16])  # Encrypt in 16-byte blocks
+        encrypted_data += aes.encrypt(padded_data[i:i+16])  # Encrypt in 16-byte blocks
     return encrypted_data
 
 
 def aes_decrypt(cipher_buffer: bytes, key: bytes) -> bytes:
-    aes = AESModeOfOperationECB(key)  # Using ECB mode
+    aes = pyaes.AESModeOfOperationECB(key)  # Using ECB mode
     decrypted_data = b''
     for i in range(0, len(cipher_buffer), 16):
-        decrypted_data += aes.decrypt(cipher_buffer[i:i + 16])  # Decrypt in 16-byte blocks
-    return pkcs7_unpad(decrypted_data)  # Remove padding after decryption
+        decrypted_data += aes.decrypt(cipher_buffer[i:i+16])  # Decrypt in 16-byte blocks
+    unpadded_data = pkcs7_unpad(decrypted_data)  # Remove padding after decryption
+    return unpadded_data
 
 
 def eapi_params_encrypt(path: bytes, params: dict) -> str:

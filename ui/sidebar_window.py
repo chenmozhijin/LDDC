@@ -1,7 +1,5 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
-from enum import Enum
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
@@ -15,10 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-
-class SidebarButtonPosition(Enum):
-    TOP = 0
-    BOTTOM = 1
+from utils.enum import Direction
 
 
 class SidebarWindow(QMainWindow):
@@ -30,6 +25,7 @@ class SidebarWindow(QMainWindow):
         self.Total_Widgets = 0
         self.Top_Widgets = 0
         self.Bottom_Widgets = 0
+        self.current_widget = 0
 
     def __setup_ui(self) -> None:
         self.setObjectName("SidebarWindow")
@@ -53,6 +49,7 @@ class SidebarWindow(QMainWindow):
         self.sidebar.addItem(self.__sidebar_spacer)
 
     def set_current_widget(self, index: int) -> None:
+        self.current_widget = index
         current_button = self.sidebar.itemAt(index + 1).widget() if index >= self.Top_Widgets else self.sidebar.itemAt(index).widget()
         if not isinstance(current_button, QPushButton):
             return
@@ -72,7 +69,7 @@ class SidebarWindow(QMainWindow):
     def set_sidebar_width(self, width: int) -> None:
         self.sidebar_widget.setFixedWidth(width)
 
-    def add_widget(self, name: str, widget: QWidget, position: SidebarButtonPosition = SidebarButtonPosition.TOP, icon: None | QIcon = None) -> None:
+    def add_widget(self, name: str, widget: QWidget, position: Direction = Direction.TOP, icon: None | QIcon = None) -> None:
         """添加一个新页面到侧边栏中
 
         :param name: 页面的名称
@@ -102,10 +99,10 @@ class SidebarWindow(QMainWindow):
             }
             """,
         )
-        if position == SidebarButtonPosition.TOP:
+        if position == Direction.TOP:
             self.sidebar.insertWidget(self.Top_Widgets, button)
             self.Top_Widgets += 1
-        elif position == SidebarButtonPosition.BOTTOM:
+        elif position == Direction.BOTTOM:
             self.sidebar.addWidget(button)
             self.Bottom_Widgets += 1
         widget.setParent(self.Widgets)
@@ -123,3 +120,4 @@ class SidebarWindow(QMainWindow):
         self.Total_Widgets = 0
         self.Top_Widgets = 0
         self.Bottom_Widgets = 0
+        self.current_widget = 0

@@ -1,5 +1,13 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
+
+"""数据管理模块
+
+这个模块提供了:
+- 配置文件管理
+- 歌词关联数据库管理
+"""
+
 import json
 import os
 import sqlite3
@@ -16,12 +24,20 @@ class ConfigSigal(QObject):
 
 
 class Config(dict):
+    """LDDC的配置管理类
+
+    1. 使用QMutex保证线程安全
+    2. 使用方法类似字典
+    3. 使用json格式存储配置文件
+    注意: 用于QMutex导致这个类并不高效,不应该在需要高性能的地方使用
+    """
+
     def __init__(self) -> None:
         self.mutex = None
         self.config_path = os.path.join(config_dir, "config.json")
         self.__singal = ConfigSigal()
-        self.lyrics_changed = self.__singal.lyrics_changed
-        self.desktop_lyrics_changed = self.__singal.desktop_lyrics_changed
+        self.lyrics_changed = self.__singal.lyrics_changed  # 在歌词相关配置改变时发出信号
+        self.desktop_lyrics_changed = self.__singal.desktop_lyrics_changed  # 在桌面歌词相关配置改变时发出信号
 
         self.default_cfg = {
             "log_level": "INFO",
@@ -61,7 +77,7 @@ class Config(dict):
             json.dump(self, f, ensure_ascii=False, indent=4)
 
     def read_config(self) -> None:
-        if os.path.exists(self.config_path):
+        if os.path.isfile(self.config_path):
             try:
                 with open(self.config_path, encoding="utf-8") as f:
                     cfg = json.load(f)
@@ -71,6 +87,8 @@ class Config(dict):
                             self[key] = value
                         elif isinstance(value, list) and isinstance(self[key], tuple):
                             self[key] = tuple(value)
+                        elif isinstance(value, float) and isinstance(self[key], int):
+                            self[key] = value
             except Exception:
                 self.write_config()
 
@@ -111,7 +129,13 @@ cfg = Config()
 
 
 class LocalSongLyricsDB(QObject):
-    changed = Signal()
+    """歌词关联数据库管理类
+
+    1. 使用sqlite3数据库管理本地歌曲歌词
+    2. 使用QMutex进行保证线程安全
+    """
+
+    changed = Signal()  # 用于更新歌词关联管理器UI
 
     def __init__(self) -> None:
         super().__init__()
@@ -122,6 +146,7 @@ class LocalSongLyricsDB(QObject):
 
     def init_db(self) -> None:
         with QMutexLocker(self.mutex):
+            # 创建表
             cur = self.conn.execute("""
                 CREATE TABLE IF NOT EXISTS songs (
                     id INTEGER PRIMARY KEY,
@@ -136,6 +161,7 @@ class LocalSongLyricsDB(QObject):
                     UNIQUE (title, artist, album, duration, song_path, track_number)
                 )
             """)
+            # 创建索引
             cur.execute("""
                 CREATE INDEX IF NOT EXISTS idx_title_artist_album_duration_song_path_track_number
                 ON songs (title, artist, album, duration, song_path, track_number)
@@ -154,6 +180,7 @@ class LocalSongLyricsDB(QObject):
                  track_number: str | None,
                  lyrics_path: str | None,
                  config: dict) -> None:
+        """设置歌曲歌词关联,如果存在则更新,否则插入"""
         with QMutexLocker(self.mutex):
             # sqlite 不认为两个 NULL 是相等的
             self.conn.execute("""
@@ -171,6 +198,7 @@ class LocalSongLyricsDB(QObject):
               duration: int | None,
               song_path: str | None,
               track_number: str | None) -> tuple[str, dict] | None:
+        """查询歌曲歌词关联"""
         parameters = self.handle_null(title=title, artist=artist, album=album, duration=duration, song_path=song_path, track_number=track_number)
         with QMutexLocker(self.mutex):
             cur = self.conn.execute("""SELECT lyrics_path, config FROM songs
@@ -182,10 +210,12 @@ class LocalSongLyricsDB(QObject):
         return None
 
     def del_item(self, id_: int) -> None:
+        """删除歌曲歌词关联"""
         with QMutexLocker(self.mutex):
             self.conn.execute("""DELETE FROM songs WHERE id = ?""", (id_,))
 
     def get_item(self, id_: int) -> dict[str, int | str | dict | None] | None:
+        """根据id获取歌曲歌词关联信息"""
         with QMutexLocker(self.mutex):
             cur = self.conn.execute("""SELECT title, artist, album, duration, song_path, track_number, lyrics_path, config FROM songs WHERE id = ?""", (id_,))
             query_result = cur.fetchone()
@@ -203,12 +233,14 @@ class LocalSongLyricsDB(QObject):
         return None
 
     def del_all(self) -> None:
+        """清空歌曲歌词关联数据库"""
         with QMutexLocker(self.mutex):
             self.conn.execute("""DELETE FROM songs""")
             self.conn.commit()
             self.changed.emit()
 
     def get_all(self) -> list:
+        """获取所有歌曲歌词关联信息"""
         with QMutexLocker(self.mutex):
             cur = self.conn.execute("""SELECT id, title, artist, album, duration, song_path, track_number, lyrics_path, config FROM songs""")
             return cur.fetchall()

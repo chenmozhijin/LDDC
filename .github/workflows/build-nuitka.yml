@@ -2,7 +2,9 @@ name: build LDDC
 
 on:
     push:
-        branches: main
+        branches: 
+          - main
+          - dev
         paths:
             - "**.py"
             - ".github/workflows/build-nuitka.yml"

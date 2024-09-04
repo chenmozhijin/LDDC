@@ -1,8 +1,8 @@
 requests
-PySide6
+PySide6-Essentials
 mutagen
 diskcache
 chardet
-cryptography
+pyaes
 psutil
 pyobjc; sys_platform == 'darwin'

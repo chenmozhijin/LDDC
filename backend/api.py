@@ -366,6 +366,13 @@ def qm_search(keyword: str, search_type: SearchType, page: int | str = 1) -> lis
     if search_type not in (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM, SearchType.SONGLIST):
         msg = f"搜索类型错误,类型为{search_type}"
         raise ValueError(msg)
+    search_type_mapping = {
+        SearchType.SONG: 0,
+        SearchType.ARTIST: 1,
+        SearchType.ALBUM: 2,
+        SearchType.SONGLIST: 3,
+        SearchType.LYRICS: 7,
+    }
     data = json.dumps({
         "comm": {
             "g_tk": 997034911,
@@ -386,7 +393,7 @@ def qm_search(keyword: str, search_type: SearchType, page: int | str = 1) -> lis
                 "num_per_page": 20,
                 "page_num": int(page),
                 "query": keyword,
-                "search_type": search_type.value,
+                "search_type": search_type_mapping[search_type],
             },
         },
     }, ensure_ascii=False).encode("utf-8")

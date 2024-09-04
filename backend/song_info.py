@@ -214,19 +214,19 @@ def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[l
 
         # 处理音频文件路径
         audio_file_path = os.path.join(file_dir, file["filename"])
-        if not os.path.exists(audio_file_path):
+        if not os.path.isfile(audio_file_path):
             for file_extension in file_extensions:
                 if file_path and (
                     (audio_file_path := os.path.join(os.path.dirname(file_path), os.path.splitext(file["filename"])[0] + "." + file_extension))
-                    and os.path.exists(audio_file_path) or
+                    and os.path.isfile(audio_file_path) or
                     (audio_file_path := os.path.splitext(file_path)[0] + "." + file_extension)
-                        and os.path.exists(audio_file_path)):
+                        and os.path.isfile(audio_file_path)):
                     break
             else:
                 logger.warning("未找到音频文件: %s", file["filename"])
                 audio_file_path = ""
 
-        if os.path.exists(audio_file_path):
+        if os.path.isfile(audio_file_path):
             audio_file_paths.append(audio_file_path)
 
         for i, track in enumerate(file["tracks"]):

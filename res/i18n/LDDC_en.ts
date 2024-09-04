@@ -4,7 +4,7 @@
 <context>
     <name>AboutWidget</name>
     <message>
-        <location filename="../../view/about.py" line="33"/>
+        <location filename="../../view/about.py" line="32"/>
         <source>LDDC主程序</source>
         <translation>LDDC main program</translation>
     </message>
@@ -54,12 +54,27 @@
 <context>
     <name>DesktopLyrics</name>
     <message>
-        <location filename="../../backend/service.py" line="560"/>
+        <location filename="../../backend/service.py" line="494"/>
+        <source>自动获取歌词中...</source>
+        <translation>Automatically getting lyrics...</translation>
+    </message>
+    <message>
+        <location filename="../../backend/service.py" line="505"/>
+        <source>没有获取到标题信息, 无法自动获取歌词</source>
+        <translation>The song title was not obtained, so the lyrics cannot be automatically obtained</translation>
+    </message>
+    <message>
+        <location filename="../../backend/service.py" line="549"/>
         <source>自动获取的歌词为纯文本，无法显示</source>
         <translation>The automatically acquired lyrics are in plain text and cannot be displayed</translation>
     </message>
     <message>
-        <location filename="../../backend/service.py" line="629"/>
+        <location filename="../../backend/service.py" line="549"/>
+        <source>自动获取歌词失败:{0}</source>
+        <translation>Failed to automatically obtain lyrics: {0}</translation>
+    </message>
+    <message>
+        <location filename="../../backend/service.py" line="618"/>
         <source>纯音乐，请欣赏</source>
         <translation>Pure music, please enjoy</translation>
     </message>
@@ -67,17 +82,17 @@
 <context>
     <name>DesktopLyricsControlBar</name>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="304"/>
+        <location filename="../../view/desktop_lyrics.py" line="314"/>
         <source>逐字</source>
         <translation>verbatim</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="306"/>
+        <location filename="../../view/desktop_lyrics.py" line="316"/>
         <source>逐行</source>
         <translation>line by line</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="308"/>
+        <location filename="../../view/desktop_lyrics.py" line="318"/>
         <source>纯文本</source>
         <translation>Plain Text</translation>
     </message>
@@ -110,42 +125,42 @@
 <context>
     <name>DesktopLyricsMenu</name>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="197"/>
+        <location filename="../../view/desktop_lyrics.py" line="203"/>
         <source>选择歌词</source>
         <translation>Select Lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="198"/>
+        <location filename="../../view/desktop_lyrics.py" line="204"/>
         <source>标记为纯音乐</source>
         <translation>Mark as instrumental music</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="199"/>
+        <location filename="../../view/desktop_lyrics.py" line="205"/>
         <source>禁用自动搜索(仅本曲)</source>
         <translation>Disable automatic search (this song only)</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="200"/>
+        <location filename="../../view/desktop_lyrics.py" line="206"/>
         <source>取消歌词关联</source>
         <translation>Unlink lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="201"/>
+        <location filename="../../view/desktop_lyrics.py" line="207"/>
         <source>歌词关联管理器</source>
         <translation>Open Lyrics Link Manager</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="202"/>
+        <location filename="../../view/desktop_lyrics.py" line="208"/>
         <source>显示/隐藏桌面歌词</source>
         <translation>Show/Hide Desktop Lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="203"/>
+        <location filename="../../view/desktop_lyrics.py" line="209"/>
         <source>显示主窗口</source>
         <translation>Show Main Window</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="204"/>
+        <location filename="../../view/desktop_lyrics.py" line="210"/>
         <source>鼠标穿透</source>
         <translation>Mouse penetration</translation>
     </message>
@@ -153,50 +168,50 @@
 <context>
     <name>DesktopLyricsSelectWidget</name>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="57"/>
-        <location filename="../../view/desktop_lyrics.py" line="99"/>
+        <location filename="../../view/desktop_lyrics.py" line="62"/>
+        <location filename="../../view/desktop_lyrics.py" line="104"/>
         <source>选择歌词</source>
         <translation>Select Lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="100"/>
+        <location filename="../../view/desktop_lyrics.py" line="105"/>
         <source>为桌面歌词选择云端或本地歌词</source>
         <translation>Choose cloud or local lyrics for desktop lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="102"/>
+        <location filename="../../view/desktop_lyrics.py" line="107"/>
         <source>选定歌词</source>
         <translation>Select lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="103"/>
-        <location filename="../../view/desktop_lyrics.py" line="127"/>
+        <location filename="../../view/desktop_lyrics.py" line="108"/>
+        <location filename="../../view/desktop_lyrics.py" line="132"/>
         <source>打开本地歌词</source>
         <translation>Open local lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="125"/>
+        <location filename="../../view/desktop_lyrics.py" line="130"/>
         <source>打开本地歌词失败</source>
         <translation>Failed to open local lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="129"/>
+        <location filename="../../view/desktop_lyrics.py" line="134"/>
         <source>歌词文件(*.qrc *.krc *.lrc)</source>
         <translation>Lyrics File(*.qrc *.krc *.lrc)</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="142"/>
-        <location filename="../../view/desktop_lyrics.py" line="144"/>
+        <location filename="../../view/desktop_lyrics.py" line="147"/>
+        <location filename="../../view/desktop_lyrics.py" line="149"/>
         <source>提示</source>
         <translation>Info</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="142"/>
+        <location filename="../../view/desktop_lyrics.py" line="147"/>
         <source>不支持纯文本歌词</source>
         <translation>No support for plain text lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="144"/>
+        <location filename="../../view/desktop_lyrics.py" line="149"/>
         <source>请先选择歌词</source>
         <translation>Please select lyrics first</translation>
     </message>
@@ -204,7 +219,7 @@
 <context>
     <name>DesktopLyricsTrayIcon</name>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="254"/>
+        <location filename="../../view/desktop_lyrics.py" line="262"/>
         <source>LDDC桌面歌词</source>
         <translation>LDDC Desktop Lyrics</translation>
     </message>
@@ -342,12 +357,12 @@
 <context>
     <name>GetListLyrics</name>
     <message>
-        <location filename="../../view/get_list_lyrics.py" line="27"/>
+        <location filename="../../view/get_list_lyrics.py" line="31"/>
         <source>提示</source>
         <translation>Info</translation>
     </message>
     <message>
-        <location filename="../../view/get_list_lyrics.py" line="27"/>
+        <location filename="../../view/get_list_lyrics.py" line="31"/>
         <source>是否要退出获取专辑/歌单歌词？</source>
         <translation>Do you want to exit getting album/playlist lyrics?</translation>
     </message>
@@ -699,27 +714,27 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../../view/main_window.py" line="46"/>
+        <location filename="../../view/main_window.py" line="49"/>
         <source>搜索</source>
         <translation>Search</translation>
     </message>
     <message>
-        <location filename="../../view/main_window.py" line="47"/>
+        <location filename="../../view/main_window.py" line="50"/>
         <source>本地匹配</source>
         <translation>local match</translation>
     </message>
     <message>
-        <location filename="../../view/main_window.py" line="48"/>
+        <location filename="../../view/main_window.py" line="51"/>
         <source>打开歌词</source>
         <translation>Open Lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/main_window.py" line="49"/>
+        <location filename="../../view/main_window.py" line="52"/>
         <source>关于</source>
         <translation>About</translation>
     </message>
     <message>
-        <location filename="../../view/main_window.py" line="50"/>
+        <location filename="../../view/main_window.py" line="53"/>
         <source>设置</source>
         <translation>Settings</translation>
     </message>
@@ -823,112 +838,112 @@
 <context>
     <name>SearchWidget</name>
     <message>
-        <location filename="../../view/search.py" line="585"/>
-        <location filename="../../view/search.py" line="661"/>
-        <location filename="../../view/search.py" line="665"/>
-        <location filename="../../view/search.py" line="684"/>
+        <location filename="../../view/search.py" line="584"/>
+        <location filename="../../view/search.py" line="658"/>
+        <location filename="../../view/search.py" line="662"/>
+        <location filename="../../view/search.py" line="681"/>
         <source>警告</source>
         <translation>Warning</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="585"/>
+        <location filename="../../view/search.py" line="584"/>
         <source>请先选择一个专辑或歌单</source>
         <translation>Please select an album or playlist first</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="619"/>
+        <location filename="../../view/search.py" line="618"/>
         <source>获取 {0} 歌词成功</source>
         <translation>Obtaining the lyrics of {0} successfully</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="622"/>
+        <location filename="../../view/search.py" line="621"/>
         <source>但歌曲为纯音乐,已跳过</source>
         <translation> but the song is pure music and has been skipped</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="630"/>
+        <location filename="../../view/search.py" line="629"/>
         <source>但保存歌词失败,原因:</source>
         <translation> but saving the lyrics failed, reason:</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="632"/>
+        <location filename="../../view/search.py" line="631"/>
         <source>,保存到</source>
         <translation>,Save to</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="607"/>
+        <location filename="../../view/search.py" line="606"/>
         <source>关闭</source>
         <translation>close</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="571"/>
+        <location filename="../../view/search.py" line="570"/>
         <source>从云端搜索并下载歌词</source>
         <translation>Search and download lyrics from the cloud</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="573"/>
+        <location filename="../../view/search.py" line="572"/>
         <source>保存到:</source>
         <translation>Save to:</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="576"/>
+        <location filename="../../view/search.py" line="575"/>
         <source>保存预览歌词</source>
         <translation>Save Preview Lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="577"/>
+        <location filename="../../view/search.py" line="576"/>
         <source>保存专辑/歌单的歌词</source>
         <translation>Save album/songlist lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="639"/>
-        <location filename="../../view/search.py" line="682"/>
+        <location filename="../../view/search.py" line="638"/>
+        <location filename="../../view/search.py" line="679"/>
         <source>提示</source>
         <translation>Info</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="639"/>
+        <location filename="../../view/search.py" line="638"/>
         <source>获取歌词完成</source>
         <translation>Get lyrics completed</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="645"/>
+        <location filename="../../view/search.py" line="643"/>
         <source>取消</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="661"/>
+        <location filename="../../view/search.py" line="658"/>
         <source>请先下载并预览歌词并选择保存路径</source>
         <translation>Please download, preview lyrics and select the save path first</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="665"/>
+        <location filename="../../view/search.py" line="662"/>
         <source>歌词内容为空</source>
         <translation>Lyrics content is empty</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="682"/>
+        <location filename="../../view/search.py" line="679"/>
         <source>歌词保存成功</source>
         <translation>Lyrics saved successfully</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="684"/>
+        <location filename="../../view/search.py" line="681"/>
         <source>歌词保存失败：</source>
         <translation>Failed to save lyrics:</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="771"/>
+        <location filename="../../view/search.py" line="768"/>
         <source>正在自动获取 {0} 的歌词...</source>
         <translation>Automatically getting lyrics for {0}...</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="574"/>
-        <location filename="../../view/search.py" line="691"/>
+        <location filename="../../view/search.py" line="573"/>
+        <location filename="../../view/search.py" line="688"/>
         <source>选择保存路径</source>
         <translation>Select save path</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="570"/>
+        <location filename="../../view/search.py" line="569"/>
         <source>搜索</source>
         <translation>Search</translation>
     </message>
@@ -1087,27 +1102,27 @@
 <context>
     <name>SettingWidget</name>
     <message>
-        <location filename="../../view/setting.py" line="80"/>
+        <location filename="../../view/setting.py" line="78"/>
         <source>选择默认保存路径</source>
         <translation>Select default save path</translation>
     </message>
     <message>
-        <location filename="../../view/setting.py" line="86"/>
+        <location filename="../../view/setting.py" line="84"/>
         <source>缓存大小:</source>
         <translation>Cache size:</translation>
     </message>
     <message>
-        <location filename="../../view/setting.py" line="34"/>
+        <location filename="../../view/setting.py" line="32"/>
         <source>罗马音</source>
         <translation>romanized</translation>
     </message>
     <message>
-        <location filename="../../view/setting.py" line="36"/>
+        <location filename="../../view/setting.py" line="34"/>
         <source>原文</source>
         <translation>original</translation>
     </message>
     <message>
-        <location filename="../../view/setting.py" line="38"/>
+        <location filename="../../view/setting.py" line="36"/>
         <source>译文</source>
         <translation>translation</translation>
     </message>
@@ -1552,31 +1567,6 @@
         <translation>Settings</translation>
     </message>
     <message>
-        <location filename="../../ui/settings.ui" line="107"/>
-        <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-hr { height: 1px; border-width: 0; }
-li.unchecked::marker { content: &quot;\2610&quot;; }
-li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;Microsoft YaHei UI&apos;; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;以下占位符可用&lt;/p&gt;
-&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;歌名: %&amp;lt;title&amp;gt; 艺术家: %&amp;lt;artist&amp;gt;&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;专辑名: %&amp;lt;album&amp;gt; 歌曲/歌词id: %&amp;lt;id&amp;gt;&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;语言类型: %&amp;lt;langs&amp;gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-hr { height: 1px; border-width: 0; }
-li.unchecked::marker { content: &quot;\2610&quot;; }
-li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;Microsoft YaHei UI&apos;; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;The following placeholders are available:&lt;/p&gt;
-&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;Song Title: %&amp;lt;title&amp;gt; Artist: %&amp;lt;artist&amp;gt;&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;Album Title: %&amp;lt;album&amp;gt; Song/lyrics id: %&amp;lt;id&amp;gt;&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;Language Type: %&amp;lt;langs&amp;gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
-    </message>
-    <message>
         <location filename="../../ui/settings.ui" line="189"/>
         <source>歌词设置</source>
         <translation>Lyrics settings</translation>
@@ -1625,6 +1615,31 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <location filename="../../ui/settings.ui" line="306"/>
         <source>歌曲搜索歌词时自动选择(酷狗音乐)</source>
         <translation>Songs automatically selected when searching for lyrics (Kugou)</translation>
+    </message>
+    <message>
+        <location filename="../../ui/settings.ui" line="107"/>
+        <source>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;以下占位符可用&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;歌名: %&amp;lt;title&amp;gt; 艺术家: %&amp;lt;artist&amp;gt;&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;专辑名: %&amp;lt;album&amp;gt; 歌曲/歌词id: %&amp;lt;id&amp;gt;&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;语言类型: %&amp;lt;langs&amp;gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style= &quot; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;The following placeholders are available:&lt;/p&gt;
+&lt;p style=&quot;margin-top:12px; margin-bottom:12px; margin-left:0px; margin -right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:6pt;&quot;&gt;Song title: %&amp;lt;title&amp;gt; Artist: %&amp;lt;artist&amp;gt; &lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent: 0px;&quot;&gt;&lt;span style=&quot; font-size:6pt;&quot;&gt;Album name: %&amp;lt;album&amp;gt; Song/lyrics id: %&amp;lt;id&amp;gt;&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin- top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:6pt;&quot;&gt;Language type : %&amp;lt;langs&amp;gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
     </message>
     <message>
         <location filename="../../ui/settings.ui" line="352"/>

@@ -16,6 +16,7 @@ from .error import DecodingError
 
 
 def get_lyrics_format_ext(lyrics_format: LyricsFormat) -> str:
+    """返回歌词格式对应的文件扩展名"""
     match lyrics_format:
         case LyricsFormat.VERBATIMLRC | LyricsFormat.LINEBYLINELRC | LyricsFormat.ENHANCEDLRC:
             return ".lrc"
