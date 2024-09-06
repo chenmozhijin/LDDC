@@ -68,8 +68,7 @@ jobs:
             - name: Install upx/7zip
               if: ${{ runner.os == 'Windows' }}
               run: |
-                winget install --id=UPX.UPX --silent
-                winget install --id=7zip.7zip --silent
+                choco install upx 7zip -y
 
             # Remove problematic brew libs if Intel Mac https://github.com/Nuitka/Nuitka/issues/2853#issuecomment-2119520735
             - name: Remove problematic brew libs
