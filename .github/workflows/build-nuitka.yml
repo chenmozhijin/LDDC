@@ -60,7 +60,7 @@ jobs:
                 sudo apt-get update
                 sudo apt-get install libegl1 upx
 
-            - name: Install create-dmg/upx
+            - name: Install create-dmg
               if: ${{ runner.os == 'macOS' }}
               run: |
                 brew install create-dmg
@@ -68,7 +68,8 @@ jobs:
             - name: Install upx/7zip
               if: ${{ runner.os == 'Windows' }}
               run: |
-                choco install upx 7zip -y
+                winget install --id=UPX.UPX --silent
+                winget install --id=7zip.7zip --silent
 
             # Remove problematic brew libs if Intel Mac https://github.com/Nuitka/Nuitka/issues/2853#issuecomment-2119520735
             - name: Remove problematic brew libs
@@ -253,6 +254,13 @@ jobs:
                 Rename-Item -Path "build/LDDC.dist" -NewName "LDDC"
                 cd build
                 7z a -tzip -mx=9 ../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}.zip LDDC
+
+                $files = Get-ChildItem -Path . -Include *.exe, *.dll -Recurse
+                foreach ($file in $files) {
+                  Write-Host "Compressing $($file.FullName)..."
+                  upx --ultra-brute $file.FullName
+                }
+                7z a -tzip -mx=9 ../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}-upx.zip LDDC
 
 
             - name: Upload
