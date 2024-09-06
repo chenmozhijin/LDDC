@@ -6,10 +6,9 @@ import re
 import sys
 from collections import OrderedDict
 from collections.abc import Iterable
-from pathlib import Path
 from typing import Any
 
-from chardet import detect
+from charset_normalizer import from_bytes, from_path
 
 from .enum import LyricsFormat
 from .error import DecodingError
@@ -38,77 +37,49 @@ def time2ms(m: int | str, s: int | str, ms: int | str) -> int:
 
 def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | None = None, sign_word: Iterable[str] | None = None) -> str:
     """读取未知编码的文件"""
-    from utils.logger import logger
-    file_content = None
-    if not sign_word:
-        sign_word = []
-    if not file_data and file_path:
-        with Path(file_path).open('rb') as f:
-            raw_data = f.read()
-    elif file_data:
-        raw_data = file_data
+    if file_data is not None:
+        results = from_bytes(file_data)
+    elif file_path is not None:
+        results = from_path(file_path)
     else:
-        msg = "file_path and file_data cannot be both None"
+        msg = "文件路径和文件数据不能同时为空"
         raise ValueError(msg)
-
-    with contextlib.suppress(Exception):
-        if sys.version_info >= (3, 11):
-            encoding = locale.getencoding()
-        else:
-            encoding = locale.getpreferredencoding(False)
-        if encoding in ("chinese", "csiso58gb231280", "euc-cn", "euccn", "eucgb2312-cn", "gb2312-1980", "gb2312-80", "iso-ir-58", "936", "cp936", "ms936"):
-            encoding = "gb18030"
-        file_content = raw_data.decode(encoding)
-        for sign in sign_word:
-            if sign not in file_content:
-                file_content = None
-                break
-        if encoding == "gb18030" and file_content and "锘縍EM" in file_content:  # 修复编码检测错误
-            file_content = None
-
-    if file_content is None:
-        detect_result = detect(raw_data)
-        if detect_result['confidence'] > 0.7 and detect_result['encoding']:
-            encoding = detect_result['encoding'].replace('gb2312', 'gb18030').replace('gbk', 'gb18030')  # gbk is a subset of gb18030
-            with contextlib.suppress(Exception):
-                file_content = raw_data.decode(encoding)
-                for sign in sign_word:
-                    if sign not in file_content:
-                        file_content = None
-                        break
-
-    if file_content is None:
-        encodings = ("utf_8", "gb18030", "shift_jis", "cp949", "big5", "big5hkscs",
-                     "euc_kr", "euc_jp", "iso2022_jp", "shift_jisx0213", "shift_jis_2004",
-                     "utf_16", "utf_16_le", "utf_16_be", "utf_32", "utf_32_le", "utf_32_be",
-                     "ascii", "cp950", "cp932", "iso2022_kr", "euc_jis_2004", "euc_jisx0213",
-                     "iso2022_jp_1", "iso2022_jp_2", "iso2022_jp_2004", "iso2022_jp_3",
-                     "iso2022_jp_ext", "latin_1", "cp874", "hz", "johab", "koi8_r", "koi8_u",
-                     "koi8_t", "kz1048", "mac_cyrillic", "mac_greek", "mac_iceland",
-                     "mac_latin2", "mac_roman", "mac_turkish", "ptcp154", "utf_7", "utf_8_sig",
-                     "iso8859_2", "iso8859_3", "iso8859_4", "iso8859_5", "iso8859_6", "iso8859_7",
-                     "iso8859_8", "iso8859_9", "iso8859_10", "iso8859_11", "iso8859_13",
-                     "iso8859_14", "iso8859_15", "iso8859_16", "cp037", "cp273", "cp424",
-                     "cp437", "cp500", "cp720", "cp737", "cp775", "cp850", "cp852", "cp855",
-                     "cp856", "cp857", "cp858", "cp860", "cp861", "cp862", "cp863", "cp864",
-                     "cp865", "cp866", "cp869", "cp875", "cp1006", "cp1026", "cp1125", "cp1140",
-                     "cp1250", "cp1251", "cp1252", "cp1253", "cp1254", "cp1255", "cp1256", "cp1257",
-                     "cp1258")
-        for encoding in encodings:
-            with contextlib.suppress(Exception):
-                file_content = raw_data.decode(encoding)
-                for sign in sign_word:
-                    if sign not in file_content:
-                        file_content = None
-                        break
-                if file_content is not None:
+    file_content = None
+    if sign_word is not None:
+        for result in results:
+            for sign in sign_word:
+                if sign not in str(result):
                     break
+            else:
+                file_content = str(result)
+                break
+    else:
+        best = results.best()
+        if best is not None:
+            file_content = str(best)
 
+    if file_content is None:
+        with contextlib.suppress(Exception):
+            if sys.version_info >= (3, 11):
+                encoding = locale.getencoding()
+            else:
+                encoding = locale.getpreferredencoding(False)
+            if encoding in ("chinese", "csiso58gb231280", "euc-cn", "euccn", "eucgb2312-cn", "gb2312-1980", "gb2312-80", "iso-ir-58", "936", "cp936", "ms936"):
+                encoding = "gb18030"
+            if file_data is not None:
+                file_content = file_data.decode(encoding)
+            elif file_path is not None:
+                with open(file_path, encoding=encoding) as f:
+                    file_content = f.read()
+            if sign_word is not None and file_content is not None:
+                for sign in sign_word:
+                    if sign not in file_content:
+                        file_content = None
+                        break
     if file_content is None:
         msg = "无法解码文件"
         raise DecodingError(msg)
 
-    logger.debug("文件 %s 解码成功,编码为 %s", file_path, encoding)
     return file_content
 
 

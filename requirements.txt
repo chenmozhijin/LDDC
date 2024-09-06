@@ -2,7 +2,7 @@ requests
 PySide6-Essentials
 mutagen
 diskcache
-chardet
+charset-normalizer
 pyaes
 psutil
 pyobjc; sys_platform == 'darwin'
