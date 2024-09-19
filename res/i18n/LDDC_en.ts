@@ -54,27 +54,27 @@
 <context>
     <name>DesktopLyrics</name>
     <message>
-        <location filename="../../backend/service.py" line="494"/>
+        <location filename="../../backend/service.py" line="496"/>
         <source>自动获取歌词中...</source>
         <translation>Automatically getting lyrics...</translation>
     </message>
     <message>
-        <location filename="../../backend/service.py" line="505"/>
+        <location filename="../../backend/service.py" line="507"/>
         <source>没有获取到标题信息, 无法自动获取歌词</source>
         <translation>The song title was not obtained, so the lyrics cannot be automatically obtained</translation>
     </message>
     <message>
-        <location filename="../../backend/service.py" line="549"/>
+        <location filename="../../backend/service.py" line="551"/>
         <source>自动获取的歌词为纯文本，无法显示</source>
         <translation>The automatically acquired lyrics are in plain text and cannot be displayed</translation>
     </message>
     <message>
-        <location filename="../../backend/service.py" line="549"/>
+        <location filename="../../backend/service.py" line="551"/>
         <source>自动获取歌词失败:{0}</source>
         <translation>Failed to automatically obtain lyrics: {0}</translation>
     </message>
     <message>
-        <location filename="../../backend/service.py" line="618"/>
+        <location filename="../../backend/service.py" line="620"/>
         <source>纯音乐，请欣赏</source>
         <translation>Pure music, please enjoy</translation>
     </message>
@@ -483,7 +483,7 @@
     <message>
         <location filename="../../view/local_match.py" line="87"/>
         <location filename="../../view/local_match.py" line="100"/>
-        <location filename="../../view/local_match.py" line="124"/>
+        <location filename="../../view/local_match.py" line="107"/>
         <source>警告</source>
         <translation>Warning</translation>
     </message>
@@ -493,30 +493,18 @@
         <translation>The song folder does not exist!</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="110"/>
-        <location filename="../../view/local_match.py" line="119"/>
-        <location filename="../../view/local_match.py" line="173"/>
+        <location filename="../../view/local_match.py" line="156"/>
         <source>错误</source>
         <translation>Error</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="110"/>
-        <source>保存模式选择错误！</source>
-        <translation>Wrong save mode selection!</translation>
-    </message>
-    <message>
-        <location filename="../../view/local_match.py" line="119"/>
-        <source>歌词文件名错误！</source>
-        <translation>Wrong save mode selection!</translation>
-    </message>
-    <message>
-        <location filename="../../view/local_match.py" line="124"/>
+        <location filename="../../view/local_match.py" line="107"/>
         <source>请选择至少一个源！</source>
         <translation>Please select at least one source!</translation>
     </message>
     <message>
         <location filename="../../view/local_match.py" line="52"/>
-        <location filename="../../view/local_match.py" line="129"/>
+        <location filename="../../view/local_match.py" line="112"/>
         <source>取消匹配</source>
         <translation>Cancel matching</translation>
     </message>
@@ -526,7 +514,7 @@
         <translation>Please select at least one lyrics language!</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="160"/>
+        <location filename="../../view/local_match.py" line="143"/>
         <source>开始匹配</source>
         <translation>Start matching</translation>
     </message>
@@ -534,32 +522,32 @@
 <context>
     <name>LocalSongLyricsDB</name>
     <message>
-        <location filename="../../backend/worker.py" line="811"/>
+        <location filename="../../backend/worker.py" line="813"/>
         <source>成功</source>
         <translation>success</translation>
     </message>
     <message>
-        <location filename="../../backend/worker.py" line="845"/>
+        <location filename="../../backend/worker.py" line="847"/>
         <source>备份成功</source>
         <translation>Backup Success</translation>
     </message>
     <message>
-        <location filename="../../backend/worker.py" line="857"/>
+        <location filename="../../backend/worker.py" line="859"/>
         <source>恢复成功</source>
         <translation>Restoration successful</translation>
     </message>
     <message>
-        <location filename="../../backend/worker.py" line="872"/>
+        <location filename="../../backend/worker.py" line="874"/>
         <source>清理成功, 共清理了 {0} 条数据</source>
         <translation>Cleaned successfully, a total of {0} data items were cleaned</translation>
     </message>
     <message>
-        <location filename="../../backend/worker.py" line="904"/>
+        <location filename="../../backend/worker.py" line="906"/>
         <source>修改成功, 共修改了 {0} 条数据</source>
         <translation>Modification successful, a total of {0} data items were modified</translation>
     </message>
     <message>
-        <location filename="../../backend/worker.py" line="878"/>
+        <location filename="../../backend/worker.py" line="880"/>
         <source>删除成功</source>
         <translation>Deleted successfully</translation>
     </message>
@@ -714,29 +702,39 @@
 <context>
     <name>MainWindow</name>
     <message>
-        <location filename="../../view/main_window.py" line="49"/>
+        <location filename="../../view/main_window.py" line="53"/>
         <source>搜索</source>
         <translation>Search</translation>
     </message>
     <message>
-        <location filename="../../view/main_window.py" line="50"/>
+        <location filename="../../view/main_window.py" line="54"/>
         <source>本地匹配</source>
         <translation>local match</translation>
     </message>
     <message>
-        <location filename="../../view/main_window.py" line="51"/>
+        <location filename="../../view/main_window.py" line="55"/>
         <source>打开歌词</source>
         <translation>Open Lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/main_window.py" line="52"/>
+        <location filename="../../view/main_window.py" line="56"/>
         <source>关于</source>
         <translation>About</translation>
     </message>
     <message>
-        <location filename="../../view/main_window.py" line="53"/>
+        <location filename="../../view/main_window.py" line="57"/>
         <source>设置</source>
         <translation>Settings</translation>
+    </message>
+    <message>
+        <location filename="../../view/main_window.py" line="70"/>
+        <source>提示</source>
+        <translation>Info</translation>
+    </message>
+    <message>
+        <location filename="../../view/main_window.py" line="70"/>
+        <source>正在匹配歌词，是否退出？</source>
+        <translation>Matching lyrics, do you want to exit?</translation>
     </message>
 </context>
 <context>
@@ -838,112 +836,112 @@
 <context>
     <name>SearchWidget</name>
     <message>
-        <location filename="../../view/search.py" line="584"/>
-        <location filename="../../view/search.py" line="658"/>
+        <location filename="../../view/search.py" line="565"/>
+        <location filename="../../view/search.py" line="639"/>
+        <location filename="../../view/search.py" line="643"/>
         <location filename="../../view/search.py" line="662"/>
-        <location filename="../../view/search.py" line="681"/>
         <source>警告</source>
         <translation>Warning</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="584"/>
+        <location filename="../../view/search.py" line="565"/>
         <source>请先选择一个专辑或歌单</source>
         <translation>Please select an album or playlist first</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="618"/>
+        <location filename="../../view/search.py" line="599"/>
         <source>获取 {0} 歌词成功</source>
         <translation>Obtaining the lyrics of {0} successfully</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="621"/>
+        <location filename="../../view/search.py" line="602"/>
         <source>但歌曲为纯音乐,已跳过</source>
         <translation> but the song is pure music and has been skipped</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="629"/>
+        <location filename="../../view/search.py" line="610"/>
         <source>但保存歌词失败,原因:</source>
         <translation> but saving the lyrics failed, reason:</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="631"/>
+        <location filename="../../view/search.py" line="612"/>
         <source>,保存到</source>
         <translation>,Save to</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="606"/>
+        <location filename="../../view/search.py" line="587"/>
         <source>关闭</source>
         <translation>close</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="570"/>
+        <location filename="../../view/search.py" line="551"/>
         <source>从云端搜索并下载歌词</source>
         <translation>Search and download lyrics from the cloud</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="572"/>
+        <location filename="../../view/search.py" line="553"/>
         <source>保存到:</source>
         <translation>Save to:</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="575"/>
+        <location filename="../../view/search.py" line="556"/>
         <source>保存预览歌词</source>
         <translation>Save Preview Lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="576"/>
+        <location filename="../../view/search.py" line="557"/>
         <source>保存专辑/歌单的歌词</source>
         <translation>Save album/songlist lyrics</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="638"/>
-        <location filename="../../view/search.py" line="679"/>
+        <location filename="../../view/search.py" line="619"/>
+        <location filename="../../view/search.py" line="660"/>
         <source>提示</source>
         <translation>Info</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="638"/>
+        <location filename="../../view/search.py" line="619"/>
         <source>获取歌词完成</source>
         <translation>Get lyrics completed</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="643"/>
+        <location filename="../../view/search.py" line="624"/>
         <source>取消</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="658"/>
+        <location filename="../../view/search.py" line="639"/>
         <source>请先下载并预览歌词并选择保存路径</source>
         <translation>Please download, preview lyrics and select the save path first</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="662"/>
+        <location filename="../../view/search.py" line="643"/>
         <source>歌词内容为空</source>
         <translation>Lyrics content is empty</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="679"/>
+        <location filename="../../view/search.py" line="660"/>
         <source>歌词保存成功</source>
         <translation>Lyrics saved successfully</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="681"/>
+        <location filename="../../view/search.py" line="662"/>
         <source>歌词保存失败：</source>
         <translation>Failed to save lyrics:</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="768"/>
+        <location filename="../../view/search.py" line="749"/>
         <source>正在自动获取 {0} 的歌词...</source>
         <translation>Automatically getting lyrics for {0}...</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="573"/>
-        <location filename="../../view/search.py" line="688"/>
+        <location filename="../../view/search.py" line="554"/>
+        <location filename="../../view/search.py" line="669"/>
         <source>选择保存路径</source>
         <translation>Select save path</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="569"/>
+        <location filename="../../view/search.py" line="550"/>
         <source>搜索</source>
         <translation>Search</translation>
     </message>
@@ -951,150 +949,150 @@
 <context>
     <name>SearchWidgetBase</name>
     <message>
-        <location filename="../../view/search.py" line="137"/>
-        <location filename="../../view/search.py" line="152"/>
+        <location filename="../../view/search.py" line="117"/>
+        <location filename="../../view/search.py" line="132"/>
         <source>搜索</source>
         <translation>Search</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="141"/>
-        <location filename="../../view/search.py" line="154"/>
-        <location filename="../../view/search.py" line="162"/>
-        <location filename="../../view/search.py" line="320"/>
-        <location filename="../../view/search.py" line="371"/>
-        <location filename="../../view/search.py" line="469"/>
+        <location filename="../../view/search.py" line="121"/>
+        <location filename="../../view/search.py" line="134"/>
+        <location filename="../../view/search.py" line="142"/>
+        <location filename="../../view/search.py" line="300"/>
+        <location filename="../../view/search.py" line="351"/>
+        <location filename="../../view/search.py" line="449"/>
         <source>错误</source>
         <translation>Error</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="141"/>
+        <location filename="../../view/search.py" line="121"/>
         <source>没有搜索到相关结果</source>
         <translation>No relevant results found</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="162"/>
+        <location filename="../../view/search.py" line="142"/>
         <source>请输入搜索关键词</source>
         <translation>Please enter the search keyword first</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="164"/>
+        <location filename="../../view/search.py" line="144"/>
         <source>正在搜索...</source>
         <translation>searching...</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="179"/>
+        <location filename="../../view/search.py" line="159"/>
         <source>获取预览歌词错误</source>
         <translation>Getting preview lyrics error</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="190"/>
+        <location filename="../../view/search.py" line="170"/>
         <source>纯文本</source>
         <translation>Plain Text</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="192"/>
+        <location filename="../../view/search.py" line="172"/>
         <source>逐字</source>
         <translation>verbatim</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="194"/>
+        <location filename="../../view/search.py" line="174"/>
         <source>逐行</source>
         <translation>line by line</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="203"/>
+        <location filename="../../view/search.py" line="183"/>
         <source>原文</source>
         <translation>original</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="205"/>
+        <location filename="../../view/search.py" line="185"/>
         <source>、译文</source>
         <translation>, translation</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="207"/>
+        <location filename="../../view/search.py" line="187"/>
         <source>、罗马音</source>
         <translation>, romanized</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="253"/>
+        <location filename="../../view/search.py" line="233"/>
         <source>处理中...</source>
         <translation>Processing...</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="265"/>
-        <location filename="../../view/search.py" line="268"/>
+        <location filename="../../view/search.py" line="245"/>
+        <location filename="../../view/search.py" line="248"/>
         <source>歌曲</source>
         <translation>Song</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="265"/>
-        <location filename="../../view/search.py" line="266"/>
-        <location filename="../../view/search.py" line="268"/>
+        <location filename="../../view/search.py" line="245"/>
+        <location filename="../../view/search.py" line="246"/>
+        <location filename="../../view/search.py" line="248"/>
         <source>艺术家</source>
         <translation>Artist</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="265"/>
-        <location filename="../../view/search.py" line="266"/>
-        <location filename="../../view/search.py" line="268"/>
+        <location filename="../../view/search.py" line="245"/>
+        <location filename="../../view/search.py" line="246"/>
+        <location filename="../../view/search.py" line="248"/>
         <source>专辑</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="265"/>
-        <location filename="../../view/search.py" line="268"/>
+        <location filename="../../view/search.py" line="245"/>
+        <location filename="../../view/search.py" line="248"/>
         <source>时长</source>
         <translation>Duration</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="266"/>
+        <location filename="../../view/search.py" line="246"/>
         <source>发行日期</source>
         <translation>Release date</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="266"/>
-        <location filename="../../view/search.py" line="267"/>
+        <location filename="../../view/search.py" line="246"/>
+        <location filename="../../view/search.py" line="247"/>
         <source>歌曲数量</source>
         <translation>Song count</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="267"/>
+        <location filename="../../view/search.py" line="247"/>
         <source>歌单</source>
         <translation>song list</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="267"/>
+        <location filename="../../view/search.py" line="247"/>
         <source>创建者</source>
         <translation>Creator</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="267"/>
+        <location filename="../../view/search.py" line="247"/>
         <source>创建时间</source>
         <translation>Creation time</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="272"/>
+        <location filename="../../view/search.py" line="252"/>
         <source>来源</source>
         <translation>Source</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="379"/>
+        <location filename="../../view/search.py" line="359"/>
         <source>提示</source>
         <translation>Info</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="379"/>
+        <location filename="../../view/search.py" line="359"/>
         <source>没有找到歌词</source>
         <translation>Lyrics not found</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="454"/>
+        <location filename="../../view/search.py" line="434"/>
         <source>没有更多结果</source>
         <translation>No more results</translation>
     </message>
     <message>
-        <location filename="../../view/search.py" line="491"/>
+        <location filename="../../view/search.py" line="472"/>
         <source>加载中...</source>
         <translation>Loading...</translation>
     </message>
