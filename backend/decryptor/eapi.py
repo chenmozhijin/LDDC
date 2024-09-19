@@ -6,29 +6,40 @@ import hashlib
 import json
 from base64 import b64decode, b64encode
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from pyaes import AESModeOfOperationECB
+
+
+def pkcs7_pad(data: bytes, block_size: int = 16) -> bytes:
+    pad_len = block_size - (len(data) % block_size)
+    padding = bytes([pad_len] * pad_len)
+    return data + padding
+
+
+def pkcs7_unpad(data: bytes) -> bytes:
+    pad_len = data[-1]
+    if pad_len < 1 or pad_len > 16:
+        msg = "Invalid padding encountered."
+        raise ValueError(msg)
+    return data[:-pad_len]
 
 
 def aes_encrypt(data: str | bytes, key: bytes) -> bytes:
     if isinstance(data, str):
         data = data.encode()
-    backend = default_backend()
-    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=backend)  # noqa: S305
-    encryptor = cipher.encryptor()
-    padder = padding.PKCS7(128).padder()
-    padded_data = padder.update(data) + padder.finalize()
-    return encryptor.update(padded_data) + encryptor.finalize()
+    padded_data = pkcs7_pad(data)  # Ensure the data is padded
+    aes = AESModeOfOperationECB(key)  # Using ECB mode
+    encrypted_data = b''
+    for i in range(0, len(padded_data), 16):
+        encrypted_data += aes.encrypt(padded_data[i:i + 16])  # Encrypt in 16-byte blocks
+    return encrypted_data
 
 
 def aes_decrypt(cipher_buffer: bytes, key: bytes) -> bytes:
-    backend = default_backend()
-    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=backend)  # noqa: S305
-    decryptor = cipher.decryptor()
-    unpadder = padding.PKCS7(128).unpadder()
-    decrypted_data = decryptor.update(cipher_buffer) + decryptor.finalize()
-    return unpadder.update(decrypted_data) + unpadder.finalize()
+    aes = AESModeOfOperationECB(key)  # Using ECB mode
+    decrypted_data = b''
+    for i in range(0, len(cipher_buffer), 16):
+        decrypted_data += aes.decrypt(cipher_buffer[i:i + 16])  # Decrypt in 16-byte blocks
+    return pkcs7_unpad(decrypted_data)  # Remove padding after decryption
 
 
 def eapi_params_encrypt(path: bytes, params: dict) -> str:

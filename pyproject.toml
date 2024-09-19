@@ -7,8 +7,9 @@ dependencies = [
     "mutagen",
     "diskcache",
     "chardet",
-    "cryptography",
+    "pyaes",
     "psutil",
+    "pyobjc; sys_platform == 'darwin'",
 ]
 requires-python = ">= 3.10"
 description = "A lyrics acquisition tool"
@@ -73,6 +74,7 @@ ignore = [
     "Q000",  # bad-quotes-inline-string
     "RUF001",  # ambiguous-unicode-character-string
     "N802",  # invalid-function-name
+    "N999",  # invalid-name
 
     "PTH",  # flake8-use-pathlib
     "FBT",  # flake8-boolean-trap

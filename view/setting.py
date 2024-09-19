@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import os
 
-from PySide6.QtCore import Qt, QUrl, SignalInstance
+from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QFont, QFontDatabase
 from PySide6.QtWidgets import QFileDialog, QListWidgetItem, QWidget
 
@@ -16,12 +16,10 @@ from utils.translator import load_translation
 
 class SettingWidget(QWidget, Ui_settings):
 
-    def __init__(self, widget_changed_signal: SignalInstance) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self.setupUi(self)
         self.init_ui()
-        self.widget_changed_signal = widget_changed_signal
-        self.widget_changed_signal.connect(self.update_cache_size)
         self.connect_signals()
 
     def init_ui(self) -> None:

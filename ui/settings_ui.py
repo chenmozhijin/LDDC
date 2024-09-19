@@ -493,11 +493,11 @@ class Ui_settings:
                 "hr { height: 1px; border-width: 0; }\n"
                 'li.unchecked::marker { content: "\\2610"; }\n'
                 'li.checked::marker { content: "\\2612"; }\n'
-                "</style></head><body style=\" font-family:'Microsoft YaHei UI'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
+                '</style></head><body style=" font-size:9pt; font-weight:400; font-style:normal;">\n'
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">\u4ee5\u4e0b\u5360\u4f4d\u7b26\u53ef\u7528</p>\n'
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u6b4c\u540d: %&lt;title&gt; \u827a\u672f\u5bb6: %&lt;artist&gt;</span></p>\n'
-                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; te'
-                'xt-indent:0px;"><span style=" font-size:8pt;">\u4e13\u8f91\u540d: %&lt;album&gt; \u6b4c\u66f2/\u6b4c\u8bcdid: %&lt;id&gt;</span></p>\n'
+                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" fo'
+                'nt-size:8pt;">\u4e13\u8f91\u540d: %&lt;album&gt; \u6b4c\u66f2/\u6b4c\u8bcdid: %&lt;id&gt;</span></p>\n'
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u8bed\u8a00\u7c7b\u578b: %&lt;langs&gt;</span></p></body></html>',
                 None,
             )

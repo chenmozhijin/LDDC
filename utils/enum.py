@@ -38,9 +38,9 @@ class LyricsFormat(Enum):
 
 class SearchType(Enum):
     SONG = 0
-    ARTIST = 1
-    ALBUM = 2
-    SONGLIST = 3
+    ALBUM = 1
+    SONGLIST = 2
+    ARTIST = 3
     LYRICS = 7
 
 
@@ -83,8 +83,8 @@ class LocalMatchSaveMode(Enum):
 
 class LocalMatchFileNameMode(Enum):
     # 歌曲/格式
-    SONG = 0
-    FORMAT = 1
+    FORMAT = 0
+    SONG = 1
 
 
 class Direction(Enum):

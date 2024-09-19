@@ -9,6 +9,8 @@ from utils.logger import logger
 
 
 class ExitManager(QObject):
+    """程序退出管理器"""
+
     close_signal = Signal()
 
     def __init__(self) -> None:
@@ -41,6 +43,9 @@ class ExitManager(QObject):
         for thread in self.threads:
             thread.quit()
             thread.wait()
+        for window in self.windows:
+            window.destroy()
+            window.deleteLater()
 
         cache["version"] = cache_version
         cache.expire()
@@ -50,6 +55,12 @@ class ExitManager(QObject):
             app.quit()
 
     def window_close_event(self, window: QWidget) -> bool:
+        """窗口关闭事件
+
+        独立窗口关闭时调用
+
+        :param window: 关闭的窗口
+        """
         if not check_any_instance_alive() and not self.check_any_window_show(window):
             self.exit()
             return True

@@ -99,28 +99,11 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         if len(lyric_langs) == 0:
             MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一种歌词语言！"))
 
-        match self.save_mode_comboBox.currentIndex():
-            case 0:
-                save_mode = LocalMatchSaveMode.MIRROR
-            case 1:
-                save_mode = LocalMatchSaveMode.SONG
-            case 2:
-                save_mode = LocalMatchSaveMode.SPECIFY
-            case _:
-                MsgBox.critical(self, self.tr("错误"), self.tr("保存模式选择错误！"))
-                return
+        save_mode = LocalMatchSaveMode(self.save_mode_comboBox.currentIndex())
 
-        match self.lyrics_filename_mode_comboBox.currentIndex():
-            case 0:
-                flienmae_mode = LocalMatchFileNameMode.FORMAT
-            case 1:
-                flienmae_mode = LocalMatchFileNameMode.SONG
-            case _:
-                MsgBox.critical(self, self.tr("错误"), self.tr("歌词文件名错误！"))
-                return
+        flienmae_mode = LocalMatchFileNameMode(self.lyrics_filename_mode_comboBox.currentIndex())
 
-        source = [Source[k] for k in self.source_listWidget.get_data()]
-        if len(source) == 0:
+        if len(source := [Source[k] for k in self.source_listWidget.get_data()]) == 0:
             MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一个源！"))
             return
 
@@ -147,7 +130,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.worker.signals.finished.connect(self.worker_finished)
         self.worker.signals.massage.connect(self.worker_massage)
         self.worker.signals.progress.connect(self.change_progress)
-        threadpool.start(self.worker)
+        threadpool.startOnReservedThread(self.worker)
 
     def worker_massage(self, massage: str) -> None:
         self.plainTextEdit.appendPlainText(massage)

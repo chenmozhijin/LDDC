@@ -1,6 +1,9 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
-__version__ = "v0.7.1"
+
+"""版本信息与处理模块"""
+
+__version__ = "v0.7.2"
 import re
 from typing import Literal
 

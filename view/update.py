@@ -31,6 +31,8 @@ class UpdateQDialog(QDialog, Ui_UpdateDialog):
             QDesktopServices.openUrl(QUrl(f"https://github.com/{self.repo}/releases/latest"))
         self.close()
         self.deleteLater()
+        if self in dialogs:
+            dialogs.remove(self)
 
 
 def show_new_version_dialog(name: str, repo: str, new_version: str, body: str) -> None:

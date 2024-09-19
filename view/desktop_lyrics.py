@@ -1,5 +1,8 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
+
+"""桌面歌词界面实现"""
+
 import math
 from typing import NewType
 
@@ -47,6 +50,8 @@ DRAW_TEXT_FLAGS = Qt.TextFlag.TextSingleLine | Qt.TextFlag.TextWordWrap
 
 
 class DesktopLyricsSelectWidget(SearchWidgetBase):
+    """选择歌词界面"""
+
     lyrics_selected = Signal(Lyrics, str, list, int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -72,15 +77,15 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
         self.verticalLayout.insertWidget(0, self.label_title)
         self.verticalLayout.insertWidget(1, self.label_sub_title)
 
-        # 设置保存按钮
+        # 设置选定歌词按钮
         self.select_lyrics_button = QPushButton(self)
         self.open_local_lyrics_button = QPushButton(self)
-        save_button_size_policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        save_button_size_policy.setHorizontalStretch(0)
-        save_button_size_policy.setVerticalStretch(0)
-        save_button_size_policy.setHeightForWidth(self.select_lyrics_button.sizePolicy().hasHeightForWidth())
-        self.select_lyrics_button.setSizePolicy(save_button_size_policy)
-        self.open_local_lyrics_button.setSizePolicy(save_button_size_policy)
+        select_lyrics_button_size_policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        select_lyrics_button_size_policy.setHorizontalStretch(0)
+        select_lyrics_button_size_policy.setVerticalStretch(0)
+        select_lyrics_button_size_policy.setHeightForWidth(self.select_lyrics_button.sizePolicy().hasHeightForWidth())
+        self.select_lyrics_button.setSizePolicy(select_lyrics_button_size_policy)
+        self.open_local_lyrics_button.setSizePolicy(select_lyrics_button_size_policy)
 
         but_h = self.control_verticalLayout.sizeHint().height() - self.control_verticalSpacer.sizeHint().height() * 0.8
 
@@ -189,6 +194,7 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
 
 
 class DesktopLyricsMenu(QMenu):
+    """桌面歌词菜单(桌面歌词与托盘图标)"""
 
     def __init__(self, parent: "DesktopLyricsWidget") -> None:
         super().__init__(parent)
@@ -245,6 +251,8 @@ class DesktopLyricsMenu(QMenu):
 
 
 class DesktopLyricsTrayIcon(QSystemTrayIcon):
+    """桌面歌词托盘图标"""
+
     def __init__(self, parent: "DesktopLyricsWidget") -> None:
         super().__init__(QIcon(":/LDDC/img/icon/logo.png"), parent)
         self._parent = parent
@@ -268,6 +276,8 @@ class DesktopLyricsTrayIcon(QSystemTrayIcon):
 
 
 class DesktopLyricsControlBar(Ui_DesktopLyricsControlBar, QWidget):
+    """桌面歌词控制栏"""
+
     update_lyrics_info = Signal(dict)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -312,6 +322,8 @@ class DesktopLyricsControlBar(Ui_DesktopLyricsControlBar, QWidget):
 
 
 class DesktopLyricsWidgetBase(QWidget):
+    """桌面歌词窗口基类(处理窗口移动调整等)"""
+
     moved = Signal(QPoint)
     resized = Signal(QSize)
 
@@ -474,6 +486,8 @@ class DesktopLyricsWidgetBase(QWidget):
 
 
 class LyricsText(QWidget):
+    """逐字歌词文本显示实现"""
+
     update_lyrics_signal = Signal(tuple)
 
     def __init__(self, parent: DesktopLyricsWidgetBase) -> None:
@@ -715,6 +729,8 @@ class LyricsText(QWidget):
 
 
 class DesktopLyricsWidget(DesktopLyricsWidgetBase):
+    """桌面歌词窗口"""
+
     send_task = Signal(str)  # snder
     new_lyrics = Signal(dict)  # slot
     to_select = Signal()  # sender

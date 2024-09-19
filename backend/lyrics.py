@@ -41,6 +41,7 @@ def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only
 
         if only_line:
             result.append(LyricsLine((line_start_time, line_end_time, line[2])))
+            continue
 
         words = []
         for j, word in enumerate(line[2]):

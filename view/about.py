@@ -13,9 +13,8 @@ from .update import check_update
 
 
 class AboutWidget(QWidget, Ui_about):
-    def __init__(self, version: str) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.version = version
         self.setupUi(self)
         self.connect_signals()
 
@@ -25,7 +24,7 @@ class AboutWidget(QWidget, Ui_about):
         if year != "2024":
             year = "2024-" + year
         self.label.setText(html.replace("{year}", year))
-        self.version_label.setText(self.version_label.text() + self.version)
+        self.version_label.setText(self.version_label.text() + __version__)
 
     def connect_signals(self) -> None:
         self.github_pushButton.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/chenmozhijin/LDDC")))

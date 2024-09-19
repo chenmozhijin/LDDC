@@ -1,6 +1,9 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
-from PySide6.QtCore import Signal
+
+"""获取专辑/歌单歌词界面"""
+
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QDialog, QMessageBox, QWidget
 
@@ -15,6 +18,7 @@ class GetListLyrics(QDialog, Ui_get_list_lyrics):
         super().__init__(parent)
         self.setupUi(self)
         self.ask_to_close = False
+        self.setWindowModality(Qt.WindowModality.WindowModal)
 
     def question_slot(self, but: QMessageBox.StandardButton) -> None:
         if but == QMessageBox.StandardButton.Yes:
