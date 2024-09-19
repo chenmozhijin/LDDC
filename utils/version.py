@@ -3,7 +3,7 @@
 
 """版本信息与处理模块"""
 
-__version__ = "v0.7.2-alpha.1"
+__version__ = "v0.7.2"
 import re
 from typing import Literal
 
