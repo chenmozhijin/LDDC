@@ -107,7 +107,7 @@ jobs:
 
                 disable-console: true
 
-                macos-app-icon: "res/img/icon/logo.png"
+                macos-app-icon: "res/img/icon/logo.icns"
                 macos-app-version: ${{ steps.info.outputs.version }}
                 macos-create-app-bundle: true
                 macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
@@ -127,7 +127,7 @@ jobs:
                 product-version: ${{ steps.info.outputs.version }}
                 copyright: ${{ steps.info.outputs.copyright }}
 
-                windows-icon-from-ico: "res/img/icon/logo.png"
+                windows-icon-from-ico: "res/img/icon/logo.ico"
                 mingw64: true
                 windows-console-mode: 'attach'
 
@@ -253,14 +253,6 @@ jobs:
                 Rename-Item -Path "build/LDDC.dist" -NewName "LDDC"
                 cd build
                 7z a -tzip -mx=9 ../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}.zip LDDC
-
-                $files = Get-ChildItem -Path . -Include *.exe, *.dll -Recurse
-                foreach ($file in $files) {
-                  Write-Host "Compressing $($file.FullName)..."
-                  upx --ultra-brute $file.FullName
-                }
-                7z a -tzip -mx=9 ../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}-upx.zip LDDC
-
 
             - name: Upload
               uses: actions/upload-artifact@v4
