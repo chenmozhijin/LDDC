@@ -499,7 +499,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                         info = self.song_info.copy()
                         info["duration"] = info["duration"] / 1000
                         worker = AutoLyricsFetcher(info,
-                                                   min_score=55, source=[Source[s] for s in cfg["desktop_lyrics_sources"]], taskid=self.taskid)
+                                                   source=[Source[s] for s in cfg["desktop_lyrics_sources"]], taskid=self.taskid)
                         worker.signals.result.connect(self.handle_fetch_result)
                         threadpool.start(worker)
                     else:

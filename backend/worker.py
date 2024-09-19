@@ -635,6 +635,8 @@ class AutoLyricsFetcher(QRunnable):
             for info in infos:
                 if duration and abs(info.get('duration', -100) - duration) > 3:
                     continue
+                if not duration:
+                    logger.warning("没有获取到 %s - %s 的时长, 跳过时长匹配检查", get_artist_str(self.info.get('artist')), self.info['title'].strip())
 
                 artist_score = None
                 title_score = calculate_title_score(self.info['title'], info.get('title', ''))
