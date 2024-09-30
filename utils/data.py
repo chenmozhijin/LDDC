@@ -51,6 +51,7 @@ class Config(dict):
             "add_end_timestamp_line": False,
             "last_ref_line_time_sty": 0,  # 0: 与当前原文起始时间相同 1: 与下一行原文起始时间接近
             "auto_check_update": True,
+            "ID3_version": "2.3",
 
             "desktop_lyrics_played_colors": [(0, 255, 255), (0, 128, 255)],
             "desktop_lyrics_unplayed_colors": [(255, 0, 0), (255, 128, 128)],

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
-from typing import TYPE_CHECKING, Literal, NewType, overload
+from typing import TYPE_CHECKING, Literal, NewType, TypeVar, overload
 
 if TYPE_CHECKING:
     from utils.enum import Source
@@ -15,6 +15,8 @@ FSLyricsWord = NewType("FSLyricsWord", tuple[int, int, str])
 FSLyricsLine = NewType("FSLyricsLine", tuple[int, int, list[FSLyricsWord]])
 FSLyricsData = NewType("FSLyricsData", list[FSLyricsLine])
 FSMultiLyricsData = NewType("FSMultiLyricsData", dict[str, FSLyricsData])
+
+T = TypeVar("T")
 
 
 @overload
@@ -153,7 +155,12 @@ class LyricsBase(dict):
             if last_start is not None:
                 return last_start
         elif self:
-            last_line = next(iter(self.values()))[-1]
+            for data in self.values():
+                if data:
+                    last_line = data[-1]
+                    break
+            else:
+                return 0
             if last_line[1] is not None:
                 return last_line[1]
             if last_line[2]:
@@ -163,8 +170,7 @@ class LyricsBase(dict):
                     return last_line[2][-1][0]
             if last_line[0] is not None:
                 return last_line[0]
-        msg = "can not get duration"
-        raise ValueError(msg)
+        return 0
 
     def add_offset(self, offset: int = 0) -> MultiLyricsData:
         """添加偏移量
@@ -243,6 +249,9 @@ class Lyrics(LyricsBase):
     def __delitem__(self, key: str) -> None:
         super().__delitem__(key)
 
+    def get(self, key: str, default: T = None) -> LyricsData | T:
+        return super().get(key, default)
+
 
 class FSLyrics(LyricsBase):
     def __getitem__(self, item: str) -> FSLyricsData:
@@ -253,3 +262,6 @@ class FSLyrics(LyricsBase):
 
     def __delitem__(self, key: str) -> None:
         super().__delitem__(key)
+
+    def get(self, key: str, default: T = None) -> FSLyricsData | T:
+        return super().get(key, default)

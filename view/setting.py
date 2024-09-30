@@ -100,6 +100,9 @@ class SettingWidget(QWidget, Ui_settings):
         self.default_save_path_lineEdit.textChanged.connect(
             lambda: cfg.setitem("default_save_path", self.default_save_path_lineEdit.text()))
 
+        self.id3_ver_comboBox.currentIndexChanged.connect(
+            lambda: cfg.setitem("ID3_version", self.id3_ver_comboBox.currentText()))
+
         self.log_level_comboBox.currentTextChanged.connect(
             lambda: cfg.setitem("log_level", self.log_level_comboBox.currentText()))
         self.log_level_comboBox.currentTextChanged.connect(

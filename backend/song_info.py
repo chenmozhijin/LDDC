@@ -3,17 +3,25 @@
 import os
 import re
 
-import mutagen
+from mutagen import File, FileType, MutagenError  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
+from mutagen.apev2 import APEv2
+from mutagen.asf import ASFTags
+from mutagen.flac import VCommentDict  # type: ignore[reportPrivateImportUsage]
+from mutagen.id3 import ID3, SYLT, USLT  # type: ignore[reportPrivateImportUsage]
+from mutagen.mp4 import MP4Tags
 
-from utils.error import GetSongInfoError
+from utils.data import cfg
+from utils.error import FileTypeError, GetSongInfoError
 from utils.logger import logger
 from utils.utils import read_unknown_encoding_file, time2ms
 
-file_extensions = ['3g2', 'aac', 'aif', 'ape', 'apev2', 'dff',
-                   'dsf', 'flac', 'm4a', 'm4b', 'mid', 'mp3',
-                   'mp4', 'mpc', 'ofr', 'ofs', 'ogg', 'oggflac',
-                   'oggtheora', 'opus', 'spx', 'tak', 'tta',
-                   'wav', 'wma', 'wv']
+from .lyrics import Lyrics
+
+audio_formats = ['3g2', 'aac', 'aif', 'ape', 'apev2', 'dff',
+                 'dsf', 'flac', 'm4a', 'm4b', 'mid', 'mp3',
+                 'mp4', 'mpc', 'ofr', 'ofs', 'ogg', 'oggflac',
+                 'oggtheora', 'opus', 'spx', 'tak', 'tta',
+                 'wav', 'wma', 'wv']
 
 
 def get_audio_file_infos(file_path: str) -> list[dict]:
@@ -22,9 +30,9 @@ def get_audio_file_infos(file_path: str) -> list[dict]:
         msg = f"未找到文件: {file_path}"
         raise GetSongInfoError(msg)
     try:
-        if file_path.lower().split('.')[-1] in file_extensions:
-            audio = mutagen.File(file_path, easy=True)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
-            if audio is not None:
+        if file_path.lower().split('.')[-1] in audio_formats:
+            audio = File(file_path, easy=True)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
+            if isinstance(audio, FileType) and audio.info:
                 if "cuesheet" in audio:
                     return parse_cue(audio["cuesheet"][0], os.path.dirname(file_path))[0]
 
@@ -76,7 +84,7 @@ def get_audio_file_infos(file_path: str) -> list[dict]:
             msg = f"{file_path} 文件格式不支持"
             raise GetSongInfoError(msg)
 
-    except mutagen.MutagenError as e:    # type: ignore[reportPrivateImportUsage] mutagen中的MutagenError被误定义为私有 quodlibet/mutagen#647
+    except MutagenError as e:    # type: ignore[reportPrivateImportUsage] mutagen中的MutagenError被误定义为私有 quodlibet/mutagen#647
         logger.exception("%s获取文件信息失败", file_path)
         msg = f"获取文件信息失败:{e.__class__.__name__}: {e!s}"
         raise GetSongInfoError(msg) from e
@@ -84,12 +92,61 @@ def get_audio_file_infos(file_path: str) -> list[dict]:
         return [metadata]
 
 
+def write_lyrics(file_path: str, lyrics_text: str, lyrics: Lyrics | None = None) -> None:
+    audio = File(file_path)
+
+    if audio and isinstance(audio, FileType):
+        if audio.tags is None:
+            audio.add_tags()
+
+        # 判断标签类型并写入歌词
+        if isinstance(audio.tags, ID3):
+            # MP3 文件使用 ID3 标签
+
+            # https://id3.org/id3v2.3.0#Unsychronised_lyrics.2Ftext_transcription
+            audio.tags.add(USLT(text=lyrics_text))
+            if lyrics and (orig := lyrics.get_fslyrics().get("orig")):
+                # https://id3.org/id3v2.3.0#Synchronised_lyrics.2Ftext
+                sylt: list[tuple[str, int]] = []
+                for i, line in enumerate(orig):
+                    for j, (start, _end, word) in enumerate(line[2]):
+                        if i != 0 and j == 0:
+                            word = f"\n{word}"  # noqa: PLW2901
+                        sylt.append((word, start))
+
+                audio.tags.add(SYLT(format=2, type=1, text=sylt))
+        elif isinstance(audio.tags, VCommentDict | APEv2):
+            # FLAC, OGG, Opus 等使用 VorbisComment, APE 文件使用 APEv2 标签
+            audio["LYRICS"] = lyrics_text
+        elif isinstance(audio.tags, MP4Tags):
+            # MP4, M4A, M4B 文件使用 MP4 标签
+            audio["©lyr"] = lyrics_text
+        elif isinstance(audio.tags, ASFTags):
+            # WMA 文件使用 ASF 标签
+            # https://learn.microsoft.com/en-us/previous-versions/windows/desktop/wmp/wm-lyrics-attribute
+            audio["WM/LYRICS"] = lyrics_text
+            audio["Lyrics"] = lyrics_text  # Lyrics is an alias for WM/Lyrics attribute.
+        else:
+            msg = f"{file_path} 不支持的文件格式"
+            raise FileTypeError(msg)
+
+        # 保存修改
+        if isinstance(audio.tags, ID3):
+            audio.save(v2_version=3 if cfg["ID3_version"] == "v2.3" else 4)
+        else:
+            audio.save()
+        logger.info("写入歌词到%s成功", file_path)
+    else:
+        msg = f"{file_path} 不支持的文件格式"
+        raise FileTypeError(msg)
+
+
 def get_audio_duration(file_path: str) -> int | None:
     if not os.path.isfile(file_path):
         logger.error("未找到文件: %s", file_path)
         return None
     try:
-        audio = mutagen.File(file_path)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
+        audio = File(file_path)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
         return int(audio.info.length) if audio.info.length else None  # type: ignore[reportOptionalMemberAccess]
     except Exception:
         logger.exception("%s获取文件时长失败", file_path)
@@ -215,7 +272,7 @@ def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[l
         # 处理音频文件路径
         audio_file_path = os.path.join(file_dir, file["filename"])
         if not os.path.isfile(audio_file_path):
-            for file_extension in file_extensions:
+            for file_extension in audio_formats:
                 if file_path and (
                     (audio_file_path := os.path.join(os.path.dirname(file_path), os.path.splitext(file["filename"])[0] + "." + file_extension))
                     and os.path.isfile(audio_file_path) or

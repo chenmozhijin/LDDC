@@ -54,6 +54,8 @@ class ErrorMsgTranslator(QObject):
 
                 if "获取文件信息失败" in msg:
                     msg = msg.replace("获取文件信息失败", self.tr("获取文件信息失败"))
+                if "不支持的文件格式" in msg:
+                    msg = msg.replace("不支持的文件格式", self.tr("不支持的文件格式"))
         return msg
 
 
@@ -111,6 +113,13 @@ class LyricsUnavailableError(Exception):
 
 class GetSongInfoError(Exception):
     """获取歌曲信息错误"""
+
+    def __init__(self, msg: str) -> None:
+        super().__init__(translator.translate(msg))
+
+
+class FileTypeError(Exception):
+    """文件类型错误"""
 
     def __init__(self, msg: str) -> None:
         super().__init__(translator.translate(msg))

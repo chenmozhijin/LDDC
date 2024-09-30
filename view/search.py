@@ -3,7 +3,7 @@
 import os
 import re
 from itertools import zip_longest
-from typing import Any
+from typing import Any, Literal
 
 from PySide6.QtCore import (
     QModelIndex,
@@ -21,7 +21,7 @@ from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPush
 
 from backend.converter import convert2
 from backend.lyrics import Lyrics
-from backend.song_info import get_audio_file_infos, parse_cue_from_file
+from backend.song_info import audio_formats, get_audio_file_infos, parse_cue_from_file, write_lyrics
 from backend.worker import AutoLyricsFetcher, GetSongListWorker, LyricProcessingWorker, SearchWorker
 from ui.search_base_ui import Ui_search_base
 from utils.data import cfg
@@ -40,10 +40,10 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.setupUi(self)
         self.connect_signals()
 
-        self.songlist_result = None
         self.reset_page_status()
         self.search_info: dict[str, Any] | None = None  # 搜索的信息
         self.search_result = None
+        self.songlist_result = None
         self.search_lyrics_result = None
         self.preview_lyric_result = None
 
@@ -495,9 +495,12 @@ class SearchWidget(SearchWidgetBase):
         self.setup_ui()
         self.resize(1050, 600)
         self.select_path_pushButton.clicked.connect(self.select_savepath)
-        self.save_preview_lyric_pushButton.clicked.connect(self.save_preview_lyric)
+        self.save_preview_lyric_pushButton.clicked.connect(lambda: self.save_lyric("dir"))
+        self.save_to_tag_pushButton.clicked.connect(lambda: self.save_lyric("tag"))
         self.save_list_lyrics_pushButton.clicked.connect(self.save_list_lyrics)
         self.setAcceptDrops(True)  # 启用拖放功能
+
+        self.droped_file_path: str | None = None
 
     def setup_ui(self) -> None:
 
@@ -526,20 +529,24 @@ class SearchWidget(SearchWidgetBase):
         # 设置保存按钮
         self.save_preview_lyric_pushButton = QPushButton(self)
         self.save_list_lyrics_pushButton = QPushButton(self)
+        self.save_to_tag_pushButton = QPushButton(self)
         save_button_size_policy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         save_button_size_policy.setHorizontalStretch(0)
         save_button_size_policy.setVerticalStretch(0)
         save_button_size_policy.setHeightForWidth(self.save_preview_lyric_pushButton.sizePolicy().hasHeightForWidth())
         self.save_preview_lyric_pushButton.setSizePolicy(save_button_size_policy)
+        self.save_to_tag_pushButton.setSizePolicy(save_button_size_policy)
         self.save_list_lyrics_pushButton.setSizePolicy(save_button_size_policy)
 
         but_h = self.control_verticalLayout.sizeHint().height() - self.control_verticalSpacer.sizeHint().height() * 0.8
 
         self.save_preview_lyric_pushButton.setMinimumSize(QSize(0, int(but_h)))
+        self.save_to_tag_pushButton.setMinimumSize(QSize(0, int(but_h)))
         self.save_list_lyrics_pushButton.setMinimumSize(QSize(0, int(but_h)))
 
         self.bottom_horizontalLayout.addWidget(self.save_list_lyrics_pushButton)
         self.bottom_horizontalLayout.addWidget(self.save_preview_lyric_pushButton)
+        self.bottom_horizontalLayout.addWidget(self.save_to_tag_pushButton)
 
         self.retranslateUi()
 
@@ -553,7 +560,8 @@ class SearchWidget(SearchWidgetBase):
         self.select_path_label.setText(self.tr("保存到:"))
         self.select_path_pushButton.setText(self.tr("选择保存路径"))
 
-        self.save_preview_lyric_pushButton.setText(self.tr("保存预览歌词"))
+        self.save_preview_lyric_pushButton.setText(self.tr("保存歌词到目录"))
+        self.save_to_tag_pushButton.setText(self.tr("保存到歌曲标签"))
         self.save_list_lyrics_pushButton.setText(self.tr("保存专辑/歌单的歌词"))
 
     def save_list_lyrics(self) -> None:
@@ -633,33 +641,62 @@ class SearchWidget(SearchWidgetBase):
         threadpool.start(worker)
 
     @Slot()
-    def save_preview_lyric(self) -> None:
+    def save_lyric(self, location: Literal["dir", "tag"]) -> None:
         """保存预览的歌词"""
-        if self.preview_lyric_result is None or self.save_path_lineEdit.text() == "":
-            MsgBox.warning(self, self.tr('警告'), self.tr('请先下载并预览歌词并选择保存路径'))
+        if self.preview_lyric_result is None:
+            MsgBox.warning(self, self.tr('警告'), self.tr('请先下载并预览歌词'))
             return
 
         if self.preview_plainTextEdit.toPlainText() == "":
             MsgBox.warning(self, self.tr('警告'), self.tr('歌词内容为空'))
             return
 
-        lyric_langs = [lang for lang in cfg["langs_order"] if lang in self.get_lyric_langs()]
-        # 获取已选择的歌词(用于替换占位符)
-        save_folder, file_name = get_save_path(
-            self.save_path_lineEdit.text(),
-            cfg["lyrics_file_name_fmt"] + get_lyrics_format_ext(self.preview_lyric_result["info"]["lyrics_format"]),
-            self.preview_lyric_result["info"],
-            lyric_langs)
+        if location == "dir":
+            if self.save_path_lineEdit.text() == "":
+                MsgBox.warning(self, self.tr('警告'), self.tr('请先选择保存路径'))
+                return
+            lyric_langs = [lang for lang in cfg["langs_order"] if lang in self.get_lyric_langs()]
+            # 获取已选择的歌词(用于替换占位符)
+            save_folder, file_name = get_save_path(
+                self.save_path_lineEdit.text(),
+                cfg["lyrics_file_name_fmt"] + get_lyrics_format_ext(self.preview_lyric_result["info"]["lyrics_format"]),
+                self.preview_lyric_result["info"],
+                lyric_langs)
 
-        save_path = os.path.join(save_folder, file_name)
-        try:
-            if not os.path.exists(save_folder):
-                os.makedirs(save_folder)
-            with open(save_path, 'w', encoding='utf-8') as f:
-                f.write(self.preview_plainTextEdit.toPlainText())
-            MsgBox.information(self, self.tr('提示'), self.tr('歌词保存成功'))
-        except Exception as e:
-            MsgBox.warning(self, self.tr('警告'), self.tr('歌词保存失败：') + str(e))
+            save_path = os.path.join(save_folder, file_name)
+            try:
+                if not os.path.exists(save_folder):
+                    os.makedirs(save_folder)
+                with open(save_path, 'w', encoding='utf-8') as f:
+                    f.write(self.preview_plainTextEdit.toPlainText())
+                MsgBox.information(self, self.tr('提示'), self.tr('歌词保存成功'))
+            except Exception as e:
+                MsgBox.warning(self, self.tr('警告'), self.tr('歌词保存失败：') + str(e))
+
+        if location == "tag":
+            if LyricsFormat(self.lyricsformat_comboBox.currentIndex()) not in (LyricsFormat.VERBATIMLRC, LyricsFormat.LINEBYLINELRC, LyricsFormat.ENHANCEDLRC):
+                MsgBox.warning(self, self.tr('警告'), self.tr('歌曲标签中的歌词应为LRC格式'))
+                return
+
+            def file_selected(save_path: str) -> None:
+                try:
+                    if self.preview_lyric_result:
+                        write_lyrics(save_path, self.preview_plainTextEdit.toPlainText(), self.preview_lyric_result.get("lyrics"))
+                    else:
+                        write_lyrics(save_path, self.preview_plainTextEdit.toPlainText())
+                    MsgBox.information(self, self.tr('提示'), self.tr('歌词保存成功'))
+                except Exception as e:
+                    MsgBox.warning(self, self.tr('警告'), self.tr('歌词保存失败：') + str(e))
+
+            dialog = QFileDialog(self)
+            dialog.setWindowTitle(self.tr("选择歌曲文件"))
+            dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+            dialog.setNameFilter(self.tr("歌曲文件") + "*." + " *.".join(audio_formats))
+            dialog.fileSelected.connect(file_selected)
+            if self.droped_file_path:
+                dialog.setDirectory(os.path.dirname(self.droped_file_path))
+                dialog.selectFile(os.path.basename(self.droped_file_path))
+            dialog.open()
 
     @Slot()
     def select_savepath(self) -> None:
@@ -676,6 +713,10 @@ class SearchWidget(SearchWidgetBase):
             event.acceptProposedAction()  # 接受拖动操作
         else:
             event.ignore()
+
+    def search(self) -> None:
+        self.droped_file_path = None
+        super().search()
 
     def dropEvent(self, event: QDropEvent) -> None:
         # 获取拖动的文件信息
@@ -725,6 +766,8 @@ class SearchWidget(SearchWidgetBase):
                 songs = get_audio_file_infos(path)
                 if len(songs) == 1:
                     song = songs[0]
+                    if song.get("type") == "audio":
+                        self.droped_file_path = path
                 elif isinstance(track, str | int):
                     for song in songs:
                         if song["track"] is not None and int(song["track"]) == int(track):

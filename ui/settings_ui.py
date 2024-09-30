@@ -38,7 +38,7 @@ class Ui_settings:
     def setupUi(self, settings):
         if not settings.objectName():
             settings.setObjectName("settings")
-        settings.resize(1173, 870)
+        settings.resize(1179, 883)
         self.verticalLayout = QVBoxLayout(settings)
         self.verticalLayout.setObjectName("verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -50,7 +50,7 @@ class Ui_settings:
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 1161, 980))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 1167, 950))
         self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.label = QLabel(self.scrollAreaWidgetContents)
@@ -68,31 +68,32 @@ class Ui_settings:
 
         self.groupBox = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox.setObjectName("groupBox")
-        self.gridLayout = QGridLayout(self.groupBox)
-        self.gridLayout.setObjectName("gridLayout")
-        self.textBrowser = QTextBrowser(self.groupBox)
-        self.textBrowser.setObjectName("textBrowser")
+        self.gridLayout_13 = QGridLayout(self.groupBox)
+        self.gridLayout_13.setObjectName("gridLayout_13")
+        self.textBrowser_5 = QTextBrowser(self.groupBox)
+        self.textBrowser_5.setObjectName("textBrowser_5")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.textBrowser.sizePolicy().hasHeightForWidth())
-        self.textBrowser.setSizePolicy(sizePolicy1)
-        self.textBrowser.setMinimumSize(QSize(200, 106))
-        self.textBrowser.setMaximumSize(QSize(234, 78))
-        self.textBrowser.setFrameShape(QFrame.Shape.Box)
-        self.textBrowser.setFrameShadow(QFrame.Shadow.Sunken)
-        self.textBrowser.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.textBrowser.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.textBrowser.setOpenLinks(False)
+        sizePolicy1.setHeightForWidth(self.textBrowser_5.sizePolicy().hasHeightForWidth())
+        self.textBrowser_5.setSizePolicy(sizePolicy1)
+        self.textBrowser_5.setMinimumSize(QSize(200, 106))
+        self.textBrowser_5.setMaximumSize(QSize(234, 78))
+        self.textBrowser_5.setFrameShape(QFrame.Shape.Box)
+        self.textBrowser_5.setFrameShadow(QFrame.Shadow.Sunken)
+        self.textBrowser_5.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.textBrowser_5.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.textBrowser_5.setOpenLinks(False)
 
-        self.gridLayout.addWidget(self.textBrowser, 0, 0, 1, 1)
+        self.gridLayout_13.addWidget(self.textBrowser_5, 0, 0, 3, 1)
 
-        self.label_3 = QLabel(self.groupBox)
-        self.label_3.setObjectName("label_3")
-        sizePolicy.setHeightForWidth(self.label_3.sizePolicy().hasHeightForWidth())
-        self.label_3.setSizePolicy(sizePolicy)
+        self.label_26 = QLabel(self.groupBox)
+        self.label_26.setObjectName("label_26")
+        sizePolicy.setHeightForWidth(self.label_26.sizePolicy().hasHeightForWidth())
+        self.label_26.setSizePolicy(sizePolicy)
+        self.label_26.setTextFormat(Qt.TextFormat.AutoText)
 
-        self.gridLayout.addWidget(self.label_3, 1, 1, 1, 1)
+        self.gridLayout_13.addWidget(self.label_26, 0, 1, 1, 1)
 
         self.lyrics_file_name_fmt_lineEdit = QLineEdit(self.groupBox)
         self.lyrics_file_name_fmt_lineEdit.setObjectName("lyrics_file_name_fmt_lineEdit")
@@ -102,29 +103,36 @@ class Ui_settings:
         sizePolicy2.setHeightForWidth(self.lyrics_file_name_fmt_lineEdit.sizePolicy().hasHeightForWidth())
         self.lyrics_file_name_fmt_lineEdit.setSizePolicy(sizePolicy2)
 
-        self.gridLayout.addWidget(self.lyrics_file_name_fmt_lineEdit, 0, 2, 1, 1)
+        self.gridLayout_13.addWidget(self.lyrics_file_name_fmt_lineEdit, 0, 2, 1, 1)
 
-        self.label_2 = QLabel(self.groupBox)
-        self.label_2.setObjectName("label_2")
-        sizePolicy.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
-        self.label_2.setSizePolicy(sizePolicy)
-        self.label_2.setTextFormat(Qt.TextFormat.AutoText)
+        self.label_27 = QLabel(self.groupBox)
+        self.label_27.setObjectName("label_27")
+        sizePolicy.setHeightForWidth(self.label_27.sizePolicy().hasHeightForWidth())
+        self.label_27.setSizePolicy(sizePolicy)
 
-        self.gridLayout.addWidget(self.label_2, 0, 1, 1, 1)
+        self.gridLayout_13.addWidget(self.label_27, 1, 1, 1, 1)
 
-        self.horizontalLayout_5 = QHBoxLayout()
-        self.horizontalLayout_5.setObjectName("horizontalLayout_5")
         self.default_save_path_lineEdit = QLineEdit(self.groupBox)
         self.default_save_path_lineEdit.setObjectName("default_save_path_lineEdit")
 
-        self.horizontalLayout_5.addWidget(self.default_save_path_lineEdit)
+        self.gridLayout_13.addWidget(self.default_save_path_lineEdit, 1, 2, 1, 1)
 
         self.select_default_save_path_pushButton = QPushButton(self.groupBox)
         self.select_default_save_path_pushButton.setObjectName("select_default_save_path_pushButton")
 
-        self.horizontalLayout_5.addWidget(self.select_default_save_path_pushButton)
+        self.gridLayout_13.addWidget(self.select_default_save_path_pushButton, 1, 3, 1, 1)
 
-        self.gridLayout.addLayout(self.horizontalLayout_5, 1, 2, 1, 1)
+        self.id3_ver_comboBox = QComboBox(self.groupBox)
+        self.id3_ver_comboBox.addItem("")
+        self.id3_ver_comboBox.addItem("")
+        self.id3_ver_comboBox.setObjectName("id3_ver_comboBox")
+
+        self.gridLayout_13.addWidget(self.id3_ver_comboBox, 2, 2, 1, 1)
+
+        self.label_28 = QLabel(self.groupBox)
+        self.label_28.setObjectName("label_28")
+
+        self.gridLayout_13.addWidget(self.label_28, 2, 1, 1, 1)
 
         self.verticalLayout_2.addWidget(self.groupBox)
 
@@ -484,7 +492,7 @@ class Ui_settings:
     def retranslateUi(self, settings):
         self.label.setText(QCoreApplication.translate("settings", "\u8bbe\u7f6e", None))
         self.groupBox.setTitle(QCoreApplication.translate("settings", "\u4fdd\u5b58\u8bbe\u7f6e", None))
-        self.textBrowser.setHtml(
+        self.textBrowser_5.setHtml(
             QCoreApplication.translate(
                 "settings",
                 '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">\n'
@@ -493,24 +501,28 @@ class Ui_settings:
                 "hr { height: 1px; border-width: 0; }\n"
                 'li.unchecked::marker { content: "\\2610"; }\n'
                 'li.checked::marker { content: "\\2612"; }\n'
-                '</style></head><body style=" font-size:9pt; font-weight:400; font-style:normal;">\n'
+                "</style></head><body style=\" font-family:'Microsoft YaHei UI'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">\u4ee5\u4e0b\u5360\u4f4d\u7b26\u53ef\u7528</p>\n'
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u6b4c\u540d: %&lt;title&gt; \u827a\u672f\u5bb6: %&lt;artist&gt;</span></p>\n'
-                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" fo'
-                'nt-size:8pt;">\u4e13\u8f91\u540d: %&lt;album&gt; \u6b4c\u66f2/\u6b4c\u8bcdid: %&lt;id&gt;</span></p>\n'
+                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; te'
+                'xt-indent:0px;"><span style=" font-size:8pt;">\u4e13\u8f91\u540d: %&lt;album&gt; \u6b4c\u66f2/\u6b4c\u8bcdid: %&lt;id&gt;</span></p>\n'
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u8bed\u8a00\u7c7b\u578b: %&lt;langs&gt;</span></p></body></html>',
                 None,
             )
         )
-        self.label_3.setText(QCoreApplication.translate("settings", "\u9ed8\u8ba4\u4fdd\u5b58\u8def\u5f84", None))
         # if QT_CONFIG(whatsthis)
-        self.label_2.setWhatsThis("")
+        self.label_26.setWhatsThis("")
         # endif // QT_CONFIG(whatsthis)
         # if QT_CONFIG(accessibility)
-        self.label_2.setAccessibleDescription("")
+        self.label_26.setAccessibleDescription("")
         # endif // QT_CONFIG(accessibility)
-        self.label_2.setText(QCoreApplication.translate("settings", "\u6b4c\u8bcd\u6587\u4ef6\u540d\u683c\u5f0f", None))
+        self.label_26.setText(QCoreApplication.translate("settings", "\u6b4c\u8bcd\u6587\u4ef6\u540d\u683c\u5f0f", None))
+        self.label_27.setText(QCoreApplication.translate("settings", "\u9ed8\u8ba4\u4fdd\u5b58\u8def\u5f84", None))
         self.select_default_save_path_pushButton.setText(QCoreApplication.translate("settings", "\u9009\u62e9\u6587\u4ef6\u5939", None))
+        self.id3_ver_comboBox.setItemText(0, QCoreApplication.translate("settings", "v2.3", None))
+        self.id3_ver_comboBox.setItemText(1, QCoreApplication.translate("settings", "v2.4", None))
+
+        self.label_28.setText(QCoreApplication.translate("settings", "ID3\u7248\u672c", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("settings", "\u6b4c\u8bcd\u8bbe\u7f6e", None))
         self.label_4.setText(QCoreApplication.translate("settings", "\u987a\u5e8f", None))
 
