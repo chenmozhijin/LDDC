@@ -25,5 +25,3 @@ def get_lyrics_lines(lyrics_dict: MultiLyricsData,
         if has_content("".join([word[2]for word in lyrics_line[2] if word[2] != ""])):
             lyrics_lines.append((lyrics_line, bool(last_ref_line_time_sty == 1 and i == len(langs_order) - 1 and len(lyrics_line[2]) == 1)))
     return lyrics_lines
-
-

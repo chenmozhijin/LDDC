@@ -36,7 +36,7 @@ from PySide6.QtNetwork import (
 from backend.calculate import find_closest_match
 from backend.converter import convert2
 from backend.fetcher import get_lyrics
-from backend.lyrics import Lyrics
+from backend.lyrics import FSLyrics, FSLyricsLine, FSLyricsWord, Lyrics
 from backend.worker import AutoLyricsFetcher
 from utils.args import args
 from utils.data import cfg, local_song_lyrics
@@ -385,7 +385,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             self.current_time = 0.0  # 当前已播放时间,单位:毫秒
         self.lyrics: None | Lyrics = None
         self.lyrics_path: None | str = None
-        self.offseted_lyrics: None | Lyrics = None
+        self.offseted_lyrics: None | FSLyrics = None
         self.song_info = {}  # 歌曲信息
         self.config = {}
 
@@ -600,10 +600,11 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
     def set_lyrics(self, lyrics: Lyrics) -> None:
         self.widget.new_lyrics.emit({"type": lyrics.types.get("orig"), "source": lyrics.source, "inst": False})
-        self.lyrics, self.offseted_lyrics = lyrics, deepcopy(lyrics)
+        self.lyrics, copied_lyrics = lyrics, deepcopy(lyrics)
+        self.offseted_lyrics = copied_lyrics.get_fslyrics(self.song_info.get("duration", self.lyrics.duration * 1000 if self.lyrics.duration else None))
         self.offseted_lyrics.set_data(
-            self.offseted_lyrics.get_full_timestamps_lyrics(
-                self.song_info.get("duration", self.offseted_lyrics.duration * 1000 if self.offseted_lyrics.duration else None), True).add_offset(
+            self.offseted_lyrics.get_fslyrics(
+                self.song_info.get("duration", self.offseted_lyrics.duration * 1000 if self.offseted_lyrics.duration else None)).add_offset(
                     self.config.get("offset", 0)))
         self.lyrics_mapping = {lang: find_closest_match(data1=self.offseted_lyrics["orig"],
                                                         data2=self.offseted_lyrics[lang],
@@ -663,9 +664,9 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         # 计算当前时间
         self.current_time = int(time.time() * 1000) - self.start_time
 
-        perv_lines: deque[tuple[int, tuple[int, int, list[tuple[int, int, str]]]]] = deque(maxlen=2)
-        current_lines: list[tuple[int, tuple[int, int, list[tuple[int, int, str]]]]] = []  # 支持同时多行
-        next_lines: deque[tuple[int, tuple[int, int, list[tuple[int, int, str]]]]] = deque(maxlen=2)
+        perv_lines: deque[tuple[int, FSLyricsLine]] = deque(maxlen=2)
+        current_lines: list[tuple[int, FSLyricsLine]] = []  # 支持同时多行
+        next_lines: deque[tuple[int, FSLyricsLine]] = deque(maxlen=2)
 
         right: list[tuple[str, str, float, str, int, list[tuple[int, int, str]]]] = []
         left: list[tuple[str, str, float, str, int, list[tuple[int, int, str]]]] = []
@@ -675,14 +676,16 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             if words:
                 start = words[0][0]  # noqa: PLW2901
                 end = words[-1][1]  # noqa: PLW2901
+            if not start or not end:
+                continue
             if end < self.current_time:
-                perv_lines.append((index, (start, end, words)))
+                perv_lines.append((index, FSLyricsLine((start, end, words))))
             elif start <= self.current_time <= end:
-                current_lines.append((index, (start, end, words)))
+                current_lines.append((index, FSLyricsLine((start, end, words))))
             elif self.current_time < start and len(next_lines) < 2:
-                next_lines.append((index, (start, end, words)))
+                next_lines.append((index, FSLyricsLine((start, end, words))))
 
-        def add(index_line: tuple[int, tuple[int, int, list[tuple[int, int, str]]]], line_type: Literal["perv", "current", "next"]) -> None:
+        def add(index_line: tuple[int, FSLyricsLine], line_type: Literal["perv", "current", "next"]) -> None:
             i, line = index_line
             alpha = 255  # 透明度
             pos = right if i % 2 else left
@@ -703,7 +706,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
             alpha = int(min(max(alpha, 0), 255))  # 透明度限制在0-255
 
-            def _add(_line: tuple[int, int, list[tuple[int, int, str]]], rubys: list | None = None) -> None:
+            def _add(_line: FSLyricsLine, rubys: list | None = None) -> None:
                 if not rubys:
                     rubys = []
                 text = "".join(word[2] for word in _line[2])
@@ -757,7 +760,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                     if index is not None:
                         _line = self.offseted_lyrics[lang][index]  # type: ignore[reportOptionalSubscript]  不是生成器函数self.offseted_lyrics != None
                         if lang == "ts" and len(_line[2]) == 1:
-                            _line = (line[0], line[1], [(line[0], line[1], _line[2][0][2])])  # 翻译同步原文
+                            _line = FSLyricsLine((line[0], line[1], [FSLyricsWord((line[0], line[1], _line[2][0][2]))]))  # 翻译同步原文
                         _add(_line)
                     else:
                         pos.append(("", "", 0, "", 0, []))

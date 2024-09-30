@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 import re
+from collections.abc import Sequence
 from difflib import SequenceMatcher
 
-from backend.lyrics import LyricsData, LyricsLine
+from backend.lyrics import FSLyricsLine, LyricsLine
 from utils.enum import Source
 
 symbol_map = {
@@ -314,7 +315,7 @@ def calculate_title_score(title1: str, title2: str) -> float:
 CHECK_SAME_LINE_CLEAN_PATTERN = re.compile(r'[(（][^）)]*[）)]|\s+')
 
 
-def is_same_line(line1: LyricsLine, line2: LyricsLine) -> bool:
+def is_same_line(line1: LyricsLine | FSLyricsLine, line2: LyricsLine | FSLyricsLine) -> bool:
     """检查行是否近似相同"""
     line1_str = "".join([word[2]for word in line1[2]])
     line2_str = "".join([word[2]for word in line2[2]])
@@ -325,7 +326,10 @@ def is_same_line(line1: LyricsLine, line2: LyricsLine) -> bool:
     return cleaned_line1 == cleaned_line2 != ""
 
 
-def find_closest_match(data1: LyricsData, data2: LyricsData, data3: LyricsData | None = None, source: Source | None = None) -> dict[int, int]:
+def find_closest_match(data1: Sequence[LyricsLine | FSLyricsLine],
+                       data2: Sequence[LyricsLine | FSLyricsLine],
+                       data3: Sequence[LyricsLine | FSLyricsLine] | None = None,
+                       source: Source | None = None) -> dict[int, int]:
     """为原文匹配其他语言类型的歌词
 
     :param data1: 原文歌词
@@ -349,8 +353,8 @@ def find_closest_match(data1: LyricsData, data2: LyricsData, data3: LyricsData |
 
     if source in (Source.QM, Source.KG):
         if source == Source.QM:
-            data1 = LyricsData([line for line in data1 if len(line[2]) != 0])
-            data2 = LyricsData([line for line in data2 if len(line[2]) != 0])
+            data1 = [line for line in data1 if len(line[2]) != 0]
+            data2 = [line for line in data2 if len(line[2]) != 0]
 
         if len(data1) == len(data2):
             return {i: i for i in range(len(data1))}

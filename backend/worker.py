@@ -461,7 +461,7 @@ class LocalMatchWorker(QRunnable):
     def handle_fetch_result(self, result: dict[str, dict | Lyrics | str]) -> None:
         try:
             song_info = result["orig_info"]
-            if not isinstance(song_info, dict):
+            if not isinstance(song_info, dict) or isinstance(song_info, Lyrics):
                 return
 
             simple_song_info_str = f"{get_artist_str(song_info['artist'])} - {song_info['title']}" if "artist" in song_info else song_info["title"]

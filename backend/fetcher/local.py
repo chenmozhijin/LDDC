@@ -4,7 +4,7 @@ import json
 import os
 import re
 
-from backend.lyrics import Lyrics
+from backend.lyrics import Lyrics, LyricsData, LyricsLine, LyricsWord
 from utils.enum import QrcType, Source
 from utils.error import LyricsFormatError, LyricsNotFoundError, LyricsProcessingError
 from utils.utils import read_unknown_encoding_file
@@ -68,9 +68,9 @@ def json2lyrics(json_data: dict, lyrics: Lyrics) -> None:
             msg = f"JSON歌词数据中包含不正确的键: {key}"
             raise LyricsProcessingError(msg)
 
-        lyrics[key] = []
+        lyrics[key] = LyricsData([])
         for line in lyrics_data:
-            lyrics[key].append((line[0], line[1], [tuple(word) for word in line[2]]))
+            lyrics[key].append(LyricsLine((line[0], line[1], [LyricsWord(tuple(word)) for word in line[2]])))
 
 
 def get_lyrics(lyrics: Lyrics, path: str | None, data: bytes | None = None) -> None:
@@ -111,7 +111,7 @@ def get_lyrics(lyrics: Lyrics, path: str | None, data: bytes | None = None) -> N
                             lyrics["ts"] = lyric
         elif data:
             lyrics.tags, lyric = qrc_str_parse(qrc_decrypt(data, QrcType.LOCAL))
-            lyrics[0] = lyric
+            lyrics["orig"] = lyric
 
     elif data.startswith(KRC_MAGICHEADER):
         # KRC歌词格式

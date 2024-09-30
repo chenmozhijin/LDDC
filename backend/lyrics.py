@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
-from typing import TYPE_CHECKING, NewType
+from typing import TYPE_CHECKING, Literal, NewType, overload
 
 if TYPE_CHECKING:
     from utils.enum import Source
@@ -10,8 +10,29 @@ LyricsLine = NewType("LyricsLine", tuple[int | None, int | None, list[LyricsWord
 LyricsData = NewType("LyricsData", list[LyricsLine])
 MultiLyricsData = NewType("MultiLyricsData", dict[str, LyricsData])
 
+# FS 是 full_timestamps 的缩写
+FSLyricsWord = NewType("FSLyricsWord", tuple[int, int, str])
+FSLyricsLine = NewType("FSLyricsLine", tuple[int, int, list[FSLyricsWord]])
+FSLyricsData = NewType("FSLyricsData", list[FSLyricsLine])
+FSMultiLyricsData = NewType("FSMultiLyricsData", dict[str, FSLyricsData])
 
-def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only_line: bool = False, skip_none: bool = False) -> LyricsData:
+
+@overload
+def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only_line: Literal[False], skip_none: Literal[True]) -> FSLyricsData:
+    ...
+
+
+@overload
+def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only_line: Literal[True], skip_none: bool = False) -> LyricsData:
+    ...
+
+
+@overload
+def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only_line: bool = False, skip_none: Literal[False] = False) -> LyricsData:
+    ...
+
+
+def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only_line: bool = False, skip_none: bool = False) -> LyricsData | FSLyricsData:
     """获取完整时间戳的歌词数据
 
     :param data: 歌词数据
@@ -20,6 +41,7 @@ def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only
     :param skip_none: 是否跳过无法推算时间戳的行
     """
     result = LyricsData([])
+    fsresult = FSLyricsData([])
     for i, line in enumerate(data):
         line_start_time = line[2][0][0] if line[0] is None and line[2] and line[2][0][0] is not None else line[0]
         line_end_time = line[2][-1][1] if line[1] is None and line[2] and line[2][-1][1] is not None else line[1]
@@ -28,22 +50,20 @@ def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only
                 line_start_time = 0
             elif data[i - 1][1] is not None:
                 line_start_time = data[i - 1][1]
-            elif skip_none:
-                continue
 
         if line_end_time is None:
             if i == len(data) - 1:
                 line_end_time = duration
             elif data[i + 1][0] is not None:
                 line_end_time = data[i + 1][0]
-            elif skip_none:
-                continue
 
         if only_line:
-            result.append(LyricsLine((line_start_time, line_end_time, line[2])))
+            if not skip_none or (line_start_time is not None and line_end_time is not None):
+                result.append(LyricsLine((line_start_time, line_end_time, line[2])))
             continue
 
-        words = []
+        words: list[LyricsWord] = []
+        fswords = []
         for j, word in enumerate(line[2]):
             word_start_time = word[0]
             word_end_time = word[1]
@@ -52,24 +72,33 @@ def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only
                     word_start_time = line_start_time
                 elif j != 0 and line[2][j - 1][1] is not None:
                     word_start_time = line[2][j - 1][1]
-                elif skip_none:
-                    continue
 
             if word_end_time is None:
                 if j == len(line[2]) - 1 and line_end_time:
                     word_end_time = line_end_time
                 elif j != len(line[2]) - 1 and line[2][j + 1][0] is not None:
                     word_end_time = line[2][j + 1][0]
-                elif skip_none:
+
+            if not skip_none:
+                words.append(LyricsWord((word_start_time, word_end_time, word[2])))
+            else:
+                if not word_start_time or not word_end_time:
                     continue
+                fswords.append(FSLyricsWord((word_start_time, word_end_time, word[2])))
 
-            words.append((word_start_time, word_end_time, word[2]))
+        if not skip_none:
+            result.append(LyricsLine((line_start_time, line_end_time, words)))
+        else:
+            if not line_start_time or not line_end_time:
+                continue
+            fsresult.append(FSLyricsLine((line_start_time, line_end_time, fswords)))
 
-        result.append(LyricsLine((line_start_time, line_end_time, words)))
+    if only_line is False and skip_none is True:
+        return fsresult
     return result
 
 
-class Lyrics(dict):
+class LyricsBase(dict):
     INFO_KEYS = ("source", "title", "artist", "album", "id", "mid", "duration", "accesskey")
 
     def __init__(self, info: dict | None = None) -> None:
@@ -112,15 +141,17 @@ class Lyrics(dict):
             return self.duration * 1000
         if self.get("orig"):
             last_line = self["orig"][-1]
-            if last_line[1] is not None:
-                return last_line[1]
-            if last_line[2]:
-                if last_line[2][-1][1] is not None:
-                    return last_line[2][-1][1]
-                if last_line[2][-1][0] is not None:
-                    return last_line[2][-1][0]
-            if last_line[0] is not None:
-                return last_line[0]
+            last_start, last_end, last_words = last_line
+            if last_end is not None:
+                return last_end
+            if last_words:
+                last_word_start, last_word_end, _ = last_words[-1]
+                if last_word_end is not None:
+                    return last_word_end
+                if last_word_start is not None:
+                    return last_word_start
+            if last_start is not None:
+                return last_start
         elif self:
             last_line = next(iter(self.values()))[-1]
             if last_line[1] is not None:
@@ -167,21 +198,21 @@ class Lyrics(dict):
         for lang, lyrics_data in data.items():
             self[lang] = lyrics_data
 
-    def get_full_timestamps_lyrics(self, duration_ms: int | None = None, skip_none: bool = False) -> "Lyrics":
+    def get_fslyrics(self, duration_ms: int | None = None) -> "FSLyrics":
         """获取完整时间戳的歌词
 
         :param duration_ms: 歌曲时长
         :param skip_none: 是否跳过没有时间戳的歌词
         :return: 完整时间戳的歌词
         """
-        full_timestamps_lyrics = Lyrics({"source": self.source,
-                                         "title": self.title,
-                                         "artist": self.artist,
-                                         "album": self.album,
-                                         "id": self.id,
-                                         "mid": self.mid,
-                                         "duration": self.duration,
-                                         "accesskey": self.accesskey})
+        full_timestamps_lyrics = FSLyrics({"source": self.source,
+                                           "title": self.title,
+                                           "artist": self.artist,
+                                           "album": self.album,
+                                           "id": self.id,
+                                           "mid": self.mid,
+                                           "duration": self.duration,
+                                           "accesskey": self.accesskey})
 
         duration = duration_ms if duration_ms else (self.duration * 1000 if self.duration else None)
         full_timestamps_lyrics.types = self.types
@@ -190,7 +221,7 @@ class Lyrics(dict):
             full_timestamps_lyrics[lang] = get_full_timestamps_lyrics_data(data=lyrics_data,
                                                                            duration=duration,
                                                                            only_line=False,
-                                                                           skip_none=skip_none)
+                                                                           skip_none=True)
         return full_timestamps_lyrics
 
     def is_inst(self) -> bool:
@@ -200,3 +231,25 @@ class Lyrics(dict):
             if text in ("此歌曲为没有填词的纯音乐，请您欣赏", "纯音乐，请欣赏"):
                 return True
         return False
+
+
+class Lyrics(LyricsBase):
+    def __getitem__(self, item: str) -> LyricsData:
+        return super().__getitem__(item)
+
+    def __setitem__(self, key: str, value: LyricsData) -> None:
+        super().__setitem__(key, value)
+
+    def __delitem__(self, key: str) -> None:
+        super().__delitem__(key)
+
+
+class FSLyrics(LyricsBase):
+    def __getitem__(self, item: str) -> FSLyricsData:
+        return super().__getitem__(item)
+
+    def __setitem__(self, key: str, value: FSLyricsData) -> None:
+        super().__setitem__(key, value)
+
+    def __delitem__(self, key: str) -> None:
+        super().__delitem__(key)

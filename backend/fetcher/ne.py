@@ -10,7 +10,7 @@ from utils.error import LyricsRequestError
 from .share import lrc2list, plaintext2list
 
 
-def yrc2list(yrc: str) -> list:
+def yrc2list(yrc: str) -> LyricsData:
     """将yrc转换为列表[(行起始时间, 行结束时间, [(字起始时间, 字结束时间, 字内容)])]"""
     lrc_list = LyricsData([])
 
