@@ -62,5 +62,6 @@ def search(keyword: str,
     else:
         raise error
 
-    cache.set(cache_key, results, 216000)
+    if results:
+        cache.set(cache_key, results, 216000)
     return results
