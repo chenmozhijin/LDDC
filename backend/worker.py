@@ -56,8 +56,7 @@ from .converter import convert2
 from .fetcher import get_lyrics
 from .lyrics import Lyrics
 from .searcher import search
-from .song_info import file_extensions as audio_formats
-from .song_info import get_audio_file_infos, parse_cue_from_file
+from .song_info import audio_formats, get_audio_file_infos, parse_cue_from_file
 
 
 class CheckUpdateSignal(QObject):
@@ -693,7 +692,7 @@ class AutoLyricsFetcher(QRunnable):
                 self.obtained_lyrics.append((song_info, result_lyrics))
             self.get_result()
         except Exception:
-            logger.exception("歌词结果处理失败, 'orig_info': %s, 'self.obtained_lyrics': %s", self.info, self.obtained_lyrics)
+            logger.exception("歌词结果处理失败, 'orig_info': %s", self.info)
             self.send_result({"status": "歌词结果处理失败", "orig_info": self.info})
 
     def get_result(self) -> None:
@@ -771,7 +770,7 @@ class AutoLyricsFetcher(QRunnable):
 
         result = {"status": "成功", "orig_info": self.info, "lyrics": result, "is_inst": is_inst, "result_info": info}
         if self.return_search_result:
-            result["search_result"] = {s: self.search_result[s] for s in self.source}
+            result["search_result"] = {s: self.search_result[s] for s in self.source if s in self.search_result}
         self.send_result(result)
 
     def send_result(self, result: dict) -> None:
