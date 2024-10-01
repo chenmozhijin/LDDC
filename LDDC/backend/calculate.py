@@ -352,12 +352,13 @@ def find_closest_match(data1: Sequence[LyricsLine | FSLyricsLine],
         matched = {}
 
     if source in (Source.QM, Source.KG):
-        if source == Source.QM:
-            data1 = [line for line in data1 if len(line[2]) != 0]
-            data2 = [line for line in data2 if len(line[2]) != 0]
+        for i in range(2):
+            if i == 1:
+                data1 = [line for line in data1 if len(line[2]) != 0]
+                data2 = [line for line in data2 if len(line[2]) != 0]
 
-        if len(data1) == len(data2):
-            return {i: i for i in range(len(data1))}
+            if len(data1) == len(data2):
+                return {i: i for i in range(len(data1))}
 
     time_difference_list = [(i1, i2, abs(s1 - s2)) for i1, (s1, e1, t1) in enumerate(data1) if isinstance(s1, int)
                             for i2, (s2, e2, t2) in enumerate(data2) if isinstance(s2, int)]
