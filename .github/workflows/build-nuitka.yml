@@ -95,7 +95,8 @@ jobs:
               if : ${{ runner.os == 'Linux' || runner.os == 'macOS'}}
               with:
                 nuitka-version: main
-                script-name: LDDC.py
+                script-name: LDDC
+                python-flag: -m
                 standalone: true
                 onefile: false
                 report: nuitka-report.xml
@@ -117,7 +118,9 @@ jobs:
               if : ${{ runner.os == 'Windows' }}
               with:
                 nuitka-version: main
-                script-name: LDDC.py
+                script-name: LDDC
+                python-flag: -m
+
                 standalone: true
                 onefile: false
                 report: nuitka-report.xml
