@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 import argparse
+import sys
 
 
 class Args:
@@ -18,7 +19,7 @@ class Args:
 
 
 args = Args()
-main_module = __import__("__main__")
+main_module = sys.modules["__main__"]
 if hasattr(main_module, 'name') and main_module.name == "LDDC":
     args.parse()
     running_lddc = True
