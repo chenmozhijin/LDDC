@@ -21,3 +21,6 @@ args = Args()
 main_module = __import__("__main__")
 if hasattr(main_module, 'name') and main_module.name == "LDDC":
     args.parse()
+    running_lddc = True
+else:
+    running_lddc = False

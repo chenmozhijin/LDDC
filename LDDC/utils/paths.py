@@ -5,6 +5,7 @@ import os
 import platform
 import sys
 
+from .args import running_lddc
 from .version import __version__
 
 csidl = {
@@ -66,11 +67,15 @@ def create_directories(dirs: list[str]) -> None:
 
 
 create_directories([config_dir, data_dir, cache_dir, log_dir, auto_save_dir])
-info_path = os.path.join(data_dir, "info.json")
-if "__compiled__" in globals() or hasattr(sys, '_MEIPASS'):
-    command_line = sys.argv[0]
+
+if running_lddc:
+    info_path = os.path.join(data_dir, "info.json")
+    if "__compiled__" in globals() or hasattr(sys, '_MEIPASS'):
+        command_line = sys.argv[0]
+    else:
+        command_line = f'"{sys.executable}" "{os.path.abspath(__import__("__main__").__file__)}"'
 else:
-    command_line = f'"{sys.executable}" "{os.path.abspath(__import__("__main__").__file__)}"'
+    command_line = None
 
 
 def __update_info() -> None:
@@ -83,4 +88,5 @@ def __update_info() -> None:
         json.dump(info, f, ensure_ascii=False)
 
 
-__update_info()
+if running_lddc:
+    __update_info()

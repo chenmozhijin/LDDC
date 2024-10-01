@@ -43,7 +43,7 @@
         <x>0</x>
         <y>0</y>
         <width>1167</width>
-        <height>950</height>
+        <height>948</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -110,7 +110,7 @@ p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
 li.unchecked::marker { content: &quot;\2610&quot;; }
 li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Microsoft YaHei UI'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;以下占位符可用&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;歌名: %&amp;lt;title&amp;gt; 艺术家: %&amp;lt;artist&amp;gt;&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;专辑名: %&amp;lt;album&amp;gt; 歌曲/歌词id: %&amp;lt;id&amp;gt;&lt;/span&gt;&lt;/p&gt;
@@ -435,7 +435,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                 </property>
                </widget>
               </item>
-              <item row="0" column="0" alignment="Qt::AlignmentFlag::AlignLeft">
+              <item row="0" column="0" alignment="">
                <widget class="QLabel" name="label_11">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -839,17 +839,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <customwidget>
    <class>LyricOrderListWidget</class>
    <extends>QListWidget</extends>
-   <header>ui.custom_widgets.h</header>
+   <header>LDDC.ui.custom_widgets.h</header>
   </customwidget>
   <customwidget>
    <class>ColorsListWidget</class>
    <extends>QListWidget</extends>
-   <header>ui.custom_widgets</header>
+   <header>LDDC.ui.custom_widgets</header>
   </customwidget>
   <customwidget>
    <class>CheckBoxListWidget</class>
    <extends>QListWidget</extends>
-   <header>ui.custom_widgets</header>
+   <header>LDDC.ui.custom_widgets</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -140,6 +140,9 @@ class LDDCService(QObject):
         exit_manager.close_signal.connect(self.stop_service, Qt.ConnectionType.BlockingQueuedConnection)
 
     def start_service(self) -> None:
+        if command_line is None:
+            msg = "You should start LDDCService by starting the LDDC main program"
+            raise RuntimeError(msg)
 
         if args.get_service_port and not self.shared_memory.attach():
             cmd = shlex.split(command_line, posix=False)
