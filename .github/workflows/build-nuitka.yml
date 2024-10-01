@@ -95,8 +95,8 @@ jobs:
               if : ${{ runner.os == 'Linux' || runner.os == 'macOS'}}
               with:
                 nuitka-version: main
-                script-name: LDDC
-                python-flag: -m
+                script-name: LDDC\__main__.py
+                
                 standalone: true
                 onefile: false
                 report: nuitka-report.xml
@@ -112,13 +112,15 @@ jobs:
                 macos-app-version: ${{ steps.info.outputs.version }}
                 macos-create-app-bundle: true
                 macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
+              env:
+                PYTHONPATH: ${{ github.workspace }}
 
             - name: Build Executable(Windows)
               uses: Nuitka/Nuitka-Action@main
               if : ${{ runner.os == 'Windows' }}
               with:
                 nuitka-version: main
-                script-name: LDDC
+                script-name: LDDC\__main__.py
                 python-flag: -m
 
                 standalone: true
@@ -133,6 +135,8 @@ jobs:
                 windows-icon-from-ico: "LDDC/res/img/icon/logo.ico"
                 mingw64: true
                 windows-console-mode: 'attach'
+              env:
+                PYTHONPATH: ${{ github.workspace }}
 
             - name: Upload report
               uses: actions/upload-artifact@v4
