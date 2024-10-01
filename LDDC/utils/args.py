@@ -20,7 +20,7 @@ class Args:
 
 args = Args()
 main_module = sys.modules["__main__"]
-if hasattr(main_module, 'name') and main_module.name == "LDDC" or ("__compiled__" in globals() or hasattr(sys, '_MEIPASS')):
+if hasattr(main_module, 'name') and main_module.name == "LDDC":
     args.parse()
     running_lddc = True
 else:

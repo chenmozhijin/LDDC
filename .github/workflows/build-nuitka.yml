@@ -121,7 +121,6 @@ jobs:
               with:
                 nuitka-version: main
                 script-name: LDDC
-                python-flag: -m
 
                 standalone: true
                 onefile: false
