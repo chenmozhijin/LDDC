@@ -91,7 +91,7 @@ def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only
         if not skip_none:
             result.append(LyricsLine((line_start_time, line_end_time, words)))
         else:
-            if not line_start_time or not line_end_time:
+            if line_start_time is None or line_end_time is None:
                 continue
             fsresult.append(FSLyricsLine((line_start_time, line_end_time, fswords)))
 
