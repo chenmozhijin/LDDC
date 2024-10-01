@@ -604,11 +604,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
     def set_lyrics(self, lyrics: Lyrics) -> None:
         self.widget.new_lyrics.emit({"type": lyrics.types.get("orig"), "source": lyrics.source, "inst": False})
         self.lyrics, copied_lyrics = lyrics, deepcopy(lyrics)
-        self.offseted_lyrics = copied_lyrics.get_fslyrics(self.song_info.get("duration", self.lyrics.duration * 1000 if self.lyrics.duration else None))
-        self.offseted_lyrics.set_data(
-            self.offseted_lyrics.get_fslyrics(
-                self.song_info.get("duration", self.offseted_lyrics.duration * 1000 if self.offseted_lyrics.duration else None)).add_offset(
-                    self.config.get("offset", 0)))
+        self.offseted_lyrics = copied_lyrics.get_fslyrics(self.song_info.get("duration"))
+        self.offseted_lyrics.set_data(self.offseted_lyrics.add_offset(self.config.get("offset", 0)))
         self.lyrics_mapping = {lang: find_closest_match(data1=self.offseted_lyrics["orig"],
                                                         data2=self.offseted_lyrics[lang],
                                                         data3=self.offseted_lyrics.get("orig_lrc"),

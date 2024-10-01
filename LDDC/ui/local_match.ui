@@ -434,7 +434,7 @@
   <customwidget>
    <class>CheckBoxListWidget</class>
    <extends>QListWidget</extends>
-   <header>ui.custom_widgets</header>
+   <header>LDDC.ui.custom_widgets</header>
   </customwidget>
  </customwidgets>
  <resources/>

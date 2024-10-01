@@ -55,7 +55,11 @@ def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only
 
         if line_end_time is None:
             if i == len(data) - 1:
-                line_end_time = duration
+                if duration is not None and line_start_time is not None:
+                    if duration >= line_start_time:
+                        line_end_time = duration
+                else:
+                    line_end_time = duration
             elif data[i + 1][0] is not None:
                 line_end_time = data[i + 1][0]
 
@@ -220,7 +224,7 @@ class LyricsBase(dict):
                                            "duration": self.duration,
                                            "accesskey": self.accesskey})
 
-        duration = duration_ms if duration_ms else (self.duration * 1000 if self.duration else None)
+        duration = duration_ms if duration_ms else self.get_duration()
         full_timestamps_lyrics.types = self.types
         full_timestamps_lyrics.tags = self.tags
         for lang, lyrics_data in self.items():
