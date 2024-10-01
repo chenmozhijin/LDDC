@@ -95,7 +95,7 @@ jobs:
               if : ${{ runner.os == 'Linux' || runner.os == 'macOS'}}
               with:
                 nuitka-version: main
-                script-name: LDDC\__main__.py
+                script-name: LDDC
                 
                 standalone: true
                 onefile: false
@@ -120,7 +120,7 @@ jobs:
               if : ${{ runner.os == 'Windows' }}
               with:
                 nuitka-version: main
-                script-name: LDDC\__main__.py
+                script-name: LDDC
                 python-flag: -m
 
                 standalone: true
