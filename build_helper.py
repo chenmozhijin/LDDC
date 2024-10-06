@@ -6,7 +6,7 @@ import time
 from LDDC.utils.version import __version__, parse_version
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--task', choices=['get_version', 'get_year'], required=True)
+parser.add_argument('--task', choices=['get_version', 'get_year', 'get_num_version'], required=True)
 arg = parser.parse_args()
 
 num_version = ".".join(str(i) for i in parse_version(__version__)[:3])
