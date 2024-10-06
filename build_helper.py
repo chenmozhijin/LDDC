@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--task', choices=['get_version', 'get_year'], required=True)
 arg = parser.parse_args()
 
-version = ".".join(str(i) for i in parse_version(__version__)[:3])
+num_version = ".".join(str(i) for i in parse_version(__version__)[:3])
 
 year = time.strftime("%Y")
 if year != '2024':
@@ -17,6 +17,8 @@ if year != '2024':
 
 match arg.task:
     case 'get_version':
-        print(version)
+        print(__version__)
+    case 'get_num_version':
+        print(num_version)
     case 'get_year':
         print(year)

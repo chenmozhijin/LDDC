@@ -88,6 +88,7 @@ jobs:
               run: |
                 echo "copyright=Copyright (C) $(python build_helper.py --task get_year) 沉默の金" >> $GITHUB_OUTPUT
                 echo "version=$(python build_helper.py --task get_version)" >> $GITHUB_OUTPUT
+                echo "num_version=$(python build_helper.py --task get_num_version)" >> $GITHUB_OUTPUT
                 cat $GITHUB_OUTPUT
 
             - name: Build Executable(Linux/macOS)
@@ -102,14 +103,14 @@ jobs:
                 report: nuitka-report.xml
                 enable-plugins: pyside6
                 product-name: "LDDC"
-                file-version: ${{ steps.info.outputs.version }}
-                product-version: ${{ steps.info.outputs.version }}
+                file-version: ${{ steps.info.outputs.num_version }}
+                product-version: ${{ steps.info.outputs.num_version }}
                 copyright: ${{ steps.info.outputs.copyright }}
 
                 disable-console: true
 
                 macos-app-icon: "LDDC/res/img/icon/logo.icns"
-                macos-app-version: ${{ steps.info.outputs.version }}
+                macos-app-version: ${{ steps.info.outputs.num_version }}
                 macos-create-app-bundle: true
                 macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
               env:
@@ -127,8 +128,8 @@ jobs:
                 report: nuitka-report.xml
                 enable-plugins: pyside6
                 product-name: "LDDC"
-                file-version: ${{ steps.info.outputs.version }}
-                product-version: ${{ steps.info.outputs.version }}
+                file-version: ${{ steps.info.outputs.num_version }}
+                product-version: ${{ steps.info.outputs.num_version }}
                 copyright: ${{ steps.info.outputs.copyright }}
 
                 windows-icon-from-ico: "LDDC/res/img/icon/logo.ico"
@@ -162,6 +163,12 @@ jobs:
 
                 mv dist/LDDC.dmg upload/LDDC-${{ steps.info.outputs.version }}-${{ steps.arch.outputs.arch }}.dmg
 
+            - name: Add fcitx5 support
+              if: ${{ runner.os == 'Linux' }}
+              uses: chenmozhijin/fcitx5-pyside@master
+              with:
+                plugins-path: ../build/LDDC.dist/PySide6/qt-plugins
+
             - name: create deb package
               if: ${{ runner.os == 'Linux' }}
               run: |
@@ -172,6 +179,7 @@ jobs:
                 mkdir -p deb/usr/share/applications
                 mkdir -p deb/usr/share/icons/
                 cp -r ../LDDC/res/img/icon/logo.ico deb/usr/share/icons/LDDC.ico
+                cp ./LICENSE deb/usr/share/doc/LDDC/
                 cp -RT ../build/LDDC.dist deb/usr/lib/LDDC
                 chmod +x deb/usr/lib/LDDC/LDDC.bin
                 ln -s ../lib/LDDC/LDDC.bin deb/usr/bin/LDDC
@@ -179,12 +187,13 @@ jobs:
                 echo "Package: LDDC" >> deb/DEBIAN/control
                 echo "Version: ${{ steps.info.outputs.version }}" >> deb/DEBIAN/control
                 echo "Architecture: ${{ steps.arch.outputs.arch }}" >> deb/DEBIAN/control
-                echo "Maintainer: chenmozhijin" >> deb/DEBIAN/control
-                echo "Description: lyrics tool" >> deb/DEBIAN/control
+                echo "Maintainer: chenmozhijin <cmzj@cmzj.org>" >> deb/DEBIAN/control
+                echo "Description: Lyrics acquisition tool" >> deb/DEBIAN/control
+                echo "Homepage: https://github.com/chenmozhijin/LDDC" >> deb/DEBIAN/control
   
                 echo "[Desktop Entry]" >> deb/usr/share/applications/LDDC.desktop
                 echo "Name=LDDC" >> deb/usr/share/applications/LDDC.desktop
-                echo "Comment=lyrics tool" >> deb/usr/share/applications/LDDC.desktop
+                echo "Comment=Lyrics acquisition tool" >> deb/usr/share/applications/LDDC.desktop
                 echo "Exec=/usr/bin/LDDC" >> deb/usr/share/applications/LDDC.desktop
                 echo "Icon=/usr/share/icons/LDDC.ico" >> deb/usr/share/applications/LDDC.desktop
                 echo "Terminal=false" >> deb/usr/share/applications/LDDC.desktop
