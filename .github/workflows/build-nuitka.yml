@@ -165,9 +165,9 @@ jobs:
 
             - name: Add fcitx5 support
               if: ${{ runner.os == 'Linux' }}
-              uses: chenmozhijin/fcitx5-pyside@master
+              uses: chenmozhijin/fcitx5-pyside@main
               with:
-                plugins-path: ../build/LDDC.dist/PySide6/qt-plugins
+                plugins-path: ${{ github.workspace }}/build/LDDC.dist/PySide6/qt-plugins
 
             - name: create deb package
               if: ${{ runner.os == 'Linux' }}
