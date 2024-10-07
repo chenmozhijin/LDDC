@@ -17,7 +17,7 @@ if year != '2024':
 
 match arg.task:
     case 'get_version':
-        print(__version__)
+        print(__version__[1:])
     case 'get_num_version':
         print(num_version)
     case 'get_year':
