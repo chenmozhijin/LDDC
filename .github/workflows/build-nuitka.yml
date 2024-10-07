@@ -179,7 +179,6 @@ jobs:
                 mkdir -p deb/usr/share/applications
                 mkdir -p deb/usr/share/icons/
                 cp -r ../LDDC/res/img/icon/logo.ico deb/usr/share/icons/LDDC.ico
-                cp ./LICENSE deb/usr/share/doc/LDDC/
                 cp -RT ../build/LDDC.dist deb/usr/lib/LDDC
                 chmod +x deb/usr/lib/LDDC/LDDC.bin
                 ln -s ../lib/LDDC/LDDC.bin deb/usr/bin/LDDC
