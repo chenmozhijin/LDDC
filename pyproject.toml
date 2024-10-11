@@ -2,7 +2,7 @@
 name = "LDDC"
 dynamic = ["version"]
 dependencies = [
-    "PySide6",
+    "PySide6-Essentials>=6.8.0",
     "requests",
     "mutagen",
     "diskcache",

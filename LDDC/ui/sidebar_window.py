@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QEvent, Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -108,6 +108,26 @@ class SidebarWindow(QMainWindow):
         widget.setParent(self.Widgets)
         self.Widgets.addTab(widget, "")
         self.Total_Widgets += 1
+
+    def changeEvent(self, event: QEvent) -> None:
+        if event.type() == QEvent.Type.StyleChange:
+            for i in range(self.Total_Widgets):
+                item = self.sidebar.itemAt(i).widget()
+                if isinstance(item, QPushButton):
+                    item.setStyleSheet(
+                        """
+                        QPushButton {
+                            border: none;
+                            padding: 5px;
+                            font-size: 16px;
+                            border-radius: 10px;
+                        }
+                        QPushButton:checked {
+                            background-color: #d9d9d9;
+                        }
+                        """,
+                    )
+        return super().changeEvent(event)
 
     def clear_widgets(self) -> None:
         """清空所有页面"""
