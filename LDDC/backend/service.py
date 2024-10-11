@@ -61,13 +61,11 @@ class ServiceInstanceBase(QRunnable):
 
     def __init__(self, service: "LDDCService", instance_id: int, client_id: int, pid: int | None = None) -> None:
         super().__init__()
+        self.running = False
         self.service = service
         self.instance_id = instance_id
         self.pid = pid
         self.client_id = client_id
-
-        self.signals = ServiceInstanceSignal()
-        self.signals.stop.connect(self.stop)
 
     @abstractmethod
     def handle_task(self, task: dict) -> None:
@@ -80,16 +78,17 @@ class ServiceInstanceBase(QRunnable):
     def stop(self) -> None:
         self.loop.quit()
         logger.info("Service instance %s stopped", self.instance_id)
-        instance_dict_mutex.lock()
-        del instance_dict[self.instance_id]
-        instance_dict_mutex.unlock()
 
     def run(self) -> None:
         logger.info("Service instance %s started", self.instance_id)
-        self.signals.handle_task.connect(self.handle_task)
+        self.signals = ServiceInstanceSignal()
+        self.signals.stop.connect(self.stop)
+        self.signals.handle_task.connect(self.handle_task, Qt.ConnectionType.QueuedConnection)
         self.loop = QEventLoop()
         self.init()
+        self.running = True
         self.loop.exec()
+        self.running = False
 
 
 instance_dict: dict[int, ServiceInstanceBase] = {}
@@ -111,7 +110,7 @@ def clean_dead_instance() -> bool:
 
 def check_any_instance_alive() -> bool:
     clean_dead_instance()
-    return bool(instance_dict)
+    return bool([True for instance in instance_dict.values() if instance.running])
 
 
 class Client:
@@ -393,6 +392,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.config = {}
 
     def to_select(self, if_show: bool = False) -> None:
+        """打开选择器"""
         if if_show and not in_main_thread(self.widget.selector.isVisible):
             return
         info = {"offset": self.config.get("offset", 0)}
@@ -415,7 +415,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         else:
             start = False
         info["langs"] = self.config.get("langs", self.default_langs)
-        in_main_thread(self.widget.selector.show, info)
+        self.widget.show_selector.emit(info)
         if start:
             self.timer.start()
 

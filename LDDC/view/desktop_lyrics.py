@@ -800,7 +800,7 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
         self.verticalLayout.addWidget(self.control_bar)
         self.verticalLayout.addWidget(self.lyrics_text)
 
-        self.selector = DesktopLyricsSelectWidget()
+        self.selector = DesktopLyricsSelectWidget(self)
 
     def move_to_center(self) -> None:
         screen_geometry = self.screen().geometry()
