@@ -53,6 +53,7 @@ jobs:
               run: |
                 pip install PySide6-Addons
                 qt_translations_path=$(python build_helper.py --task get_qt_translations_path)
+                mkdir -p /tmp/qt_translations
                 cp $qt_translations_path/*.qm /tmp/qt_translations
                 pip freeze > /tmp/modules.txt
                 pip uninstall -r /tmp/modules.txt -y
