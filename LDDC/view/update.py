@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import re
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, Slot
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QAbstractButton, QDialog, QDialogButtonBox
 
@@ -35,6 +35,7 @@ class UpdateQDialog(QDialog, Ui_UpdateDialog):
             dialogs.remove(self)
 
 
+@Slot(str, str, str, str)
 def show_new_version_dialog(name: str, repo: str, new_version: str, body: str) -> None:
     dialog = UpdateQDialog(name, repo, new_version, body)
     dialog.show()

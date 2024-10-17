@@ -91,6 +91,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
             case _:
                 return Source(self.source_comboBox.currentIndex())
 
+    @Slot()
     def result_return(self) -> None:
         """返回"""
         if self.search_result is not None and len(self.result_path) == 2 and self.result_path[0] == "search":
@@ -195,6 +196,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
         self.preview_plainTextEdit.setPlainText(result['converted_lyrics'])
 
+    @Slot()
     def update_preview_lyric(self, info: dict | None = None) -> None:
         """开始更新预览歌词"""
         if not isinstance(info, dict) and self.preview_lyric_result is not None:
@@ -380,6 +382,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         worker.signals.error.connect(self.search_lyrics_error_slot)
         threadpool.start(worker)
 
+    @Slot(QModelIndex)
     def select_results(self, index: QModelIndex) -> None:
         """结果表格元素被双击时调用"""
         row = index.row()  # 获取被双击的行
@@ -448,6 +451,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.results_tableWidget.removeRow(last_row)
         MsgBox.critical(self, self.tr("错误"), error)
 
+    @Slot()
     def results_table_scroll_changed(self) -> None:
         # 判断是否已经滚动到了底部或消失
         results_table_scroll = self.results_tableWidget.verticalScrollBar()
@@ -584,6 +588,7 @@ class SearchWidget(SearchWidgetBase):
                                         "lyrics_file_name_fmt": lyrics_file_name_fmt,
                                         })
 
+        @Slot()
         def pushButton_clicked_slot() -> None:
             if worker.is_running:
                 worker.stop()
@@ -595,6 +600,7 @@ class SearchWidget(SearchWidgetBase):
             self.get_list_lyrics_box.pushButton.setText(self.tr("关闭"))
             self.get_list_lyrics_box.ask_to_close = False
 
+        @Slot()
         def get_list_lyrics_update(count: int | str, result: dict | None = None) -> None:
             text = ""
             if result is None or isinstance(count, str):
@@ -678,6 +684,7 @@ class SearchWidget(SearchWidgetBase):
                 MsgBox.warning(self, self.tr('警告'), self.tr('歌曲标签中的歌词应为LRC格式'))
                 return
 
+            @Slot()
             def file_selected(save_path: str) -> None:
                 try:
                     if self.preview_lyric_result:
@@ -700,6 +707,7 @@ class SearchWidget(SearchWidgetBase):
 
     @Slot()
     def select_savepath(self) -> None:
+        @Slot(str)
         def file_selected(save_path: str) -> None:
             self.save_path_lineEdit.setText(os.path.normpath(save_path))
         dialog = QFileDialog(self)
@@ -792,6 +800,7 @@ class SearchWidget(SearchWidgetBase):
         self.preview_plainTextEdit.setPlainText(self.tr("正在自动获取 {0} 的歌词...").format(
             f"{song['artist']} - {song['title']}" if song['artist'] and len(song['title']) * 2 > len(song['artist']) else song['title']))
 
+    @Slot(dict)
     def auto_fetch_slot(self, result: dict) -> None:
         if result.get("taskid") != tuple(self.taskid.values()):
             if result.get("taskid", (0, -1))[1] == self.taskid["update_preview_lyric"]:

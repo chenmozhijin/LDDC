@@ -6,7 +6,7 @@
 import math
 from typing import NewType
 
-from PySide6.QtCore import QEvent, QMutex, QMutexLocker, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QMutex, QMutexLocker, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer, Signal, Slot
 from PySide6.QtGui import (
     QAction,
     QBrush,
@@ -111,7 +111,9 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
         super().update_preview_lyric_result_slot(taskid, result)
         self.path = result["info"].get("path", "")
 
+    @Slot()
     def open_local_lyrics(self) -> None:
+        @Slot(str)
         def file_selected(path: str) -> None:
             try:
                 lyrics, _from_cache = get_lyrics(Source.Local, use_cache=False, path=path)
@@ -135,6 +137,7 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
         dialog.fileSelected.connect(file_selected)
         dialog.open()
 
+    @Slot()
     def select_lyrics(self) -> None:
         if self.preview_lyric_result:
             lyrics = self.preview_lyric_result["lyrics"]
@@ -148,6 +151,8 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
                 return
         MsgBox.warning(self, self.tr("提示"), self.tr("请先选择歌词"))
 
+    @Slot()
+    @Slot(dict)
     def show(self, infos: dict | None = None) -> None:
         if infos:
             keyword = infos.get("keyword")
@@ -229,6 +234,7 @@ class DesktopLyricsMenu(QMenu):
         self.addAction(self.action_show_main_window)
         self.addAction(self.action_show_local_song_lyrics_db_manager)
 
+    @Slot()
     def show_hide_triggered(self) -> None:
         if self._parent.isVisible():
             self._parent.hide()
@@ -241,10 +247,12 @@ class DesktopLyricsMenu(QMenu):
         if not self._parent.mouse_inside and not self._parent.resizing:
             self._parent.set_transparency(False)
 
+    @Slot()
     def show_local_song_lyrics_db_manager(self) -> None:
         from .local_song_lyrics_db_manager import local_song_lyrics_db_manager
         local_song_lyrics_db_manager.show()
 
+    @Slot()
     def show_main_window(self) -> None:
         from .main_window import main_window
         main_window.show_window()
@@ -270,6 +278,7 @@ class DesktopLyricsTrayIcon(QSystemTrayIcon):
         # 显示托盘图标
         self.show()
 
+    @Slot(QSystemTrayIcon.ActivationReason)
     def self_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self._parent.menu.show_hide_triggered()
@@ -296,6 +305,7 @@ class DesktopLyricsControlBar(Ui_DesktopLyricsControlBar, QWidget):
         palette.setColor(self.info_label.backgroundRole(), color)
         self.info_label.setPalette(palette)
 
+    @Slot(dict)
     def update_lyrics_info_slot(self, info: dict) -> None:
         if not info:
             self.info_label.setText("")
@@ -532,6 +542,7 @@ class LyricsText(QWidget):
                 del self.unplayed_chars_cache[font]
             font.setPointSizeF(font.pointSizeF() * 0.6)
 
+    @Slot(tuple)
     def update_lyrics(self, lyrics: DesktopLyrics) -> None:
         if self.lyrics != lyrics:
             self.lyrics = lyrics
@@ -780,6 +791,7 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
         else:
             self.control_bar.play_pause_button.clicked.connect(self.play_pause_button_clicked)
 
+    @Slot()
     def play_pause_button_clicked(self) -> None:
         with QMutexLocker(self.playing_mutex):
             self.send_task.emit('pause' if self.playing else 'play')
@@ -834,6 +846,7 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
         self.menu.exec(event.globalPos())
 
+    @Slot(tuple)
     def cfg_changed_slot(self, k_v: tuple) -> None:
         key, value = k_v
         match key:
@@ -853,6 +866,7 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
                 self.lyrics_text.clear_cache()
                 self.lyrics_text.update()
 
+    @Slot(bool)
     def set_mouse_penetration(self, penetrate: bool) -> None:
         """设置鼠标穿透"""
         self.setWindowFlag(Qt.WindowType.WindowTransparentForInput, penetrate)

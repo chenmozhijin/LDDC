@@ -16,14 +16,15 @@ from typing import Literal
 import psutil
 from PySide6.QtCore import (
     QCoreApplication,
-    QEventLoop,
     QMutex,
     QObject,
     QRunnable,
     QSharedMemory,
     Qt,
+    QThread,
     QTimer,
     Signal,
+    Slot,
 )
 from PySide6.QtNetwork import (
     QHostAddress,
@@ -61,13 +62,13 @@ class ServiceInstanceBase(QRunnable):
 
     def __init__(self, service: "LDDCService", instance_id: int, client_id: int, pid: int | None = None) -> None:
         super().__init__()
-        self.running = False
         self.service = service
         self.instance_id = instance_id
         self.pid = pid
         self.client_id = client_id
 
     @abstractmethod
+    @Slot(dict)
     def handle_task(self, task: dict) -> None:
         ...
 
@@ -75,20 +76,19 @@ class ServiceInstanceBase(QRunnable):
     def init(self) -> None:
         ...
 
+    @Slot()
     def stop(self) -> None:
-        self.loop.quit()
+        self.thread.quit()
         logger.info("Service instance %s stopped", self.instance_id)
 
     def run(self) -> None:
         logger.info("Service instance %s started", self.instance_id)
-        self.signals = ServiceInstanceSignal()
-        self.signals.stop.connect(self.stop)
-        self.signals.handle_task.connect(self.handle_task, Qt.ConnectionType.QueuedConnection)
-        self.loop = QEventLoop()
+        self.base_signals = ServiceInstanceSignal()
+        self.base_signals.stop.connect(self.stop)
+        self.base_signals.handle_task.connect(self.handle_task, Qt.ConnectionType.QueuedConnection)
+        self.thread = QThread.currentThread()
         self.init()
-        self.running = True
-        self.loop.exec()
-        self.running = False
+        self.thread.exec()
 
 
 instance_dict: dict[int, ServiceInstanceBase] = {}
@@ -104,13 +104,13 @@ def clean_dead_instance() -> bool:
     instance_dict_mutex.unlock()
 
     for instance_id in to_stop:
-        instance_dict[instance_id].signals.stop.emit()
+        instance_dict[instance_id].base_signals.stop.emit()
     return bool(to_stop)
 
 
 def check_any_instance_alive() -> bool:
     clean_dead_instance()
-    return bool([True for instance in instance_dict.values() if instance.running])
+    return bool([True for instance in instance_dict.values() if instance.thread.isRunning()])
 
 
 class Client:
@@ -215,6 +215,7 @@ class LDDCService(QObject):
 
             self.send_msg.connect(self.socket_send_message)
 
+    @Slot()
     def stop_service(self) -> None:
         self.q_server.close()
         if self.socketserver:
@@ -222,12 +223,14 @@ class LDDCService(QObject):
         self.shared_memory.detach()
         self.check_any_instance_alive_timer.stop()
 
+    @Slot()
     def on_q_server_new_connection(self) -> None:
         logger.info("q_server_new_connection")
         client_connection = self.q_server.nextPendingConnection()
         if client_connection:
             client_connection.readyRead.connect(self.q_server_read_client)
 
+    @Slot()
     def q_server_read_client(self) -> None:
         client_connection = self.sender()
         if not isinstance(client_connection, QLocalSocket):
@@ -253,6 +256,7 @@ class LDDCService(QObject):
             case _:
                 logger.error("未知消息：%s", response)
 
+    @Slot()
     def socket_on_new_connection(self) -> None:
         if not self.socketserver:
             return
@@ -311,11 +315,12 @@ class LDDCService(QObject):
                     self.socket_send_message(client_id, json.dumps(response))
         elif json_data["id"] in instance_dict:
             if json_data["task"] == "del_instance":
-                instance_dict[json_data["id"]].signals.stop.emit()
+                instance_dict[json_data["id"]].base_signals.stop.emit()
                 self.instance_del.emit()
             else:
-                instance_dict[json_data["id"]].signals.handle_task.emit(json_data)
+                instance_dict[json_data["id"]].base_signals.handle_task.emit(json_data)
 
+    @Slot()
     def socket_send_message(self, client_id: int, response: str) -> None:
         """向客户端发送消息(前4字节应为消息长度)"""
         logger.debug("%s 发送响应：%s", client_id, response)
@@ -329,9 +334,21 @@ class LDDCService(QObject):
         client_socket.write(length_bytes + response_bytes)
         client_socket.flush()
 
+    @Slot()
     def _clean_dead_instance(self) -> None:
         if clean_dead_instance():
             self.instance_del.emit()
+
+
+class DesktopLyricsInstanceSignal(QObject):
+    send_task = Signal(str)
+    to_select = Signal()
+    lyrics_select = Signal(Lyrics, str, list, int)
+    update_refresh_rate = Signal()
+    set_inst = Signal()
+    set_auto_search = Signal(bool)
+    unlink_lyrics = Signal()
+    cfg_changed = Signal()
 
 
 class DesktopLyricsInstance(ServiceInstanceBase):
@@ -364,16 +381,28 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.default_langs = cfg["desktop_lyrics_default_langs"]
 
         self.reset()
-        self.widget.send_task.connect(self.send_task)
-        self.widget.moved.connect(self.update_refresh_rate)
-        self.widget.to_select.connect(self.to_select)
-        self.widget.selector.lyrics_selected.connect(self.select_lyrics)
+        self.signal = DesktopLyricsInstanceSignal()
+        self.signal.send_task.connect(self.send_task)
+        self.signal.update_refresh_rate.connect(self.update_refresh_rate)
+        self.signal.to_select.connect(self.to_select)
+        self.signal.lyrics_select.connect(self.select_lyrics)
 
-        self.widget.menu.action_set_inst.triggered.connect(self.set_inst)
-        self.widget.menu.actino_set_auto_search.triggered.connect(self.set_auto_search)
-        self.widget.menu.action_unlink_lyrics.triggered.connect(self.unlink_lyrics)
+        self.signal.set_inst.connect(self.set_inst)
+        self.signal.set_auto_search.connect(self.set_auto_search)
+        self.signal.unlink_lyrics.connect(self.unlink_lyrics)
 
-        cfg.desktop_lyrics_changed.connect(self.cfg_changed_slot)
+        self.signal.cfg_changed.connect(self.cfg_changed_slot)
+        # 连接gui信号(6.8.0后直接连接函数会导致函数在gui线程中执行)
+        self.widget.send_task.connect(self.signal.send_task)
+        self.widget.moved.connect(self.signal.update_refresh_rate)
+        self.widget.to_select.connect(self.signal.to_select)
+        self.widget.selector.lyrics_selected.connect(self.signal.lyrics_select)
+
+        self.widget.menu.action_set_inst.triggered.connect(self.signal.set_inst)
+        self.widget.menu.actino_set_auto_search.triggered.connect(self.signal.set_auto_search)
+        self.widget.menu.action_unlink_lyrics.triggered.connect(self.signal.unlink_lyrics)
+
+        cfg.desktop_lyrics_changed.connect(self.signal.cfg_changed)
 
     def init_widget(self) -> None:
         """初始化界面(主线程)"""
@@ -391,6 +420,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.song_info = {}  # 歌曲信息
         self.config = {}
 
+    @Slot(bool)
+    @Slot()
     def to_select(self, if_show: bool = False) -> None:
         """打开选择器"""
         if if_show and not in_main_thread(self.widget.selector.isVisible):
@@ -423,11 +454,13 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         """发送消息给客户端"""
         self.service.send_msg.emit(self.client_id, msg)
 
+    @Slot(str)
     def send_task(self, task: str) -> None:
         """发送任务给客户端"""
         if task in self.available_tasks:
             self.send_message(json.dumps({"task": task}))
 
+    @Slot()
     def handle_task(self, task: dict) -> None:
         """处理客户端发送的任务"""
         # 同步播放时间
@@ -537,6 +570,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                     self.timer.stop()
                 self.widget.set_playing(False)
 
+    @Slot(dict)
     def handle_fetch_result(self, result: dict[str, dict | Lyrics | str | int | bool]) -> None:
         """处理自动获取歌词的结果"""
         if result.get("taskid") != self.taskid:
@@ -554,6 +588,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.auto_search_fail(QCoreApplication.translate("DesktopLyrics", "自动获取歌词失败:{0}").format(result.get("status")))
         logger.error("自动获取歌词失败: %s", result.get("status"))
 
+    @Slot(Lyrics, str, list, int)
     def select_lyrics(self, lyrics: Lyrics, path: str | None = None, langs: list[str] | None = None, offset: int = 0, is_inst: bool = False) -> None:
         if offset or self.config.get("offset"):
             self.config["offset"] = offset
@@ -613,6 +648,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                                for lang in self.offseted_lyrics if lang not in ("orig", "orig_lrc")}
         self.to_select(True)
 
+    @Slot()
     def set_inst(self) -> None:
         """设置纯音乐时显示的字"""
         if self.song_info:
@@ -620,11 +656,14 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             self.widget.new_lyrics.emit({"inst": True})
             self.unlink_lyrics(QCoreApplication.translate("DesktopLyrics", "纯音乐，请欣赏"))
 
+    @Slot(bool)
+    @Slot()
     def set_auto_search(self, is_disable: bool | None = None) -> None:
         if self.song_info:
             self.config["disable_auto_search"] = is_disable if is_disable is not None else bool(not self.config.get("disable_auto_search"))
             self.update_db_data()
 
+    @Slot(str)
     def unlink_lyrics(self, msg: str = "") -> None:
         if self.song_info:
             self.lyrics_path = None
@@ -653,6 +692,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.widget.update_lyrics.emit(DesktopLyrics(([(artist_title, "", 0, "", 255, [])],
                                                       [(msg, "", 0, "", 255, [])])))
 
+    @Slot()
     def update_lyrics(self) -> None:  # noqa: C901, PLR0915
         # 更新界面的歌词,给Gui线程发送self.widget.update_lyrics信号
         if self.offseted_lyrics is None or "orig" not in self.offseted_lyrics:
@@ -813,6 +853,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
         self.widget.update_lyrics.emit(DesktopLyrics((left, right)))
 
+    @Slot()
     def update_refresh_rate(self) -> None:
         """更新刷新率,使其与屏幕刷新率同步"""
         refresh_rate = self.widget.screen().refreshRate() if cfg["desktop_lyrics_refresh_rate"] == -1 else cfg["desktop_lyrics_refresh_rate"]
@@ -821,6 +862,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             logger.info("歌词刷新率更新,刷新间隔: %s ms, 歌词刷新率: %s Hz, 屏幕刷新率: %s Hz", interval, 1000 / interval, refresh_rate)
             self.timer.setInterval(interval)
 
+    @Slot(tuple)
     def cfg_changed_slot(self, k_v: tuple) -> None:
         """处理配置变更"""
         key, value = k_v

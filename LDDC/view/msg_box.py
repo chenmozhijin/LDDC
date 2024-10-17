@@ -6,13 +6,14 @@ import contextlib
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import QObject, Qt, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QAbstractButton, QMessageBox, QWidget
 
 _msg_boxs: list[tuple[QMessageBox, QWidget | None, Callable | None]] = []
 
 
+@Slot(QAbstractButton)
 def button_clicked(button: QAbstractButton) -> None:
     """处理消息框的按钮点击事件的槽函数
 
@@ -120,7 +121,6 @@ class MsgBox(QObject):
         msg.setText(text)
         msg.setStandardButtons(button0)
         msg.setDefaultButton(button1)
-        msg.buttonClicked.connect(lambda: None)
         msg.buttonClicked.connect(button_clicked)
         msg.show()
         _msg_boxs.append((msg, parent, func))

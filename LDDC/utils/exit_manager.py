@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import QApplication, QWidget
 
 from LDDC.backend.service import check_any_instance_alive
@@ -66,6 +66,7 @@ class ExitManager(QObject):
             return True
         return False
 
+    @Slot()
     def close_event(self) -> bool:
         if not check_any_instance_alive() and not self.check_any_window_show():
             self.exit()

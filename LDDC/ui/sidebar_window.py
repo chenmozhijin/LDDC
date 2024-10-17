@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
-from PySide6.QtCore import QEvent, Qt, Signal
+from PySide6.QtCore import QEvent, Qt, Signal, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -61,6 +61,7 @@ class SidebarWindow(QMainWindow):
             if item != current_button and isinstance(item, QPushButton):
                 item.setChecked(False)
 
+    @Slot()
     def SidebarButtonClicked(self) -> None:
         sender = self.sender()
         index = sender.property("index")

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 from typing import Any
 
-from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, Qt, Signal
+from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, Qt, Signal, Slot
 from PySide6.QtGui import QColor, QCursor, QDropEvent, QHelpEvent, QMouseEvent, QPainter, QResizeEvent
 from PySide6.QtWidgets import (
     QApplication,
@@ -133,6 +133,8 @@ class ColorsListWidget(QListWidget):
     def get_colors(self) -> list:
         return [self.item(i).background().color().toTuple() for i in range(self.count())]
 
+    @Slot()
+    @Slot(QListWidgetItem)
     def open_color_dialog(self, item: QListWidgetItem | None = None) -> None:
         i = self.row(item) if item is not None else self.count()
         self.dialog = QColorDialog(self)  # https://bugreports.qt.io/browse/QTBUG-124118
@@ -142,6 +144,7 @@ class ColorsListWidget(QListWidget):
         self.dialog.setWindowModality(Qt.WindowModality.WindowModal)
         self.dialog.show()
 
+    @Slot()
     def del_selected(self) -> None:
         selected_items = self.selectedItems()
         if selected_items:
@@ -227,6 +230,7 @@ class CheckBoxListWidget(QListWidget):
     def get_order(self) -> list[str]:
         return [self.item(i).data(Qt.ItemDataRole.UserRole) for i in range(self.count())]
 
+    @Slot()
     def retranslate(self) -> None:
         match self.list_type:
             case "lang":

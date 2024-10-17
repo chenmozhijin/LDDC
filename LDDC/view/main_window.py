@@ -82,6 +82,7 @@ class MainWindow(SidebarWindow):
         self.widget_changed.connect(self.settings_widget.update_cache_size)  # 更新缓存大小
         language_changed.connect(self.retranslateUi)
 
+    @Slot()
     def retranslateUi(self) -> None:
         self.search_widget.retranslateUi()
         self.local_match_widget.retranslateUi(self.local_match_widget)

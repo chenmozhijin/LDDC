@@ -3,7 +3,7 @@
 import os
 from typing import Any, Literal
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QCloseEvent, QShowEvent
 from PySide6.QtWidgets import QDialog, QFileDialog, QLineEdit, QTableWidgetItem, QWidget
 
@@ -31,6 +31,7 @@ class DirSelectorDialog(QDialog, Ui_DirSelectorDialog):
         self._parent = parent
 
     def select_path(self, path_line_edit: QLineEdit) -> None:
+        @Slot(str)
         def file_selected(save_path: str) -> None:
             path_line_edit.setText(os.path.normpath(save_path))
         dialog = QFileDialog(self)
@@ -39,6 +40,7 @@ class DirSelectorDialog(QDialog, Ui_DirSelectorDialog):
         dialog.fileSelected.connect(file_selected)
         dialog.open()
 
+    @Slot()
     def to_change(self) -> None:
         old_path = self.old_lineEdit.text()
         new_path = self.new_lineEdit.text()
@@ -62,6 +64,7 @@ class ProgresDialog(QDialog, Ui_progressDialog):
         self.label.setText(text)
         self.setWindowModality(Qt.WindowModality.WindowModal)
 
+    @Slot(int, int)
     def set_progress(self, progress: int, total: int) -> None:
         self.progressBar.setMaximum(total)
         self.progressBar.setValue(progress)
@@ -88,6 +91,7 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
         self.backup_button.clicked.connect(lambda: self.run_select_path_task("backup"))
         self.restore_button.clicked.connect(lambda: self.run_select_path_task("restore"))
 
+    @Slot()
     def reset_table(self) -> None:
         data = local_song_lyrics.get_all()
         self.id_map = {i: item[0] for i, item in enumerate(data)}
@@ -106,6 +110,7 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
             self.data_table.setItem(i, 6, QTableWidgetItem(lyrics_path))
             self.data_table.setItem(i, 7, QTableWidgetItem(str(config)))
 
+    @Slot()
     def del_item(self) -> None:
         if not self.data_table.selectionModel().hasSelection():
             MsgBox.information(self, self.tr("提示"), self.tr("请先选择要删除的项"))
@@ -113,11 +118,13 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
             local_song_lyrics.del_item(self.id_map[i.row()])
         self.reset_table()
 
+    @Slot()
     def change_dir(self) -> None:
         self.dir_selector = DirSelectorDialog(self)
         self.dir_selector.show()
 
     def run_select_path_task(self, task: Literal["backup", "restore"]) -> None:
+        @Slot(str)
         def file_selected(save_path: str) -> None:
             self.run_task(task, save_path)
         dialog = QFileDialog(self)
@@ -140,6 +147,7 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
         local_song_lyrics.changed.disconnect(self.reset_table)
         threadpool.start(worker)
 
+    @Slot()
     def task_finished(self, result: bool, msg: str) -> None:
         if result:
             MsgBox.information(self, self.tr("提示"), msg)

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import os
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, Slot
 from PySide6.QtGui import QDesktopServices, QFont, QFontDatabase, QGuiApplication
 from PySide6.QtWidgets import QFileDialog, QListWidgetItem, QWidget
 
@@ -87,7 +87,9 @@ class SettingWidget(QWidget, Ui_settings):
         self.log_level_comboBox.setCurrentText(cfg["log_level"])
         self.auto_check_update_checkBox.setChecked(cfg["auto_check_update"])
 
+    @Slot()
     def select_default_save_path(self) -> None:
+        @Slot(str)
         def file_selected(path: str) -> None:
             self.default_save_path_lineEdit.setText(os.path.normpath(path))
         dialog = QFileDialog(self)
@@ -193,6 +195,7 @@ class SettingWidget(QWidget, Ui_settings):
         # 缓存设置
         self.clear_cache_pushButton.clicked.connect(self.clear_cache)
 
+    @Slot(int)
     def color_scheme_changed(self, index: int) -> None:
         cfg["color_scheme"] = self.color_scheme_mapping[index]
         qapp = QGuiApplication.instance()
@@ -208,6 +211,7 @@ class SettingWidget(QWidget, Ui_settings):
             case 2:
                 style_hints.setColorScheme(Qt.ColorScheme.Dark)
 
+    @Slot()
     def language_comboBox_changed(self, index: int) -> None:
         match index:
             case 0:
@@ -219,9 +223,11 @@ class SettingWidget(QWidget, Ui_settings):
         load_translation()
         self.init_ui()
 
+    @Slot()
     def update_cache_size(self) -> None:
         self.cache_size_label.setText(self.tr("缓存大小:") + f" {cache.volume() / 1000000 } MB")
 
+    @Slot()
     def clear_cache(self) -> None:
         cache.clear()
         self.update_cache_size()

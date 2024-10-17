@@ -13,6 +13,7 @@ from PySide6.QtCore import (
     QObject,
     QRunnable,
     Qt,
+    QThread,
     QTimer,
     Signal,
     Slot,
@@ -115,12 +116,14 @@ class SearchWorker(QRunnable):
         self.page = int(page)
         self.signals = SearchSignal()
 
+    @Slot(int, SearchType, list)
     def handle_search_result(self, task_id: int, _search_type: SearchType, result: list) -> None:
         self.search_task_finished += 1
         self.search_task[task_id] = result
         if self.search_task_finished == len(self.search_task):
             self.loop.exit()
 
+    @Slot(str)
     def handle_search_error(self, error: str) -> None:
         self.search_task_finished += 1
         self.error = error
@@ -382,7 +385,7 @@ class LocalMatchWorker(QRunnable):
         threadpool.start(worker)
 
     def run(self) -> None:
-        self.loop = QEventLoop()
+        self.thread = QThread.currentThread()
         logger.info("开始本地匹配歌词,源:%s", self.source)
         try:
             self.start_time = time.time()
@@ -454,9 +457,10 @@ class LocalMatchWorker(QRunnable):
             logger.exception("搜索歌词时错误")
             self.signals.error.emit(str(e), 1)
         finally:
-            self.loop.exec()
+            self.thread.exec()
             self.signals.finished.emit()
 
+    @Slot(dict)
     def handle_fetch_result(self, result: dict[str, dict | Lyrics | str]) -> None:
         try:
             song_info = result["orig_info"]
@@ -545,11 +549,11 @@ class LocalMatchWorker(QRunnable):
             self.signals.progress.emit(self.current_index, self.total_index)
             if self.current_index == self.total_index:
                 self.signals.massage.emit(QCoreApplication.translate("LocalMatch", "匹配完成,耗时{0}秒").format(f"{time.time() - self.start_time}"))
-                self.loop.quit()
+                self.thread.quit()
             elif self.is_running:
                 self.fetch_next_lyrics()
             else:
-                self.loop.quit()
+                self.thread.quit()
 
 
 class AutoLyricsFetcherSignal(QObject):
@@ -680,6 +684,7 @@ class AutoLyricsFetcher(QRunnable):
         finally:
             self.get_result()
 
+    @Slot(int, dict)
     def handle_get_result(self, task_id: int, result: dict) -> None:
         try:
             self.get_task_finished += 1

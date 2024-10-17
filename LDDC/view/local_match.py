@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import os
 
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -53,6 +54,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             self.start_cancel_pushButton.setText(self.tr("取消匹配"))
 
     def select_path(self, path_line_edit: QLineEdit) -> None:
+        @Slot(str)
         def file_selected(save_path: str) -> None:
             path_line_edit.setText(os.path.normpath(save_path))
         dialog = QFileDialog(self)
@@ -61,6 +63,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         dialog.fileSelected.connect(file_selected)
         dialog.open()
 
+    @Slot(int)
     def save_mode_changed(self, index: int) -> None:
         match index:
             case 0:
@@ -76,6 +79,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 self.save_path_pushButton.setEnabled(True)
                 self.save_path_pushButton.setText(self.tr("选择文件夹"))
 
+    @Slot()
     def start_cancel_button_clicked(self) -> None:
         if self.running:
             # 取消
@@ -133,13 +137,16 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.worker.signals.progress.connect(self.change_progress)
         threadpool.startOnReservedThread(self.worker)
 
+    @Slot(str)
     def worker_massage(self, massage: str) -> None:
         self.plainTextEdit.appendPlainText(massage)
 
+    @Slot(int, int)
     def change_progress(self, current: int, maximum: int) -> None:
         self.progressBar.setValue(current)
         self.progressBar.setMaximum(maximum)
 
+    @Slot()
     def worker_finished(self) -> None:
         self.start_cancel_pushButton.setText(self.tr("开始匹配"))
         self.running = False
@@ -150,6 +157,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.progressBar.setValue(0)
         self.progressBar.setMaximum(0)
 
+    @Slot(str, int)
     def worker_error(self, error: str, level: int) -> None:
         if level == 0:
             self.plainTextEdit.appendPlainText(error)

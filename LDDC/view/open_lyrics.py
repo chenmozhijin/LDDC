@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import os
 
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QFileDialog, QWidget
 
 from LDDC.backend.converter import convert2
@@ -51,7 +52,9 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             lyric_langs.append("roma")
         return lyric_langs
 
+    @Slot()
     def open_file(self) -> None:
+        @Slot(str)
         def file_selected(file_path: str) -> None:
             if not os.path.exists(file_path):
                 MsgBox.warning(self, self.tr("警告"), self.tr("文件不存在！"))
@@ -100,6 +103,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         dialog.fileSelected.connect(file_selected)
         dialog.open()
 
+    @Slot()
     def convert(self) -> None:
         if self.lyrics_type == "converted":
             MsgBox.information(self, self.tr("提示"), self.tr("当前歌词已经转换过了！"))
@@ -120,6 +124,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         self.plainTextEdit.setPlainText(lrc)
         self.lyrics_type = "converted"
 
+    @Slot()
     def update_lyrics(self) -> None:
         if not (self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics)):
             return
@@ -128,15 +133,18 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         self.plainTextEdit.setPlainText(convert2(self.lyrics, langs_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
                                         offset=self.offset_spinBox.value()))
 
+    @Slot()
     def change_lyrics_type(self) -> None:
         if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics):
             self.update_lyrics()
 
+    @Slot()
     def save(self) -> None:
         if self.plainTextEdit.toPlainText() == "":
             MsgBox.warning(self, self.tr("警告"), self.tr("歌词内容不能为空！"))
             return
 
+        @Slot(str)
         def file_selected(file_path: str) -> None:
             if self.lyrics_type == 'converted':
                 ext = get_lyrics_format_ext(LyricsFormat(self.lyricsformat_comboBox.currentIndex()))

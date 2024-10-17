@@ -19,7 +19,15 @@ def search(keyword: str,
            source: Source,
            info: dict[str, str | int] | None = None,
            page: int = 1) -> list[dict[str, Any]]:
+    """搜索歌曲
 
+    :param keyword: 搜索关键词
+    :param search_type: 搜索类型
+    :param source: 搜索来源
+    :param info: 歌曲信息(用于歌词搜索)
+    :param page: 页码
+    :return: 搜索结果
+    """
     cache_key = (search_type, source, keyword, info, page)
     results = cache.get(cache_key)
     if results is not None and isinstance(results, list):
