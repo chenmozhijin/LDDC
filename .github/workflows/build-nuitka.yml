@@ -51,8 +51,17 @@ jobs:
             
             - name: Install dependencies
               run: |
+                pip install PySide6-Addons
+                qt_translations_path=$(python build_helper.py --task get_qt_translations_path)
+                cp $qt_translations_path/*.qm /tmp/qt_translations
+                pip freeze > /tmp/modules.txt
+                pip uninstall -r /tmp/modules.txt -y
+
                 pip install -r requirements.txt
                 pip install imageio
+
+                cp -f /tmp/qt_translations/qt_zh_CN.qm  $qt_translations_path/
+
             
             - name: Install EGL/upx
               if: ${{ runner.os == 'Linux' }}

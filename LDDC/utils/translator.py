@@ -51,14 +51,17 @@ def load_translation(emit: bool = True) -> None:
             logger.info("System language detected: %s", language)
             if language != QLocale.Language.Chinese:
                 translator.load(":/i18n/LDDC_en.qm")
-                qt_translator.load("qt_en.qm", QLibraryInfo.location(QLibraryInfo.LibraryPath.TranslationsPath))
-            else:
-                qt_translator.load("qt_zh_CN.qm", QLibraryInfo.location(QLibraryInfo.LibraryPath.TranslationsPath))
+                if not qt_translator.load("qt_en.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+                    logger.warning("Failed to load qt_en.qm")
+            elif not qt_translator.load("qt_zh_CN.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+                logger.warning("Failed to load qt_zh_CN.qm")
         case "en":
             translator.load(":/i18n/LDDC_en.qm")
-            qt_translator.load("qt_en.qm", QLibraryInfo.location(QLibraryInfo.LibraryPath.TranslationsPath))
+            if not qt_translator.load("qt_en.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+                logger.warning("Failed to load qt_en.qm")
         case "zh-Hans":
-            qt_translator.load("qt_zh_CN.qm", QLibraryInfo.location(QLibraryInfo.LibraryPath.TranslationsPath))
+            if not qt_translator.load("qt_zh_CN.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+                logger.warning("Failed to load qt_zh_CN.qm")
     app.installTranslator(translator)
     app.installTranslator(qt_translator)
 
