@@ -726,8 +726,6 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             if words:
                 start = words[0][0]  # noqa: PLW2901
                 end = words[-1][1]  # noqa: PLW2901
-            if not start or not end:
-                continue
             if end < self.current_time:
                 perv_lines.append((index, FSLyricsLine((start, end, words))))
             elif start <= self.current_time <= end:
