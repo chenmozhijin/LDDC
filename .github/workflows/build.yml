@@ -7,7 +7,7 @@ on:
           - dev
         paths:
             - "**.py"
-            - ".github/workflows/build-nuitka.yml"
+            - ".github/workflows/build.yml"
     workflow_dispatch:
         
 
