@@ -62,7 +62,7 @@ jobs:
                 pip install -Ur requirements.txt
                 pip install imageio
 
-                cp -f /tmp/qt_translations/qt_zh_CN.qm  $qt_translations_path/
+                cp -f /tmp/qt_translations/*.qm  $qt_translations_path/
                 ls -alh $qt_translations_path/
 
             - name: Install dependencies(Windows)
@@ -81,7 +81,7 @@ jobs:
                 pip install -Ur requirements.txt
                 pip install imageio
 
-                Copy-Item -Force "$temp_path\qt_zh_CN.qm" -Destination "$qt_translations_path/"
+                Copy-Item -Force "$temp_path\*.qm" -Destination "$qt_translations_path/"
                 Get-ChildItem -Path "$qt_translations_path/"
 
             
