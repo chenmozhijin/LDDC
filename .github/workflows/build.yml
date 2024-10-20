@@ -59,10 +59,11 @@ jobs:
                 pip freeze > /tmp/modules.txt
                 pip uninstall -r /tmp/modules.txt -y
 
-                pip install -r requirements.txt
+                pip install -Ur requirements.txt
                 pip install imageio
 
                 cp -f /tmp/qt_translations/qt_zh_CN.qm  $qt_translations_path/
+                ls -alh $qt_translations_path/
 
             - name: Install dependencies(Windows)
               if: ${{ runner.os == 'Windows' }}
@@ -77,10 +78,11 @@ jobs:
                 pip freeze | Out-File "$env:TEMP\modules.txt"
                 pip uninstall -r "$env:TEMP\modules.txt" -y
 
-                pip install -r requirements.txt
+                pip install -Ur requirements.txt
                 pip install imageio
 
                 Copy-Item -Force "$temp_path\qt_zh_CN.qm" -Destination "$qt_translations_path/"
+                Get-ChildItem -Path "$qt_translations_path/"
 
             
             - name: Install EGL/upx
@@ -303,3 +305,28 @@ jobs:
                 name: ${{ runner.os }} - ${{ matrix.arch }} artifacts
                 path: |
                     upload/
+    build-wheel:
+      name: Build wheel
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
+
+        - uses: actions/setup-python@v5
+          with:
+            python-version: 3.12
+
+        - name: Install dependencies
+          run: |
+            pip install -Ur requirements-dev.txt
+
+        - name: Build wheel
+          run: |
+            python -m build
+
+        - name: Upload
+          uses: actions/upload-artifact@v4
+          with:
+            name: Wheel
+            path: |
+                dist/

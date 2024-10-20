@@ -1,0 +1,10 @@
+requests
+PySide6-Essentials>=6.8.0
+mutagen
+diskcache
+charset-normalizer
+pyaes
+psutil
+pyobjc; sys_platform == 'darwin'
+hatchling
+build
