@@ -80,6 +80,7 @@ class ServiceInstanceBase(QRunnable):
     def stop(self) -> None:
         self.thread.quit()
         logger.info("Service instance %s stopped", self.instance_id)
+        self.service.instance_finished.emit(self.instance_id)
 
     def run(self) -> None:
         logger.info("Service instance %s started", self.instance_id)
@@ -122,6 +123,7 @@ class Client:
 class LDDCService(QObject):
     handle_task = Signal(int, dict)
     instance_del = Signal()
+    instance_finished = Signal(int)
     send_msg = Signal(int, str)
 
     def __init__(self) -> None:
@@ -212,6 +214,7 @@ class LDDCService(QObject):
             self.check_any_instance_alive_timer = QTimer(self)
             self.check_any_instance_alive_timer.timeout.connect(self._clean_dead_instance)
             self.check_any_instance_alive_timer.start(1000)
+            self.instance_finished.connect(self.del_instance)
 
             self.send_msg.connect(self.socket_send_message)
 
@@ -338,6 +341,13 @@ class LDDCService(QObject):
     def _clean_dead_instance(self) -> None:
         if clean_dead_instance():
             self.instance_del.emit()
+
+    @Slot()
+    def del_instance(self, instance_id: int) -> None:
+        instance_dict_mutex.lock()
+        del instance_dict[instance_id]
+        instance_dict_mutex.unlock()
+        self.instance_del.emit()
 
 
 class DesktopLyricsInstanceSignal(QObject):
