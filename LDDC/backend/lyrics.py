@@ -74,13 +74,13 @@ def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only
             word_start_time = word[0]
             word_end_time = word[1]
             if word_start_time is None:
-                if j == 0 and line_start_time:
+                if j == 0 and line_start_time is not None:
                     word_start_time = line_start_time
                 elif j != 0 and line[2][j - 1][1] is not None:
                     word_start_time = line[2][j - 1][1]
 
             if word_end_time is None:
-                if j == len(line[2]) - 1 and line_end_time:
+                if j == len(line[2]) - 1 and line_end_time is not None:
                     word_end_time = line_end_time
                 elif j != len(line[2]) - 1 and line[2][j + 1][0] is not None:
                     word_end_time = line[2][j + 1][0]
@@ -88,7 +88,7 @@ def get_full_timestamps_lyrics_data(data: LyricsData, duration: int | None, only
             if not skip_none:
                 words.append(LyricsWord((word_start_time, word_end_time, word[2])))
             else:
-                if not word_start_time or not word_end_time:
+                if word_start_time is None or word_end_time is None:
                     continue
                 fswords.append(FSLyricsWord((word_start_time, word_end_time, word[2])))
 
