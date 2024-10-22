@@ -14,7 +14,7 @@ from .args import args
 from .data import cfg
 from .paths import log_dir
 
-log_file = os.path.join(log_dir, f'{time.strftime("%Y.%m.%d",time.localtime())}.log')
+log_file = os.path.join(log_dir, f'{time.strftime("%Y.%m.%d", time.localtime())}.log')
 if not os.path.exists(os.path.dirname(log_file)):
     os.makedirs(os.path.dirname(log_file))
 
@@ -50,7 +50,7 @@ class Logger:
         file_handler.setFormatter(formatter)
         self.__logger.addHandler(file_handler)
 
-        if __debug__ and sys.gettrace() is not None and not args.get_service_port:
+        if __debug__ and (os.getenv("DEBUGPY_RUNNING") == "true" or sys.gettrace() is not None) and not args.get_service_port:
             # 调试时创建一个处理器,用于将日志输出到标准输出
             console_handler = logging.StreamHandler(sys.stdout)
             if isinstance(sys.stdout, io.TextIOWrapper):
