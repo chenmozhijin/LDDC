@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QCoreApplication, QEvent, QMutex, QObject, QThreadPool
+from PySide6.QtCore import QCoreApplication, QEvent, QMutex, QObject, QThread, QThreadPool
 
 threadpool = QThreadPool()
 if threadpool.maxThreadCount() < 8:
@@ -47,6 +47,8 @@ run_event_handler = EventHandler()
 
 def in_main_thread(func: Callable, *args: Any, **kwargs: Any) -> Any:
     """在主线程运行函数(堵塞、支持返回值)"""
+    if QThread.currentThread().isMainThread():
+        return func(*args, **kwargs)
     ret = []
     mutex = QMutex()
     mutex.lock()
