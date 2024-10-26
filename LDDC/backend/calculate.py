@@ -56,7 +56,10 @@ def list_max_difference(orig_list1: list[str | list[str]], orig_list2: list[str 
             # 过滤掉空字符串
             l1 = [item for item in l1 if item]
             l2 = [item for item in l2 if item]
-        return max(text_difference(text1, text2) for text1 in l1 for text2 in l2)
+        diff_scores = [text_difference(text1, text2) for text1 in l1 for text2 in l2]
+        if not diff_scores:
+            return 0.0
+        return max(diff_scores)
 
     list1: list[list[str]] = [[item] if not isinstance(item, list) else item for item in orig_list1]
     list2: list[list[str]] = [[item] if not isinstance(item, list) else item for item in orig_list2]
