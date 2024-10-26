@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'progres.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,7 +15,6 @@ class Ui_progressDialog:
     def setupUi(self, progressDialog):
         if not progressDialog.objectName():
             progressDialog.setObjectName("progressDialog")
-        progressDialog.resize(564, 72)
         icon = QIcon()
         icon.addFile(":/LDDC/img/icon/logo.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         progressDialog.setWindowIcon(icon)

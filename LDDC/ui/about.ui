@@ -2,14 +2,6 @@
 <ui version="4.0">
  <class>about</class>
  <widget class="QWidget" name="about">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>1050</width>
-    <height>600</height>
-   </rect>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="title_label">

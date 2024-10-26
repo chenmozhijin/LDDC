@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'get_list_lyrics.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,7 +15,6 @@ class Ui_get_list_lyrics:
     def setupUi(self, get_list_lyrics):
         if not get_list_lyrics.objectName():
             get_list_lyrics.setObjectName("get_list_lyrics")
-        get_list_lyrics.resize(900, 450)
         icon = QIcon()
         icon.addFile(":/LDDC/img/icon/logo.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         get_list_lyrics.setWindowIcon(icon)

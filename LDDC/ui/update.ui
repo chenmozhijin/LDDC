@@ -2,14 +2,6 @@
 <ui version="4.0">
  <class>UpdateDialog</class>
  <widget class="QDialog" name="UpdateDialog">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>538</width>
-    <height>322</height>
-   </rect>
-  </property>
   <property name="windowTitle">
    <string>发现新版本</string>
   </property>

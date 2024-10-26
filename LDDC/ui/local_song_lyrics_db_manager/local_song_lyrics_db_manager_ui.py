@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'local_song_lyrics_db_manager.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -17,7 +17,6 @@ class Ui_LocalSongLyricsDBManager:
     def setupUi(self, LocalSongLyricsDBManager):
         if not LocalSongLyricsDBManager.objectName():
             LocalSongLyricsDBManager.setObjectName("LocalSongLyricsDBManager")
-        LocalSongLyricsDBManager.resize(868, 538)
         icon = QIcon()
         icon.addFile(":/LDDC/img/icon/logo.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         LocalSongLyricsDBManager.setWindowIcon(icon)

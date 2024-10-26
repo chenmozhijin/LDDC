@@ -2,14 +2,6 @@
 <ui version="4.0">
  <class>DirSelectorDialog</class>
  <widget class="QDialog" name="DirSelectorDialog">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>406</width>
-    <height>314</height>
-   </rect>
-  </property>
   <property name="windowTitle">
    <string>选择文件夹</string>
   </property>

@@ -6,7 +6,7 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QSize, Qt
+from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -15,16 +15,13 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
-    QLayout,
     QLineEdit,
     QListView,
     QListWidgetItem,
     QPushButton,
     QScrollArea,
     QSizePolicy,
-    QSpacerItem,
     QSpinBox,
     QTextBrowser,
     QVBoxLayout,
@@ -38,7 +35,6 @@ class Ui_settings:
     def setupUi(self, settings):
         if not settings.objectName():
             settings.setObjectName("settings")
-        settings.resize(1179, 883)
         self.verticalLayout = QVBoxLayout(settings)
         self.verticalLayout.setObjectName("verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -50,7 +46,6 @@ class Ui_settings:
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 1167, 959))
         self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.label = QLabel(self.scrollAreaWidgetContents)
@@ -68,8 +63,9 @@ class Ui_settings:
 
         self.groupBox = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox.setObjectName("groupBox")
-        self.gridLayout_13 = QGridLayout(self.groupBox)
-        self.gridLayout_13.setObjectName("gridLayout_13")
+        self.gridLayout_4 = QGridLayout(self.groupBox)
+        self.gridLayout_4.setObjectName("gridLayout_4")
+        self.gridLayout_4.setContentsMargins(-1, -1, -1, 40)
         self.textBrowser_5 = QTextBrowser(self.groupBox)
         self.textBrowser_5.setObjectName("textBrowser_5")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
@@ -85,7 +81,7 @@ class Ui_settings:
         self.textBrowser_5.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.textBrowser_5.setOpenLinks(False)
 
-        self.gridLayout_13.addWidget(self.textBrowser_5, 0, 0, 3, 1)
+        self.gridLayout_4.addWidget(self.textBrowser_5, 0, 0, 3, 1)
 
         self.label_26 = QLabel(self.groupBox)
         self.label_26.setObjectName("label_26")
@@ -93,7 +89,7 @@ class Ui_settings:
         self.label_26.setSizePolicy(sizePolicy)
         self.label_26.setTextFormat(Qt.TextFormat.AutoText)
 
-        self.gridLayout_13.addWidget(self.label_26, 0, 1, 1, 1)
+        self.gridLayout_4.addWidget(self.label_26, 0, 1, 1, 1)
 
         self.lyrics_file_name_fmt_lineEdit = QLineEdit(self.groupBox)
         self.lyrics_file_name_fmt_lineEdit.setObjectName("lyrics_file_name_fmt_lineEdit")
@@ -103,60 +99,53 @@ class Ui_settings:
         sizePolicy2.setHeightForWidth(self.lyrics_file_name_fmt_lineEdit.sizePolicy().hasHeightForWidth())
         self.lyrics_file_name_fmt_lineEdit.setSizePolicy(sizePolicy2)
 
-        self.gridLayout_13.addWidget(self.lyrics_file_name_fmt_lineEdit, 0, 2, 1, 1)
+        self.gridLayout_4.addWidget(self.lyrics_file_name_fmt_lineEdit, 0, 2, 1, 1)
 
         self.label_27 = QLabel(self.groupBox)
         self.label_27.setObjectName("label_27")
         sizePolicy.setHeightForWidth(self.label_27.sizePolicy().hasHeightForWidth())
         self.label_27.setSizePolicy(sizePolicy)
 
-        self.gridLayout_13.addWidget(self.label_27, 1, 1, 1, 1)
+        self.gridLayout_4.addWidget(self.label_27, 1, 1, 1, 1)
 
         self.default_save_path_lineEdit = QLineEdit(self.groupBox)
         self.default_save_path_lineEdit.setObjectName("default_save_path_lineEdit")
 
-        self.gridLayout_13.addWidget(self.default_save_path_lineEdit, 1, 2, 1, 1)
+        self.gridLayout_4.addWidget(self.default_save_path_lineEdit, 1, 2, 1, 1)
 
         self.select_default_save_path_pushButton = QPushButton(self.groupBox)
         self.select_default_save_path_pushButton.setObjectName("select_default_save_path_pushButton")
 
-        self.gridLayout_13.addWidget(self.select_default_save_path_pushButton, 1, 3, 1, 1)
+        self.gridLayout_4.addWidget(self.select_default_save_path_pushButton, 1, 3, 1, 1)
+
+        self.label_28 = QLabel(self.groupBox)
+        self.label_28.setObjectName("label_28")
+
+        self.gridLayout_4.addWidget(self.label_28, 2, 1, 1, 1)
 
         self.id3_ver_comboBox = QComboBox(self.groupBox)
         self.id3_ver_comboBox.addItem("")
         self.id3_ver_comboBox.addItem("")
         self.id3_ver_comboBox.setObjectName("id3_ver_comboBox")
 
-        self.gridLayout_13.addWidget(self.id3_ver_comboBox, 2, 2, 1, 1)
-
-        self.label_28 = QLabel(self.groupBox)
-        self.label_28.setObjectName("label_28")
-
-        self.gridLayout_13.addWidget(self.label_28, 2, 1, 1, 1)
+        self.gridLayout_4.addWidget(self.id3_ver_comboBox, 2, 2, 1, 1)
 
         self.verticalLayout_2.addWidget(self.groupBox)
 
         self.groupBox_2 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_2.setObjectName("groupBox_2")
-        self.horizontalLayout = QHBoxLayout(self.groupBox_2)
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.verticalLayout_4 = QVBoxLayout()
-        self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.verticalLayout_4.setSizeConstraint(QLayout.SizeConstraint.SetDefaultConstraint)
-        self.label_4 = QLabel(self.groupBox_2)
-        self.label_4.setObjectName("label_4")
-        sizePolicy.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
-        self.label_4.setSizePolicy(sizePolicy)
-
-        self.verticalLayout_4.addWidget(self.label_4)
-
+        self.gridLayout = QGridLayout(self.groupBox_2)
+        self.gridLayout.setObjectName("gridLayout")
         self.langs_order_listWidget = LyricOrderListWidget(self.groupBox_2)
         QListWidgetItem(self.langs_order_listWidget)
         QListWidgetItem(self.langs_order_listWidget)
         QListWidgetItem(self.langs_order_listWidget)
         self.langs_order_listWidget.setObjectName("langs_order_listWidget")
-        sizePolicy.setHeightForWidth(self.langs_order_listWidget.sizePolicy().hasHeightForWidth())
-        self.langs_order_listWidget.setSizePolicy(sizePolicy)
+        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        sizePolicy3.setHorizontalStretch(0)
+        sizePolicy3.setVerticalStretch(0)
+        sizePolicy3.setHeightForWidth(self.langs_order_listWidget.sizePolicy().hasHeightForWidth())
+        self.langs_order_listWidget.setSizePolicy(sizePolicy3)
         self.langs_order_listWidget.setMinimumSize(QSize(0, 0))
         self.langs_order_listWidget.setMaximumSize(QSize(118, 96))
         self.langs_order_listWidget.setFrameShape(QFrame.Shape.Box)
@@ -172,102 +161,125 @@ class Ui_settings:
         self.langs_order_listWidget.setMovement(QListView.Movement.Free)
         self.langs_order_listWidget.setSortingEnabled(False)
 
-        self.verticalLayout_4.addWidget(self.langs_order_listWidget)
-
-        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
-
-        self.verticalLayout_4.addItem(self.verticalSpacer)
-
-        self.horizontalLayout.addLayout(self.verticalLayout_4)
-
-        self.gridLayout_4 = QGridLayout()
-        self.gridLayout_4.setObjectName("gridLayout_4")
-        self.auto_select_checkBox = QCheckBox(self.groupBox_2)
-        self.auto_select_checkBox.setObjectName("auto_select_checkBox")
-
-        self.gridLayout_4.addWidget(self.auto_select_checkBox, 1, 0, 1, 1)
-
-        self.gridLayout_8 = QGridLayout()
-        self.gridLayout_8.setObjectName("gridLayout_8")
-        self.lrc_ms_digit_count_spinBox = QSpinBox(self.groupBox_2)
-        self.lrc_ms_digit_count_spinBox.setObjectName("lrc_ms_digit_count_spinBox")
-        sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
-        sizePolicy3.setHorizontalStretch(0)
-        sizePolicy3.setVerticalStretch(0)
-        sizePolicy3.setHeightForWidth(self.lrc_ms_digit_count_spinBox.sizePolicy().hasHeightForWidth())
-        self.lrc_ms_digit_count_spinBox.setSizePolicy(sizePolicy3)
-        self.lrc_ms_digit_count_spinBox.setMinimumSize(QSize(70, 0))
-        self.lrc_ms_digit_count_spinBox.setMinimum(2)
-        self.lrc_ms_digit_count_spinBox.setMaximum(3)
-        self.lrc_ms_digit_count_spinBox.setValue(3)
-
-        self.gridLayout_8.addWidget(self.lrc_ms_digit_count_spinBox, 0, 2, 1, 1)
+        self.gridLayout.addWidget(self.langs_order_listWidget, 1, 0, 6, 1)
 
         self.label_6 = QLabel(self.groupBox_2)
         self.label_6.setObjectName("label_6")
         sizePolicy.setHeightForWidth(self.label_6.sizePolicy().hasHeightForWidth())
         self.label_6.setSizePolicy(sizePolicy)
 
-        self.gridLayout_8.addWidget(self.label_6, 0, 1, 1, 1)
+        self.gridLayout.addWidget(self.label_6, 3, 1, 1, 1)
 
         self.label_8 = QLabel(self.groupBox_2)
         self.label_8.setObjectName("label_8")
+        sizePolicy.setHeightForWidth(self.label_8.sizePolicy().hasHeightForWidth())
+        self.label_8.setSizePolicy(sizePolicy)
 
-        self.gridLayout_8.addWidget(self.label_8, 1, 1, 1, 1)
+        self.gridLayout.addWidget(self.label_8, 4, 1, 1, 1)
+
+        self.skip_inst_lyrics_checkBox = QCheckBox(self.groupBox_2)
+        self.skip_inst_lyrics_checkBox.setObjectName("skip_inst_lyrics_checkBox")
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.skip_inst_lyrics_checkBox.sizePolicy().hasHeightForWidth())
+        self.skip_inst_lyrics_checkBox.setSizePolicy(sizePolicy4)
+
+        self.gridLayout.addWidget(self.skip_inst_lyrics_checkBox, 0, 1, 1, 4)
+
+        self.add_end_timestamp_line_checkBox = QCheckBox(self.groupBox_2)
+        self.add_end_timestamp_line_checkBox.setObjectName("add_end_timestamp_line_checkBox")
+        sizePolicy4.setHeightForWidth(self.add_end_timestamp_line_checkBox.sizePolicy().hasHeightForWidth())
+        self.add_end_timestamp_line_checkBox.setSizePolicy(sizePolicy4)
+
+        self.gridLayout.addWidget(self.add_end_timestamp_line_checkBox, 2, 1, 1, 4)
+
+        self.label_4 = QLabel(self.groupBox_2)
+        self.label_4.setObjectName("label_4")
+        sizePolicy4.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
+        self.label_4.setSizePolicy(sizePolicy4)
+
+        self.gridLayout.addWidget(self.label_4, 0, 0, 1, 1)
+
+        self.auto_select_checkBox = QCheckBox(self.groupBox_2)
+        self.auto_select_checkBox.setObjectName("auto_select_checkBox")
+        sizePolicy4.setHeightForWidth(self.auto_select_checkBox.sizePolicy().hasHeightForWidth())
+        self.auto_select_checkBox.setSizePolicy(sizePolicy4)
+
+        self.gridLayout.addWidget(self.auto_select_checkBox, 1, 1, 1, 4)
 
         self.last_ref_line_time_sty_comboBox = QComboBox(self.groupBox_2)
         self.last_ref_line_time_sty_comboBox.addItem("")
         self.last_ref_line_time_sty_comboBox.addItem("")
         self.last_ref_line_time_sty_comboBox.setObjectName("last_ref_line_time_sty_comboBox")
+        sizePolicy4.setHeightForWidth(self.last_ref_line_time_sty_comboBox.sizePolicy().hasHeightForWidth())
+        self.last_ref_line_time_sty_comboBox.setSizePolicy(sizePolicy4)
 
-        self.gridLayout_8.addWidget(self.last_ref_line_time_sty_comboBox, 1, 2, 1, 1)
+        self.gridLayout.addWidget(self.last_ref_line_time_sty_comboBox, 4, 2, 1, 3)
 
-        self.gridLayout_4.addLayout(self.gridLayout_8, 3, 0, 1, 1)
+        self.lrc_ms_digit_count_spinBox = QSpinBox(self.groupBox_2)
+        self.lrc_ms_digit_count_spinBox.setObjectName("lrc_ms_digit_count_spinBox")
+        sizePolicy4.setHeightForWidth(self.lrc_ms_digit_count_spinBox.sizePolicy().hasHeightForWidth())
+        self.lrc_ms_digit_count_spinBox.setSizePolicy(sizePolicy4)
+        self.lrc_ms_digit_count_spinBox.setMinimumSize(QSize(70, 0))
+        self.lrc_ms_digit_count_spinBox.setMinimum(2)
+        self.lrc_ms_digit_count_spinBox.setMaximum(3)
+        self.lrc_ms_digit_count_spinBox.setValue(3)
 
-        self.skip_inst_lyrics_checkBox = QCheckBox(self.groupBox_2)
-        self.skip_inst_lyrics_checkBox.setObjectName("skip_inst_lyrics_checkBox")
-
-        self.gridLayout_4.addWidget(self.skip_inst_lyrics_checkBox, 0, 0, 1, 1)
-
-        self.add_end_timestamp_line_checkBox = QCheckBox(self.groupBox_2)
-        self.add_end_timestamp_line_checkBox.setObjectName("add_end_timestamp_line_checkBox")
-
-        self.gridLayout_4.addWidget(self.add_end_timestamp_line_checkBox, 2, 0, 1, 1)
-
-        self.horizontalLayout.addLayout(self.gridLayout_4)
+        self.gridLayout.addWidget(self.lrc_ms_digit_count_spinBox, 3, 2, 1, 3)
 
         self.verticalLayout_2.addWidget(self.groupBox_2)
 
         self.groupBox_3 = QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_3.setObjectName("groupBox_3")
-        self.verticalLayout_3 = QVBoxLayout(self.groupBox_3)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.gridLayout_3 = QGridLayout()
+        self.gridLayout_3 = QGridLayout(self.groupBox_3)
         self.gridLayout_3.setObjectName("gridLayout_3")
-        self.played_del_color_button = QPushButton(self.groupBox_3)
-        self.played_del_color_button.setObjectName("played_del_color_button")
-        sizePolicy.setHeightForWidth(self.played_del_color_button.sizePolicy().hasHeightForWidth())
-        self.played_del_color_button.setSizePolicy(sizePolicy)
-
-        self.gridLayout_3.addWidget(self.played_del_color_button, 2, 0, 1, 1)
-
         self.label_11 = QLabel(self.groupBox_3)
         self.label_11.setObjectName("label_11")
         sizePolicy.setHeightForWidth(self.label_11.sizePolicy().hasHeightForWidth())
         self.label_11.setSizePolicy(sizePolicy)
 
-        self.gridLayout_3.addWidget(self.label_11, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.label_11, 0, 0, 1, 2)
+
+        self.label_12 = QLabel(self.groupBox_3)
+        self.label_12.setObjectName("label_12")
+        sizePolicy.setHeightForWidth(self.label_12.sizePolicy().hasHeightForWidth())
+        self.label_12.setSizePolicy(sizePolicy)
+
+        self.gridLayout_3.addWidget(self.label_12, 0, 2, 1, 2)
+
+        self.label_13 = QLabel(self.groupBox_3)
+        self.label_13.setObjectName("label_13")
+        sizePolicy3.setHeightForWidth(self.label_13.sizePolicy().hasHeightForWidth())
+        self.label_13.setSizePolicy(sizePolicy3)
+
+        self.gridLayout_3.addWidget(self.label_13, 0, 4, 1, 1)
+
+        self.label_16 = QLabel(self.groupBox_3)
+        self.label_16.setObjectName("label_16")
+        sizePolicy3.setHeightForWidth(self.label_16.sizePolicy().hasHeightForWidth())
+        self.label_16.setSizePolicy(sizePolicy3)
+
+        self.gridLayout_3.addWidget(self.label_16, 0, 5, 1, 1)
+
+        self.label_10 = QLabel(self.groupBox_3)
+        self.label_10.setObjectName("label_10")
+        sizePolicy3.setHeightForWidth(self.label_10.sizePolicy().hasHeightForWidth())
+        self.label_10.setSizePolicy(sizePolicy3)
+
+        self.gridLayout_3.addWidget(self.label_10, 0, 6, 1, 1)
+
+        self.font_comboBox = QComboBox(self.groupBox_3)
+        self.font_comboBox.setObjectName("font_comboBox")
+
+        self.gridLayout_3.addWidget(self.font_comboBox, 0, 7, 1, 1)
 
         self.played_add_color_button = QPushButton(self.groupBox_3)
         self.played_add_color_button.setObjectName("played_add_color_button")
         sizePolicy.setHeightForWidth(self.played_add_color_button.sizePolicy().hasHeightForWidth())
         self.played_add_color_button.setSizePolicy(sizePolicy)
 
-        self.gridLayout_3.addWidget(self.played_add_color_button, 1, 0, 1, 1)
-
-        self.horizontalLayout_2.addLayout(self.gridLayout_3)
+        self.gridLayout_3.addWidget(self.played_add_color_button, 1, 0, 2, 1)
 
         self.played_color_list = ColorsListWidget(self.groupBox_3)
         self.played_color_list.setObjectName("played_color_list")
@@ -275,32 +287,14 @@ class Ui_settings:
         self.played_color_list.setSizePolicy(sizePolicy)
         self.played_color_list.setMaximumSize(QSize(120, 16777215))
 
-        self.horizontalLayout_2.addWidget(self.played_color_list)
-
-        self.gridLayout_7 = QGridLayout()
-        self.gridLayout_7.setObjectName("gridLayout_7")
-        self.unplayed_del_color_button = QPushButton(self.groupBox_3)
-        self.unplayed_del_color_button.setObjectName("unplayed_del_color_button")
-        sizePolicy.setHeightForWidth(self.unplayed_del_color_button.sizePolicy().hasHeightForWidth())
-        self.unplayed_del_color_button.setSizePolicy(sizePolicy)
-
-        self.gridLayout_7.addWidget(self.unplayed_del_color_button, 2, 0, 1, 1)
-
-        self.label_12 = QLabel(self.groupBox_3)
-        self.label_12.setObjectName("label_12")
-        sizePolicy.setHeightForWidth(self.label_12.sizePolicy().hasHeightForWidth())
-        self.label_12.setSizePolicy(sizePolicy)
-
-        self.gridLayout_7.addWidget(self.label_12, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.played_color_list, 1, 1, 4, 1)
 
         self.unplayed_add_color_button = QPushButton(self.groupBox_3)
         self.unplayed_add_color_button.setObjectName("unplayed_add_color_button")
         sizePolicy.setHeightForWidth(self.unplayed_add_color_button.sizePolicy().hasHeightForWidth())
         self.unplayed_add_color_button.setSizePolicy(sizePolicy)
 
-        self.gridLayout_7.addWidget(self.unplayed_add_color_button, 1, 0, 1, 1)
-
-        self.horizontalLayout_2.addLayout(self.gridLayout_7)
+        self.gridLayout_3.addWidget(self.unplayed_add_color_button, 1, 2, 2, 1)
 
         self.unplayed_color_list = ColorsListWidget(self.groupBox_3)
         self.unplayed_color_list.setObjectName("unplayed_color_list")
@@ -308,19 +302,7 @@ class Ui_settings:
         self.unplayed_color_list.setSizePolicy(sizePolicy)
         self.unplayed_color_list.setMaximumSize(QSize(120, 16777215))
 
-        self.horizontalLayout_2.addWidget(self.unplayed_color_list)
-
-        self.gridLayout_9 = QGridLayout()
-        self.gridLayout_9.setObjectName("gridLayout_9")
-        self.label_16 = QLabel(self.groupBox_3)
-        self.label_16.setObjectName("label_16")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
-        sizePolicy4.setHeightForWidth(self.label_16.sizePolicy().hasHeightForWidth())
-        self.label_16.setSizePolicy(sizePolicy4)
-
-        self.gridLayout_9.addWidget(self.label_16, 0, 1, 1, 1)
+        self.gridLayout_3.addWidget(self.unplayed_color_list, 1, 3, 4, 1)
 
         self.lang_type_list = CheckBoxListWidget(self.groupBox_3)
         self.lang_type_list.setObjectName("lang_type_list")
@@ -330,14 +312,7 @@ class Ui_settings:
         self.lang_type_list.setDragEnabled(True)
         self.lang_type_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
 
-        self.gridLayout_9.addWidget(self.lang_type_list, 1, 0, 1, 1)
-
-        self.label_13 = QLabel(self.groupBox_3)
-        self.label_13.setObjectName("label_13")
-        sizePolicy4.setHeightForWidth(self.label_13.sizePolicy().hasHeightForWidth())
-        self.label_13.setSizePolicy(sizePolicy4)
-
-        self.gridLayout_9.addWidget(self.label_13, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.lang_type_list, 1, 4, 4, 1)
 
         self.source_list = CheckBoxListWidget(self.groupBox_3)
         self.source_list.setObjectName("source_list")
@@ -346,60 +321,51 @@ class Ui_settings:
         self.source_list.setMaximumSize(QSize(100, 16777215))
         self.source_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
 
-        self.gridLayout_9.addWidget(self.source_list, 1, 1, 1, 1)
+        self.gridLayout_3.addWidget(self.source_list, 1, 5, 4, 1)
 
-        self.horizontalLayout_2.addLayout(self.gridLayout_9)
+        self.label_18 = QLabel(self.groupBox_3)
+        self.label_18.setObjectName("label_18")
+        sizePolicy4.setHeightForWidth(self.label_18.sizePolicy().hasHeightForWidth())
+        self.label_18.setSizePolicy(sizePolicy4)
+        self.label_18.setWordWrap(True)
 
-        self.gridLayout_10 = QGridLayout()
-        self.gridLayout_10.setObjectName("gridLayout_10")
-        self.font_comboBox = QComboBox(self.groupBox_3)
-        self.font_comboBox.setObjectName("font_comboBox")
-
-        self.gridLayout_10.addWidget(self.font_comboBox, 0, 1, 1, 1)
-
-        self.auto_frame_rate_checkBox = QCheckBox(self.groupBox_3)
-        self.auto_frame_rate_checkBox.setObjectName("auto_frame_rate_checkBox")
-
-        self.gridLayout_10.addWidget(self.auto_frame_rate_checkBox, 2, 0, 1, 2)
+        self.gridLayout_3.addWidget(self.label_18, 1, 6, 1, 2)
 
         self.label_15 = QLabel(self.groupBox_3)
         self.label_15.setObjectName("label_15")
 
-        self.gridLayout_10.addWidget(self.label_15, 3, 0, 1, 1)
-
-        self.label_18 = QLabel(self.groupBox_3)
-        self.label_18.setObjectName("label_18")
-        sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        sizePolicy5.setHorizontalStretch(0)
-        sizePolicy5.setVerticalStretch(0)
-        sizePolicy5.setHeightForWidth(self.label_18.sizePolicy().hasHeightForWidth())
-        self.label_18.setSizePolicy(sizePolicy5)
-        self.label_18.setWordWrap(True)
-
-        self.gridLayout_10.addWidget(self.label_18, 1, 0, 1, 2)
+        self.gridLayout_3.addWidget(self.label_15, 2, 6, 1, 1)
 
         self.frame_rate_spinBox = QSpinBox(self.groupBox_3)
         self.frame_rate_spinBox.setObjectName("frame_rate_spinBox")
         self.frame_rate_spinBox.setMaximum(1000)
         self.frame_rate_spinBox.setValue(60)
 
-        self.gridLayout_10.addWidget(self.frame_rate_spinBox, 3, 1, 1, 1)
+        self.gridLayout_3.addWidget(self.frame_rate_spinBox, 2, 7, 1, 1)
 
-        self.label_10 = QLabel(self.groupBox_3)
-        self.label_10.setObjectName("label_10")
-        sizePolicy4.setHeightForWidth(self.label_10.sizePolicy().hasHeightForWidth())
-        self.label_10.setSizePolicy(sizePolicy4)
+        self.played_del_color_button = QPushButton(self.groupBox_3)
+        self.played_del_color_button.setObjectName("played_del_color_button")
+        sizePolicy.setHeightForWidth(self.played_del_color_button.sizePolicy().hasHeightForWidth())
+        self.played_del_color_button.setSizePolicy(sizePolicy)
 
-        self.gridLayout_10.addWidget(self.label_10, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.played_del_color_button, 3, 0, 2, 1)
+
+        self.unplayed_del_color_button = QPushButton(self.groupBox_3)
+        self.unplayed_del_color_button.setObjectName("unplayed_del_color_button")
+        sizePolicy.setHeightForWidth(self.unplayed_del_color_button.sizePolicy().hasHeightForWidth())
+        self.unplayed_del_color_button.setSizePolicy(sizePolicy)
+
+        self.gridLayout_3.addWidget(self.unplayed_del_color_button, 3, 2, 2, 1)
+
+        self.auto_frame_rate_checkBox = QCheckBox(self.groupBox_3)
+        self.auto_frame_rate_checkBox.setObjectName("auto_frame_rate_checkBox")
+
+        self.gridLayout_3.addWidget(self.auto_frame_rate_checkBox, 3, 6, 1, 2)
 
         self.show_local_song_lyrics_db_manager_button = QPushButton(self.groupBox_3)
         self.show_local_song_lyrics_db_manager_button.setObjectName("show_local_song_lyrics_db_manager_button")
 
-        self.gridLayout_10.addWidget(self.show_local_song_lyrics_db_manager_button, 4, 0, 1, 2)
-
-        self.horizontalLayout_2.addLayout(self.gridLayout_10)
-
-        self.verticalLayout_3.addLayout(self.horizontalLayout_2)
+        self.gridLayout_3.addWidget(self.show_local_song_lyrics_db_manager_button, 4, 6, 1, 2)
 
         self.verticalLayout_2.addWidget(self.groupBox_3)
 
@@ -443,8 +409,8 @@ class Ui_settings:
 
         self.label_7 = QLabel(self.groupBox_6)
         self.label_7.setObjectName("label_7")
-        sizePolicy4.setHeightForWidth(self.label_7.sizePolicy().hasHeightForWidth())
-        self.label_7.setSizePolicy(sizePolicy4)
+        sizePolicy3.setHeightForWidth(self.label_7.sizePolicy().hasHeightForWidth())
+        self.label_7.setSizePolicy(sizePolicy3)
 
         self.gridLayout_2.addWidget(self.label_7, 0, 0, 1, 1)
 
@@ -486,10 +452,6 @@ class Ui_settings:
 
         self.verticalLayout_2.addWidget(self.groupBox_5)
 
-        self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
-
-        self.verticalLayout_2.addItem(self.verticalSpacer_2)
-
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.verticalLayout.addWidget(self.scrollArea)
@@ -514,11 +476,11 @@ class Ui_settings:
                 "hr { height: 1px; border-width: 0; }\n"
                 'li.unchecked::marker { content: "\\2610"; }\n'
                 'li.checked::marker { content: "\\2612"; }\n'
-                '</style></head><body style=" font-size:9pt; font-weight:400; font-style:normal;">\n'
+                "</style></head><body style=\" font-family:'Microsoft YaHei UI'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">\u4ee5\u4e0b\u5360\u4f4d\u7b26\u53ef\u7528</p>\n'
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u6b4c\u540d: %&lt;title&gt; \u827a\u672f\u5bb6: %&lt;artist&gt;</span></p>\n'
-                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" fo'
-                'nt-size:8pt;">\u4e13\u8f91\u540d: %&lt;album&gt; \u6b4c\u66f2/\u6b4c\u8bcdid: %&lt;id&gt;</span></p>\n'
+                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; te'
+                'xt-indent:0px;"><span style=" font-size:8pt;">\u4e13\u8f91\u540d: %&lt;album&gt; \u6b4c\u66f2/\u6b4c\u8bcdid: %&lt;id&gt;</span></p>\n'
                 '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u8bed\u8a00\u7c7b\u578b: %&lt;langs&gt;</span></p></body></html>',
                 None,
             )
@@ -532,12 +494,11 @@ class Ui_settings:
         self.label_26.setText(QCoreApplication.translate("settings", "\u6b4c\u8bcd\u6587\u4ef6\u540d\u683c\u5f0f", None))
         self.label_27.setText(QCoreApplication.translate("settings", "\u9ed8\u8ba4\u4fdd\u5b58\u8def\u5f84", None))
         self.select_default_save_path_pushButton.setText(QCoreApplication.translate("settings", "\u9009\u62e9\u6587\u4ef6\u5939", None))
+        self.label_28.setText(QCoreApplication.translate("settings", "ID3\u7248\u672c", None))
         self.id3_ver_comboBox.setItemText(0, QCoreApplication.translate("settings", "v2.3", None))
         self.id3_ver_comboBox.setItemText(1, QCoreApplication.translate("settings", "v2.4", None))
 
-        self.label_28.setText(QCoreApplication.translate("settings", "ID3\u7248\u672c", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("settings", "\u6b4c\u8bcd\u8bbe\u7f6e", None))
-        self.label_4.setText(QCoreApplication.translate("settings", "\u987a\u5e8f", None))
 
         __sortingEnabled = self.langs_order_listWidget.isSortingEnabled()
         self.langs_order_listWidget.setSortingEnabled(False)
@@ -549,20 +510,8 @@ class Ui_settings:
         ___qlistwidgetitem2.setText(QCoreApplication.translate("settings", "\u8bd1\u6587", None))
         self.langs_order_listWidget.setSortingEnabled(__sortingEnabled)
 
-        self.auto_select_checkBox.setText(
-            QCoreApplication.translate("settings", "\u6b4c\u66f2\u641c\u7d22\u6b4c\u8bcd\u65f6\u81ea\u52a8\u9009\u62e9(\u9177\u72d7\u97f3\u4e50)", None)
-        )
-        self.lrc_ms_digit_count_spinBox.setSpecialValueText("")
-        self.lrc_ms_digit_count_spinBox.setPrefix("")
-        self.label_6.setText(QCoreApplication.translate("settings", "LRC\u6b4c\u8bcd\u6beb\u79d2\u4f4d\u6570", None))
+        self.label_6.setText(QCoreApplication.translate("settings", "LRC\u6b4c\u8bcd\u6beb\u79d2\u4f4d\u6570:", None))
         self.label_8.setText(QCoreApplication.translate("settings", "\u672b\u5c3e\u53c2\u7167\u884c\u65f6\u95f4\u6837\u5f0f(\u4ec5LRC):", None))
-        self.last_ref_line_time_sty_comboBox.setItemText(
-            0, QCoreApplication.translate("settings", "\u4e0e\u5f53\u524d\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u76f8\u540c", None)
-        )
-        self.last_ref_line_time_sty_comboBox.setItemText(
-            1, QCoreApplication.translate("settings", "\u4e0e\u4e0b\u4e00\u884c\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u63a5\u8fd1", None)
-        )
-
         self.skip_inst_lyrics_checkBox.setText(
             QCoreApplication.translate(
                 "settings", "\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd/\u672c\u5730\u5339\u914d\u65f6\u8df3\u8fc7\u7eaf\u97f3\u4e50", None
@@ -571,21 +520,34 @@ class Ui_settings:
         self.add_end_timestamp_line_checkBox.setText(
             QCoreApplication.translate("settings", "\u4e3a\u9010\u884clrc\u6b4c\u8bcd\u6dfb\u52a0\u7ed3\u675f\u65f6\u95f4\u6233\u884c", None)
         )
+        self.label_4.setText(QCoreApplication.translate("settings", "\u987a\u5e8f", None))
+        self.auto_select_checkBox.setText(
+            QCoreApplication.translate("settings", "\u6b4c\u66f2\u641c\u7d22\u6b4c\u8bcd\u65f6\u81ea\u52a8\u9009\u62e9(\u9177\u72d7\u97f3\u4e50)", None)
+        )
+        self.last_ref_line_time_sty_comboBox.setItemText(
+            0, QCoreApplication.translate("settings", "\u4e0e\u5f53\u524d\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u76f8\u540c", None)
+        )
+        self.last_ref_line_time_sty_comboBox.setItemText(
+            1, QCoreApplication.translate("settings", "\u4e0e\u4e0b\u4e00\u884c\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u63a5\u8fd1", None)
+        )
+
+        self.lrc_ms_digit_count_spinBox.setSpecialValueText("")
+        self.lrc_ms_digit_count_spinBox.setPrefix("")
         self.groupBox_3.setTitle(QCoreApplication.translate("settings", "\u684c\u9762\u6b4c\u8bcd\u8bbe\u7f6e", None))
-        self.played_del_color_button.setText(QCoreApplication.translate("settings", "\u5220\u9664\u989c\u8272", None))
         self.label_11.setText(QCoreApplication.translate("settings", "\u5df2\u64ad\u653e\u989c\u8272:", None))
-        self.played_add_color_button.setText(QCoreApplication.translate("settings", "\u6dfb\u52a0\u989c\u8272", None))
-        self.unplayed_del_color_button.setText(QCoreApplication.translate("settings", "\u5220\u9664\u989c\u8272", None))
         self.label_12.setText(QCoreApplication.translate("settings", "\u672a\u64ad\u653e\u989c\u8272:", None))
-        self.unplayed_add_color_button.setText(QCoreApplication.translate("settings", "\u6dfb\u52a0\u989c\u8272", None))
-        self.label_16.setText(QCoreApplication.translate("settings", "\u81ea\u52a8\u641c\u7d22\u6b4c\u8bcd\u6e90\uff1a", None))
         self.label_13.setText(QCoreApplication.translate("settings", "\u9ed8\u8ba4\u8bed\u8a00\u7c7b\u578b\uff1a", None))
-        self.auto_frame_rate_checkBox.setText(QCoreApplication.translate("settings", "\u81ea\u9002\u5e94\u5e27\u7387", None))
-        self.label_15.setText(QCoreApplication.translate("settings", "\u5e27\u7387:", None))
+        self.label_16.setText(QCoreApplication.translate("settings", "\u81ea\u52a8\u641c\u7d22\u6b4c\u8bcd\u6e90\uff1a", None))
+        self.label_10.setText(QCoreApplication.translate("settings", "\u5b57\u4f53:", None))
+        self.played_add_color_button.setText(QCoreApplication.translate("settings", "\u6dfb\u52a0\u989c\u8272", None))
+        self.unplayed_add_color_button.setText(QCoreApplication.translate("settings", "\u6dfb\u52a0\u989c\u8272", None))
         self.label_18.setText(
             QCoreApplication.translate("settings", "\u63d0\u793a\uff1a\u5b57\u4f53\u5927\u5c0f\u901a\u8fc7\u62c9\u4f38\u7a97\u53e3\u8c03\u8282", None)
         )
-        self.label_10.setText(QCoreApplication.translate("settings", "\u5b57\u4f53:", None))
+        self.label_15.setText(QCoreApplication.translate("settings", "\u5e27\u7387:", None))
+        self.played_del_color_button.setText(QCoreApplication.translate("settings", "\u5220\u9664\u989c\u8272", None))
+        self.unplayed_del_color_button.setText(QCoreApplication.translate("settings", "\u5220\u9664\u989c\u8272", None))
+        self.auto_frame_rate_checkBox.setText(QCoreApplication.translate("settings", "\u81ea\u9002\u5e94\u5e27\u7387", None))
         self.show_local_song_lyrics_db_manager_button.setText(QCoreApplication.translate("settings", "\u6b4c\u8bcd\u5173\u8054\u7ba1\u7406", None))
         self.groupBox_6.setTitle(QCoreApplication.translate("settings", "\u5176\u4ed6", None))
         self.auto_check_update_checkBox.setText(QCoreApplication.translate("settings", "\u81ea\u52a8\u68c0\u67e5\u66f4\u65b0", None))

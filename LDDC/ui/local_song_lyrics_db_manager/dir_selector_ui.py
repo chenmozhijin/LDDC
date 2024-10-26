@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'dir_selector.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,7 +15,6 @@ class Ui_DirSelectorDialog:
     def setupUi(self, DirSelectorDialog):
         if not DirSelectorDialog.objectName():
             DirSelectorDialog.setObjectName("DirSelectorDialog")
-        DirSelectorDialog.resize(406, 314)
         icon = QIcon()
         icon.addFile(":/LDDC/img/icon/logo.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         DirSelectorDialog.setWindowIcon(icon)

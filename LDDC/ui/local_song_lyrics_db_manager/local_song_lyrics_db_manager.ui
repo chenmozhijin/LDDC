@@ -2,14 +2,6 @@
 <ui version="4.0">
  <class>LocalSongLyricsDBManager</class>
  <widget class="QWidget" name="LocalSongLyricsDBManager">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>868</width>
-    <height>538</height>
-   </rect>
-  </property>
   <property name="windowTitle">
    <string>歌词关联管理器</string>
   </property>
@@ -79,7 +71,7 @@
   <customwidget>
    <class>ProportionallyStretchedTableWidget</class>
    <extends>QTableWidget</extends>
-   <header>ui.custom_widgets</header>
+   <header>LDDC.ui.custom_widgets</header>
   </customwidget>
  </customwidgets>
  <resources>

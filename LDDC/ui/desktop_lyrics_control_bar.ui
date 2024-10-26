@@ -2,14 +2,6 @@
 <ui version="4.0">
  <class>DesktopLyricsControlBar</class>
  <widget class="QWidget" name="DesktopLyricsControlBar">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>186</width>
-    <height>24</height>
-   </rect>
-  </property>
   <property name="mouseTracking">
    <bool>true</bool>
   </property>

@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'about.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -15,7 +15,6 @@ class Ui_about:
     def setupUi(self, about):
         if not about.objectName():
             about.setObjectName("about")
-        about.resize(1050, 600)
         self.verticalLayout = QVBoxLayout(about)
         self.verticalLayout.setObjectName("verticalLayout")
         self.title_label = QLabel(about)

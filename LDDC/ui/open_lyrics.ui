@@ -2,14 +2,6 @@
 <ui version="4.0">
  <class>open_lyrics</class>
  <widget class="QWidget" name="open_lyrics">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>1050</width>
-    <height>600</height>
-   </rect>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QPlainTextEdit" name="plainTextEdit">

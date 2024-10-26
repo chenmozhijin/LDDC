@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'search_base.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -34,7 +34,6 @@ class Ui_search_base:
     def setupUi(self, search_base):
         if not search_base.objectName():
             search_base.setObjectName("search_base")
-        search_base.resize(1039, 433)
         self.verticalLayout = QVBoxLayout(search_base)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout = QHBoxLayout()

@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'open_lyrics.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.7.2
+## Created by: Qt User Interface Compiler version 6.8.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -25,7 +25,6 @@ class Ui_open_lyrics:
     def setupUi(self, open_lyrics):
         if not open_lyrics.objectName():
             open_lyrics.setObjectName("open_lyrics")
-        open_lyrics.resize(1050, 600)
         self.verticalLayout = QVBoxLayout(open_lyrics)
         self.verticalLayout.setObjectName("verticalLayout")
         self.plainTextEdit = QPlainTextEdit(open_lyrics)
