@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import os
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Qt, Slot
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -131,10 +131,10 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 "source": source,
             },
         )
-        self.worker.signals.error.connect(self.worker_error)
-        self.worker.signals.finished.connect(self.worker_finished)
-        self.worker.signals.massage.connect(self.worker_massage)
-        self.worker.signals.progress.connect(self.change_progress)
+        self.worker.signals.error.connect(self.worker_error, Qt.ConnectionType.BlockingQueuedConnection)
+        self.worker.signals.finished.connect(self.worker_finished, Qt.ConnectionType.BlockingQueuedConnection)
+        self.worker.signals.massage.connect(self.worker_massage, Qt.ConnectionType.BlockingQueuedConnection)
+        self.worker.signals.progress.connect(self.change_progress, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.startOnReservedThread(self.worker)
 
     @Slot(str)

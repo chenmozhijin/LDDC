@@ -44,5 +44,5 @@ def show_new_version_dialog(name: str, repo: str, new_version: str, body: str) -
 
 def check_update(is_auto: bool, name: str, repo: str, version: str) -> None:
     worker = CheckUpdate(is_auto, name, repo, version)
-    worker.signals.show_new_version_dialog.connect(show_new_version_dialog)
+    worker.signals.show_new_version_dialog.connect(show_new_version_dialog, Qt.ConnectionType.BlockingQueuedConnection)
     threadpool.start(worker)

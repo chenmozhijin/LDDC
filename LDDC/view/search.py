@@ -147,8 +147,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.taskid["results_table"] += 1
         self.search_info = {'keyword': keyword, 'search_type': SearchType(self.search_type_comboBox.currentIndex()), 'source': self.get_source(), 'page': 1}
         worker = SearchWorker(self.taskid["results_table"], keyword, SearchType(self.search_type_comboBox.currentIndex()), self.get_source(), 1)
-        worker.signals.result.connect(self.search_result_slot)
-        worker.signals.error.connect(self.search_error_slot)
+        worker.signals.result.connect(self.search_result_slot, Qt.ConnectionType.BlockingQueuedConnection)
+        worker.signals.error.connect(self.search_error_slot, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
         self.results_tableWidget.setColumnCount(0)
@@ -227,8 +227,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
              "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
              "id": self.taskid["update_preview_lyric"],
              "offset": self.offset_spinBox.value()})
-        worker.signals.result.connect(self.update_preview_lyric_result_slot)
-        worker.signals.error.connect(self.update_preview_lyric_error_slot)
+        worker.signals.result.connect(self.update_preview_lyric_result_slot, Qt.ConnectionType.BlockingQueuedConnection)
+        worker.signals.error.connect(self.update_preview_lyric_error_slot, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
 
         self.preview_lyric_result = None
@@ -340,8 +340,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         else:
             msg = "Unknown result_type"
             raise ValueError(msg)
-        worker.signals.result.connect(self.show_songlist_result)
-        worker.signals.error.connect(self.get_songlist_error)
+        worker.signals.result.connect(self.show_songlist_result, Qt.ConnectionType.BlockingQueuedConnection)
+        worker.signals.error.connect(self.get_songlist_error, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
         self.results_tableWidget.setRowCount(0)
         self.results_tableWidget.setColumnCount(0)
@@ -378,8 +378,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         worker = SearchWorker(self.taskid["results_table"],
                               f"{get_artist_str(info.get('artist'), '、')} - {info['title'].strip()}",
                               SearchType.LYRICS, info['source'], 1, info)
-        worker.signals.result.connect(self.search_lyrics_result_slot)
-        worker.signals.error.connect(self.search_lyrics_error_slot)
+        worker.signals.result.connect(self.search_lyrics_result_slot, Qt.ConnectionType.BlockingQueuedConnection)
+        worker.signals.error.connect(self.search_lyrics_error_slot, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
 
     @Slot(QModelIndex)
@@ -488,8 +488,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                                       self.search_info['search_type'],
                                       self.search_info['source'],
                                       self.search_info['page'] + 1)
-                worker.signals.result.connect(self.search_nextpage_result_slot)
-                worker.signals.error.connect(self.search_nextpage_error)
+                worker.signals.result.connect(self.search_nextpage_result_slot, Qt.ConnectionType.BlockingQueuedConnection)
+                worker.signals.error.connect(self.search_nextpage_error, Qt.ConnectionType.BlockingQueuedConnection)
                 threadpool.start(worker)
 
 
@@ -642,8 +642,8 @@ class SearchWidget(SearchWidgetBase):
         self.get_list_lyrics_box.show()
         self.get_list_lyrics_box.setEnabled(True)
 
-        worker.signals.result.connect(get_list_lyrics_update)
-        worker.signals.error.connect(get_list_lyrics_update)
+        worker.signals.result.connect(get_list_lyrics_update, Qt.ConnectionType.BlockingQueuedConnection)
+        worker.signals.error.connect(get_list_lyrics_update, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
 
     @Slot()
@@ -794,7 +794,7 @@ class SearchWidget(SearchWidgetBase):
             MsgBox.warning(self, "警告", "没有获取到歌曲标题,无法自动搜索")
 
         worker = AutoLyricsFetcher(song, taskid=tuple(self.taskid.values()), return_search_result=True)
-        worker.signals.result.connect(self.auto_fetch_slot)
+        worker.signals.result.connect(self.auto_fetch_slot, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
         self.preview_lyric_result = None
         self.preview_plainTextEdit.setPlainText(self.tr("正在自动获取 {0} 的歌词...").format(

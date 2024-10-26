@@ -225,7 +225,7 @@ class SettingWidget(QWidget, Ui_settings):
 
     @Slot()
     def update_cache_size(self) -> None:
-        self.cache_size_label.setText(self.tr("缓存大小:") + f" {cache.volume() / 1000000 } MB")
+        self.cache_size_label.setText(self.tr("缓存大小:") + f" {cache.volume() / 1000000} MB")
 
     @Slot()
     def clear_cache(self) -> None:

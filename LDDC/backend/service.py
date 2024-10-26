@@ -546,7 +546,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                         info["duration"] = info["duration"] / 1000
                         worker = AutoLyricsFetcher(info,
                                                    source=[Source[s] for s in cfg["desktop_lyrics_sources"]], taskid=self.taskid)
-                        worker.signals.result.connect(self.handle_fetch_result)
+                        worker.signals.result.connect(self.handle_fetch_result, Qt.ConnectionType.BlockingQueuedConnection)
                         threadpool.start(worker)
                     else:
                         # 没有标题无法自动获取歌词

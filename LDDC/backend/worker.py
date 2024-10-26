@@ -65,6 +65,7 @@ class CheckUpdateSignal(QObject):
 
 
 class CheckUpdate(QRunnable):
+
     def __init__(self, is_auto: bool, name: str, repo: str, version: str) -> None:
         super().__init__()
         self.isAuto = is_auto
@@ -152,8 +153,8 @@ class SearchWorker(QRunnable):
                 else:
                     self.search_task[task_id] = None
                     worker = SearchWorker(task_id, self.keyword, self.search_type, source, self.page, self.info)
-                    worker.signals.result.connect(self.handle_search_result)
-                    worker.signals.error.connect(self.handle_search_error)
+                    worker.signals.result.connect(self.handle_search_result, Qt.ConnectionType.BlockingQueuedConnection)
+                    worker.signals.error.connect(self.handle_search_error, Qt.ConnectionType.BlockingQueuedConnection)
                     threadpool.start(worker)
 
             if self.search_task_finished != len(self.search_task):
@@ -381,7 +382,7 @@ class LocalMatchWorker(QRunnable):
         info = self.song_infos[self.current_index]
         self.current_index += 1
         worker = AutoLyricsFetcher(info, self.min_score, self.source)
-        worker.signals.result.connect(self.handle_fetch_result)
+        worker.signals.result.connect(self.handle_fetch_result, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
 
     def run(self) -> None:
