@@ -681,6 +681,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             self.offseted_lyrics = None
             self.update_db_data()
             self.show_artist_title(msg)
+            self.widget.new_lyrics.emit({})
 
     def update_db_data(self) -> None:
         local_song_lyrics.set_song(**self.song_info, lyrics_path=self.lyrics_path, config={k: v for k, v in self.config.items()
