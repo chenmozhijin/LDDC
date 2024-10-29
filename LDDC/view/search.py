@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 import os
-import re
 from itertools import zip_longest
 from typing import Any, Literal
 
@@ -21,17 +20,17 @@ from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPush
 
 from LDDC.backend.converter import convert2
 from LDDC.backend.lyrics import Lyrics
-from LDDC.backend.song_info import audio_formats, get_audio_file_infos, parse_cue_from_file, write_lyrics
+from LDDC.backend.song_info import audio_formats, write_lyrics
 from LDDC.backend.worker import AutoLyricsFetcher, GetSongListWorker, LyricProcessingWorker, SearchWorker
 from LDDC.ui.search_base_ui import Ui_search_base
 from LDDC.utils.data import cfg
 from LDDC.utils.enum import LyricsFormat, LyricsType, SearchType, Source
-from LDDC.utils.logger import logger
 from LDDC.utils.thread import threadpool
 from LDDC.utils.utils import get_artist_str, get_lyrics_format_ext, get_save_path, ms2formattime
 
 from .get_list_lyrics import GetListLyrics
 from .msg_box import MsgBox
+from .share import parse_drop_mime
 
 
 class SearchWidgetBase(QWidget, Ui_search_base):
@@ -727,69 +726,20 @@ class SearchWidget(SearchWidgetBase):
         super().search()
 
     def dropEvent(self, event: QDropEvent) -> None:
-        # 获取拖动的文件信息
-        mime = event.mimeData()
 
-        path, track, index = None, None, None
-        # 特殊适配
-        if 'application/x-qt-windows-mime;value="ACL.FileURIs"' in mime.formats():
-            # AIMP
-            data = mime.data('application/x-qt-windows-mime;value="ACL.FileURIs"')
-            path = bytearray(data.data()[20:-4]).decode('UTF-16')
-            if path.split(":")[-1].isdigit():
-                index = path.split(":")[-1]
-                path = ":".join(path.split(":")[:-1])
-        elif ('text/plain' in mime.formats() and
-              # foobar2000
-              (matched := re.fullmatch(r"(?:(?P<artist>.*?) - )?\[(?P<album>.*?) (?:CD\d+/\d+ )?#(?P<track>\d+)\] (?P<title>.*)", mime.text())) is not None):
-            track = matched.group('track')
+        try:
+            # 获取拖入的文件信息
+            songs = parse_drop_mime(event.mimeData())
+        except Exception as e:
+            MsgBox.critical(self, self.tr('错误'), self.tr('拖动文件解析失败：') + str(e))
+            return
 
-        if not path:
-            try:
-                path = mime.urls()[0].toLocalFile()
-            except Exception as e:
-                logger.exception(e)
-                MsgBox.critical(self, "错误", "无法获取文件路径")
-                return
-        if path.lower().endswith('.cue') and (isinstance(track, str | int) or index is not None):
-            try:
-                songs, _audio_file_paths = parse_cue_from_file(path)
-            except Exception as e:
-                MsgBox.critical(self, "错误", f"解析文件 {path} 失败: {e}")
-                return
-            if index is not None:
-                if int(index) + 1 >= len(songs):
-                    MsgBox.critical(self, "错误", f"文件 {path} 中没有找到第 {index} 轨歌曲")
-                    return
-                song = songs[int(index)]
-            elif isinstance(track, str | int):
-                for song in songs:
-                    if song["track"] is not None and int(song["track"]) == int(track):
-                        break
-                else:
-                    MsgBox.critical(self, "错误", f"文件 {path} 中没有找到第 {track} 轨歌曲")
-                    return
-        else:
-            try:
-                songs = get_audio_file_infos(path)
-                if len(songs) == 1:
-                    song = songs[0]
-                    if song.get("type") == "audio":
-                        self.droped_file_path = path
-                elif isinstance(track, str | int):
-                    for song in songs:
-                        if song["track"] is not None and int(song["track"]) == int(track):
-                            break
-                    else:
-                        MsgBox.critical(self, "错误", f"文件 {path} 中没有找到第 {track} 轨歌曲")
-                        return
-                else:
-                    MsgBox.critical(self, "错误", f"文件 {path} 中包含多个歌曲")
-            except Exception as e:
-                logger.exception(e)
-                MsgBox.critical(self, "错误", f"解析文件 {path} 失败: {e}")
-                return
+        if not songs:
+            MsgBox.warning(self, self.tr('警告'), self.tr('没有获取到歌曲信息'))
+            return
 
+        song = songs[0]
+        self.droped_file_path = song.get("file_path")
         if not song['title']:
             MsgBox.warning(self, "警告", "没有获取到歌曲标题,无法自动搜索")
 
