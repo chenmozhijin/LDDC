@@ -123,3 +123,10 @@ class FileTypeError(Exception):
 
     def __init__(self, msg: str) -> None:
         super().__init__(translator.translate(msg))
+
+
+class DropError(Exception):
+    """拖放错误"""
+
+    def __init__(self, msg: str) -> None:
+        super().__init__(translator.translate(msg))

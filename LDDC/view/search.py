@@ -20,7 +20,7 @@ from PySide6.QtWidgets import QFileDialog, QHBoxLayout, QLabel, QLineEdit, QPush
 
 from LDDC.backend.converter import convert2
 from LDDC.backend.lyrics import Lyrics
-from LDDC.backend.song_info import audio_formats, write_lyrics
+from LDDC.backend.song_info import audio_formats, parse_drop_infos, write_lyrics
 from LDDC.backend.worker import AutoLyricsFetcher, GetSongListWorker, LyricProcessingWorker, SearchWorker
 from LDDC.ui.search_base_ui import Ui_search_base
 from LDDC.utils.data import cfg
@@ -30,7 +30,6 @@ from LDDC.utils.utils import get_artist_str, get_lyrics_format_ext, get_save_pat
 
 from .get_list_lyrics import GetListLyrics
 from .msg_box import MsgBox
-from .share import parse_drop_mime
 
 
 class SearchWidgetBase(QWidget, Ui_search_base):
@@ -716,7 +715,10 @@ class SearchWidget(SearchWidgetBase):
         dialog.open()
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
-        if event.mimeData().hasUrls():
+        formats = event.mimeData().formats()
+        if (event.mimeData().hasUrls() or
+            'application/x-qt-windows-mime;value="foobar2000_playable_location_format"' in formats or
+                'application/x-qt-windows-mime;value="ACL.FileURIs"' in formats):
             event.acceptProposedAction()  # 接受拖动操作
         else:
             event.ignore()
@@ -729,16 +731,10 @@ class SearchWidget(SearchWidgetBase):
 
         try:
             # 获取拖入的文件信息
-            songs = parse_drop_mime(event.mimeData())
+            song = parse_drop_infos(event.mimeData(), first=True)
         except Exception as e:
             MsgBox.critical(self, self.tr('错误'), self.tr('拖动文件解析失败：') + str(e))
-            return
 
-        if not songs:
-            MsgBox.warning(self, self.tr('警告'), self.tr('没有获取到歌曲信息'))
-            return
-
-        song = songs[0]
         self.droped_file_path = song.get("file_path")
         if not song['title']:
             MsgBox.warning(self, "警告", "没有获取到歌曲标题,无法自动搜索")
