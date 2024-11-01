@@ -74,6 +74,7 @@ ignore = [
     "D103",  # undocumented-public-function
     "D104",  # undocumented-public-package
     "D105",  # undocumented-magic-method
+    "D106",  # undocumented-public-nested-class
     "D107",  # undocumented-public-init
     "D400",  # ends-in-period
     "D415",  # ends-in-punctuation
