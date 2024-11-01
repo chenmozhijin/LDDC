@@ -18,7 +18,6 @@ from PySide6.QtCore import (
     QCoreApplication,
     QMutex,
     QObject,
-    QRunnable,
     QSharedMemory,
     Qt,
     QThread,
@@ -53,12 +52,9 @@ random = SystemRandom()
 api_version = 1
 
 
-class ServiceInstanceSignal(QObject):
-    handle_task = Signal(dict)
+class ServiceInstanceBase(QThread):
+    task = Signal(dict)
     stop = Signal()
-
-
-class ServiceInstanceBase(QRunnable):
 
     def __init__(self, service: "LDDCService", instance_id: int, client_id: int, pid: int | None = None) -> None:
         super().__init__()
@@ -66,6 +62,7 @@ class ServiceInstanceBase(QRunnable):
         self.instance_id = instance_id
         self.pid = pid
         self.client_id = client_id
+        self.moveToThread(self)  # 让信号连接的函数在此线程运行
 
     @abstractmethod
     @Slot(dict)
@@ -77,19 +74,19 @@ class ServiceInstanceBase(QRunnable):
         ...
 
     @Slot()
-    def stop(self) -> None:
-        self.thread.quit()
+    def handle_stop(self) -> None:
+        self.quit()
         logger.info("Service instance %s stopped", self.instance_id)
         self.service.instance_finished.emit(self.instance_id)
 
     def run(self) -> None:
         logger.info("Service instance %s started", self.instance_id)
-        self.base_signals = ServiceInstanceSignal()
-        self.base_signals.stop.connect(self.stop)
-        self.base_signals.handle_task.connect(self.handle_task, Qt.ConnectionType.QueuedConnection)
-        self.thread = QThread.currentThread()
+
+        self.stop.connect(self.handle_stop)
+        self.task.connect(self.handle_task)
+
         self.init()
-        self.thread.exec()
+        self.exec()
 
 
 instance_dict: dict[int, ServiceInstanceBase] = {}
@@ -105,13 +102,13 @@ def clean_dead_instance() -> bool:
     instance_dict_mutex.unlock()
 
     for instance_id in to_stop:
-        instance_dict[instance_id].base_signals.stop.emit()
+        instance_dict[instance_id].stop.emit()
     return bool(to_stop)
 
 
 def check_any_instance_alive() -> bool:
     clean_dead_instance()
-    return bool([True for instance in instance_dict.values() if instance.thread.isRunning()])
+    return bool([True for instance in instance_dict.values() if instance.isRunning()])
 
 
 class Client:
@@ -312,16 +309,16 @@ class LDDCService(QObject):
                     instance_dict_mutex.lock()
                     instance_dict[instance_id] = DesktopLyricsInstance(self, instance_id, json_data, client_id)
                     instance_dict_mutex.unlock()
-                    threadpool.startOnReservedThread(instance_dict[instance_id])
+                    instance_dict[instance_id].start()
                     logger.info("创建新实例：%s", instance_id)
                     response = {"v": api_version, "id": instance_id}
                     self.socket_send_message(client_id, json.dumps(response))
         elif json_data["id"] in instance_dict:
             if json_data["task"] == "del_instance":
-                instance_dict[json_data["id"]].base_signals.stop.emit()
+                instance_dict[json_data["id"]].stop.emit()
                 self.instance_del.emit()
             else:
-                instance_dict[json_data["id"]].base_signals.handle_task.emit(json_data)
+                instance_dict[json_data["id"]].task.emit(json_data)
 
     @Slot()
     def socket_send_message(self, client_id: int, response: str) -> None:
@@ -345,20 +342,10 @@ class LDDCService(QObject):
     @Slot()
     def del_instance(self, instance_id: int) -> None:
         instance_dict_mutex.lock()
+        instance_dict[instance_id].deleteLater()
         del instance_dict[instance_id]
         instance_dict_mutex.unlock()
         self.instance_del.emit()
-
-
-class DesktopLyricsInstanceSignal(QObject):
-    send_task = Signal(str)
-    to_select = Signal()
-    lyrics_select = Signal(Lyrics, str, list, int)
-    update_refresh_rate = Signal()
-    set_inst = Signal()
-    set_auto_search = Signal(bool)
-    unlink_lyrics = Signal()
-    cfg_changed = Signal()
 
 
 class DesktopLyricsInstance(ServiceInstanceBase):
@@ -391,28 +378,17 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.default_langs = cfg["desktop_lyrics_default_langs"]
 
         self.reset()
-        self.signal = DesktopLyricsInstanceSignal()
-        self.signal.send_task.connect(self.send_task)
-        self.signal.update_refresh_rate.connect(self.update_refresh_rate)
-        self.signal.to_select.connect(self.to_select)
-        self.signal.lyrics_select.connect(self.select_lyrics)
+        # 连接gui信号
+        self.widget.send_task.connect(self.send_task)
+        self.widget.moved.connect(self.update_refresh_rate)
+        self.widget.to_select.connect(self.to_select)
+        self.widget.selector.lyrics_selected.connect(self.select_lyrics)
 
-        self.signal.set_inst.connect(self.set_inst)
-        self.signal.set_auto_search.connect(self.set_auto_search)
-        self.signal.unlink_lyrics.connect(self.unlink_lyrics)
+        self.widget.menu.action_set_inst.triggered.connect(self.set_inst)
+        self.widget.menu.actino_set_auto_search.triggered.connect(self.set_auto_search)
+        self.widget.menu.action_unlink_lyrics.triggered.connect(self.unlink_lyrics)
 
-        self.signal.cfg_changed.connect(self.cfg_changed_slot)
-        # 连接gui信号(6.8.0后直接连接函数会导致函数在gui线程中执行)
-        self.widget.send_task.connect(self.signal.send_task)
-        self.widget.moved.connect(self.signal.update_refresh_rate)
-        self.widget.to_select.connect(self.signal.to_select)
-        self.widget.selector.lyrics_selected.connect(self.signal.lyrics_select)
-
-        self.widget.menu.action_set_inst.triggered.connect(self.signal.set_inst)
-        self.widget.menu.actino_set_auto_search.triggered.connect(self.signal.set_auto_search)
-        self.widget.menu.action_unlink_lyrics.triggered.connect(self.signal.unlink_lyrics)
-
-        cfg.desktop_lyrics_changed.connect(self.signal.cfg_changed)
+        cfg.desktop_lyrics_changed.connect(self.cfg_changed_slot)
 
     def init_widget(self) -> None:
         """初始化界面(主线程)"""
@@ -699,7 +675,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
         :param msg: 要显示的字符串
         """
-        artist_title = " - ".join(item for item in [self.song_info.get("artist"), self.song_info.get("title")] if item)
+        artist, title = self.song_info.get("artist"), self.song_info.get("title")
+        artist_title = f"{artist if artist else '?'} - {title if title else '?'}"
         self.widget.update_lyrics.emit(DesktopLyrics(([(artist_title, "", 0, "", 255, [])],
                                                       [(msg, "", 0, "", 255, [])])))
 
@@ -888,6 +865,6 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                     self.config["langs"] = [lang for lang in value if lang in self.config["langs"]]
                     self.update_db_data()
 
-    def stop(self) -> None:
+    def handle_stop(self) -> None:
         in_main_thread(self.widget.close)
-        super().stop()
+        super().handle_stop()
