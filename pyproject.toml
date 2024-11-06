@@ -9,7 +9,7 @@ dependencies = [
     "charset-normalizer",
     "pyaes",
     "psutil",
-    "pyobjc; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
 ]
 requires-python = ">= 3.10"
 description = "A lyrics acquisition tool"
