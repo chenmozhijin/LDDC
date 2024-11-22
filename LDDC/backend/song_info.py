@@ -274,10 +274,10 @@ def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[l
         if not os.path.isfile(audio_file_path):
             for file_extension in audio_formats:
                 if file_path and (
-                    (audio_file_path := os.path.join(os.path.dirname(file_path), os.path.splitext(file["filename"])[0] + "." + file_extension))
-                    and os.path.isfile(audio_file_path) or
-                    (audio_file_path := os.path.splitext(file_path)[0] + "." + file_extension)
-                        and os.path.isfile(audio_file_path)):
+                    ((audio_file_path := os.path.join(os.path.dirname(file_path), os.path.splitext(file["filename"])[0] + "." + file_extension))
+                        and os.path.isfile(audio_file_path)) or
+                    ((audio_file_path := os.path.splitext(file_path)[0] + "." + file_extension)
+                        and os.path.isfile(audio_file_path))):
                     break
             else:
                 logger.warning("未找到音频文件: %s", file["filename"])
