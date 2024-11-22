@@ -8,7 +8,9 @@ import logging
 import os
 import sys
 import time
-from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING
+from logging import CRITICAL, DEBUG, ERROR, INFO, NOTSET, WARNING, Filter, LogRecord
+
+from PySide6.QtCore import QLoggingCategory, QMessageLogContext, QtMsgType, qInstallMessageHandler
 
 from .args import args
 from .data import cfg
@@ -17,6 +19,15 @@ from .paths import log_dir
 log_file = os.path.join(log_dir, f'{time.strftime("%Y.%m.%d", time.localtime())}.log')
 if not os.path.exists(os.path.dirname(log_file)):
     os.makedirs(os.path.dirname(log_file))
+
+LOGGING_TO_QT_RULES = {
+    NOTSET: "*.debug=true\n*.info=true\n*.warning=true\n*.critical=true",
+    DEBUG: "*.debug=true\n*.info=true\n*.warning=true\n*.critical=true",
+    INFO: "*.debug=false\n*.info=true\n*.warning=true\n*.critical=true",
+    WARNING: "*.debug=false\n*.info=false\n*.warning=true\n*.critical=true",
+    ERROR: "*.debug=false\n*.info=false\n*.warning=false\n*.critical=true",
+    CRITICAL: "*.debug=false\n*.info=false\n*.warning=false\n*.critical=true",
+}
 
 
 def str2log_level(level: str) -> int:
@@ -38,10 +49,21 @@ def str2log_level(level: str) -> int:
             raise ValueError(msg)
 
 
+class QtMessageFilter(Filter):
+    def filter(self, record: LogRecord) -> bool:
+        if (qt := record.__dict__.get("qt")) and isinstance(qt, QMessageLogContext):
+            record.filename = getattr(qt, "file", "?")
+            record.module = getattr(qt, "category", "?")
+            record.lineno = getattr(qt, "line", 0)
+            record.funcName = getattr(qt, "function", "?")
+        return True
+
+
 class Logger:
     def __init__(self) -> None:
         self.name = 'LDDC'
         self.__logger = logging.getLogger(self.name)
+        self.__logger.addFilter(QtMessageFilter())
         self.level = str2log_level(cfg["log_level"])
 
         formatter = logging.Formatter('[%(levelname)s]%(asctime)s- %(module)s(%(lineno)d) - %(funcName)s:%(message)s')
@@ -76,5 +98,29 @@ class Logger:
         for handler in self.__logger.handlers:
             handler.setLevel(level)
 
+        if level >= WARNING:
+            rules = LOGGING_TO_QT_RULES.get(level, "*.debug=true")
+            if rules is not None:
+                QLoggingCategory.setFilterRules(rules)
+        else:
+            QLoggingCategory.setFilterRules(LOGGING_TO_QT_RULES[WARNING])
+
 
 logger = Logger()
+
+
+def qt_message_handler(mode: QtMsgType, context: QMessageLogContext, message: str) -> None:
+    match mode:
+        case QtMsgType.QtDebugMsg:
+            logger.debug(message, extra={"qt": context})
+        case QtMsgType.QtInfoMsg:
+            logger.info(message, extra={"qt": context})
+        case QtMsgType.QtWarningMsg:
+            logger.warning(message, extra={"qt": context})
+        case QtMsgType.QtCriticalMsg:
+            logger.error(message, extra={"qt": context})
+        case QtMsgType.QtFatalMsg:
+            logger.critical(message, extra={"qt": context})
+
+
+qInstallMessageHandler(qt_message_handler)
