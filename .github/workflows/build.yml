@@ -49,31 +49,10 @@ jobs:
                   echo "nuitka_arch=universal" >> $GITHUB_OUTPUT
                 fi
             
-            - name: Install dependencies(Linux/macOS)
-              if : ${{ runner.os == 'Linux' || runner.os == 'macOS'}}
+            - name: Install dependencies
               run: |
                 pip install -Ur requirements.txt
                 pip install imageio PySide6_Addons
-
-            - name: Install dependencies(Windows)
-              if: ${{ runner.os == 'Windows' }}
-              run: |
-                pip install PySide6-Addons
-                $qt_translations_path = python build_helper.py --task get_qt_translations_path
-                $temp_path = $env:TEMP + "\qt_translations"
-                if (!(Test-Path -Path $temp_path)) {
-                  New-Item -ItemType Directory -Path $temp_path
-                }
-                Copy-Item "$qt_translations_path/*.qm" -Destination $temp_path
-                pip freeze | Out-File "$env:TEMP\modules.txt"
-                pip uninstall -r "$env:TEMP\modules.txt" -y
-
-                pip install -Ur requirements.txt
-                pip install imageio
-
-                Copy-Item -Force "$temp_path\*.qm" -Destination "$qt_translations_path/"
-                Get-ChildItem -Path "$qt_translations_path/"
-
             
             - name: Install EGL/upx
               if: ${{ runner.os == 'Linux' }}
