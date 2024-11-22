@@ -320,7 +320,7 @@ class LDDCService(QObject):
             else:
                 instance_dict[json_data["id"]].task.emit(json_data)
 
-    @Slot()
+    @Slot(int, str)
     def socket_send_message(self, client_id: int, response: str) -> None:
         """向客户端发送消息(前4字节应为消息长度)"""
         logger.debug("%s 发送响应：%s", client_id, response)
@@ -339,7 +339,7 @@ class LDDCService(QObject):
         if clean_dead_instance():
             self.instance_del.emit()
 
-    @Slot()
+    @Slot(int)
     def del_instance(self, instance_id: int) -> None:
         instance_dict_mutex.lock()
         instance_dict[instance_id].deleteLater()
@@ -386,7 +386,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
         self.widget.menu.action_set_inst.triggered.connect(self.set_inst)
         self.widget.menu.actino_set_auto_search.triggered.connect(self.set_auto_search)
-        self.widget.menu.action_unlink_lyrics.triggered.connect(self.unlink_lyrics)
+        self.widget.menu.action_unlink_lyrics.triggered.connect(lambda: self.unlink_lyrics())
 
         cfg.desktop_lyrics_changed.connect(self.cfg_changed_slot)
 
@@ -675,7 +675,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
         :param msg: 要显示的字符串
         """
-        artist, title = self.song_info.get("artist"), self.song_info.get("title")
+        artist, title = self.song_info.get("artist", "").strip(), self.song_info.get("title", "").strip()
         artist_title = f"{artist if artist else '?'} - {title if title else '?'}"
         self.widget.update_lyrics.emit(DesktopLyrics(([(artist_title, "", 0, "", 255, [])],
                                                       [(msg, "", 0, "", 255, [])])))
