@@ -525,12 +525,8 @@ class LocalMatchWorker(QRunnable):
         skip_inst_lyrics = cfg["skip_inst_lyrics"]
         file_name_format = cfg["lyrics_file_name_fmt"]
 
-        total = len(infos)
-        current = 0
-
-        success_count = 0
-        fail_count = 0
-        skip_count = 0
+        total, current = len(infos), 0
+        success_count, fail_count, skip_count = 0, 0, 0
 
         loop = QEventLoop()
 
@@ -556,13 +552,7 @@ class LocalMatchWorker(QRunnable):
         def handle_result(result: dict[str, dict | Lyrics | str]) -> None:
             nonlocal current, success_count, fail_count, skip_count
 
-            if "status" not in result:
-                logger.error("result中没有status字段: %s", result)
-            try:
-                extra: dict = {"status": result["status"], "current": current}  # 更新进度的额外信息
-            except Exception as e:
-                logger.exception("处理歌词匹配结果失败: %s", result)
-                raise e from e
+            extra: dict = {"status": result["status"], "current": current}  # 更新进度的额外信息
             song_info = infos[current]
 
             if result["status"] == "成功":
@@ -736,7 +726,7 @@ class AutoLyricsFetcher(QRunnable):
                     artist_score = None
                     title_score = calculate_title_score(self.info['title'], info.get('title', ''))
                     album_score = max(text_difference(self.info.get('album', '').lower(), info.get('album', '').lower()) * 100, 0)
-                    if (isinstance(artist, str) and artist.strip()) or isinstance(artist, list) and [a for a in artist if a]:
+                    if (isinstance(artist, str) and artist.strip()) or (isinstance(artist, list) and [a for a in artist if a]):
                         artist_score = calculate_artist_score(artist, info.get('artist', ''))
 
                     if artist_score is not None:

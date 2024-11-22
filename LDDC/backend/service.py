@@ -662,9 +662,9 @@ class DesktopLyricsInstance(ServiceInstanceBase):
     def update_db_data(self) -> None:
         local_song_lyrics.set_song(**self.song_info, lyrics_path=self.lyrics_path, config={k: v for k, v in self.config.items()
                                                                                            if (k == "langs" and v != self.default_langs) or
-                                                                                           k == "offset" and v != 0 or
-                                                                                           k == "inst" and v is True or
-                                                                                           k == "disable_auto_search" and v is True})
+                                                                                           (k == "offset" and v != 0) or
+                                                                                           (k == "inst" and v is True) or
+                                                                                           (k == "disable_auto_search" and v is True)})
 
     def auto_search_fail(self, msg: str) -> None:
         self.show_artist_title(msg)
