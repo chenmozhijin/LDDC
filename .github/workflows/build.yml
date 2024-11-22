@@ -52,18 +52,8 @@ jobs:
             - name: Install dependencies(Linux/macOS)
               if : ${{ runner.os == 'Linux' || runner.os == 'macOS'}}
               run: |
-                pip install PySide6-Addons
-                qt_translations_path=$(python build_helper.py --task get_qt_translations_path)
-                mkdir -p /tmp/qt_translations
-                cp $qt_translations_path/*.qm /tmp/qt_translations
-                pip freeze > /tmp/modules.txt
-                pip uninstall -r /tmp/modules.txt -y
-
                 pip install -Ur requirements.txt
-                pip install imageio
-
-                cp -f /tmp/qt_translations/*.qm  $qt_translations_path/
-                ls -alh $qt_translations_path/
+                pip install imageio PySide6_Addons
 
             - name: Install dependencies(Windows)
               if: ${{ runner.os == 'Windows' }}
