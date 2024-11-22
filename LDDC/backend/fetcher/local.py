@@ -64,7 +64,7 @@ def json2lyrics(json_data: dict, lyrics: Lyrics) -> None:
 
     for key, lyrics_data in json_data["lyrics"].items():
         lyrics_data: list[list]
-        if not isinstance(key, str | int):
+        if not isinstance(key, str):
             msg = f"JSON歌词数据中包含不正确的键: {key}"
             raise LyricsProcessingError(msg)
 
@@ -131,6 +131,6 @@ def get_lyrics(lyrics: Lyrics, path: str | None, data: bytes | None = None) -> N
                     file_text = read_unknown_encoding_file(file_data=data, sign_word=("[", "]", ":"))
                     lyrics.tags, multi_lyrics_data = lrc2dict(file_text)
                     lyrics.update(multi_lyrics_data)
-                except UnicodeDecodeError:
+                except UnicodeDecodeError as e:
                     msg = f"不支持的歌词格式: {path}"
-                    raise LyricsFormatError(msg) from UnicodeDecodeError
+                    raise LyricsFormatError(msg) from e
