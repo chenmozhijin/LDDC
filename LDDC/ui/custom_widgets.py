@@ -76,6 +76,8 @@ class ProportionallyStretchedTableWidget(QTableWidget):
         if event.type() == QEvent.Type.ToolTip and isinstance(event, QHelpEvent):
             item = self.itemAt(event.x(), event.y() - self.horizontalHeader().height())
             if isinstance(item, QTableWidgetItem):
+                if item.toolTip():
+                    return super().event(event)
                 text = item.text().strip()  # 考虑表头的高度
                 if text:
                     QToolTip.showText(QCursor.pos(), text, self)

@@ -57,10 +57,10 @@ class MainWindow(SidebarWindow):
         self.add_widget(self.tr("设置"), self.settings_widget, Direction.BOTTOM)
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self.local_match_widget.running:
+        if self.local_match_widget.matching:
             def question_slot(but: QMessageBox.StandardButton) -> None:
-                if but == QMessageBox.StandardButton.Yes and self.local_match_widget.worker:
-                    self.local_match_widget.worker.stop()
+                if but == QMessageBox.StandardButton.Yes and self.local_match_widget.workers:
+                    self.local_match_widget.workers[0].stop()
                     if exit_manager.window_close_event(self):
                         self.destroy()
                         self.deleteLater()
@@ -81,6 +81,9 @@ class MainWindow(SidebarWindow):
     def connect_signals(self) -> None:
         self.widget_changed.connect(self.settings_widget.update_cache_size)  # 更新缓存大小
         language_changed.connect(self.retranslateUi)
+
+        self.local_match_widget.search_song.connect(self.search_widget.auto_fetch)
+        self.local_match_widget.search_song.connect(lambda: self.set_current_widget(0))
 
     @Slot()
     def retranslateUi(self) -> None:

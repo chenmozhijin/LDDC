@@ -3,6 +3,7 @@
 import os
 import re
 import struct
+from collections.abc import Callable
 from typing import Literal, overload
 
 from mutagen import File, FileType, MutagenError  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
@@ -44,8 +45,7 @@ def get_audio_file_infos(file_path: str) -> list[dict]:
                 elif "TIT2" in audio and "�" not in str(audio["TIT2"][0]):
                     title = str(audio["TIT2"][0])
                 else:
-                    msg = f"{file_path} 无法获取歌曲标题"
-                    raise GetSongInfoError(msg)
+                    title = None
 
                 if "artist" in audio and "�" not in str(audio["artist"][0]):
                     artist = str(audio["artist"][0])
@@ -77,9 +77,6 @@ def get_audio_file_infos(file_path: str) -> list[dict]:
                     "type": "audio",
                     "file_path": file_path,
                 }
-                if metadata["title"] is None:
-                    msg = f"{file_path} 无法获取歌曲标题"
-                    raise GetSongInfoError(msg)
             else:
                 msg = f"{file_path} 无法获取歌曲信息"
                 raise GetSongInfoError(msg)
@@ -335,20 +332,31 @@ def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[l
 
 
 @overload
-def parse_drop_infos(mime: QMimeData, first: Literal[True] = True) -> dict:
+def parse_drop_infos(mime: QMimeData,
+                     first: Literal[True] = True,
+                     progress: Callable[[str, int, int], None] | None = None,
+                     running: Callable[[], bool] | None = None) -> dict:
     ...
 
 
 @overload
-def parse_drop_infos(mime: QMimeData, first: Literal[False] = False) -> list[dict]:
+def parse_drop_infos(mime: QMimeData,
+                     first: Literal[False] = False,
+                     progress: Callable[[str, int, int], None] | None = None,
+                     running: Callable[[], bool] | None = None) -> list[dict]:
     ...
 
 
-def parse_drop_infos(mime: QMimeData, first: bool = True) -> list[dict] | dict:
+def parse_drop_infos(mime: QMimeData,
+                     first: bool = True,
+                     progress: Callable[[str, int, int], None] | None = None,
+                     running: Callable[[], bool] | None = None) -> list[dict] | dict:
     """解析拖拽的文件
 
     :param mime: 拖拽的文件信息
     :param first: 是否只获取第一个文件
+    :param progress: 进度回调函数
+    :param running: 是否正在运行
     :return: 解析后的文件信息
     """
     paths, tracks, indexs = [], [], []
@@ -402,13 +410,19 @@ def parse_drop_infos(mime: QMimeData, first: bool = True) -> list[dict] | dict:
         else:
             msg = "没有获取到任何文件信息"
             raise DropError(msg)
+    paths_count = len(paths)
     for i, path in enumerate(paths):
+        if running is not None and running() is False:
+            break
         track, index = None, None
         if tracks and len(tracks) > i:
             track = tracks[i]
         elif indexs and len(indexs) > i:
             index = indexs[i]
         logger.info(f"解析文件 {path}, track={track}, index={index}")
+        if progress is not None:
+            msg = f"正在解析文件 {path}"
+            progress(msg, i + 1, paths_count)
 
         if path.lower().endswith('.cue') and (isinstance(track, str | int) or index is not None):
             try:

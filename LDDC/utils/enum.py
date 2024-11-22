@@ -87,6 +87,12 @@ class LocalMatchFileNameMode(Enum):
     SONG = 1
 
 
+class LocalMatchSave2TagMode(Enum):
+    ONLY_FILE = 0  # 不保存到歌词标签
+    ONLY_TAG = 1  # 保存到歌词标签(非cue)
+    BOTH = 2  # 保存到歌词标签(非cue)与文件
+
+
 class Direction(Enum):
     LEFT = 1
     RIGHT = 2

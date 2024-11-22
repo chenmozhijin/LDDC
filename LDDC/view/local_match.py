@@ -1,97 +1,258 @@
 # SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
+
 import os
 
-from PySide6.QtCore import Qt, Slot
-from PySide6.QtWidgets import (
-    QCheckBox,
-    QComboBox,
-    QFileDialog,
-    QLineEdit,
-    QListWidget,
-    QPushButton,
-    QWidget,
-)
+from PySide6.QtCore import QMimeData, Qt, QUrl, Signal, Slot
+from PySide6.QtGui import QContextMenuEvent, QDesktopServices, QDragEnterEvent, QDropEvent, QKeyEvent
+from PySide6.QtWidgets import QFileDialog, QMenu, QTableWidgetItem, QWidget
 
 from LDDC.backend.worker import LocalMatchWorker
 from LDDC.ui.local_match_ui import Ui_local_match
 from LDDC.utils.data import cfg
-from LDDC.utils.enum import LocalMatchFileNameMode, LocalMatchSaveMode, LyricsFormat, Source
+from LDDC.utils.enum import LocalMatchFileNameMode, LocalMatchSave2TagMode, LocalMatchSaveMode, LyricsFormat, Source
+from LDDC.utils.paths import default_save_lyrics_dir
 from LDDC.utils.thread import threadpool
+from LDDC.utils.utils import get_artist_str, get_local_match_save_path
 
 from .msg_box import MsgBox
 
 
 class LocalMatchWidget(QWidget, Ui_local_match):
+    search_song = Signal(dict)
+
     def __init__(self) -> None:
         super().__init__()
-
-        self.running = False
-
         self.setupUi(self)
+        self.setAcceptDrops(True)  # 启用拖放功能
         self.connect_signals()
 
-        self.worker = None
-
-        self.save_mode_changed(self.save_mode_comboBox.currentIndex())
-
-        self.save_path_lineEdit.setText(cfg["default_save_path"])
-
+        self.songs_table.set_proportions([0.2, 0.1, 0.1, 0.3, 2, 0.3, 2])  # 设置列宽比例
         self.source_listWidget.set_soures(["QM", "KG"])
 
+        self.taskids: dict[str, int] = {
+            "get_infos": 0,
+            "match_lyrics": 0,
+        }
+        self.workers: dict[int, LocalMatchWorker] = {}  # 任务ID与工作线程的映射
+        self.matching: bool = False  # 是否正在匹配
+        self.save_root_path: str | None = None  # 保存根目录
+        self.save_path_errors: set[str] = set()  # 保存路径错误
+
     def connect_signals(self) -> None:
-        self.song_path_pushButton.clicked.connect(lambda: self.select_path(self.song_path_lineEdit))
-        self.save_path_pushButton.clicked.connect(lambda: self.select_path(self.save_path_lineEdit))
+        """连接信号与槽"""
+        self.select_files_button.clicked.connect(self.select_files)
+        self.select_dirs_button.clicked.connect(self.select_dirs)
+        self.save_path_button.clicked.connect(self.select_save_root_path)
+        self.start_cancel_pushButton.clicked.connect(self.start_cancel)
 
-        self.save_mode_comboBox.currentIndexChanged.connect(self.save_mode_changed)
-
-        self.start_cancel_pushButton.clicked.connect(self.start_cancel_button_clicked)
-
-    def retranslateUi(self, local_match: QWidget) -> None:
-        super().retranslateUi(local_match)
-        self.save_mode_changed(self.save_mode_comboBox.currentIndex())
-        if self.running:
-            self.start_cancel_pushButton.setText(self.tr("取消匹配"))
-
-    def select_path(self, path_line_edit: QLineEdit) -> None:
-        @Slot(str)
-        def file_selected(save_path: str) -> None:
-            path_line_edit.setText(os.path.normpath(save_path))
-        dialog = QFileDialog(self)
-        dialog.setWindowTitle(self.tr("选择文件夹"))
-        dialog.setFileMode(QFileDialog.FileMode.Directory)
-        dialog.fileSelected.connect(file_selected)
-        dialog.open()
-
-    @Slot(int)
-    def save_mode_changed(self, index: int) -> None:
-        match index:
-            case 0:
-                self.save_path_lineEdit.setEnabled(True)
-                self.save_path_pushButton.setEnabled(True)
-                self.save_path_pushButton.setText(self.tr("选择镜像文件夹"))
-            case 1:
-                self.save_path_lineEdit.setEnabled(False)
-                self.save_path_pushButton.setEnabled(False)
-                self.save_path_pushButton.setText(self.tr("选择文件夹"))
-            case 2:
-                self.save_path_lineEdit.setEnabled(True)
-                self.save_path_pushButton.setEnabled(True)
-                self.save_path_pushButton.setText(self.tr("选择文件夹"))
+        self.save_mode_comboBox.currentIndexChanged.connect(self.update_save_paths)
+        self.filename_mode_comboBox.currentIndexChanged.connect(self.update_save_paths)
+        self.save2tag_mode_comboBox.currentIndexChanged.connect(self.update_save_paths)
+        self.lyricsformat_comboBox.currentIndexChanged.connect(self.update_save_paths)
 
     @Slot()
-    def start_cancel_button_clicked(self) -> None:
-        if self.running:
-            # 取消
-            if self.worker is not None:
-                self.worker.stop()
-                self.start_cancel_pushButton.setText(self.tr("正在取消..."))
+    def start_cancel(self) -> None:
+        """开始/取消按钮点击槽"""
+        if self.workers:
+            for worker in self.workers.values():
+                worker.stop()
+            self.start_cancel_pushButton.setEnabled(False)
+            self.start_cancel_pushButton.setText(self.tr("取消中..."))
             return
 
-        if not os.path.exists(self.song_path_lineEdit.text()):
-            MsgBox.warning(self, self.tr("警告"), self.tr("歌曲文件夹不存在！"))
+        if (LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex()) in (LocalMatchSave2TagMode.ONLY_TAG, LocalMatchSave2TagMode.BOTH) and
+                LyricsFormat(self.lyricsformat_comboBox.currentIndex()) not in (LyricsFormat.VERBATIMLRC,
+                                                                                LyricsFormat.LINEBYLINELRC,
+                                                                                LyricsFormat.ENHANCEDLRC)):
+
+            MsgBox.warning(self, self.tr("警告"), self.tr("歌曲标签中的歌词应为LRC格式"))
             return
 
+        langs = self.get_langs()
+        if not langs:
+            MsgBox.warning(self, self.tr("警告"), self.tr("请选择要匹配的语言"))
+            return
+
+        if len(source := [Source[k] for k in self.source_listWidget.get_data()]) == 0:
+            MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一个源！"))
+            return
+
+        if self.save_path_errors:
+            MsgBox.warning(self, self.tr("警告"), "\n".join(self.save_path_errors))
+            return
+
+        if not (infos := self.get_table_infos()):
+            MsgBox.warning(self, self.tr("警告"), self.tr("请选择要匹配的歌曲！"))
+            return
+
+        worker = LocalMatchWorker("match_lyrics",
+                                  self.taskids["match_lyrics"],
+                                  infos=infos,
+                                  save_mode=LocalMatchSaveMode(self.save_mode_comboBox.currentIndex()),
+                                  file_name_mode=LocalMatchFileNameMode(self.filename_mode_comboBox.currentIndex()),
+                                  save2tag_mode=LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex()),
+                                  lyrics_format=LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+                                  langs=self.get_langs(),
+                                  save_root_path=self.save_root_path,
+                                  min_score=self.min_score_spinBox.value(),
+                                  source=source)
+
+        worker.signals.finished.connect(self.match_lyrics_result_slot, Qt.ConnectionType.BlockingQueuedConnection)
+        worker.signals.progress.connect(self.update_progress_slot, Qt.ConnectionType.BlockingQueuedConnection)
+        threadpool.start(worker)
+        self.workers[self.taskids["match_lyrics"]] = worker
+        self.taskids["match_lyrics"] += 1
+        self.start_cancel_pushButton.setText(self.tr("取消(匹配歌词)"))
+
+        for widget in self.control_bar.children():
+            if isinstance(widget, QWidget) and widget != self.start_cancel_pushButton:
+                widget.setEnabled(False)
+        self.matching = True
+
+        self.update_save_paths()
+        for i in range(self.songs_table.rowCount()):
+            self.songs_table.setItem(i, 6, QTableWidgetItem(self.tr("未匹配")))
+
+    @Slot(list)
+    @Slot(str)
+    def get_infos(self, paths: list[str] | str | QMimeData) -> None:
+        """获取文件信息,并添加到表格中"""
+        if isinstance(paths, QMimeData):
+            mime = paths
+
+        if isinstance(paths, str):
+            paths = [paths]
+
+        if not paths:
+            return
+
+        if isinstance(paths, list) and paths:
+            mime = QMimeData()
+            mime.setUrls([QUrl.fromLocalFile(path) for path in paths])
+
+        worker = LocalMatchWorker("get_infos",
+                                  self.taskids["get_infos"],
+                                  mime=mime)
+        worker.signals.finished.connect(self.get_infos_result_slot, Qt.ConnectionType.BlockingQueuedConnection)
+        worker.signals.progress.connect(self.update_progress_slot, Qt.ConnectionType.BlockingQueuedConnection)
+        threadpool.start(worker)
+        self.workers[self.taskids["get_infos"]] = worker
+        self.taskids["get_infos"] += 1
+        self.start_cancel_pushButton.setText(self.tr("取消(获取文件信息)"))
+
+    @Slot()
+    def select_files(self) -> None:
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle(self.tr("选择要匹配的文件"))
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        dialog.filesSelected.connect(self.get_infos)
+        dialog.open()
+
+    @Slot()
+    def select_dirs(self) -> None:
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle(self.tr("选择要遍历的文件夹"))
+        dialog.setFileMode(QFileDialog.FileMode.Directory)
+        dialog.fileSelected.connect(self.get_infos)
+        dialog.open()
+
+    @Slot()
+    def select_save_root_path(self) -> None:
+        """选择保存根目录"""
+        @Slot(str)
+        def set_save_root_path(path: str) -> None:
+            self.save_root_path = os.path.abspath(path)
+            self.update_save_paths()
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle(self.tr("选择保存根目录"))
+        dialog.setFileMode(QFileDialog.FileMode.Directory)
+        dialog.fileSelected.connect(set_save_root_path)
+        dialog.setDirectory(default_save_lyrics_dir)
+        dialog.open()
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        formats = event.mimeData().formats()
+        if (event.mimeData().hasUrls() or
+            'application/x-qt-windows-mime;value="foobar2000_playable_location_format"' in formats or
+                'application/x-qt-windows-mime;value="ACL.FileURIs"' in formats) and not self.matching:
+            event.acceptProposedAction()  # 接受拖动操作
+        else:
+            event.ignore()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        mime = QMimeData()
+
+        # 复制一份数据以便在其他线程使用
+        _mime = event.mimeData()
+        for f in _mime.formats():
+            mime.setData(f, _mime.data(f))
+        self.get_infos(mime)
+
+    @Slot(dict)
+    def update_progress_slot(self, result: dict) -> None:
+        """处理更新进度条的结果
+
+        :param result: 更新进度条的结果
+        """
+        msg, progress, total = result["msg"], result["progress"], result["total"]
+        self.progressBar.setMaximum(total)
+        self.progressBar.setValue(progress)
+        self.status_label.setText(msg)
+
+        if "current" in result:
+            match result["status"]:
+                case "成功":
+                    self.songs_table.item(result["current"], 6).setForeground(Qt.GlobalColor.green)
+                    self.songs_table.item(result["current"], 6).setText(self.tr("成功"))
+                    if "save_path" in result:
+                        info = self.songs_table.item(result["current"], 0).data(Qt.ItemDataRole.UserRole)
+                        self.songs_table.item(result["current"], 6).setData(Qt.ItemDataRole.UserRole,
+                                                                            {"status": result["status"], "save_path": result["save_path"]})
+                        if (LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex()) in (LocalMatchSave2TagMode.ONLY_TAG,
+                                                                                                   LocalMatchSave2TagMode.BOTH) and
+                                info["type"] != "cue"):
+
+                            self.songs_table.setItem(result["current"], 5, QTableWidgetItem(f"{self.tr("保存到标签")} + {result['save_path']}"))
+                        else:
+                            self.songs_table.setItem(result["current"], 5, QTableWidgetItem(result["save_path"]))
+
+                case "跳过纯音乐":
+                    self.songs_table.item(result["current"], 6).setForeground(Qt.GlobalColor.blue)
+                    self.songs_table.item(result["current"], 6).setText(self.tr("跳过"))
+                    self.songs_table.item(result["current"], 6).setData(Qt.ItemDataRole.UserRole, {"status": result["status"]})
+                    self.songs_table.item(result["current"], 6).setToolTip(self.tr("跳过纯音乐"))
+
+                case _:
+                    self.songs_table.item(result["current"], 6).setForeground(Qt.GlobalColor.red)
+                    self.songs_table.item(result["current"], 6).setText(self.tr("失败"))
+                    self.songs_table.item(result["current"], 6).setData(Qt.ItemDataRole.UserRole, {"status": result["status"]})
+                    match result["status"]:
+                        case "没有找到符合要求的歌曲":
+                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：没有找到符合要求的歌曲"))
+                        case "搜索结果处理失败":
+                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：搜索结果处理失败"))
+                        case "没有足够的信息用于搜索":
+                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：没有足够的信息用于搜索"))
+                        case "保存歌词失败":
+                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：保存歌词失败"))
+                        case "超时":
+                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：超时"))
+
+    def get_table_infos(self) -> list[dict]:
+        """获取表格中的文件信息
+
+        :return: 文件信息列表
+        """
+        infos: list[dict] = []
+        for row in range(self.songs_table.rowCount()):
+            item = self.songs_table.item(row, 0)
+            if item is not None:
+                infos.append(item.data(Qt.ItemDataRole.UserRole))
+        return infos
+
+    def get_langs(self) -> list[str]:
+        """获取选择的的语言"""
         lyric_langs = []
         if self.original_checkBox.isChecked():
             lyric_langs.append("orig")
@@ -99,68 +260,172 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             lyric_langs.append("ts")
         if self.romanized_checkBox.isChecked():
             lyric_langs.append("roma")
-        langs_order = [lang for lang in cfg["langs_order"] if lang in lyric_langs]
-
-        if len(lyric_langs) == 0:
-            MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一种歌词语言！"))
-
-        save_mode = LocalMatchSaveMode(self.save_mode_comboBox.currentIndex())
-
-        flienmae_mode = LocalMatchFileNameMode(self.lyrics_filename_mode_comboBox.currentIndex())
-
-        if len(source := [Source[k] for k in self.source_listWidget.get_data()]) == 0:
-            MsgBox.warning(self, self.tr("警告"), self.tr("请选择至少一个源！"))
-            return
-
-        self.running = True
-        self.plainTextEdit.setPlainText("")
-        self.start_cancel_pushButton.setText(self.tr("取消匹配"))
-        for item in self.findChildren(QWidget):
-            if isinstance(item, QLineEdit | QPushButton | QComboBox | QCheckBox | QListWidget) and item != self.start_cancel_pushButton:
-                item.setEnabled(False)
-
-        self.worker = LocalMatchWorker(
-            {
-                "song_path": self.song_path_lineEdit.text(),
-                "save_path": self.save_path_lineEdit.text(),
-                "min_score": self.min_score_spinBox.value(),
-                "save_mode": save_mode,
-                "flienmae_mode": flienmae_mode,
-                "langs_order": langs_order,
-                "lyrics_format": LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
-                "source": source,
-            },
-        )
-        self.worker.signals.error.connect(self.worker_error, Qt.ConnectionType.BlockingQueuedConnection)
-        self.worker.signals.finished.connect(self.worker_finished, Qt.ConnectionType.BlockingQueuedConnection)
-        self.worker.signals.massage.connect(self.worker_massage, Qt.ConnectionType.BlockingQueuedConnection)
-        self.worker.signals.progress.connect(self.change_progress, Qt.ConnectionType.BlockingQueuedConnection)
-        threadpool.startOnReservedThread(self.worker)
-
-    @Slot(str)
-    def worker_massage(self, massage: str) -> None:
-        self.plainTextEdit.appendPlainText(massage)
-
-    @Slot(int, int)
-    def change_progress(self, current: int, maximum: int) -> None:
-        self.progressBar.setValue(current)
-        self.progressBar.setMaximum(maximum)
+        return [lang for lang in cfg["langs_order"] if lang in lyric_langs]
 
     @Slot()
-    def worker_finished(self) -> None:
-        self.start_cancel_pushButton.setText(self.tr("开始匹配"))
-        self.running = False
-        for item in self.findChildren(QWidget):
-            if isinstance(item, QLineEdit | QPushButton | QComboBox | QCheckBox | QListWidget):
-                item.setEnabled(True)
-        self.save_mode_changed(self.save_mode_comboBox.currentIndex())
-        self.progressBar.setValue(0)
-        self.progressBar.setMaximum(0)
+    def update_save_paths(self) -> None:
+        """更新保存路径"""
+        save_mode = LocalMatchSaveMode(self.save_mode_comboBox.currentIndex())
+        file_name_mode = LocalMatchFileNameMode(self.filename_mode_comboBox.currentIndex())
+        save2tag_mode = LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex())
+        lyrics_format = LyricsFormat(self.lyricsformat_comboBox.currentIndex())
+        langs = self.get_langs()
+        file_name_format = cfg["lyrics_file_name_fmt"]
 
-    @Slot(str, int)
-    def worker_error(self, error: str, level: int) -> None:
-        if level == 0:
-            self.plainTextEdit.appendPlainText(error)
+        self.save_path_errors.clear()
+
+        for row in range(self.songs_table.rowCount()):
+            info: dict = self.songs_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+            save_path_text = ""
+
+            if save2tag_mode in (LocalMatchSave2TagMode.ONLY_TAG, LocalMatchSave2TagMode.BOTH) and info["type"] != "cue":
+                save_path_text += self.tr("保存到标签")
+
+            if (info["type"] == "cue" or save2tag_mode != LocalMatchSave2TagMode.ONLY_TAG):
+                save_path = get_local_match_save_path(save_mode=save_mode,
+                                                      file_name_mode=file_name_mode,
+                                                      song_info=info,
+                                                      lyrics_format=lyrics_format,
+                                                      file_name_format=file_name_format,
+                                                      langs=langs,
+                                                      save_root_path=self.save_root_path,
+                                                      allow_placeholder=True)
+                if isinstance(save_path, int):
+                    match save_path:
+                        case -1:
+                            save_path = self.tr("需要指定保存路径")
+                        case -2:
+                            save_path = self.tr("错误(需要歌词信息)")
+                        case -3:
+                            save_path = self.tr("需要指定歌曲根目录")
+                        case _:
+                            save_path = self.tr("未知错误")
+                    self.save_path_errors.add(save_path)
+                save_path_text += f"+ {save_path}" if save_path_text else save_path
+
+            self.songs_table.setItem(row, 5, QTableWidgetItem(save_path_text))
+
+    @Slot(str)
+    def select_root_path(self, rows: list[int]) -> None:
+        @Slot(str)
+        def set_root_path(path: str) -> None:
+            skips = []
+            for row in rows:
+                info: dict = self.songs_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+                # 获取绝对路径
+                file_path = os.path.abspath(info["file_path"])  # 歌曲文件路径
+                path = os.path.abspath(path)  # 根目录路径
+
+                # 检查驱动器是否相同(仅在 Windows 上适用)
+                # 检查文件路径是否以目录路径为前缀
+                if os.path.splitdrive(file_path)[0] == os.path.splitdrive(path)[0] and os.path.commonpath([file_path, path]) == path:
+                    info["root_path"] = path
+                    self.songs_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, info)
+                else:
+                    skips.append(info["file_path"])
+
+            if skips:
+                MsgBox.warning(self, self.tr("警告"), self.tr("由于以下歌曲不在指定的根目录中,无法设置\n") + "\n".join(skips))
+
+            self.update_save_paths()
+
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle(self.tr("选择歌曲根目录"))
+        dialog.setFileMode(QFileDialog.FileMode.Directory)
+        dialog.setDirectory(os.path.dirname(self.songs_table.item(rows[0], 0).data(Qt.ItemDataRole.UserRole)["file_path"]))
+        dialog.fileSelected.connect(set_root_path)
+        dialog.open()
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        if not self.songs_table.geometry().contains(event.pos()):  # 判断否在表格内点击
+            return
+        selected_rows = self.songs_table.selectionModel().selectedRows()
+        if not selected_rows:
+            return
+        menu = QMenu(self)
+        if not self.matching:
+            menu.addAction(self.tr("删除"), lambda rows=selected_rows: [self.songs_table.removeRow(row.row()) for row in reversed(rows)])
+            #  反向删除,防止删除行后影响后续行号
+            menu.addAction(self.tr("指定根目录"), lambda rows=selected_rows: self.select_root_path([row.row() for row in rows]))
+        if len(selected_rows) == 1:
+            menu.addAction(self.tr("打开歌曲目录"),
+                           lambda row=selected_rows[0]: QDesktopServices.openUrl(
+                               QUrl.fromLocalFile(os.path.dirname(self.songs_table.item(row.row(), 0).data(Qt.ItemDataRole.UserRole)["file_path"]))))
+            menu.addAction(self.tr("在搜索中打开"),
+                           lambda row=selected_rows[0]: self.search_song.emit(self.songs_table.item(row.row(), 0).data(Qt.ItemDataRole.UserRole)))
+            if ((completion_status := self.songs_table.item(selected_rows[0].row(), 6).data(Qt.ItemDataRole.UserRole)) and  # 获取完成状态
+                isinstance(completion_status, dict) and  # 检查是否为字典
+                    (save_path := completion_status.get("save_path"))):  # 获取保存路径
+                menu.addAction(self.tr("打开保存目录"),
+                               lambda save_path=save_path: QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.dirname(save_path))))
+                menu.addAction(self.tr("打开歌词"),
+                               lambda save_path=save_path: QDesktopServices.openUrl(QUrl.fromLocalFile(save_path)))
+        menu.exec_(event.globalPos())
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() == Qt.Key.Key_Delete and not self.matching:
+            # 获取所有选中的行并删除
+            selected_rows = {index.row() for index in self.songs_table.selectionModel().selectedRows()}
+            for row in sorted(selected_rows, reverse=True):
+                self.songs_table.removeRow(row)
         else:
-            MsgBox.critical(self, self.tr("错误"), error)
-            self.worker_finished()
+            super().keyPressEvent(event)
+
+    @Slot(dict)
+    def get_infos_result_slot(self, result: dict) -> None:
+        """处理获取文件信息的结果
+
+        :param result: 获取文件信息的结果
+        """
+        del self.workers[result["taskid"]]
+        if not self.workers:
+            self.start_cancel_pushButton.setText(self.tr("开始"))
+            self.start_cancel_pushButton.setEnabled(True)
+        errors: list = result.get("errors", [])
+        if errors:
+            MsgBox.critical(self, self.tr("错误"), "\n".join(errors))
+
+        if result["status"] == "success":
+            infos: list[dict] = result["infos"]
+            existing_infos = self.get_table_infos()
+            for info in infos:
+                if info in existing_infos:
+                    continue
+                i = self.songs_table.rowCount()
+                self.songs_table.insertRow(i)
+                item = QTableWidgetItem(info.get("title", ""))
+                item.setData(Qt.ItemDataRole.UserRole, info)
+                self.songs_table.setItem(i, 0, item)
+                self.songs_table.setItem(i, 1, QTableWidgetItem(get_artist_str(info.get("artist"))))
+                self.songs_table.setItem(i, 2, QTableWidgetItem(info.get("album", "")))
+                self.songs_table.setItem(i, 3, QTableWidgetItem(info["file_path"]))
+                if info["duration"] is not None:
+                    self.songs_table.setItem(i, 4, QTableWidgetItem('{:02d}:{:02d}'.format(*divmod(info['duration'], 60))))
+                self.songs_table.setItem(i, 6, QTableWidgetItem(self.tr("未匹配")))
+            self.update_save_paths()
+
+    @Slot(dict)
+    def match_lyrics_result_slot(self, result: dict) -> None:
+        """处理匹配歌词的结果
+
+        :param result: 匹配歌词的结果
+        """
+        del self.workers[result["taskid"]]
+        self.update_progress_slot({"msg": "", "progress": 0, "total": 0})
+        self.start_cancel_pushButton.setText(self.tr("开始"))
+        for widget in self.control_bar.children():
+            if isinstance(widget, QWidget):
+                widget.setEnabled(True)
+        self.matching = False
+
+        info_str = self.tr("总共{total}首歌曲，匹配成功{success}首，匹配失败{fail}首，跳过{skip}首。").format(total=result.get("total"),
+                                                                                        success=result.get("success"),
+                                                                                        fail=result.get("fail"),
+                                                                                        skip=result.get("skip"))
+        match result["status"]:
+            case "success":
+                MsgBox.information(self, self.tr("匹配完成"), self.tr("匹配完成") + "\n" + info_str)
+            case "error":
+                MsgBox.critical(self, self.tr("匹配错误"), self.tr("匹配错误") + "\n" + info_str)
+            case "cancelled":
+                MsgBox.information(self, self.tr("匹配取消"), self.tr("匹配取消") + "\n" + info_str)
