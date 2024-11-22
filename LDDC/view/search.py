@@ -57,18 +57,18 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.search_pushButton.clicked.connect(self.search)
         self.results_tableWidget.doubleClicked.connect(self.select_results)
 
-        self.translate_checkBox.stateChanged.connect(self.update_preview_lyric)
-        self.romanized_checkBox.stateChanged.connect(self.update_preview_lyric)
-        self.original_checkBox.stateChanged.connect(self.update_preview_lyric)
-        self.lyricsformat_comboBox.currentTextChanged.connect(self.update_preview_lyric)
-        self.offset_spinBox.valueChanged.connect(self.update_preview_lyric)
+        self.translate_checkBox.stateChanged.connect(lambda: self.update_preview_lyric())
+        self.romanized_checkBox.stateChanged.connect(lambda: self.update_preview_lyric())
+        self.original_checkBox.stateChanged.connect(lambda: self.update_preview_lyric())
+        self.lyricsformat_comboBox.currentTextChanged.connect(lambda: self.update_preview_lyric())
+        self.offset_spinBox.valueChanged.connect(lambda: self.update_preview_lyric())
 
         self.return_toolButton.clicked.connect(self.result_return)
 
         self.results_tableWidget.verticalScrollBar().valueChanged.connect(self.results_table_scroll_changed)
         self.results_tableWidget.verticalScrollBar().rangeChanged.connect(self.results_table_scroll_changed)
 
-        cfg.lyrics_changed.connect(self.update_preview_lyric)
+        cfg.lyrics_changed.connect(lambda: self.update_preview_lyric())
 
     def get_lyric_langs(self) -> list:
         """返回选择了的歌词类型的列表"""
@@ -195,6 +195,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.preview_plainTextEdit.setPlainText(result['converted_lyrics'])
 
     @Slot()
+    @Slot(dict)
     def update_preview_lyric(self, info: dict | None = None) -> None:
         """开始更新预览歌词"""
         if not isinstance(info, dict) and self.preview_lyric_result is not None:
@@ -502,7 +503,7 @@ class SearchWidget(SearchWidgetBase):
         self.save_list_lyrics_pushButton.clicked.connect(self.save_list_lyrics)
         self.setAcceptDrops(True)  # 启用拖放功能
 
-        self.droped_file_path: str | None = None
+        self.auto_fetch_file_path: str | None = None
 
     def setup_ui(self) -> None:
 
@@ -566,6 +567,7 @@ class SearchWidget(SearchWidgetBase):
         self.save_to_tag_pushButton.setText(self.tr("保存到歌曲标签"))
         self.save_list_lyrics_pushButton.setText(self.tr("保存专辑/歌单的歌词"))
 
+    @Slot()
     def save_list_lyrics(self) -> None:
         """保存专辑、歌单中的所有歌词"""
         result_type = self.results_tableWidget.property("result_type")
@@ -698,9 +700,9 @@ class SearchWidget(SearchWidgetBase):
             dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
             dialog.setNameFilter(self.tr("歌曲文件") + "*." + " *.".join(audio_formats))
             dialog.fileSelected.connect(file_selected)
-            if self.droped_file_path:
-                dialog.setDirectory(os.path.dirname(self.droped_file_path))
-                dialog.selectFile(os.path.basename(self.droped_file_path))
+            if self.auto_fetch_file_path:
+                dialog.setDirectory(os.path.dirname(self.auto_fetch_file_path))
+                dialog.selectFile(os.path.basename(self.auto_fetch_file_path))
             dialog.open()
 
     @Slot()
@@ -724,7 +726,7 @@ class SearchWidget(SearchWidgetBase):
             event.ignore()
 
     def search(self) -> None:
-        self.droped_file_path = None
+        self.auto_fetch_file_path = None
         super().search()
 
     def dropEvent(self, event: QDropEvent) -> None:
@@ -735,19 +737,23 @@ class SearchWidget(SearchWidgetBase):
         except Exception as e:
             MsgBox.critical(self, self.tr('错误'), self.tr('拖动文件解析失败：') + str(e))
 
-        self.droped_file_path = song.get("file_path")
-        if not song['title']:
-            MsgBox.warning(self, "警告", "没有获取到歌曲标题,无法自动搜索")
+        self.auto_fetch(song)
 
+    @Slot(dict)
+    def auto_fetch(self, song: dict) -> None:
+        self.auto_fetch_file_path = song.get("file_path")
         worker = AutoLyricsFetcher(song, taskid=tuple(self.taskid.values()), return_search_result=True)
         worker.signals.result.connect(self.auto_fetch_slot, Qt.ConnectionType.BlockingQueuedConnection)
         threadpool.start(worker)
         self.preview_lyric_result = None
         self.preview_plainTextEdit.setPlainText(self.tr("正在自动获取 {0} 的歌词...").format(
-            f"{song['artist']} - {song['title']}" if song['artist'] and len(song['title']) * 2 > len(song['artist']) else song['title']))
+            f"{song['artist']} - {song['title']}"
+            if song['artist'] and len(song['title']) * 2 > len(song['artist']) else song['title']
+            if song['title'] else song['file_path']))
 
     @Slot(dict)
     def auto_fetch_slot(self, result: dict) -> None:
+        """自动获取歌词槽函数"""
         if result.get("taskid") != tuple(self.taskid.values()):
             if result.get("taskid", (0, -1))[1] == self.taskid["update_preview_lyric"]:
                 self.preview_plainTextEdit.setPlainText("")

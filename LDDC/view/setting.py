@@ -211,7 +211,7 @@ class SettingWidget(QWidget, Ui_settings):
             case 2:
                 style_hints.setColorScheme(Qt.ColorScheme.Dark)
 
-    @Slot()
+    @Slot(int)
     def language_comboBox_changed(self, index: int) -> None:
         match index:
             case 0:

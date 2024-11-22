@@ -832,6 +832,7 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
         self.destroy()
         self.deleteLater()
 
+    @Slot()
     def hide_control_bar(self) -> None:
         if not self.mouse_inside:
             self.control_bar.hide()
