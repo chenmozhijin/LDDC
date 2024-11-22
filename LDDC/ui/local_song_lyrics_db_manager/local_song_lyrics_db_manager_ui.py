@@ -17,6 +17,7 @@ class Ui_LocalSongLyricsDBManager:
     def setupUi(self, LocalSongLyricsDBManager):
         if not LocalSongLyricsDBManager.objectName():
             LocalSongLyricsDBManager.setObjectName("LocalSongLyricsDBManager")
+        LocalSongLyricsDBManager.resize(640, 720)
         icon = QIcon()
         icon.addFile(":/LDDC/img/icon/logo.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         LocalSongLyricsDBManager.setWindowIcon(icon)
