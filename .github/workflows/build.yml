@@ -129,8 +129,7 @@ jobs:
                 nuitka-version: main
                 script-name: LDDC
                 
-                standalone: true
-                onefile: false
+                mode: standalone
                 report: nuitka-report.xml
                 enable-plugins: pyside6
                 product-name: "LDDC"
@@ -154,8 +153,7 @@ jobs:
                 nuitka-version: main
                 script-name: LDDC
 
-                standalone: true
-                onefile: false
+                mode: standalone
                 report: nuitka-report.xml
                 enable-plugins: pyside6
                 product-name: "LDDC"
