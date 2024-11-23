@@ -800,7 +800,6 @@ class AutoLyricsFetcher(QRunnable):
            len(self.get_task) != self.get_task_finished or
            len(self.get_task) == 0 or
            self.get_task_finished == 0):
-            logger.debug("processEvents")
             self.loop.processEvents()
             return
 
@@ -872,7 +871,6 @@ class AutoLyricsFetcher(QRunnable):
         self.result = result
         if self.tastid:
             self.result["taskid"] = self.tastid
-        logger.info("AutoLyricsFetcher 搜索结果:%s", result)
         self.loop.exit()
 
     def run(self) -> None:
