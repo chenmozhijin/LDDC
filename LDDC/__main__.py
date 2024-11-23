@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
+# SPDX-FileCopyrightText: Copyright (C) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 import os
 import sys
@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication
 
 __author__ = "沉默の金"
 __license__ = "GPL-3.0-only"
-__copyright__ = "Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>"
+__copyright__ = "Copyright (C) 2024 沉默の金 <cmzj@cmzj.org>"
 name = "LDDC"  # 程序名称(用于utils.args检查运行模式)
 if find_spec("LDDC") is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

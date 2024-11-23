@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024 沉默の金 <cmzj@cmzj.org>
+# SPDX-FileCopyrightText: Copyright (C) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
 import os
@@ -28,7 +28,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.connect_signals()
 
         self.songs_table.set_proportions([0.2, 0.1, 0.1, 0.3, 2, 0.3, 2])  # 设置列宽比例
-        self.source_listWidget.set_soures(["QM", "KG"])
+        self.source_listWidget.set_soures(["QM", "KG", "NE"])
 
         self.taskids: dict[str, int] = {
             "get_infos": 0,
