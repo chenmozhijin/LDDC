@@ -98,7 +98,7 @@ jobs:
                 nuitka-version: main
                 script-name: LDDC
                 
-                mode: standalone
+                mode: app
                 report: nuitka-report.xml
                 enable-plugins: pyside6
                 product-name: "LDDC"
@@ -110,7 +110,6 @@ jobs:
 
                 macos-app-icon: "LDDC/res/img/icon/logo.icns"
                 macos-app-version: ${{ steps.info.outputs.num_version }}
-                macos-create-app-bundle: true
                 macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
               env:
                 PYTHONPATH: ${{ github.workspace }}
