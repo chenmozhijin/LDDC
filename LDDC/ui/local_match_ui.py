@@ -264,6 +264,7 @@ class Ui_local_match:
         self.progressBar.setObjectName("progressBar")
         self.progressBar.setOrientation(Qt.Orientation.Horizontal)
         self.progressBar.setInvertedAppearance(False)
+        self.progressBar.setFormat("%v/%m %p%")
 
         self.verticalLayout.addWidget(self.progressBar)
 
@@ -326,6 +327,5 @@ class Ui_local_match:
         ___qtablewidgetitem5.setText(QCoreApplication.translate("local_match", "\u4fdd\u5b58\u8def\u5f84", None))
         ___qtablewidgetitem6 = self.songs_table.horizontalHeaderItem(6)
         ___qtablewidgetitem6.setText(QCoreApplication.translate("local_match", "\u72b6\u6001", None))
-        self.progressBar.setFormat(QCoreApplication.translate("local_match", "%v/%m %p%", None))
 
     # retranslateUi

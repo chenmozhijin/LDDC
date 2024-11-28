@@ -401,8 +401,10 @@ class Ui_settings:
 
         self.language_comboBox = QComboBox(self.groupBox_6)
         self.language_comboBox.addItem("")
+        self.language_comboBox.addItem("\u7b80\u4f53\u4e2d\u6587")
         self.language_comboBox.addItem("")
-        self.language_comboBox.addItem("")
+        self.language_comboBox.addItem("English")
+        self.language_comboBox.addItem("\u65e5\u672c\u8a9e")
         self.language_comboBox.setObjectName("language_comboBox")
 
         self.gridLayout_2.addWidget(self.language_comboBox, 0, 2, 1, 1)
@@ -555,8 +557,7 @@ class Ui_settings:
 
         self.open_log_dir_button.setText(QCoreApplication.translate("settings", "\u6253\u5f00\u65e5\u5fd7\u6587\u4ef6\u5939", None))
         self.language_comboBox.setItemText(0, QCoreApplication.translate("settings", "\u81ea\u52a8", None))
-        self.language_comboBox.setItemText(1, QCoreApplication.translate("settings", "\u82f1\u6587", None))
-        self.language_comboBox.setItemText(2, QCoreApplication.translate("settings", "\u4e2d\u6587", None))
+        self.language_comboBox.setItemText(2, QCoreApplication.translate("settings", "\u7e41\u9ad4\u4e2d\u6587", None))
 
         self.label_7.setText(QCoreApplication.translate("settings", "\u8bed\u8a00\uff1a", None))
         self.label_2.setText(QCoreApplication.translate("settings", "\u4e3b\u9898\u989c\u8272:", None))

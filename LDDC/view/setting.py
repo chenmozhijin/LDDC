@@ -69,10 +69,14 @@ class SettingWidget(QWidget, Ui_settings):
         match cfg["language"]:
             case "auto":
                 self.language_comboBox.setCurrentIndex(0)
-            case "en":
-                self.language_comboBox.setCurrentIndex(1)
             case "zh-Hans":
+                self.language_comboBox.setCurrentIndex(1)
+            case "zh-Hant":
                 self.language_comboBox.setCurrentIndex(2)
+            case "en":
+                self.language_comboBox.setCurrentIndex(3)
+            case "ja":
+                self.language_comboBox.setCurrentIndex(4)
 
         self.color_scheme_mapping = {
             0: "auto",
@@ -217,9 +221,13 @@ class SettingWidget(QWidget, Ui_settings):
             case 0:
                 cfg.setitem("language", "auto")
             case 1:
-                cfg.setitem("language", "en")
-            case 2:
                 cfg.setitem("language", "zh-Hans")
+            case 2:
+                cfg.setitem("language", "zh-Hant")
+            case 3:
+                cfg.setitem("language", "en")
+            case 4:
+                cfg.setitem("language", "ja")
         load_translation()
         self.init_ui()
 

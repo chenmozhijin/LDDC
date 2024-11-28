@@ -21,17 +21,19 @@ _signal_helper = _SignalHelper()
 language_changed = _signal_helper.language_changed
 
 
-def get_system_language() -> QLocale.Language:
+def get_system_language() -> tuple[QLocale.Language, QLocale.Script]:
     if platform.system() == 'Darwin':
         try:
             from Foundation import NSUserDefaults  # type: ignore[reportMissingImports]
             if (languages := NSUserDefaults.standardUserDefaults().objectForKey_("AppleLanguages")):
                 language = languages[0]
                 if language.startswith("zh"):
-                    return QLocale.Language.Chinese
+                    if language.startswith("zh-Hant"):
+                        return QLocale.Language.Chinese, QLocale.Script.TraditionalHanScript
+                    return QLocale.Language.Chinese, QLocale.Script.SimplifiedHanScript
         except ImportError:
             logger.warning("Failed to get system language on macOS")
-    return QLocale.system().language()
+    return QLocale.system().language(), QLocale.system().script()
 
 
 def load_translation(emit: bool = True) -> None:
@@ -44,17 +46,17 @@ def load_translation(emit: bool = True) -> None:
     translator = QTranslator()
     qt_translator = QTranslator()
     lang = cfg.get("language")
-    match lang:
-        case "auto":
+    if lang == "auto":
+        language, script = get_system_language()
+        match language:
+            case QLocale.Language.Chinese:
+                lang = 'zh-Hant' if script == QLocale.Script.TraditionalHanScript else 'zh-Hans'
+            case QLocale.Language.Japanese:
+                lang = 'ja'
+            case _:
+                lang = 'en'
 
-            language = get_system_language()
-            logger.info("System language detected: %s", language)
-            if language != QLocale.Language.Chinese:
-                translator.load(":/i18n/LDDC_en.qm")
-                if not qt_translator.load("qt_en.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
-                    logger.warning("Failed to load qt_en.qm")
-            elif not qt_translator.load("qt_zh_CN.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
-                logger.warning("Failed to load qt_zh_CN.qm")
+    match lang:
         case "en":
             translator.load(":/i18n/LDDC_en.qm")
             if not qt_translator.load("qt_en.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
@@ -62,6 +64,14 @@ def load_translation(emit: bool = True) -> None:
         case "zh-Hans":
             if not qt_translator.load("qt_zh_CN.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
                 logger.warning("Failed to load qt_zh_CN.qm")
+        case "zh-Hant":
+            translator.load(":/i18n/LDDC_zh-Hant.ts")
+            if not qt_translator.load("qt_zh_TW.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+                logger.warning("Failed to load qt_zh_TW.qm")
+        case "ja":
+            translator.load(":/i18n/LDDC_ja.qm")
+            if not qt_translator.load("qt_ja.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+                logger.warning("Failed to load qt_ja.qm")
     app.installTranslator(translator)
     app.installTranslator(qt_translator)
 

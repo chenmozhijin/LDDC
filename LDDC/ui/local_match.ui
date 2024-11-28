@@ -457,7 +457,7 @@
       <bool>false</bool>
      </property>
      <property name="format">
-      <string>%v/%m %p%</string>
+      <string notr="true">%v/%m %p%</string>
      </property>
     </widget>
    </item>
