@@ -91,9 +91,31 @@ jobs:
                 echo "num_version=$(python build_helper.py --task get_num_version)" >> $GITHUB_OUTPUT
                 cat $GITHUB_OUTPUT
 
-            - name: Build Executable(Linux/macOS)
+            - name: Build Executable(Linux)
               uses: Nuitka/Nuitka-Action@main
-              if : ${{ runner.os == 'Linux' || runner.os == 'macOS'}}
+              if : ${{ runner.os == 'Linux'}}
+              with:
+                nuitka-version: main
+                script-name: LDDC
+                
+                mode: standalone
+                report: nuitka-report.xml
+                enable-plugins: pyside6
+                product-name: "LDDC"
+                file-version: ${{ steps.info.outputs.num_version }}
+                product-version: ${{ steps.info.outputs.num_version }}
+                copyright: ${{ steps.info.outputs.copyright }}
+
+
+                macos-app-icon: "LDDC/res/img/icon/logo.icns"
+                macos-app-version: ${{ steps.info.outputs.num_version }}
+                macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
+              env:
+                PYTHONPATH: ${{ github.workspace }}
+
+            - name: Build Executable(macOS)
+              uses: Nuitka/Nuitka-Action@main
+              if : ${{ runner.os == 'macOS' }}
               with:
                 nuitka-version: main
                 script-name: LDDC
@@ -106,7 +128,6 @@ jobs:
                 product-version: ${{ steps.info.outputs.num_version }}
                 copyright: ${{ steps.info.outputs.copyright }}
 
-                disable-console: true
 
                 macos-app-icon: "LDDC/res/img/icon/logo.icns"
                 macos-app-version: ${{ steps.info.outputs.num_version }}
