@@ -34,7 +34,6 @@ class Ui_search_base:
     def setupUi(self, search_base):
         if not search_base.objectName():
             search_base.setObjectName("search_base")
-        search_base.resize(672, 415)
         self.verticalLayout = QVBoxLayout(search_base)
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalLayout = QHBoxLayout()
@@ -54,6 +53,7 @@ class Ui_search_base:
         self.search_type_comboBox.addItem("")
         self.search_type_comboBox.addItem("")
         self.search_type_comboBox.setObjectName("search_type_comboBox")
+        self.search_type_comboBox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
         self.horizontalLayout.addWidget(self.search_type_comboBox)
 
