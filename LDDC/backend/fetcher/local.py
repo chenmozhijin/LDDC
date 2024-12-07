@@ -125,7 +125,7 @@ def get_lyrics(lyrics: Lyrics, path: str | None, data: bytes | None = None) -> N
             json_data = json.loads(data)
             json2lyrics(json_data, lyrics)
         except Exception:
-            if path and path.lower().split('.')[-1] == 'lrc':
+            if not path or path.lower().split('.')[-1] == 'lrc':
                 # LRC歌词格式
                 try:
                     file_text = read_unknown_encoding_file(file_data=data, sign_word=("[", "]", ":"))
