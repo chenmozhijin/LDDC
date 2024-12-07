@@ -81,7 +81,7 @@ def _lrc2list_list(lrc: str, source: Source | None = None) -> tuple[dict[str, st
 
                         # 添加上一字的结束时间
                         if words:  # 上一字存在
-                            words[-1][1] = word_start
+                            words[-1] = LyricsWord((words[-1][0], word_start, words[-1][2]))
 
                         # 添加歌词字到歌词行
                         if word_str:
