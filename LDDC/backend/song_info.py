@@ -95,7 +95,7 @@ def get_audio_file_infos(file_path: str) -> list[dict]:
 def write_lyrics(file_path: str, lyrics_text: str, lyrics: Lyrics | None = None) -> None:
     audio = File(file_path)
 
-    if audio and isinstance(audio, FileType):
+    if isinstance(audio, FileType):
         if audio.tags is None:
             audio.add_tags()
 
@@ -137,7 +137,7 @@ def write_lyrics(file_path: str, lyrics_text: str, lyrics: Lyrics | None = None)
             audio.save()
         logger.info("写入歌词到%s成功", file_path)
     else:
-        msg = f"{file_path} 不支持的文件格式"
+        msg = f"{file_path} 不支持的文件格式 {type(audio)}"
         raise FileTypeError(msg)
 
 
