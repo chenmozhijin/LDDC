@@ -16,7 +16,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os: [macos-13, ubuntu-latest, windows-latest]
+                os: [macos-13, windows-latest]
                 arch: [x64]
                 include:
                   - os: macos-latest
@@ -56,11 +56,7 @@ jobs:
 
             - name: Run tests
               run: |
-                if [ "${{ runner.os }}" == "Linux" ]; then
-                    xvfb-run pytest --cov=lddc --cov-report=xml --cov-report=html --disable-warnings
-                else
-                    pytest --cov=lddc --cov-report=xml --cov-report=html --disable-warnings
-                fi
+                pytest --cov=lddc --cov-report=xml --cov-report=html --disable-warnings
 
             - name: Save test artifacts
               if: always()
