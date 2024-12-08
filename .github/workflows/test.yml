@@ -52,15 +52,15 @@ jobs:
               if: runner.os == 'Linux'
               run: |
                 sudo apt-get update
-                sudo apt-get install -y \
-                  libegl1-mesa \
-                  libxcb-xinerama0 \
-                  xauth \
-                  xvfb \
-                  libgl1-mesa-glx
+                sudo apt-get install -y sudo apt-get install -y qtbase5-dev libqt5gui5 libqt5widgets5 xvfb
+
             - name: Run tests
               run: |
-                pytest --cov=lddc --cov-report=xml --cov-report=html --disable-warnings
+                if [ "${{ runner.os }}" == "Linux" ]; then
+                    xvfb-run pytest --cov=lddc --cov-report=xml --cov-report=html --disable-warnings
+                else
+                    pytest --cov=lddc --cov-report=xml --cov-report=html --disable-warnings
+                fi
 
             - name: Save test artifacts
               if: always()
@@ -73,5 +73,5 @@ jobs:
               uses: actions/upload-artifact@v3
               if: always()
               with:
-                name: artifacts
+                name: artifacts-${{ matrix.os }}
                 path: tests/artifacts
