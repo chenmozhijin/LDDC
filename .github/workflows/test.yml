@@ -52,7 +52,7 @@ jobs:
               if: runner.os == 'Linux'
               run: |
                 sudo apt-get update
-                sudo apt-get install -y sudo apt-get install -y qtbase5-dev libqt5gui5 libqt5widgets5 xvfb
+                sudo apt-get install -y qtbase5-dev libqt5gui5 libqt5widgets5 xvfb
 
             - name: Run tests
               run: |
