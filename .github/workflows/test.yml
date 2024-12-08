@@ -36,15 +36,42 @@ jobs:
                 pip install -Ur requirements-tests.txt
                 pip install .
 
+            - name: Install FFmpeg(Linux)
+              if: runner.os == 'Linux'
+              run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      
+            - name: Install FFmpeg(Windows)
+              if: runner.os == 'Windows'
+              run: choco install ffmpeg -y
+
+            - name: Install FFmpeg(Mac)
+              if: runner.os == 'macOS'
+              run: brew install ffmpeg
+
+            - name: Install GUI dependencies
+              if: runner.os == 'Linux'
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y \
+                  libegl1-mesa \
+                  libxcb-xinerama0 \
+                  xauth \
+                  xvfb \
+                  libgl1-mesa-glx
             - name: Run tests
               run: |
                 pytest --cov=lddc --cov-report=xml --cov-report=html --disable-warnings
+
+            - name: Save test artifacts
+              if: always()
+              run: |
                 mkdir -p tests/artifacts/reports
                 cp -r htmlcov ./tests/artifacts/reports
                 cp coverage.xml ./tests/artifacts/reports
 
             - name: Upload artifacts
               uses: actions/upload-artifact@v3
+              if: always()
               with:
                 name: artifacts
                 path: tests/artifacts
