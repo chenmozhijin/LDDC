@@ -15,6 +15,7 @@ class Ui_get_list_lyrics:
     def setupUi(self, get_list_lyrics):
         if not get_list_lyrics.objectName():
             get_list_lyrics.setObjectName("get_list_lyrics")
+        get_list_lyrics.resize(600, 400)
         icon = QIcon()
         icon.addFile(":/LDDC/img/icon/logo.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
         get_list_lyrics.setWindowIcon(icon)

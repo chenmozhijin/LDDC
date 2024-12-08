@@ -2,6 +2,14 @@
 <ui version="4.0">
  <class>get_list_lyrics</class>
  <widget class="QWidget" name="get_list_lyrics">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>600</width>
+    <height>400</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>获取专辑/歌单歌词</string>
   </property>
