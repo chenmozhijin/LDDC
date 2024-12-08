@@ -1,0 +1,5 @@
+-r requirements.txt
+pydub
+pytest
+pytest-qt
+pytest-cov
