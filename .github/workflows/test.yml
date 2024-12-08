@@ -1,0 +1,50 @@
+name: test LDDC
+
+on:
+    push:
+        branches: 
+          - main
+          - dev
+        paths:
+            - "**.py"
+            - ".github/workflows/test.yml"
+    workflow_dispatch:
+
+jobs:
+
+    test:
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [macos-13, ubuntu-latest, windows-latest]
+                arch: [x64]
+                include:
+                  - os: macos-latest
+                    arch: arm64
+        runs-on: ${{ matrix.os }}
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                python-version: 3.12
+                architecture: ${{ matrix.arch }}
+
+            - name: Install dependencies
+              run: |
+                pip install -Ur requirements-tests.txt
+                pip install .
+
+            - name: Run tests
+              run: |
+                pytest --cov=lddc --cov-report=xml --cov-report=html --disable-warnings
+                mkdir -p tests/artifacts/reports
+                cp -r htmlcov ./tests/artifacts/reports
+                cp coverage.xml ./tests/artifacts/reports
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v3
+              with:
+                name: artifacts
+                path: tests/artifacts
