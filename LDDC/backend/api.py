@@ -696,7 +696,7 @@ def kg_get_songlist(listid: str | int, list_type: str) -> str | list:
     if list_type not in ["album", "songlist"]:
         return "错误的list_type"
 
-    domain = random.choice(["mobiles.kugou.com", "msearchcdn.kugou.com", "mobilecdnbj.kugou.com", "msearch.kugou.com"])  # noqa: S311
+    domain = random.choice(["mobiles.kugou.com", "mobilecdnbj.kugou.com"])  # noqa: S311
     match list_type:
         case "album":
             url = f"http://{domain}/api/v3/album/song"
