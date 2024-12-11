@@ -40,6 +40,38 @@ def search(qtbot: QtBot, search_type: SearchType, keyword: str) -> None:
         qtbot.waitUntil(check_table)
         qtbot.wait(20)
         grab(main_window, os.path.join(screenshot_path, f"search_{search_type.name.lower()}_{Source(i).name.lower()}.png"))
+
+        # preview
+        # 双击第一行
+        for _ in range(2):
+            QTest.mouseDClick(main_window.search_widget.results_tableWidget.viewport(),
+                              Qt.MouseButton.LeftButton,
+                              pos=QPoint(int(main_window.search_widget.results_tableWidget.width() * 0.5),
+                                         int(main_window.search_widget.results_tableWidget.horizontalHeader().height())))
+
+        orig_lyrics = main_window.search_widget.preview_lyric_result
+
+        def check_preview_lyric() -> bool:
+            return main_window.search_widget.preview_lyric_result != orig_lyrics and len(main_window.search_widget.preview_plainTextEdit.toPlainText()) > 15  # noqa: B023
+
+        def check_album_table() -> bool:
+            return main_window.search_widget.results_tableWidget.property("result_type")[0] == "album"
+
+        def check_song_list_table() -> bool:
+            return main_window.search_widget.results_tableWidget.property("result_type")[0] == "songlist"
+
+        match search_type:
+            case SearchType.SONG:
+                qtbot.waitUntil(check_preview_lyric)
+                grab(main_window, os.path.join(screenshot_path, "preview_lyrics.png"))
+                verify_lyrics(main_window.search_widget.preview_plainTextEdit.toPlainText())
+            case SearchType.ALBUM:
+                qtbot.waitUntil(check_album_table)
+                grab(main_window, os.path.join(screenshot_path, "show_album_song.png"))
+                assert main_window.search_widget.results_tableWidget.rowCount() > 0
+            case SearchType.SONGLIST:
+                qtbot.waitUntil(check_song_list_table)
+                grab(main_window, os.path.join(screenshot_path, "show_songlist_song.png"))
     assert main_window.search_widget.results_tableWidget.rowCount() > 0
     qtbot.wait(200)
 
@@ -51,25 +83,6 @@ def test_search_song(qtbot: QtBot) -> None:
     main_window.set_current_widget(0)
     qtbot.wait(300)  # 等待窗口加载完成
     search(qtbot, SearchType.SONG, "鈴木このみ - アルカテイル")
-
-
-def test_preview(qtbot: QtBot) -> None:
-    from LDDC.view.main_window import main_window
-
-    assert main_window.search_widget.results_tableWidget.rowCount() > 0
-    # 双击第一行
-    for _ in range(2):
-        QTest.mouseDClick(main_window.search_widget.results_tableWidget.viewport(),
-                          Qt.MouseButton.LeftButton,
-                          pos=QPoint(int(main_window.search_widget.results_tableWidget.width() * 0.5),
-                                     int(main_window.search_widget.results_tableWidget.horizontalHeader().height())))
-
-    def check_preview_text() -> bool:
-        return main_window.search_widget.preview_lyric_result is not None
-
-    qtbot.waitUntil(check_preview_text)
-    grab(main_window, os.path.join(screenshot_path, "preview.png"))
-    verify_lyrics(main_window.search_widget.preview_plainTextEdit.toPlainText())
 
 
 def test_save_to_dir() -> None:
@@ -177,25 +190,6 @@ def test_search_song_list(qtbot: QtBot) -> None:
     search(qtbot, SearchType.SONGLIST, "key社")
 
 
-def test_open_song_list(qtbot: QtBot) -> None:
-    from LDDC.view.main_window import main_window
-
-    assert main_window.search_widget.results_tableWidget.rowCount() > 0
-    # 双击第一行
-    for _ in range(2):
-        QTest.mouseDClick(main_window.search_widget.results_tableWidget.viewport(),
-                          Qt.MouseButton.LeftButton,
-                          pos=QPoint(int(main_window.search_widget.results_tableWidget.width() * 0.5),
-                                     int(main_window.search_widget.results_tableWidget.horizontalHeader().height())))
-
-    def check_table() -> bool:
-        return main_window.search_widget.results_tableWidget.property("result_type")[0] == "songlist"
-
-    qtbot.waitUntil(check_table)
-    grab(main_window, os.path.join(screenshot_path, "show_songlist.png"))
-    assert main_window.search_widget.results_tableWidget.rowCount() > 0
-
-
 def test_search_album(qtbot: QtBot) -> None:
     search(qtbot, SearchType.ALBUM, "アスタロア/青き此方/夏の砂時計")
 
@@ -204,19 +198,7 @@ def test_save_album_lyrics(qtbot: QtBot) -> None:
     from LDDC.view.main_window import main_window
 
     assert main_window.search_widget.results_tableWidget.rowCount() > 0
-    # 双击第一行
-    for _ in range(2):
-        QTest.mouseDClick(main_window.search_widget.results_tableWidget.viewport(),
-                          Qt.MouseButton.LeftButton,
-                          pos=QPoint(int(main_window.search_widget.results_tableWidget.width() * 0.5),
-                                     int(main_window.search_widget.results_tableWidget.horizontalHeader().height())))
-
-    def check_table() -> bool:
-        return main_window.search_widget.results_tableWidget.property("result_type")[0] == "album"
-
-    qtbot.waitUntil(check_table)
-    grab(main_window, os.path.join(screenshot_path, "show_album.png"))
-    assert main_window.search_widget.results_tableWidget.rowCount() > 0
+    assert main_window.search_widget.results_tableWidget.property("result_type")[0] == "album"
 
     # 保存歌词
     orig_path = main_window.search_widget.save_path_lineEdit.text()
