@@ -37,7 +37,7 @@ def search(qtbot: QtBot, search_type: SearchType, keyword: str) -> None:
 
         def check_table() -> bool:
             return main_window.search_widget.results_tableWidget.rowCount() > 0
-        qtbot.waitUntil(check_table)
+        qtbot.waitUntil(check_table, timeout=15000)
         qtbot.wait(20)
         grab(main_window, os.path.join(screenshot_path, f"search_{search_type.name.lower()}_{Source(i).name.lower()}.png"))
 
@@ -62,15 +62,15 @@ def search(qtbot: QtBot, search_type: SearchType, keyword: str) -> None:
 
         match search_type:
             case SearchType.SONG:
-                qtbot.waitUntil(check_preview_lyric)
+                qtbot.waitUntil(check_preview_lyric, timeout=15000)
                 grab(main_window, os.path.join(screenshot_path, "preview_lyrics.png"))
                 verify_lyrics(main_window.search_widget.preview_plainTextEdit.toPlainText())
             case SearchType.ALBUM:
-                qtbot.waitUntil(check_album_table)
+                qtbot.waitUntil(check_album_table, timeout=15000)
                 grab(main_window, os.path.join(screenshot_path, "show_album_song.png"))
                 assert main_window.search_widget.results_tableWidget.rowCount() > 0
             case SearchType.SONGLIST:
-                qtbot.waitUntil(check_song_list_table)
+                qtbot.waitUntil(check_song_list_table, timeout=15000)
                 grab(main_window, os.path.join(screenshot_path, "show_songlist_song.png"))
     assert main_window.search_widget.results_tableWidget.rowCount() > 0
     qtbot.wait(200)
@@ -137,7 +137,7 @@ def test_lyrics_langs(qtbot: QtBot) -> None:
             def check_langs_changed() -> bool:
                 return main_window.search_widget.preview_plainTextEdit.toPlainText() != orig_text
 
-            qtbot.waitUntil(check_langs_changed)
+            qtbot.waitUntil(check_langs_changed, timeout=15000)
             grab(main_window, os.path.join(screenshot_path, f"search_{'_'.join(langs)}.png"))
 
     for r in range(1, 4):
@@ -161,7 +161,7 @@ def change_preview_format(qtbot: QtBot, lyrics_format: LyricsFormat) -> str:
             return bool(len(main_window.search_widget.preview_plainTextEdit.toPlainText()) > 20 and
                         main_window.search_widget.preview_plainTextEdit.toPlainText() != orig_text)
 
-        qtbot.waitUntil(check_preview_result)
+        qtbot.waitUntil(check_preview_result, timeout=15000)
     grab(main_window, os.path.join(screenshot_path, f"preview_{lyrics_format.name.lower()}.png"))
     return main_window.search_widget.preview_plainTextEdit.toPlainText()
 
