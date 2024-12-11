@@ -162,6 +162,7 @@ def change_preview_format(qtbot: QtBot, lyrics_format: LyricsFormat) -> str:
                         main_window.search_widget.preview_plainTextEdit.toPlainText() != orig_text)
 
         qtbot.waitUntil(check_preview_result, timeout=15000)
+        qtbot.wait(20)
     grab(main_window, os.path.join(screenshot_path, f"preview_{lyrics_format.name.lower()}.png"))
     return main_window.search_widget.preview_plainTextEdit.toPlainText()
 

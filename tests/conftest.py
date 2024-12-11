@@ -8,7 +8,7 @@ from functools import partial
 from typing import Any
 
 import pytest
-from PySide6.QtCore import QRunnable
+from PySide6.QtCore import QRunnable, QThread
 
 from LDDC.utils.cache import cache
 from LDDC.utils.logger import logger
@@ -20,14 +20,14 @@ def init() -> None:
     cache.clear()
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 def cover_qthreadpool(monkeypatch: pytest.MonkeyPatch) -> None:
 
-    def run_with_trace(self) -> None:
+    def run_with_trace(self: QRunnable | QThread) -> None:
         if "coverage" in sys.modules:
             # https://github.com/nedbat/coveragepy/issues/686#issuecomment-634932753
             sys.settrace(threading._trace_hook)  # type: ignore[reportAttributeAccessIssue] # noqa: SLF001
-        self._base_run()
+        self._base_run()  # type: ignore[reportAttributeAccessIssue]
 
     def _start(worker: QRunnable | Callable, *args: Any, **kwargs: Any) -> None:
 
@@ -41,3 +41,10 @@ def cover_qthreadpool(monkeypatch: pytest.MonkeyPatch) -> None:
 
     threadpool.no_patch_start = threadpool.start  # type: ignore[reportAttributeAccessIssue]
     monkeypatch.setattr(threadpool, "start", _start)
+
+    def _init(self: QThread, *args: Any, **kwargs: Any) -> None:
+        QThread.__init__(self, *args, **kwargs)
+        self._base_run = self.run  # type: ignore[reportAttributeAccessIssue]
+        self.run = partial(run_with_trace, self)
+
+    monkeypatch.setattr(QThread, "__init__", _init)

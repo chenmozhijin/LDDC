@@ -3,7 +3,8 @@
 import os
 
 from mutagen import File, FileType  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
-from mutagen.id3 import USLT  # type: ignore[reportPrivateImportUsage]
+from mutagen.easyid3 import EasyID3
+from mutagen.id3 import ID3, USLT  # type: ignore[reportPrivateImportUsage]
 from pydub import AudioSegment
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 
@@ -65,7 +66,26 @@ def create_audio_file(path: str, audio_format: str, duration: int, tags: dict[st
     if not os.path.exists(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path), exist_ok=True)
     silent_audio = AudioSegment.silent(duration=duration * 1000, frame_rate=44100)
-    silent_audio.export(path, format=audio_format, tags=tags)
+    silent_audio.export(path, format=audio_format)
+    if tags:
+        audio = File(path, easy=True)
+        if isinstance(audio, FileType):
+            if audio.tags is None:
+                audio.add_tags()
+
+            if isinstance(audio.tags, ID3):
+                # 对于ID3类型的标签(wave文件),使用mutagen.easyid3.EasyID3来转换
+                easy_tags = EasyID3()
+                for tag, value in tags.items():
+                    easy_tags[tag] = value
+                id3: ID3 = easy_tags._EasyID3__id3  # id3是EasyID3的一个私有变量  # type: ignore[reportAttributeAccessIssue]  # noqa: SLF001
+                for value in id3.values():
+                    audio.tags.add(value)
+            else:
+                for tag, value in tags.items():
+                    audio[tag] = value
+
+            audio.save()
 
 
 def verify_audio_lyrics(path: str) -> None:
