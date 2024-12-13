@@ -201,14 +201,18 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.status_label.setText(msg)
 
         if "current" in result:
+            info_item = self.songs_table.item(result["current"], 0)
+            status_item = self.songs_table.item(result["current"], 6)
+            if not status_item or not info_item:
+                MsgBox.critical(self, self.tr("错误"), self.tr("对应的引索{}不存在").format(result["current"]))
+                return
             match result["status"]:
                 case "成功":
-                    self.songs_table.item(result["current"], 6).setForeground(Qt.GlobalColor.green)
-                    self.songs_table.item(result["current"], 6).setText(self.tr("成功"))
+                    status_item.setForeground(Qt.GlobalColor.green)
+                    status_item.setText(self.tr("成功"))
                     if "save_path" in result:
-                        info = self.songs_table.item(result["current"], 0).data(Qt.ItemDataRole.UserRole)
-                        self.songs_table.item(result["current"], 6).setData(Qt.ItemDataRole.UserRole,
-                                                                            {"status": result["status"], "save_path": result["save_path"]})
+                        info = info_item.data(Qt.ItemDataRole.UserRole)
+                        status_item.setData(Qt.ItemDataRole.UserRole, {"status": result["status"], "save_path": result["save_path"]})
                         if (LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex()) in (LocalMatchSave2TagMode.ONLY_TAG,
                                                                                                    LocalMatchSave2TagMode.BOTH) and
                                 info["type"] != "cue"):
@@ -218,26 +222,26 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                             self.songs_table.setItem(result["current"], 5, QTableWidgetItem(result["save_path"]))
 
                 case "跳过纯音乐":
-                    self.songs_table.item(result["current"], 6).setForeground(Qt.GlobalColor.blue)
-                    self.songs_table.item(result["current"], 6).setText(self.tr("跳过"))
-                    self.songs_table.item(result["current"], 6).setData(Qt.ItemDataRole.UserRole, {"status": result["status"]})
-                    self.songs_table.item(result["current"], 6).setToolTip(self.tr("跳过纯音乐"))
+                    status_item.setForeground(Qt.GlobalColor.blue)
+                    status_item.setText(self.tr("跳过"))
+                    status_item.setData(Qt.ItemDataRole.UserRole, {"status": result["status"]})
+                    status_item.setToolTip(self.tr("跳过纯音乐"))
 
                 case _:
-                    self.songs_table.item(result["current"], 6).setForeground(Qt.GlobalColor.red)
-                    self.songs_table.item(result["current"], 6).setText(self.tr("失败"))
-                    self.songs_table.item(result["current"], 6).setData(Qt.ItemDataRole.UserRole, {"status": result["status"]})
+                    status_item.setForeground(Qt.GlobalColor.red)
+                    status_item.setText(self.tr("失败"))
+                    status_item.setData(Qt.ItemDataRole.UserRole, {"status": result["status"]})
                     match result["status"]:
                         case "没有找到符合要求的歌曲":
-                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：没有找到符合要求的歌曲"))
+                            status_item.setToolTip(self.tr("错误：没有找到符合要求的歌曲"))
                         case "搜索结果处理失败":
-                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：搜索结果处理失败"))
+                            status_item.setToolTip(self.tr("错误：搜索结果处理失败"))
                         case "没有足够的信息用于搜索":
-                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：没有足够的信息用于搜索"))
+                            status_item.setToolTip(self.tr("错误：没有足够的信息用于搜索"))
                         case "保存歌词失败":
-                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：保存歌词失败"))
+                            status_item.setToolTip(self.tr("错误：保存歌词失败"))
                         case "超时":
-                            self.songs_table.item(result["current"], 6).setToolTip(self.tr("错误：超时"))
+                            status_item.setToolTip(self.tr("错误：超时"))
 
     def get_table_infos(self) -> list[dict]:
         """获取表格中的文件信息
@@ -275,7 +279,11 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.save_path_errors.clear()
 
         for row in range(self.songs_table.rowCount()):
-            info: dict = self.songs_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+            info_item = self.songs_table.item(row, 0)
+            if not info_item:
+                MsgBox.critical(self, self.tr("错误"), self.tr("对应的引索{}不存在").format(row))
+                continue
+            info: dict = info_item.data(Qt.ItemDataRole.UserRole)
             save_path_text = ""
 
             if save2tag_mode in (LocalMatchSave2TagMode.ONLY_TAG, LocalMatchSave2TagMode.BOTH) and info["type"] != "cue":
@@ -311,7 +319,11 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         def set_root_path(path: str) -> None:
             skips = []
             for row in rows:
-                info: dict = self.songs_table.item(row, 0).data(Qt.ItemDataRole.UserRole)
+                info_item = self.songs_table.item(row, 0)
+                if not info_item:
+                    MsgBox.critical(self, self.tr("错误"), self.tr("对应的引索{}不存在").format(row))
+                    continue
+                info: dict = info_item.data(Qt.ItemDataRole.UserRole)
                 # 获取绝对路径
                 file_path = os.path.abspath(info["file_path"])  # 歌曲文件路径
                 path = os.path.abspath(path)  # 根目录路径
@@ -320,7 +332,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 # 检查文件路径是否以目录路径为前缀
                 if os.path.splitdrive(file_path)[0] == os.path.splitdrive(path)[0] and os.path.commonpath([file_path, path]) == path:
                     info["root_path"] = path
-                    self.songs_table.item(row, 0).setData(Qt.ItemDataRole.UserRole, info)
+                    info_item.setData(Qt.ItemDataRole.UserRole, info)
                 else:
                     skips.append(info["file_path"])
 
@@ -332,7 +344,11 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         dialog = QFileDialog(self)
         dialog.setWindowTitle(self.tr("选择歌曲根目录"))
         dialog.setFileMode(QFileDialog.FileMode.Directory)
-        dialog.setDirectory(os.path.dirname(self.songs_table.item(rows[0], 0).data(Qt.ItemDataRole.UserRole)["file_path"]))
+        info_item = self.songs_table.item(rows[0], 0)
+        if not info_item:
+            MsgBox.critical(self, self.tr("错误"), self.tr("对应的引索{}不存在").format(rows[0]))
+            return
+        dialog.setDirectory(os.path.dirname(info_item.data(Qt.ItemDataRole.UserRole)["file_path"]))
         dialog.fileSelected.connect(set_root_path)
         dialog.open()
 
@@ -348,12 +364,15 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             #  反向删除,防止删除行后影响后续行号
             menu.addAction(self.tr("指定根目录"), lambda rows=selected_rows: self.select_root_path([row.row() for row in rows]))
         if len(selected_rows) == 1:
+            info_item, status_item = self.songs_table.item(selected_rows[0].row(), 0), self.songs_table.item(selected_rows[0].row(), 6)
+            if not info_item or not status_item:
+                return
             menu.addAction(self.tr("打开歌曲目录"),
-                           lambda row=selected_rows[0]: QDesktopServices.openUrl(
-                               QUrl.fromLocalFile(os.path.dirname(self.songs_table.item(row.row(), 0).data(Qt.ItemDataRole.UserRole)["file_path"]))))
+                           lambda info_item=info_item: QDesktopServices.openUrl(
+                               QUrl.fromLocalFile(os.path.dirname(info_item.data(Qt.ItemDataRole.UserRole)["file_path"]))))
             menu.addAction(self.tr("在搜索中打开"),
-                           lambda row=selected_rows[0]: self.search_song.emit(self.songs_table.item(row.row(), 0).data(Qt.ItemDataRole.UserRole)))
-            if ((completion_status := self.songs_table.item(selected_rows[0].row(), 6).data(Qt.ItemDataRole.UserRole)) and  # 获取完成状态
+                           lambda info_item=info_item: self.search_song.emit(info_item.data(Qt.ItemDataRole.UserRole)))
+            if ((completion_status := status_item.data(Qt.ItemDataRole.UserRole)) and  # 获取完成状态
                 isinstance(completion_status, dict) and  # 检查是否为字典
                     (save_path := completion_status.get("save_path"))):  # 获取保存路径
                 menu.addAction(self.tr("打开保存目录"),
