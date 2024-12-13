@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 import os
+from tempfile import TemporaryDirectory
 
 from mutagen import File, FileType  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
 from mutagen.easyid3 import EasyID3
@@ -10,6 +11,17 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 
 from LDDC.backend.fetcher import get_lyrics
 from LDDC.utils.enum import Source
+
+tmp_dirs: list[TemporaryDirectory] = []
+test_artifacts_path = os.path.join(os.path.dirname(__file__), "artifacts")
+screenshot_path = os.path.join(test_artifacts_path, "screenshots")
+tmp_dir_root = os.path.join(test_artifacts_path, "tmp")
+
+
+def get_tmp_dir() -> str:
+    directory = TemporaryDirectory(dir=tmp_dir_root)
+    tmp_dirs.append(directory)
+    return directory.name
 
 
 def verify_lyrics(lyrics_text: str) -> None:
@@ -28,6 +40,8 @@ def close_msg_boxs(widget: QWidget) -> None:
 def select_file(widget: QWidget, path: str | list[str]) -> None:
     for child in widget.children():
         if isinstance(child, QFileDialog):
+            if child.property("opened"):
+                continue
             match child.fileMode():
                 case QFileDialog.FileMode.ExistingFile | QFileDialog.FileMode.Directory | QFileDialog.FileMode.AnyFile:
                     if isinstance(path, list):
@@ -40,6 +54,7 @@ def select_file(widget: QWidget, path: str | list[str]) -> None:
 
             child.accept()
             child.deleteLater()
+            child.setProperty("opened", True)
             break
     else:
         msg = "No QFileDialog found"

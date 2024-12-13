@@ -3,7 +3,6 @@
 
 # ruff: noqa: S101
 import os
-import shutil
 from itertools import combinations
 
 import pytest
@@ -12,18 +11,9 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QFileDialog
 from pytestqt.qtbot import QtBot
 
-from LDDC.res import resource_rc
 from LDDC.utils.enum import LyricsFormat, SearchType, Source
 
-from .helper import close_msg_boxs, create_audio_file, grab, select_file, verify_audio_lyrics, verify_lyrics
-
-resource_rc.qInitResources()
-test_artifacts_path = os.path.join(os.path.dirname(__file__), "artifacts")
-screenshot_path = os.path.join(test_artifacts_path, "screenshots")
-if os.path.exists(test_artifacts_path):
-    shutil.rmtree(test_artifacts_path)
-os.makedirs(test_artifacts_path)
-os.makedirs(screenshot_path)
+from .helper import close_msg_boxs, create_audio_file, grab, screenshot_path, select_file, test_artifacts_path, verify_audio_lyrics, verify_lyrics
 
 
 def search(qtbot: QtBot, search_type: SearchType, keyword: str) -> None:

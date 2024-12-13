@@ -56,7 +56,7 @@ jobs:
 
             - name: Run tests
               run: |
-                pytest --cov=lddc --cov-report=xml --cov-report=html --disable-warnings
+                pytest --cov=LDDC --cov-report=xml --cov-report=html --cov-report=term --disable-warnings
 
             - name: Save test artifacts
               if: always()
