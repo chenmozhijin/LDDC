@@ -396,7 +396,7 @@ def parse_drop_infos(mime: QMimeData,
 
     if not paths:
         try:
-            paths = [url.toLocalFile() for url in mime.urls()]
+            paths = [os.path.realpath(url.toLocalFile()) for url in mime.urls()]
         except Exception as e:
             logger.exception(e)
             msg = "无法获取文件路径"

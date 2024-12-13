@@ -436,7 +436,7 @@ class LocalMatchWorker(QRunnable):
 
         else:
             self.update_get_infos_progress(QCoreApplication.translate("LocalMatch", "遍历文件..."), 0, 0)
-            mix_paths = [url.toLocalFile() for url in mime.urls()]
+            mix_paths = [os.path.realpath(url.toLocalFile()) for url in mime.urls()]
             infos: list[dict] = []
             dirs: list[str] = []
             audio_paths: list[tuple[str | None, str]] = []  # (遍历的目录, 文件路径)
