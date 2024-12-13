@@ -220,6 +220,8 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                             self.songs_table.setItem(result["current"], 5, QTableWidgetItem(f"{self.tr("保存到标签")} + {result['save_path']}"))
                         else:
                             self.songs_table.setItem(result["current"], 5, QTableWidgetItem(result["save_path"]))
+                    else:  # 只保存到标签
+                        status_item.setData(Qt.ItemDataRole.UserRole, {"status": result["status"]})
 
                 case "跳过纯音乐":
                     status_item.setForeground(Qt.GlobalColor.blue)
