@@ -89,6 +89,7 @@ jobs:
                 echo "copyright=Copyright (C) $(python build_helper.py --task get_year) 沉默の金" >> $GITHUB_OUTPUT
                 echo "version=$(python build_helper.py --task get_version)" >> $GITHUB_OUTPUT
                 echo "num_version=$(python build_helper.py --task get_num_version)" >> $GITHUB_OUTPUT
+                echo "qt_translations_path=$(python build_helper.py --task get_qt_translations_path)" >> $GITHUB_OUTPUT
                 cat $GITHUB_OUTPUT
 
             - name: Build Executable(Linux)
@@ -110,6 +111,12 @@ jobs:
                 macos-app-icon: "LDDC/res/img/icon/logo.icns"
                 macos-app-version: ${{ steps.info.outputs.num_version }}
                 macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
+
+                include-data-files: |
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_en.qm=qtbase_en.qm"
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_CN.qm=qtbase_zh_CN.qm"
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_TW.qm=qtbase_zh_TW.qm"
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_ja.qm=qtbase_ja.qm"
               env:
                 PYTHONPATH: ${{ github.workspace }}
 
@@ -132,6 +139,12 @@ jobs:
                 macos-app-icon: "LDDC/res/img/icon/logo.icns"
                 macos-app-version: ${{ steps.info.outputs.num_version }}
                 macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
+                
+                include-data-files: |
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_en.qm=PySide6/Qt/translations/qtbase_en.qm"
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_CN.qm=PySide6/Qt/translations/qtbase_zh_CN.qm"
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_TW.qm=PySide6/Qt/translations/qtbase_zh_TW.qm"
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_ja.qm=PySide6/Qt/translations/qtbase_ja.qm"
               env:
                 PYTHONPATH: ${{ github.workspace }}
 
@@ -153,6 +166,13 @@ jobs:
                 windows-icon-from-ico: "LDDC/res/img/icon/logo.ico"
                 mingw64: true
                 windows-console-mode: 'attach'
+
+                include-data-files: |
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_en.qm=PySide6/translations/qtbase_en.qm"
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_CN.qm=PySide6/translations/qtbase_zh_CN.qm"
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_TW.qm=PySide6/translations/qtbase_zh_TW.qm"
+                  "${{ steps.info.outputs.qt_translations_path }}/qtbase_ja.qm=PySide6/translations/qtbase_ja.qm"
+
               env:
                 PYTHONPATH: ${{ github.workspace }}
 

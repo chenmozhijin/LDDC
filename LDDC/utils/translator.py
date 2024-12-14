@@ -59,18 +59,18 @@ def load_translation(emit: bool = True) -> None:
     match lang:
         case "en":
             translator.load(":/i18n/LDDC_en.qm")
-            if not qt_translator.load("qt_en.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+            if not qt_translator.load("qtbase_en.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
                 logger.warning("Failed to load qt_en.qm")
         case "zh-Hans":
-            if not qt_translator.load("qt_zh_CN.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+            if not qt_translator.load("qtbase_zh_CN.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
                 logger.warning("Failed to load qt_zh_CN.qm")
         case "zh-Hant":
             translator.load(":/i18n/LDDC_zh-Hant.ts")
-            if not qt_translator.load("qt_zh_TW.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+            if not qt_translator.load("qtbase_zh_TW.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
                 logger.warning("Failed to load qt_zh_TW.qm")
         case "ja":
             translator.load(":/i18n/LDDC_ja.qm")
-            if not qt_translator.load("qt_ja.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
+            if not qt_translator.load("qtbase_ja.qm", QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)):
                 logger.warning("Failed to load qt_ja.qm")
     app.installTranslator(translator)
     app.installTranslator(qt_translator)
