@@ -52,7 +52,7 @@ jobs:
             - name: Install dependencies
               run: |
                 pip install -Ur requirements.txt
-                pip install imageio PySide6_Addons
+                pip install imageio
             
             - name: Install EGL/upx
               if: ${{ runner.os == 'Linux' }}
