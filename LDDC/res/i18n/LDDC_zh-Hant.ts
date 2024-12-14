@@ -82,17 +82,17 @@
 <context>
     <name>DesktopLyricsControlBar</name>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="324"/>
+        <location filename="../../view/desktop_lyrics.py" line="326"/>
         <source>逐字</source>
         <translation type="unfinished">逐字</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="326"/>
+        <location filename="../../view/desktop_lyrics.py" line="328"/>
         <source>逐行</source>
         <translation type="unfinished">逐行</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="328"/>
+        <location filename="../../view/desktop_lyrics.py" line="330"/>
         <source>纯文本</source>
         <translation type="unfinished">純文本</translation>
     </message>
@@ -125,42 +125,42 @@
 <context>
     <name>DesktopLyricsMenu</name>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="208"/>
+        <location filename="../../view/desktop_lyrics.py" line="210"/>
         <source>选择歌词</source>
         <translation type="unfinished">選擇歌詞</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="209"/>
+        <location filename="../../view/desktop_lyrics.py" line="211"/>
         <source>标记为纯音乐</source>
         <translation type="unfinished">標記爲純音樂</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="210"/>
+        <location filename="../../view/desktop_lyrics.py" line="212"/>
         <source>禁用自动搜索(仅本曲)</source>
         <translation type="unfinished">禁用自動搜索(僅本曲)</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="211"/>
+        <location filename="../../view/desktop_lyrics.py" line="213"/>
         <source>取消歌词关联</source>
         <translation type="unfinished">取消歌詞關聯</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="212"/>
+        <location filename="../../view/desktop_lyrics.py" line="214"/>
         <source>歌词关联管理器</source>
         <translation type="unfinished">歌詞關聯管理器</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="213"/>
+        <location filename="../../view/desktop_lyrics.py" line="215"/>
         <source>显示/隐藏桌面歌词</source>
         <translation type="unfinished">顯示/隱藏桌面歌詞</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="214"/>
+        <location filename="../../view/desktop_lyrics.py" line="216"/>
         <source>显示主窗口</source>
         <translation type="unfinished">顯示主窗口</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="215"/>
+        <location filename="../../view/desktop_lyrics.py" line="217"/>
         <source>鼠标穿透</source>
         <translation type="unfinished">鼠標穿透</translation>
     </message>
@@ -169,49 +169,49 @@
     <name>DesktopLyricsSelectWidget</name>
     <message>
         <location filename="../../view/desktop_lyrics.py" line="62"/>
-        <location filename="../../view/desktop_lyrics.py" line="104"/>
+        <location filename="../../view/desktop_lyrics.py" line="105"/>
         <source>选择歌词</source>
         <translation type="unfinished">選擇歌詞</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="105"/>
+        <location filename="../../view/desktop_lyrics.py" line="106"/>
         <source>为桌面歌词选择云端或本地歌词</source>
         <translation type="unfinished">爲桌面歌詞選擇雲端或本地歌詞</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="107"/>
+        <location filename="../../view/desktop_lyrics.py" line="108"/>
         <source>选定歌词</source>
         <translation type="unfinished">選定歌詞</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="108"/>
-        <location filename="../../view/desktop_lyrics.py" line="134"/>
+        <location filename="../../view/desktop_lyrics.py" line="109"/>
+        <location filename="../../view/desktop_lyrics.py" line="135"/>
         <source>打开本地歌词</source>
         <translation type="unfinished">打開本地歌詞</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="132"/>
+        <location filename="../../view/desktop_lyrics.py" line="133"/>
         <source>打开本地歌词失败</source>
         <translation type="unfinished">打開本地歌詞失敗</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="136"/>
+        <location filename="../../view/desktop_lyrics.py" line="137"/>
         <source>歌词文件(*.qrc *.krc *.lrc)</source>
         <translation type="unfinished">歌詞文件(*.qrc *.krc *.lrc)</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="150"/>
-        <location filename="../../view/desktop_lyrics.py" line="152"/>
+        <location filename="../../view/desktop_lyrics.py" line="151"/>
+        <location filename="../../view/desktop_lyrics.py" line="153"/>
         <source>提示</source>
         <translation type="unfinished">提示</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="150"/>
+        <location filename="../../view/desktop_lyrics.py" line="151"/>
         <source>不支持纯文本歌词</source>
         <translation type="unfinished">不支持純文本歌詞</translation>
     </message>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="152"/>
+        <location filename="../../view/desktop_lyrics.py" line="153"/>
         <source>请先选择歌词</source>
         <translation type="unfinished">請先選擇歌詞</translation>
     </message>
@@ -219,7 +219,7 @@
 <context>
     <name>DesktopLyricsTrayIcon</name>
     <message>
-        <location filename="../../view/desktop_lyrics.py" line="270"/>
+        <location filename="../../view/desktop_lyrics.py" line="272"/>
         <source>LDDC桌面歌词</source>
         <translation type="unfinished">LDDC桌面歌詞</translation>
     </message>
@@ -393,7 +393,7 @@
         <location filename="../../view/local_match.py" line="78"/>
         <location filename="../../view/local_match.py" line="82"/>
         <location filename="../../view/local_match.py" line="86"/>
-        <location filename="../../view/local_match.py" line="328"/>
+        <location filename="../../view/local_match.py" line="342"/>
         <source>警告</source>
         <translation type="unfinished">警告</translation>
     </message>
@@ -424,7 +424,7 @@
     </message>
     <message>
         <location filename="../../view/local_match.py" line="115"/>
-        <location filename="../../view/local_match.py" line="404"/>
+        <location filename="../../view/local_match.py" line="425"/>
         <source>未匹配</source>
         <translation type="unfinished">未匹配</translation>
     </message>
@@ -450,144 +450,156 @@
     </message>
     <message>
         <location filename="../../view/local_match.py" line="207"/>
+        <location filename="../../view/local_match.py" line="286"/>
+        <location filename="../../view/local_match.py" line="326"/>
+        <location filename="../../view/local_match.py" line="351"/>
+        <source>对应的引索{}不存在</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../../view/local_match.py" line="212"/>
         <source>成功</source>
         <translation type="unfinished">成功</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="222"/>
+        <location filename="../../view/local_match.py" line="228"/>
         <source>跳过</source>
         <translation type="unfinished">跳過</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="224"/>
+        <location filename="../../view/local_match.py" line="230"/>
         <source>跳过纯音乐</source>
         <translation type="unfinished">跳過純音樂</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="228"/>
+        <location filename="../../view/local_match.py" line="234"/>
         <source>失败</source>
         <translation type="unfinished">失敗</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="232"/>
+        <location filename="../../view/local_match.py" line="238"/>
         <source>错误：没有找到符合要求的歌曲</source>
         <translation type="unfinished">錯誤：沒有找到符合要求的歌曲</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="234"/>
+        <location filename="../../view/local_match.py" line="240"/>
         <source>错误：搜索结果处理失败</source>
         <translation type="unfinished">錯誤：搜索結果處理失敗</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="236"/>
+        <location filename="../../view/local_match.py" line="242"/>
         <source>错误：没有足够的信息用于搜索</source>
         <translation type="unfinished">錯誤：沒有足夠的信息用於搜索</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="238"/>
+        <location filename="../../view/local_match.py" line="244"/>
         <source>错误：保存歌词失败</source>
         <translation type="unfinished">錯誤：保存歌詞失敗</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="240"/>
+        <location filename="../../view/local_match.py" line="246"/>
         <source>错误：超时</source>
         <translation type="unfinished">錯誤：超時</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="284"/>
+        <location filename="../../view/local_match.py" line="294"/>
         <source>保存到标签</source>
         <translation type="unfinished">保存到標籤</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="297"/>
+        <location filename="../../view/local_match.py" line="307"/>
         <source>需要指定保存路径</source>
         <translation type="unfinished">需要指定保存路徑</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="299"/>
+        <location filename="../../view/local_match.py" line="309"/>
         <source>错误(需要歌词信息)</source>
         <translation type="unfinished">錯誤(需要歌詞信息)</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="301"/>
+        <location filename="../../view/local_match.py" line="311"/>
         <source>需要指定歌曲根目录</source>
         <translation type="unfinished">需要指定歌曲根目錄</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="303"/>
+        <location filename="../../view/local_match.py" line="313"/>
         <source>未知错误</source>
         <translation type="unfinished">未知錯誤</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="328"/>
+        <location filename="../../view/local_match.py" line="342"/>
         <source>由于以下歌曲不在指定的根目录中,无法设置
 </source>
         <translation type="unfinished">由於以下歌曲不在指定的根目錄中,無法設置
 </translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="333"/>
+        <location filename="../../view/local_match.py" line="347"/>
         <source>选择歌曲根目录</source>
         <translation type="unfinished">選擇歌曲根目錄</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="347"/>
+        <location filename="../../view/local_match.py" line="365"/>
         <source>删除</source>
         <translation type="unfinished">刪除</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="349"/>
+        <location filename="../../view/local_match.py" line="367"/>
         <source>指定根目录</source>
         <translation type="unfinished">指定根目錄</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="351"/>
+        <location filename="../../view/local_match.py" line="372"/>
         <source>打开歌曲目录</source>
         <translation type="unfinished">打開歌曲目錄</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="354"/>
+        <location filename="../../view/local_match.py" line="375"/>
         <source>在搜索中打开</source>
         <translation type="unfinished">在搜索中打開</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="359"/>
+        <location filename="../../view/local_match.py" line="380"/>
         <source>打开保存目录</source>
         <translation type="unfinished">打開保存目錄</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="361"/>
+        <location filename="../../view/local_match.py" line="382"/>
         <source>打开歌词</source>
         <translation type="unfinished">打開歌詞</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="382"/>
-        <location filename="../../view/local_match.py" line="415"/>
+        <location filename="../../view/local_match.py" line="403"/>
+        <location filename="../../view/local_match.py" line="436"/>
         <source>开始</source>
         <translation type="unfinished">開始</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="386"/>
+        <location filename="../../view/local_match.py" line="207"/>
+        <location filename="../../view/local_match.py" line="286"/>
+        <location filename="../../view/local_match.py" line="326"/>
+        <location filename="../../view/local_match.py" line="351"/>
+        <location filename="../../view/local_match.py" line="407"/>
         <source>错误</source>
         <translation type="unfinished">錯誤</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="421"/>
+        <location filename="../../view/local_match.py" line="442"/>
         <source>总共{total}首歌曲，匹配成功{success}首，匹配失败{fail}首，跳过{skip}首。</source>
         <translation type="unfinished">總共{total}首歌曲，匹配成功{success}首，匹配失敗{fail}首，跳過{skip}首。</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="427"/>
+        <location filename="../../view/local_match.py" line="448"/>
         <source>匹配完成</source>
         <translation type="unfinished">匹配完成</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="429"/>
+        <location filename="../../view/local_match.py" line="450"/>
         <source>匹配错误</source>
         <translation type="unfinished">匹配錯誤</translation>
     </message>
     <message>
-        <location filename="../../view/local_match.py" line="431"/>
+        <location filename="../../view/local_match.py" line="452"/>
         <source>匹配取消</source>
         <translation type="unfinished">匹配取消</translation>
     </message>
@@ -1324,12 +1336,12 @@
 <context>
     <name>get_list_lyrics</name>
     <message>
-        <location filename="../../ui/get_list_lyrics.ui" line="6"/>
+        <location filename="../../ui/get_list_lyrics.ui" line="14"/>
         <source>获取专辑/歌单歌词</source>
         <translation type="unfinished">獲取專輯/歌單歌詞</translation>
     </message>
     <message>
-        <location filename="../../ui/get_list_lyrics.ui" line="33"/>
+        <location filename="../../ui/get_list_lyrics.ui" line="41"/>
         <source>取消</source>
         <translation type="unfinished">取消</translation>
     </message>
@@ -1591,122 +1603,122 @@
 <context>
     <name>search_base</name>
     <message>
-        <location filename="../../ui/search_base.ui" line="23"/>
+        <location filename="../../ui/search_base.ui" line="15"/>
         <source>聚合</source>
         <translation type="unfinished">聚合</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="28"/>
+        <location filename="../../ui/search_base.ui" line="20"/>
         <source>QQ音乐</source>
         <translation type="unfinished">QQ音樂</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="33"/>
+        <location filename="../../ui/search_base.ui" line="25"/>
         <source>酷狗音乐</source>
         <translation type="unfinished">酷狗音樂</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="38"/>
+        <location filename="../../ui/search_base.ui" line="30"/>
         <source>网易云音乐</source>
         <translation type="unfinished">網易雲音樂</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="47"/>
+        <location filename="../../ui/search_base.ui" line="42"/>
         <source>单曲</source>
         <translation type="unfinished">單曲</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="52"/>
+        <location filename="../../ui/search_base.ui" line="47"/>
         <source>专辑</source>
         <translation type="unfinished">專輯</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="57"/>
+        <location filename="../../ui/search_base.ui" line="52"/>
         <source>歌单</source>
         <translation type="unfinished">歌單</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="77"/>
+        <location filename="../../ui/search_base.ui" line="72"/>
         <source>输入关键词</source>
         <translation type="unfinished">輸入關鍵詞</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="100"/>
+        <location filename="../../ui/search_base.ui" line="95"/>
         <source>搜索</source>
         <translation type="unfinished">搜索</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="155"/>
+        <location filename="../../ui/search_base.ui" line="150"/>
         <source>搜索结果</source>
         <translation type="unfinished">搜索結果</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="165"/>
+        <location filename="../../ui/search_base.ui" line="160"/>
         <source>返回</source>
         <translation type="unfinished">返回</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="251"/>
+        <location filename="../../ui/search_base.ui" line="246"/>
         <source>歌词预览</source>
         <translation type="unfinished">歌詞預覽</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="260"/>
+        <location filename="../../ui/search_base.ui" line="255"/>
         <source>歌词语言</source>
         <translation type="unfinished">歌詞語言</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="277"/>
+        <location filename="../../ui/search_base.ui" line="272"/>
         <source>歌曲/歌词id</source>
         <translation type="unfinished">歌曲/歌詞id</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="334"/>
+        <location filename="../../ui/search_base.ui" line="329"/>
         <source>原文</source>
         <translation type="unfinished">原文</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="350"/>
+        <location filename="../../ui/search_base.ui" line="345"/>
         <source>译文</source>
         <translation type="unfinished">譯文</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="366"/>
+        <location filename="../../ui/search_base.ui" line="361"/>
         <source>罗马音</source>
         <translation type="unfinished">羅馬音</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="379"/>
+        <location filename="../../ui/search_base.ui" line="374"/>
         <source>偏移量:</source>
         <translation type="unfinished">偏移量:</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="415"/>
+        <location filename="../../ui/search_base.ui" line="410"/>
         <source>歌词格式:</source>
         <translation type="unfinished">歌詞格式:</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="423"/>
+        <location filename="../../ui/search_base.ui" line="418"/>
         <source>LRC(逐字)</source>
         <translation type="unfinished">LRC(逐字)</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="428"/>
+        <location filename="../../ui/search_base.ui" line="423"/>
         <source>LRC(逐行)</source>
         <translation type="unfinished">LRC(逐行)</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="433"/>
+        <location filename="../../ui/search_base.ui" line="428"/>
         <source>增强型LRC(ESLyric)</source>
         <translation type="unfinished">增強型LRC(ESLyric)</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="438"/>
+        <location filename="../../ui/search_base.ui" line="433"/>
         <source>SRT</source>
         <translation type="unfinished">SRT</translation>
     </message>
     <message>
-        <location filename="../../ui/search_base.ui" line="443"/>
+        <location filename="../../ui/search_base.ui" line="438"/>
         <source>ASS</source>
         <translation type="unfinished">ASS</translation>
     </message>
@@ -1731,7 +1743,7 @@ p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
 li.unchecked::marker { content: &quot;\2610&quot;; }
 li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;Microsoft YaHei UI&apos;; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;以下占位符可用&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;歌名: %&amp;lt;title&amp;gt; 艺术家: %&amp;lt;artist&amp;gt;&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;专辑名: %&amp;lt;album&amp;gt; 歌曲/歌词id: %&amp;lt;id&amp;gt;&lt;/span&gt;&lt;/p&gt;
@@ -1742,7 +1754,7 @@ p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }
 li.unchecked::marker { content: &quot;\2610&quot;; }
 li.checked::marker { content: &quot;\2612&quot;; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:&apos;Microsoft YaHei UI&apos;; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot;font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;以下佔位符可用&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;歌名: %&amp;lt;title&amp;gt; 藝術家: %&amp;lt;artist&amp;gt;&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;專輯名: %&amp;lt;album&amp;gt; 歌曲/歌詞id: %&amp;lt;id&amp;gt;&lt;/span&gt;&lt;/p&gt;
@@ -1924,11 +1936,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <location filename="../../ui/settings.ui" line="734"/>
         <source>自动</source>
         <translation type="unfinished">自動</translation>
-    </message>
-    <message>
-        <location filename="../../ui/settings.ui" line="744"/>
-        <source>繁體中文</source>
-        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../../ui/settings.ui" line="768"/>
