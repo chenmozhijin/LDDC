@@ -113,10 +113,10 @@ jobs:
                 macos-target-arch: ${{ steps.arch.outputs.nuitka_arch }}
 
                 include-data-files: |
-                  ${{ steps.info.outputs.qt_translations_path }}/qtbase_en.qm=qtbase_en.qm
-                  ${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_CN.qm=qtbase_zh_CN.qm
-                  ${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_TW.qm=qtbase_zh_TW.qm
-                  ${{ steps.info.outputs.qt_translations_path }}/qtbase_ja.qm=qtbase_ja.qm
+                  ${{ steps.info.outputs.qt_translations_path }}/qtbase_en.qm=PySide6/Qt/translations/qtbase_en.qm
+                  ${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_CN.qm=PySide6/Qt/translations/qtbase_zh_CN.qm
+                  ${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_TW.qm=PySide6/Qt/translations/qtbase_zh_TW.qm
+                  ${{ steps.info.outputs.qt_translations_path }}/qtbase_ja.qm=PySide6/Qt/translations/qtbase_ja.qm
               env:
                 PYTHONPATH: ${{ github.workspace }}
 
