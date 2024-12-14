@@ -63,6 +63,7 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
         self.setWindowIcon(QIcon(":/LDDC/img/icon/logo.png"))
 
         self.path = ""
+        self.last_keywords = ""  # 上次搜索的关键词
         self.select_lyrics_button.clicked.connect(self.select_lyrics)
         self.open_local_lyrics_button.clicked.connect(self.open_local_lyrics)
 
@@ -161,7 +162,8 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
             offset = infos.get("offset")
             if isinstance(offset, int):
                 self.offset_spinBox.setValue(offset)
-            if keyword:
+            if keyword and keyword != self.last_keywords:
+                self.last_keywords = keyword
                 self.source_comboBox.setCurrentIndex(0)
                 self.search_type_comboBox.setCurrentIndex(0)
                 self.search_keyword_lineEdit.setText(keyword)
