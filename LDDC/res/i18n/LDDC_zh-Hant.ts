@@ -379,6 +379,21 @@
         <source>遍历文件...</source>
         <translation type="unfinished">遍歷文件...</translation>
     </message>
+    <message>
+        <location filename="../../backend/worker.py" line="482"/>
+        <source>解析cue{}...</source>
+        <translation type="unfinished">解析cue{}...</translation>
+    </message>
+    <message>
+        <location filename="../../backend/worker.py" line="502"/>
+        <source>解析歌曲文件{}...</source>
+        <translation type="unfinished">解析歌曲檔案{}...</translation>
+    </message>
+    <message>
+        <location filename="../../backend/worker.py" line="541"/>
+        <source>正在匹配 {} 的歌词...</source>
+        <translation type="unfinished">正在匹配 {} 的歌詞...</translation>
+    </message>
 </context>
 <context>
     <name>LocalMatchWidget</name>
@@ -454,7 +469,7 @@
         <location filename="../../view/local_match.py" line="326"/>
         <location filename="../../view/local_match.py" line="351"/>
         <source>对应的引索{}不存在</source>
-        <translation type="unfinished"></translation>
+        <translation type="unfinished">對應的引索{}不存在</translation>
     </message>
     <message>
         <location filename="../../view/local_match.py" line="212"/>

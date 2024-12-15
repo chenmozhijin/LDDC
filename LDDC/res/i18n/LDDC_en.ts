@@ -379,6 +379,21 @@
         <source>遍历文件...</source>
         <translation>Scanning files...</translation>
     </message>
+    <message>
+        <location filename="../../backend/worker.py" line="482"/>
+        <source>解析cue{}...</source>
+        <translation>Parsing cue{}...</translation>
+    </message>
+    <message>
+        <location filename="../../backend/worker.py" line="502"/>
+        <source>解析歌曲文件{}...</source>
+        <translation>Parse song file{}...</translation>
+    </message>
+    <message>
+        <location filename="../../backend/worker.py" line="541"/>
+        <source>正在匹配 {} 的歌词...</source>
+        <translation>Matching lyrics for {}...</translation>
+    </message>
 </context>
 <context>
     <name>LocalMatchWidget</name>
@@ -449,7 +464,7 @@
         <location filename="../../view/local_match.py" line="326"/>
         <location filename="../../view/local_match.py" line="351"/>
         <source>对应的引索{}不存在</source>
-        <translation type="unfinished"></translation>
+        <translation>対応するインデックス {} が存在しません</translation>
     </message>
     <message>
         <location filename="../../view/local_match.py" line="212"/>
@@ -1895,7 +1910,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;歌名: %&amp;lt;title&amp;gt; 艺术家: %&amp;lt;artist&amp;gt;&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;专辑名: %&amp;lt;album&amp;gt; 歌曲/歌词id: %&amp;lt;id&amp;gt;&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;语言类型: %&amp;lt;langs&amp;gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
-        <translation type="unfinished">&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+        <translation>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 hr { height: 1px; border-width: 0; }

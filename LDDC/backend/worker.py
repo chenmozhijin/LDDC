@@ -479,7 +479,7 @@ class LocalMatchWorker(QRunnable):
                     self.del_get_infos_progress()
                     self.signals.finished.emit({"taskid": self.taskid, "status": "cancelled"})
                     return
-                self.update_get_infos_progress(f"解析cue{cue_path}...", i, total)
+                self.update_get_infos_progress(QCoreApplication.translate("LocalMatch", "解析cue{}...").format(cue_path), i, total)
                 try:
                     songs, cue_audio_file_paths = parse_cue_from_file(cue_path)
                     exclude_audio_paths.extend(cue_audio_file_paths)
@@ -499,7 +499,7 @@ class LocalMatchWorker(QRunnable):
                     self.del_get_infos_progress()
                     self.signals.finished.emit({"taskid": self.taskid, "status": "cancelled"})
                     return
-                self.update_get_infos_progress(f"解析歌曲文件{audio_path}...", i, total)
+                self.update_get_infos_progress(QCoreApplication.translate("LocalMatch", "解析歌曲文件{}...").format(audio_path), i, total)
                 try:
                     songs = get_audio_file_infos(audio_path)
                     for song in songs:  # 添加遍历根目录到歌曲信息
@@ -538,7 +538,7 @@ class LocalMatchWorker(QRunnable):
             info = infos[current]
             artist, title, file_path = info.get("artist"), info.get("title"), info.get("file_path")
             song_str = (f"{get_artist_str(artist)} - {title.strip()}" if artist else title.strip()) if title and title.strip() else file_path
-            self.signals.progress.emit({"msg": f"正在匹配 {song_str} 的歌词...",
+            self.signals.progress.emit({"msg": QCoreApplication.translate("LocalMatch", "正在匹配 {} 的歌词...").format(song_str),
                                         "progress": current + 1, "total": total, **(extra if extra else {})})
 
         def next_song() -> None:
