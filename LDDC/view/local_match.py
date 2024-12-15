@@ -311,7 +311,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                         case _:
                             save_path = self.tr("未知错误")
                     self.save_path_errors.add(save_path)
-                save_path_text += f"+ {save_path}" if save_path_text else save_path
+                save_path_text += f" + {save_path}" if save_path_text else save_path
 
             self.songs_table.setItem(row, 5, QTableWidgetItem(save_path_text))
 
