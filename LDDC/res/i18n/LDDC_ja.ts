@@ -1854,7 +1854,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <message>
         <location filename="../../ui/settings.ui" line="359"/>
         <source>歌曲搜索歌词时自动选择(酷狗音乐)</source>
-        <translation type="unfinished">曲の歌詞検索時に自動選択（KuGouミュージック）</translation>
+        <translation type="unfinished">曲の歌詞検索時に自動選択（酷狗音楽）</translation>
     </message>
     <message>
         <location filename="../../ui/settings.ui" line="373"/>
