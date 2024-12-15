@@ -1277,12 +1277,12 @@
     <message>
         <location filename="../../utils/enum.py" line="67"/>
         <source>QQ音乐</source>
-        <translation type="unfinished">QQミュージック</translation>
+        <translation type="unfinished">QQ音楽</translation>
     </message>
     <message>
         <location filename="../../utils/enum.py" line="69"/>
         <source>酷狗音乐</source>
-        <translation type="unfinished">KuGouミュージック</translation>
+        <translation type="unfinished">酷狗音楽</translation>
     </message>
     <message>
         <location filename="../../utils/enum.py" line="71"/>
@@ -1626,12 +1626,12 @@
     <message>
         <location filename="../../ui/search_base.ui" line="20"/>
         <source>QQ音乐</source>
-        <translation type="unfinished">QQミュージック</translation>
+        <translation type="unfinished">QQ音楽</translation>
     </message>
     <message>
         <location filename="../../ui/search_base.ui" line="25"/>
         <source>酷狗音乐</source>
-        <translation type="unfinished">KuGouミュージック</translation>
+        <translation type="unfinished">酷狗音楽</translation>
     </message>
     <message>
         <location filename="../../ui/search_base.ui" line="30"/>
