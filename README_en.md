@@ -1,6 +1,6 @@
 # LDDC
 
-[中文](./README.md) | English
+[中文](./README.md) | English | [日本語](./README_ja.md)
 
 > Accurate Lyrics (verbatim lyrics) Download, Decryption, and Conversion
 
@@ -14,8 +14,8 @@
 
 - [x] Search for singles, albums, and playlists on QQ Music, Kugou Music, and NetEase Cloud Music
 - [x] Drag the song to the search interface to automatically search and match the lyrics
-- [x] One-click download of lyrics for entire albums and playlists
 - [x] One-click match lyrics for local song files
+- [x] One-click download of lyrics for entire albums and playlists
 - [x] Support for saving in multiple formats (verbatim lrc,line by line lrc,Enhanced LRC, srt, ass)
 - [x] Double-click to preview lyrics and save directly
 - [x] Merge lyrics of various types (original, translated, romanized) at will

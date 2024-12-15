@@ -143,3 +143,5 @@ plugins/
 Logs/
 
 update_ts.ps1
+
+tests/artifacts/

@@ -1,0 +1,73 @@
+name: test LDDC
+
+on:
+    push:
+        branches: 
+          - main
+          - dev
+        paths:
+            - "**.py"
+            - ".github/workflows/test.yml"
+    workflow_dispatch:
+
+jobs:
+
+    test:
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [macos-13, windows-latest]
+                arch: [x64]
+                include:
+                  - os: macos-latest
+                    arch: arm64
+        runs-on: ${{ matrix.os }}
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-python@v5
+              with:
+                python-version: 3.12
+                architecture: ${{ matrix.arch }}
+
+            - name: Install dependencies
+              run: |
+                pip install -Ur requirements-tests.txt
+                pip install .
+
+            - name: Install FFmpeg(Linux)
+              if: runner.os == 'Linux'
+              run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      
+            - name: Install FFmpeg(Windows)
+              if: runner.os == 'Windows'
+              run: choco install ffmpeg -y
+
+            - name: Install FFmpeg(Mac)
+              if: runner.os == 'macOS'
+              run: brew install ffmpeg
+
+            - name: Install GUI dependencies
+              if: runner.os == 'Linux'
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y qtbase5-dev libqt5gui5 libqt5widgets5 xvfb
+
+            - name: Run tests
+              run: |
+                pytest --cov=LDDC --cov-report=xml --cov-report=html --cov-report=term --disable-warnings
+
+            - name: Save test artifacts
+              if: always()
+              run: |
+                mkdir -p tests/artifacts/reports
+                cp -r htmlcov ./tests/artifacts/reports
+                cp coverage.xml ./tests/artifacts/reports
+
+            - name: Upload artifacts
+              uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                name: artifacts-${{ matrix.os }}
+                path: tests/artifacts

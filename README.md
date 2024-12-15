@@ -1,6 +1,6 @@
 # LDDC
 
-中文 | [English](./README_en.md)
+中文 | [English](./README_en.md) | [日本語](./README_ja.md)
 
 > 精准歌词(逐字歌词)下载解密转换
 
@@ -14,11 +14,11 @@
 
 - [x] 搜索QQ音乐、酷狗音乐、网易云音乐的单曲、专辑、歌单
 - [x] 拖动歌曲到搜索界面自动搜索并匹配歌词
-- [x] 一键下载整个 专辑、歌单 的歌词
 - [x] 一键为本地歌曲文件匹配歌词
+- [x] 一键下载整个 专辑、歌单 的歌词
 - [x] 支持保存为多种格式(逐字lrc、逐行lrc、增强型lrc、srt、ass)
 - [x] 双击预览歌词,直接保存
-- [x] 多种类型(原文、译文、罗马音)歌词随意合并
+- [x] 多种类型(原文、译文、罗马音)歌词随意组合
 - [x] 保存路径多种占位符随意组合
 - [x] 支持打开本地的加密歌词
 - [x] 多平台支持
@@ -39,15 +39,19 @@
 
 ### 搜索界面
 
-![image](img/zh_1.jpg)
+![image](img/zh-Hans_1.jpg)
 
-### 打开歌词/本地匹配/设置界面
+### 本地匹配
 
-![image](img/zh_2.jpg)
+![image](img/zh-Hans_4.jpg)
+
+### 打开歌词/设置界面
+
+![image](img/zh-Hans_2.jpg)
 
 ### 桌面歌词
 
-![image](img/zh_3.jpg)
+![image](img/zh-Hans_4.jpg)
 ![gif](img/desktop_lyrics.gif)
 
 ## 使用方法

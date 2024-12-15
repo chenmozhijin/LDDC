@@ -2,19 +2,19 @@
 name = "LDDC"
 dynamic = ["version"]
 dependencies = [
-    "PySide6",
+    "PySide6-Essentials>=6.8.0",
     "requests",
     "mutagen",
     "diskcache",
-    "chardet",
+    "charset-normalizer",
     "pyaes",
     "psutil",
-    "pyobjc; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
 ]
 requires-python = ">= 3.10"
 description = "A lyrics acquisition tool"
 readme = "README.md"
-authors = [
+maintainers = [
     {name = "沉默の金", email = "cmzj@cmzj.org"}
 ]
 license = {file = "LICENSE"}
@@ -22,7 +22,7 @@ keywords = ["lyrics","music","download","acquisition","tool"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
-    "Environment :: MacOS X ",
+    "Environment :: MacOS X",
     "Environment :: Win32 (MS Windows)",
     "Environment :: X11 Applications :: Qt",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -43,8 +43,16 @@ repository = "https://github.com/chenmozhijin/LDDC"
 documentation = "https://github.com/chenmozhijin/LDDC/wiki"
 tracker = "https://github.com/chenmozhijin/LDDC/issues"
 
-[tool.setuptools.dynamic]
-version = {attr = "LDDC.__version__"}
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["LDDC/**"]
+exclude = ["*.ui", "*.qrc", "LDDC/res/img", "LDDC/res/i18n"]
+
+[tool.hatch.version]
+path = "LDDC/utils/version.py"
 
 [tool.ruff]
 target-version = "py310"
@@ -66,6 +74,7 @@ ignore = [
     "D103",  # undocumented-public-function
     "D104",  # undocumented-public-package
     "D105",  # undocumented-magic-method
+    "D106",  # undocumented-public-nested-class
     "D107",  # undocumented-public-init
     "D400",  # ends-in-period
     "D415",  # ends-in-punctuation

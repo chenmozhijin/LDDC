@@ -1,8 +1,8 @@
 requests
-PySide6-Essentials
+PySide6-Essentials>=6.8.0
 mutagen
 diskcache
 charset-normalizer
 pyaes
 psutil
-pyobjc; sys_platform == 'darwin'
+pyobjc-framework-Cocoa; sys_platform == 'darwin'
