@@ -201,9 +201,11 @@ def test_save_album_lyrics(qtbot: QtBot) -> None:
     qtbot.waitUntil(check_progress, timeout=50000)
     close_msg_boxs(main_window.search_widget)
 
+    qtbot.wait(120)
     grab(main_window, os.path.join(screenshot_path, "save_album_lyrics.png"))
 
     main_window.search_widget.get_list_lyrics_box.pushButton.click()
     main_window.search_widget.save_path_lineEdit.setText(orig_path)
 
+    main_window.search_widget.get_list_lyrics_box.close()
     assert os.listdir(os.path.join(test_artifacts_path, "lyrics", "search album")) != []
