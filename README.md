@@ -43,7 +43,7 @@
 
 ### 本地匹配
 
-![image](img/zh-Hans_4.jpg)
+![image](img/zh-Hans_3.jpg)
 
 ### 打开歌词/设置界面
 
