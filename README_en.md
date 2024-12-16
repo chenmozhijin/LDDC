@@ -41,7 +41,11 @@
 
 ![image](img/en_1.jpg)
 
-### Open the lyrics/local matching/settings interface
+### local matching
+
+![image](img/zh-Hans_3.jpg)
+
+### Open the lyrics/settings interface
 
 ![image](img/en_2.jpg)
 
