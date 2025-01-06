@@ -40,12 +40,12 @@ def _lrc2list_list(lrc: str, source: Source | None = None) -> tuple[dict[str, st
     tags = {}
 
     tag_split_pattern = re.compile(r"^\[(\w+):([^\]]*)\]$")  # 标签匹配表达式
-    line_split_pattern = re.compile(r"^\[(\d+):(\d+).(\d+)\](.*)$")  # 歌词行匹配表达式
-    enhanced_word_split_pattern = re.compile(r"<(\d+):(\d+).(\d+)>([^<]*)(?:<(\d+):(\d+).(\d+)>$)?")
-    word_split_pattern = re.compile(r"([^\[]*)(?:\[(\d+):(\d+).(\d+)\])?")
+    line_split_pattern = re.compile(r"^\[(\d+):(\d+)\.(\d+)\](.*)$")  # 歌词行匹配表达式
+    enhanced_word_split_pattern = re.compile(r"<(\d+):(\d+)\.(\d+)>((?:(?!<\d+:\d+\.\d+>).)*)(?:<(\d+):(\d+)\.(\d+)>$)?")
+    word_split_pattern = re.compile(r"((?:(?!\[\d+:\d+\.\d+\]).)*)(?:\[(\d+):(\d+)\.(\d+)\])?")  # 歌词字匹配表达式
 
     multi_line_split_pattern = re.compile(r"^((?:\[\d+:\d+\.\d+\]){2,})(.*)$")
-    timestamps_pattern = re.compile(r"\[(\d+):(\d+).(\d+)\]")
+    timestamps_pattern = re.compile(r"\[(\d+):(\d+)\.(\d+)\]")
 
     for line_str in lrc.splitlines():
         line_data = line_str.strip()
