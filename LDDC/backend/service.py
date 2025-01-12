@@ -458,7 +458,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                     playback_time -= round(delay)
             last_start_time = self.start_time
             self.start_time = int(time.time() * 1000) - playback_time
-            logger.info("同步播放时间 playback_time:%s|%s| delay:%s", playback_time, last_start_time - self.start_time, delay)
+            logger.debug("同步播放时间 playback_time:%s|%s| delay:%s", playback_time, last_start_time - self.start_time, delay)
 
         # 处理任务
         logger.debug("instance %s handle task: %s", self.instance_id, task)
