@@ -509,7 +509,9 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                         except Exception:
                             logger.exception("读取歌词时错误,lyrics_path: %s", lyrics_path)
 
-                if isinstance(lyrics, Lyrics):
+                if self.config.get("inst"):
+                    pass
+                elif isinstance(lyrics, Lyrics):
                     self.set_lyrics(lyrics)
                 elif not self.config.get("disable_auto_search"):
                     if isinstance(self.song_info["title"], str):
