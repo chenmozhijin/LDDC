@@ -1,14 +1,24 @@
+
 ################################################################################
 ## Form generated from reading UI file 'dir_selector.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.0
+## Created by: Qt User Interface Compiler version 6.8.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
 from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QCheckBox, QDialogButtonBox, QGridLayout, QLabel, QLineEdit, QPushButton
+from PySide6.QtGui import (
+    QIcon,
+)
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QDialogButtonBox,
+    QGridLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+)
 
 
 class Ui_DirSelectorDialog:

@@ -8,7 +8,9 @@
 ################################################################################
 
 from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QSize, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import (
+    QFont,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -133,7 +135,6 @@ class Ui_settings:
 
         self.gridLayout_4.addWidget(self.id3_ver_comboBox, 2, 2, 1, 1)
 
-
         self.verticalLayout_2.addWidget(self.groupBox)
 
         self.groupBox_2 = QGroupBox(self.scrollAreaWidgetContents)
@@ -231,7 +232,6 @@ class Ui_settings:
         self.lrc_ms_digit_count_spinBox.setValue(3)
 
         self.gridLayout.addWidget(self.lrc_ms_digit_count_spinBox, 3, 2, 1, 3)
-
 
         self.verticalLayout_2.addWidget(self.groupBox_2)
 
@@ -372,7 +372,6 @@ class Ui_settings:
 
         self.gridLayout_3.addWidget(self.show_local_song_lyrics_db_manager_button, 4, 6, 1, 2)
 
-
         self.verticalLayout_2.addWidget(self.groupBox_3)
 
         self.groupBox_6 = QGroupBox(self.scrollAreaWidgetContents)
@@ -442,7 +441,6 @@ class Ui_settings:
 
         self.gridLayout_2.addWidget(self.color_scheme_comboBox, 1, 2, 1, 1)
 
-
         self.verticalLayout_2.addWidget(self.groupBox_6)
 
         self.groupBox_5 = QGroupBox(self.scrollAreaWidgetContents)
@@ -459,43 +457,47 @@ class Ui_settings:
 
         self.gridLayout_5.addWidget(self.cache_size_label, 0, 0, 1, 1)
 
-
         self.verticalLayout_2.addWidget(self.groupBox_5)
 
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
 
         self.verticalLayout.addWidget(self.scrollArea)
 
-
         self.retranslateUi(settings)
 
         self.log_level_comboBox.setCurrentIndex(0)
 
-
         QMetaObject.connectSlotsByName(settings)
+
     # setupUi
 
     def retranslateUi(self, settings):
         self.label.setText(QCoreApplication.translate("settings", "\u8bbe\u7f6e", None))
         self.groupBox.setTitle(QCoreApplication.translate("settings", "\u4fdd\u5b58\u8bbe\u7f6e", None))
-        self.textBrowser_5.setHtml(QCoreApplication.translate("settings", '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">\n'
-'<html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" /><style type="text/css">\n'
-"p, li { white-space: pre-wrap; }\n"
-"hr { height: 1px; border-width: 0; }\n"
-'li.unchecked::marker { content: "\\2610"; }\n'
-'li.checked::marker { content: "\\2612"; }\n'
-'</style></head><body style=" font-size:9pt; font-weight:400; font-style:normal;">\n'
-'<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">\u4ee5\u4e0b\u5360\u4f4d\u7b26\u53ef\u7528</p>\n'
-'<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u6b4c\u540d: %&lt;title&gt; \u827a\u672f\u5bb6: %&lt;artist&gt;</span></p>\n'
-'<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" fo'
-                        'nt-size:8pt;">\u4e13\u8f91\u540d: %&lt;album&gt; \u6b4c\u66f2/\u6b4c\u8bcdid: %&lt;id&gt;</span></p>\n'
-'<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u8bed\u8a00\u7c7b\u578b: %&lt;langs&gt;</span></p></body></html>', None))
-#if QT_CONFIG(whatsthis)
+        self.textBrowser_5.setHtml(
+            QCoreApplication.translate(
+                "settings",
+                '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">\n'
+                '<html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" /><style type="text/css">\n'
+                "p, li { white-space: pre-wrap; }\n"
+                "hr { height: 1px; border-width: 0; }\n"
+                'li.unchecked::marker { content: "\\2610"; }\n'
+                'li.checked::marker { content: "\\2612"; }\n'
+                '</style></head><body style=" font-size:9pt; font-weight:400; font-style:normal;">\n'
+                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">\u4ee5\u4e0b\u5360\u4f4d\u7b26\u53ef\u7528</p>\n'
+                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u6b4c\u540d: %&lt;title&gt; \u827a\u672f\u5bb6: %&lt;artist&gt;</span></p>\n'
+                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" fo'
+                'nt-size:8pt;">\u4e13\u8f91\u540d: %&lt;album&gt; \u6b4c\u66f2/\u6b4c\u8bcdid: %&lt;id&gt;</span></p>\n'
+                '<p style=" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;"><span style=" font-size:8pt;">\u8bed\u8a00\u7c7b\u578b: %&lt;langs&gt;</span></p></body></html>',
+                None,
+            ),
+        )
+        # if QT_CONFIG(whatsthis)
         self.label_26.setWhatsThis("")
-#endif // QT_CONFIG(whatsthis)
-#if QT_CONFIG(accessibility)
+        # endif // QT_CONFIG(whatsthis)
+        # if QT_CONFIG(accessibility)
         self.label_26.setAccessibleDescription("")
-#endif // QT_CONFIG(accessibility)
+        # endif // QT_CONFIG(accessibility)
         self.label_26.setText(QCoreApplication.translate("settings", "\u6b4c\u8bcd\u6587\u4ef6\u540d\u683c\u5f0f", None))
         self.label_27.setText(QCoreApplication.translate("settings", "\u9ed8\u8ba4\u4fdd\u5b58\u8def\u5f84", None))
         self.select_default_save_path_pushButton.setText(QCoreApplication.translate("settings", "\u9009\u62e9\u6587\u4ef6\u5939", None))
@@ -517,12 +519,24 @@ class Ui_settings:
 
         self.label_6.setText(QCoreApplication.translate("settings", "LRC\u6b4c\u8bcd\u6beb\u79d2\u4f4d\u6570:", None))
         self.label_8.setText(QCoreApplication.translate("settings", "\u672b\u5c3e\u53c2\u7167\u884c\u65f6\u95f4\u6837\u5f0f(\u4ec5LRC):", None))
-        self.skip_inst_lyrics_checkBox.setText(QCoreApplication.translate("settings", "\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd/\u672c\u5730\u5339\u914d\u65f6\u8df3\u8fc7\u7eaf\u97f3\u4e50", None))
-        self.add_end_timestamp_line_checkBox.setText(QCoreApplication.translate("settings", "\u4e3a\u9010\u884clrc\u6b4c\u8bcd\u6dfb\u52a0\u7ed3\u675f\u65f6\u95f4\u6233\u884c", None))
+        self.skip_inst_lyrics_checkBox.setText(
+            QCoreApplication.translate(
+                "settings", "\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd/\u672c\u5730\u5339\u914d\u65f6\u8df3\u8fc7\u7eaf\u97f3\u4e50", None,
+            ),
+        )
+        self.add_end_timestamp_line_checkBox.setText(
+            QCoreApplication.translate("settings", "\u4e3a\u9010\u884clrc\u6b4c\u8bcd\u6dfb\u52a0\u7ed3\u675f\u65f6\u95f4\u6233\u884c", None),
+        )
         self.label_4.setText(QCoreApplication.translate("settings", "\u987a\u5e8f", None))
-        self.auto_select_checkBox.setText(QCoreApplication.translate("settings", "\u6b4c\u66f2\u641c\u7d22\u6b4c\u8bcd\u65f6\u81ea\u52a8\u9009\u62e9(\u9177\u72d7\u97f3\u4e50)", None))
-        self.last_ref_line_time_sty_comboBox.setItemText(0, QCoreApplication.translate("settings", "\u4e0e\u5f53\u524d\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u76f8\u540c", None))
-        self.last_ref_line_time_sty_comboBox.setItemText(1, QCoreApplication.translate("settings", "\u4e0e\u4e0b\u4e00\u884c\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u63a5\u8fd1", None))
+        self.auto_select_checkBox.setText(
+            QCoreApplication.translate("settings", "\u6b4c\u66f2\u641c\u7d22\u6b4c\u8bcd\u65f6\u81ea\u52a8\u9009\u62e9(\u9177\u72d7\u97f3\u4e50)", None),
+        )
+        self.last_ref_line_time_sty_comboBox.setItemText(
+            0, QCoreApplication.translate("settings", "\u4e0e\u5f53\u524d\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u76f8\u540c", None),
+        )
+        self.last_ref_line_time_sty_comboBox.setItemText(
+            1, QCoreApplication.translate("settings", "\u4e0e\u4e0b\u4e00\u884c\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u63a5\u8fd1", None),
+        )
 
         self.lrc_ms_digit_count_spinBox.setSpecialValueText("")
         self.lrc_ms_digit_count_spinBox.setPrefix("")
@@ -534,7 +548,9 @@ class Ui_settings:
         self.label_10.setText(QCoreApplication.translate("settings", "\u5b57\u4f53:", None))
         self.played_add_color_button.setText(QCoreApplication.translate("settings", "\u6dfb\u52a0\u989c\u8272", None))
         self.unplayed_add_color_button.setText(QCoreApplication.translate("settings", "\u6dfb\u52a0\u989c\u8272", None))
-        self.label_18.setText(QCoreApplication.translate("settings", "\u63d0\u793a\uff1a\u5b57\u4f53\u5927\u5c0f\u901a\u8fc7\u62c9\u4f38\u7a97\u53e3\u8c03\u8282", None))
+        self.label_18.setText(
+            QCoreApplication.translate("settings", "\u63d0\u793a\uff1a\u5b57\u4f53\u5927\u5c0f\u901a\u8fc7\u62c9\u4f38\u7a97\u53e3\u8c03\u8282", None),
+        )
         self.label_15.setText(QCoreApplication.translate("settings", "\u5e27\u7387:", None))
         self.played_del_color_button.setText(QCoreApplication.translate("settings", "\u5220\u9664\u989c\u8272", None))
         self.unplayed_del_color_button.setText(QCoreApplication.translate("settings", "\u5220\u9664\u989c\u8272", None))
@@ -557,5 +573,5 @@ class Ui_settings:
         self.groupBox_5.setTitle(QCoreApplication.translate("settings", "\u7f13\u5b58\u8bbe\u7f6e", None))
         self.clear_cache_pushButton.setText(QCoreApplication.translate("settings", "\u6e05\u9664\u7f13\u5b58", None))
         self.cache_size_label.setText(QCoreApplication.translate("settings", "\u7f13\u5b58\u5927\u5c0f\uff1a", None))
-    # retranslateUi
 
+    # retranslateUi

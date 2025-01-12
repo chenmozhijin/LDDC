@@ -1,13 +1,16 @@
+
 ################################################################################
 ## Form generated from reading UI file 'local_song_lyrics_db_manager.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.0
+## Created by: Qt User Interface Compiler version 6.8.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
 from PySide6.QtCore import QCoreApplication, QMetaObject, QSize
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import (
+    QIcon,
+)
 from PySide6.QtWidgets import QAbstractItemView, QGridLayout, QPushButton
 
 from LDDC.ui.custom_widgets import ProportionallyStretchedTableWidget

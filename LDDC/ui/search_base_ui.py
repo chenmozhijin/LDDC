@@ -1,13 +1,16 @@
+
 ################################################################################
 ## Form generated from reading UI file 'search_base.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.0
+## Created by: Qt User Interface Compiler version 6.8.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
 from PySide6.QtCore import QCoreApplication, QMetaObject, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import (
+    QFont,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractScrollArea,
@@ -325,5 +328,6 @@ class Ui_search_base:
         self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("search_base", "\u589e\u5f3a\u578bLRC(ESLyric)", None))
         self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("search_base", "SRT", None))
         self.lyricsformat_comboBox.setItemText(4, QCoreApplication.translate("search_base", "ASS", None))
+
 
     # retranslateUi
