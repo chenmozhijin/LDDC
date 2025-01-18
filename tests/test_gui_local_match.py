@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-# ruff: noqa: S101
 import os
 import shutil
 from itertools import product
@@ -159,12 +158,12 @@ def test_gui_local_match(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
         qtbot.waitUntil(check_finished, timeout=10000)
         assert main_window.local_match_widget.songs_table.rowCount() == len(SONGS_INFO)
         qtbot.wait(20)
-        grab(main_window, os.path.join(screenshot_path, f"local_match_prepare_{file_name_mode.name}_{save2tagmode.name}_{save_mode.name}.png"))
+        grab(main_window, os.path.join(screenshot_path, f"local_match_prepare_{file_name_mode.name}_{save2tagmode.name}_{save_mode.name}"))
         main_window.local_match_widget.start_cancel()
         qtbot.waitUntil(check_finished, timeout=100000)
         close_msg_boxs(main_window.local_match_widget)
         qtbot.wait(150)
-        grab(main_window, os.path.join(screenshot_path, f"local_match_finish_{file_name_mode.name}_{save2tagmode.name}_{save_mode.name}.png"))
+        grab(main_window, os.path.join(screenshot_path, f"local_match_finish_{file_name_mode.name}_{save2tagmode.name}_{save_mode.name}"))
 
         for row in range(main_window.local_match_widget.songs_table.rowCount()):
             status_item = main_window.local_match_widget.songs_table.item(row, 6)

@@ -58,6 +58,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 @pytest.fixture(autouse=True)
 def apply_coverage_for_qthread(monkeypatch: pytest.MonkeyPatch) -> None:
+    no_patch_start = threadpool.start
 
     def run_with_trace(self: QRunnable | QThread) -> None:
         if "coverage" in sys.modules:
@@ -70,16 +71,17 @@ def apply_coverage_for_qthread(monkeypatch: pytest.MonkeyPatch) -> None:
         if isinstance(worker, QRunnable):
             worker._base_run = worker.run   # type: ignore[reportAttributeAccessIssue] # noqa: SLF001
             worker.run = partial(run_with_trace, worker)
-            threadpool.no_patch_start(worker, *args, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            no_patch_start(worker, *args, **kwargs)
         else:
-            threadpool.no_patch_start(worker, *args, **kwargs)  # type: ignore[reportAttributeAccessIssue]
+            no_patch_start(worker, *args, **kwargs)
             logger.warning("No support coverage for start a function in QThreadPool")
 
-    threadpool.no_patch_start = threadpool.start  # type: ignore[reportAttributeAccessIssue]
     monkeypatch.setattr(threadpool, "start", _start)
 
+    no_patch_init = QThread.__init__
+
     def _init(self: QThread, *args: Any, **kwargs: Any) -> None:
-        QThread.__init__(self, *args, **kwargs)
+        no_patch_init(self, *args, **kwargs)
         self._base_run = self.run  # type: ignore[reportAttributeAccessIssue]
         self.run = partial(run_with_trace, self)
 

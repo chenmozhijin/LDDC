@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-# ruff: noqa: S101
 import os
 
 import pytest
@@ -34,7 +33,7 @@ def test_gui_open_lyrics(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
     main_window.show()
     main_window.set_current_widget(2)
     qtbot.wait(300)  # 等待窗口加载完成
-    grab(main_window, os.path.join(screenshot_path, "open_lyrics.png"))
+    grab(main_window, os.path.join(screenshot_path, "open_lyrics"))
 
     files = {
         "qrc": "铃木木乃美 (鈴木このみ) - アスタロア (Asterlore)"
@@ -47,7 +46,7 @@ def test_gui_open_lyrics(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
         main_window.open_lyrics_widget.open_pushButton.click()
         select_file(main_window.open_lyrics_widget, path)
         qtbot.wait(150)
-        grab(main_window, os.path.join(screenshot_path, f"open_lyrics_{file_format}.png"))
+        grab(main_window, os.path.join(screenshot_path, f"open_lyrics_{file_format}"))
         main_window.open_lyrics_widget.convert_pushButton.click()
         qtbot.wait(40)
         for lyrics_format in [LyricsFormat.VERBATIMLRC, LyricsFormat.LINEBYLINELRC, LyricsFormat.ENHANCEDLRC, LyricsFormat.ASS, LyricsFormat.SRT]:
@@ -55,5 +54,5 @@ def test_gui_open_lyrics(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
             if lyrics_format in [LyricsFormat.VERBATIMLRC, LyricsFormat.LINEBYLINELRC, LyricsFormat.ENHANCEDLRC]:
                 verify_lyrics(main_window.open_lyrics_widget.plainTextEdit.toPlainText())
             qtbot.wait(40)
-            grab(main_window, os.path.join(screenshot_path, f"open_lyrics_{file_format}_{lyrics_format.name.lower()}.png"))
+            grab(main_window, os.path.join(screenshot_path, f"open_lyrics_{file_format}_{lyrics_format.name.lower()}"))
         qtbot.wait(150)

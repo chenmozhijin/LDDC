@@ -1,7 +1,9 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
+import json
 import os
 from tempfile import TemporaryDirectory
+from typing import Literal
 
 from mutagen import File, FileType  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
 from mutagen.easyid3 import EasyID3
@@ -61,11 +63,40 @@ def select_file(widget: QWidget, path: str | list[str]) -> None:
         raise RuntimeError(msg)
 
 
-def grab(widget: QWidget, path: str) -> None:
+def grab(widget: QWidget, path: str, method: Literal["screen", "widget"] = "screen") -> None:
+    """截图
+
+    Args:
+        widget (QWidget): 截图对象
+        path (str): 保存路径
+        method (Literal["screen", "widget"]): 截图方式
+
+    """
     app = QApplication.instance()
     if isinstance(app, QApplication):
-        rect = widget.frameGeometry()
-        widget.screen().grabWindow(0, rect.x(), rect.y(), rect.width(), rect.height()).save(path)
+        if method == "screen":
+            rect = widget.frameGeometry()
+            widget.screen().grabWindow(0, rect.x(), rect.y(), rect.width(), rect.height()).save(path + ".png")
+        elif method == "widget":
+            widget.grab().save(path + ".png")
+
+        rects = {}
+
+        recorded_widget = []
+
+        def get_rects(w: QWidget, prefix: str = "") -> None:
+            for name, obj in w.__dict__.items():
+                if isinstance(obj, QWidget) and obj.isVisible() and obj not in recorded_widget:
+                    recorded_widget.append(obj)
+                    rect = obj.geometry()
+                    full_name = name if not prefix else f"{prefix}.{name}"
+                    rects[full_name] = (rect.x(), rect.y(), rect.width(), rect.height())
+                    get_rects(obj, full_name)
+
+        get_rects(widget)
+
+        with open(path + ".json", "w") as f:
+            json.dump(rects, f, indent=4, ensure_ascii=False)
     else:
         msg = "No QApplication instance found"
         raise RuntimeError(msg)  # noqa: TRY004

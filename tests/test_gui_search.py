@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-# ruff: noqa: S101
 import os
 from itertools import combinations
 
@@ -29,7 +28,7 @@ def search(qtbot: QtBot, search_type: SearchType, keyword: str) -> None:
             return main_window.search_widget.results_tableWidget.rowCount() > 0
         qtbot.waitUntil(check_table, timeout=15000)
         qtbot.wait(20)
-        grab(main_window, os.path.join(screenshot_path, f"search_{search_type.name.lower()}_{Source(i).name.lower()}.png"))
+        grab(main_window, os.path.join(screenshot_path, f"search_{search_type.name.lower()}_{Source(i).name.lower()}"))
 
         # preview
         # 双击第一行
@@ -53,15 +52,15 @@ def search(qtbot: QtBot, search_type: SearchType, keyword: str) -> None:
         match search_type:
             case SearchType.SONG:
                 qtbot.waitUntil(check_preview_lyric, timeout=15000)
-                grab(main_window, os.path.join(screenshot_path, "preview_lyrics.png"))
+                grab(main_window, os.path.join(screenshot_path, "preview_lyrics"))
                 verify_lyrics(main_window.search_widget.preview_plainTextEdit.toPlainText())
             case SearchType.ALBUM:
                 qtbot.waitUntil(check_album_table, timeout=15000)
-                grab(main_window, os.path.join(screenshot_path, "show_album_song.png"))
+                grab(main_window, os.path.join(screenshot_path, "show_album_song"))
                 assert main_window.search_widget.results_tableWidget.rowCount() > 0
             case SearchType.SONGLIST:
                 qtbot.waitUntil(check_song_list_table, timeout=15000)
-                grab(main_window, os.path.join(screenshot_path, "show_songlist_song.png"))
+                grab(main_window, os.path.join(screenshot_path, "show_songlist_song"))
     assert main_window.search_widget.results_tableWidget.rowCount() > 0
     qtbot.wait(200)
 
@@ -128,7 +127,7 @@ def test_lyrics_langs(qtbot: QtBot) -> None:
                 return main_window.search_widget.preview_plainTextEdit.toPlainText() != orig_text
 
             qtbot.waitUntil(check_langs_changed, timeout=15000)
-            grab(main_window, os.path.join(screenshot_path, f"search_{'_'.join(langs)}.png"))
+            grab(main_window, os.path.join(screenshot_path, f"search_{'_'.join(langs)}"))
 
     for r in range(1, 4):
         for langs in combinations(["orig", "ts", "roma"], r):
@@ -153,7 +152,7 @@ def change_preview_format(qtbot: QtBot, lyrics_format: LyricsFormat) -> str:
 
         qtbot.waitUntil(check_preview_result, timeout=15000)
         qtbot.wait(20)
-    grab(main_window, os.path.join(screenshot_path, f"preview_{lyrics_format.name.lower()}.png"))
+    grab(main_window, os.path.join(screenshot_path, f"preview_{lyrics_format.name.lower()}"))
     return main_window.search_widget.preview_plainTextEdit.toPlainText()
 
 
@@ -202,7 +201,7 @@ def test_save_album_lyrics(qtbot: QtBot) -> None:
     close_msg_boxs(main_window.search_widget)
 
     qtbot.wait(120)
-    grab(main_window, os.path.join(screenshot_path, "save_album_lyrics.png"))
+    grab(main_window, os.path.join(screenshot_path, "save_album_lyrics"))
 
     main_window.search_widget.get_list_lyrics_box.pushButton.click()
     main_window.search_widget.save_path_lineEdit.setText(orig_path)

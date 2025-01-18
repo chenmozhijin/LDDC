@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-# ruff: noqa: S101
 import os
 
 from pytestqt.qtbot import QtBot
@@ -18,5 +17,5 @@ def test_gui_setting(qtbot: QtBot) -> None:
     size = main_window.size()
     main_window.resize(size.width(), 980)
     qtbot.wait(300)  # 等待窗口加载完成
-    grab(main_window, os.path.join(screenshot_path, "setting.png"))
+    grab(main_window, os.path.join(screenshot_path, "setting"))
     main_window.resize(size)
