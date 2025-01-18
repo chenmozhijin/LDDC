@@ -71,7 +71,7 @@ def test_search_song(qtbot: QtBot) -> None:
     main_window.show()
     main_window.set_current_widget(0)
     qtbot.wait(300)  # 等待窗口加载完成
-    search(qtbot, SearchType.SONG, "鈴木このみ - アルカテイル")
+    search(qtbot, SearchType.SONG, "鈴田美夜子 - one's future")
 
 
 def test_save_to_dir() -> None:
