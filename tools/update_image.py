@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-# ruff: noqa: INP001
 import os
+import shutil
 
 import pytest
 from PySide6.QtCore import QRectF
@@ -58,6 +58,9 @@ orig_lang = cfg["language"]
 for index, lang in enumerate(("zh-Hans", "zh-Hant", "en", "ja"), start=1):
     cfg["language"] = lang
     pytest.main(["--not-clear-cache"])
+    if os.path.exists(os.path.join(tests_path, "screenshots", lang)):
+        shutil.rmtree(os.path.join(tests_path, "screenshots", lang))
+    shutil.copytree(os.path.join(screenshot_path), os.path.join(tests_path, "screenshots", lang))
     image1 = stitch_images_grid(["preview_verbatimlrc", "preview_ass",
                                  "preview_linebylinelrc", "preview_srt",
                                  "preview_enhancedlrc", "save_album_lyrics"], 3, 2)

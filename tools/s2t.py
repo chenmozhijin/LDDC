@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-# ruff: noqa: T201 INP001
 from xml.etree import ElementTree as ET
 
 import opencc
@@ -27,4 +26,4 @@ if __name__ == "__main__":
     i18n_path = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "LDDC", "res", "i18n"))
     for file in os.listdir(i18n_path):
         if file == "LDDC_zh-Hant.ts":
-            msgs = s2t(os.path.join(i18n_path, file))
+            s2t(os.path.join(i18n_path, file))
