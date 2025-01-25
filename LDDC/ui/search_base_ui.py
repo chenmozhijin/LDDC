@@ -1,4 +1,3 @@
-
 ################################################################################
 ## Form generated from reading UI file 'search_base.ui'
 ##
@@ -328,6 +327,5 @@ class Ui_search_base:
         self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("search_base", "\u589e\u5f3a\u578bLRC(ESLyric)", None))
         self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("search_base", "SRT", None))
         self.lyricsformat_comboBox.setItemText(4, QCoreApplication.translate("search_base", "ASS", None))
-
 
     # retranslateUi

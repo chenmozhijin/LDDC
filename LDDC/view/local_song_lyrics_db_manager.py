@@ -9,9 +9,15 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QLineEdit, QTableWidgetItem,
 
 from LDDC.backend.worker import LocalSongLyricsDBWorker
 from LDDC.ui.local_song_lyrics_db_manager.dir_selector_ui import Ui_DirSelectorDialog
+from LDDC.ui.local_song_lyrics_db_manager.export_lyrics_ui import Ui_export_lyrics
 from LDDC.ui.local_song_lyrics_db_manager.local_song_lyrics_db_manager_ui import Ui_LocalSongLyricsDBManager
 from LDDC.ui.progres_ui import Ui_progressDialog
-from LDDC.utils.data import local_song_lyrics
+from LDDC.utils.data import cfg, local_song_lyrics
+from LDDC.utils.enum import (
+    LocalMatchFileNameMode,
+    LocalMatchSaveMode,
+    LyricsFormat,
+)
 from LDDC.utils.exit_manager import exit_manager
 from LDDC.utils.thread import threadpool
 from LDDC.utils.utils import ms2formattime
@@ -57,6 +63,50 @@ class DirSelectorDialog(QDialog, Ui_DirSelectorDialog):
         self.close()
 
 
+class ExportLyricsDialog(QDialog, Ui_export_lyrics):
+
+    def __init__(self, parent: "LocalSongLyricsDBManager") -> None:
+        super().__init__(parent)
+        self.setupUi(self)
+        self.setWindowModality(Qt.WindowModality.WindowModal)
+
+        self.save_path_button.clicked.connect(self.select_path)
+        self.accepted.connect(self.to_export)
+        self._parent = parent
+
+    def get_langs(self) -> list[str]:
+        """获取选择的的语言"""
+        lyric_langs = []
+        if self.original_checkBox.isChecked():
+            lyric_langs.append("orig")
+        if self.translate_checkBox.isChecked():
+            lyric_langs.append("ts")
+        if self.romanized_checkBox.isChecked():
+            lyric_langs.append("roma")
+        return [lang for lang in cfg["langs_order"] if lang in lyric_langs]
+
+    @Slot()
+    def select_path(self) -> None:
+        @Slot(str)
+        def file_selected(save_path: str) -> None:
+            self.save_path_lineEdit.setText(os.path.normpath(save_path))
+        dialog = QFileDialog(self)
+        dialog.setWindowTitle(self.tr("选择文件夹"))
+        dialog.setFileMode(QFileDialog.FileMode.Directory)
+        dialog.fileSelected.connect(file_selected)
+        dialog.open()
+
+    @Slot()
+    def to_export(self) -> None:
+        self._parent.run_task("export",
+                              LocalMatchSaveMode.SPECIFY,
+                              LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+                              self.get_langs(),
+                              LocalMatchFileNameMode(self.filename_mode_comboBox.currentIndex()),
+                              self.save_path_lineEdit.text())
+        self.close()
+
+
 class ProgresDialog(QDialog, Ui_progressDialog):
     def __init__(self, parent: QWidget, text: str) -> None:
         super().__init__(parent)
@@ -90,6 +140,7 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
         self.change_dir_button.clicked.connect(self.change_dir)
         self.backup_button.clicked.connect(lambda: self.run_select_path_task("backup"))
         self.restore_button.clicked.connect(lambda: self.run_select_path_task("restore"))
+        self.export_lyrics_button.clicked.connect(self.export_lyrics)
 
     @Slot()
     def reset_table(self) -> None:
@@ -123,6 +174,11 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
         self.dir_selector = DirSelectorDialog(self)
         self.dir_selector.show()
 
+    @Slot()
+    def export_lyrics(self) -> None:
+        self.export_lyrics_dialog = ExportLyricsDialog(self)
+        self.export_lyrics_dialog.show()
+
     def run_select_path_task(self, task: Literal["backup", "restore"]) -> None:
         @Slot(str)
         def file_selected(save_path: str) -> None:
@@ -138,7 +194,7 @@ class LocalSongLyricsDBManager(QWidget, Ui_LocalSongLyricsDBManager):
         dialog.setNameFilter(self.tr("备份文件(*.json)"))
         dialog.open()
 
-    def run_task(self, task: Literal["backup", "restore", "clear", "change_dir", "del_all"], *args: Any, **kwargs: Any) -> None:
+    def run_task(self, task: Literal["backup", "restore", "clear", "change_dir", "del_all", "export"], *args: Any, **kwargs: Any) -> None:
         worker = LocalSongLyricsDBWorker(task, *args, **kwargs)
         worker.signals.finished.connect(self.task_finished)
         self.progress_dialog = ProgresDialog(self, self.tr("正在处理中，请稍候..."))

@@ -143,10 +143,22 @@ def escape_filename(filename: str) -> str:
 
 def replace_info_placeholders(text: str, info: dict, lyric_langs: list) -> str:
     """替换路径中的歌曲信息占位符"""
+    if "id" not in info and "%<id>" in text:
+        text = text.replace("(%<id>)", "") if "(%<id>)" in text else text.replace("%<id>", "")
+
+    if not (title := info.get("title")):
+        title = "?"
+
+    if not (info.get("artist")):
+        info["artist"] = "?"
+
+    if not (info.get("album")):
+        info["album"] = "?"
+
     mapping_table = {
-        "%<title>": escape_filename(info['title']),
+        "%<title>": escape_filename(title),
         "%<artist>": escape_filename("/".join(info["artist"]) if isinstance(info["artist"], list) else info["artist"]),
-        "%<id>": escape_filename(str(info["id"])),
+        "%<id>": escape_filename(str(info.get("id"))),
         "%<album>": escape_filename(info["album"]),
         "%<langs>": escape_filename("-".join(lyric_langs)),
     }
@@ -206,11 +218,11 @@ def get_local_match_save_path(save_mode: LocalMatchSaveMode,
                         return -2
                 else:
                     save_filename = escape_filename(
-                        replace_info_placeholders(file_name_format, lrc_info, langs)) + ext
+                        replace_info_placeholders(file_name_format, song_info, langs)) + ext
             else:
                 save_filename = os.path.splitext(os.path.basename(song_info["file_path"]))[0] + ext
 
-        case LocalMatchFileNameMode.FORMAT:
+        case LocalMatchFileNameMode.FORMAT_BY_LYRICS:
             if lrc_info is None:
                 if allow_placeholder:
                     save_filename = file_name_format + ext
@@ -219,6 +231,13 @@ def get_local_match_save_path(save_mode: LocalMatchSaveMode,
             else:
                 save_filename = escape_filename(
                     replace_info_placeholders(file_name_format, lrc_info, langs)) + ext
+
+        case LocalMatchFileNameMode.FORMAT_BY_SONG:
+            if song_info["type"] != "cue" and not song_info.get("title"):
+                save_filename = os.path.splitext(os.path.basename(song_info["file_path"]))[0] + ext
+            else:
+                save_filename = escape_filename(
+                    replace_info_placeholders(file_name_format, song_info, langs)) + ext
 
     return os.path.join(save_folder, save_filename)
 

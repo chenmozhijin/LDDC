@@ -38,7 +38,6 @@ class LyricOrderListWidget(QListWidget):
 
 
 class ProportionallyStretchedTableWidget(QTableWidget):
-
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.props = []
@@ -64,7 +63,6 @@ class ProportionallyStretchedTableWidget(QTableWidget):
                 width -= self.columnWidth(i)
         for i in range(self.columnCount()):
             if 0 <= self.props[i] <= 1:
-
                 self.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeMode.Interactive)
                 self.setColumnWidth(i, self.props[i] * width)
 

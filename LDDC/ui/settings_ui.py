@@ -1,4 +1,3 @@
-
 ################################################################################
 ## Form generated from reading UI file 'settings.ui'
 ##
@@ -521,7 +520,9 @@ class Ui_settings:
         self.label_8.setText(QCoreApplication.translate("settings", "\u672b\u5c3e\u53c2\u7167\u884c\u65f6\u95f4\u6837\u5f0f(\u4ec5LRC):", None))
         self.skip_inst_lyrics_checkBox.setText(
             QCoreApplication.translate(
-                "settings", "\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd/\u672c\u5730\u5339\u914d\u65f6\u8df3\u8fc7\u7eaf\u97f3\u4e50", None,
+                "settings",
+                "\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd/\u672c\u5730\u5339\u914d\u65f6\u8df3\u8fc7\u7eaf\u97f3\u4e50",
+                None,
             ),
         )
         self.add_end_timestamp_line_checkBox.setText(
@@ -532,10 +533,12 @@ class Ui_settings:
             QCoreApplication.translate("settings", "\u6b4c\u66f2\u641c\u7d22\u6b4c\u8bcd\u65f6\u81ea\u52a8\u9009\u62e9(\u9177\u72d7\u97f3\u4e50)", None),
         )
         self.last_ref_line_time_sty_comboBox.setItemText(
-            0, QCoreApplication.translate("settings", "\u4e0e\u5f53\u524d\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u76f8\u540c", None),
+            0,
+            QCoreApplication.translate("settings", "\u4e0e\u5f53\u524d\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u76f8\u540c", None),
         )
         self.last_ref_line_time_sty_comboBox.setItemText(
-            1, QCoreApplication.translate("settings", "\u4e0e\u4e0b\u4e00\u884c\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u63a5\u8fd1", None),
+            1,
+            QCoreApplication.translate("settings", "\u4e0e\u4e0b\u4e00\u884c\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u63a5\u8fd1", None),
         )
 
         self.lrc_ms_digit_count_spinBox.setSpecialValueText("")

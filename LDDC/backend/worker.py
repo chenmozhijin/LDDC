@@ -24,7 +24,10 @@ from PySide6.QtCore import (
 from LDDC.utils.cache import cache
 from LDDC.utils.data import cfg, local_song_lyrics
 from LDDC.utils.enum import (
+    LocalMatchFileNameMode,
     LocalMatchSave2TagMode,
+    LocalMatchSaveMode,
+    LyricsFormat,
     LyricsProcessingError,
     LyricsType,
     SearchType,
@@ -68,8 +71,7 @@ class CheckUpdate(QRunnable):
         super().__init__()
         self.isAuto = is_auto
         self.name = name
-        if repo.startswith("https://github.com/"):
-            repo = repo[len("https://github.com/"):]
+        repo = repo.removeprefix("https://github.com/")
         self.repo = repo
         self.version = version
         self.signals = CheckUpdateSignal()
@@ -898,7 +900,7 @@ class LocalSongLyricsDBSignals(QObject):
 
 class LocalSongLyricsDBWorker(QRunnable):
 
-    def __init__(self, task: Literal["backup", "restore", "clear", "change_dir", "del_all"], *args: Any, **kwargs: Any) -> None:
+    def __init__(self, task: Literal["backup", "restore", "clear", "change_dir", "del_all", "export"], *args: Any, **kwargs: Any) -> None:
         super().__init__()
         self.signals = LocalSongLyricsDBSignals()
         self.task = task
@@ -919,6 +921,8 @@ class LocalSongLyricsDBWorker(QRunnable):
                     msg = self.change_dir(*self.args, **self.kwargs)
                 case "del_all":
                     msg = self.del_all(*self.args, **self.kwargs)
+                case "export":
+                    msg = self.export(*self.args, **self.kwargs)
         except Exception as e:
             self.signals.finished.emit(False, str(e))
             logger.exception(e)
@@ -978,7 +982,7 @@ class LocalSongLyricsDBWorker(QRunnable):
         all_data = local_song_lyrics.get_all()
         data_len = len(all_data)
         frequency = max(data_len // 20, 1)
-        count = 0
+        success_count = 0
         for i, (id_, title, artist, album, duration, song_path, track_number, lyrics_path, config) in enumerate(all_data):
             change = False
             song_path: str
@@ -997,7 +1001,64 @@ class LocalSongLyricsDBWorker(QRunnable):
                 local_song_lyrics.set_song(title, artist, album, duration, song_path, track_number, lyrics_path, json.loads(config))
                 if del_old:
                     local_song_lyrics.del_item(id_)
-                count += 1
+                success_count += 1
             if i % frequency == 0:
                 self.signals.progress.emit(i, data_len)
-        return QCoreApplication.translate("LocalSongLyricsDB", "修改成功, 共修改了 {0} 条数据").format(count)
+        return QCoreApplication.translate("LocalSongLyricsDB", "修改成功, 共修改了 {0} 条数据").format(success_count)
+
+    def export(self,
+               save_mode: LocalMatchSaveMode,
+               lyrics_format: LyricsFormat,
+               langs: list[str],
+               file_name_mode: LocalMatchFileNameMode,
+               save_root_path: str) -> str:
+        all_data = local_song_lyrics.get_all()
+        data_len = len(all_data)
+        frequency = max(data_len // 20, 1)
+        file_name_format = cfg["lyrics_file_name_fmt"]
+        success_count = 0
+        skip_count = 0
+        for i, (_id, title, artist, album, duration, song_path, track_number, lyrics_path, config) in enumerate(all_data):
+            song_path: str
+            if json.loads(config).get("inst") is True or not lyrics_path:
+                skip_count += 1
+                continue
+            try:
+                lyrics = get_lyrics(Source.Local, False, path=lyrics_path)[0]
+            except Exception:
+                logger.exception("获取歌词失败: %s", lyrics_path)
+                continue
+            converted_lyrics = convert2(lyrics, langs, lyrics_format)
+            save_path = get_local_match_save_path(save_mode=save_mode,
+                                                  file_name_mode=file_name_mode,
+                                                  song_info={"title": title,
+                                                             "artist": artist,
+                                                             "album": album,
+                                                             "duration": duration,
+                                                             "file_path": song_path,
+                                                             "track_number": track_number,
+                                                             "type": "song" if not song_path.endswith(".cue") else "cue"},
+                                                  lyrics_format=lyrics_format,
+                                                  langs=langs,
+                                                  save_root_path=save_root_path,
+                                                  lrc_info=lyrics.get_info(),
+                                                  file_name_format=file_name_format)
+            if isinstance(save_path, int):
+                logger.error("获取歌词保存路径失败，错误码: %s", save_path)
+                continue
+
+            try:
+                if not os.path.exists(os.path.dirname(save_path)):
+                    os.makedirs(os.path.dirname(save_path))
+
+                with open(save_path, "w", encoding="utf-8") as f:
+                    f.write(converted_lyrics)
+            except Exception:
+                logger.exception("保存歌词失败")
+                continue
+            success_count += 1
+
+            if i % frequency == 0:
+                self.signals.progress.emit(i, data_len)
+
+        return QCoreApplication.translate("LocalSongLyricsDB", "导出成功, 共导出了 {0}/{1} 条数据").format(success_count, data_len - skip_count)

@@ -1,4 +1,3 @@
-
 ################################################################################
 ## Form generated from reading UI file 'update.ui'
 ##
@@ -53,7 +52,9 @@ class Ui_UpdateDialog:
         UpdateDialog.setWindowTitle(QCoreApplication.translate("UpdateDialog", "\u53d1\u73b0\u65b0\u7248\u672c", None))
         self.label.setText(
             QCoreApplication.translate(
-                "UpdateDialog", "\u53d1\u73b0\u65b0\u7248\u672c\uff0c\u662f\u5426\u524d\u5f80GitHub\u4e0b\u8f7d\u66f4\u65b0\uff1f", None,
+                "UpdateDialog",
+                "\u53d1\u73b0\u65b0\u7248\u672c\uff0c\u662f\u5426\u524d\u5f80GitHub\u4e0b\u8f7d\u66f4\u65b0\uff1f",
+                None,
             ),
         )
         self.textBrowser.setMarkdown("")

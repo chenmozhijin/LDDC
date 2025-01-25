@@ -83,8 +83,9 @@ class LocalMatchSaveMode(Enum):
 
 class LocalMatchFileNameMode(Enum):
     # 歌曲/格式
-    FORMAT = 0
-    SONG = 1
+    FORMAT_BY_LYRICS = 0
+    FORMAT_BY_SONG = 1
+    SONG = 2
 
 
 class LocalMatchSave2TagMode(Enum):

@@ -296,7 +296,7 @@ def parse_cue(data: str, file_dir: str, file_path: str | None = None) -> tuple[l
                           "date": None,
                           "duration": None,
                           "type": "cue",
-                          "file_path": audio_file_path,
+                          "file_path": audio_file_path if audio_file_path else os.path.join(file_dir, file["filename"]),
                           "track": track.get("id"),
                           })
 
@@ -384,8 +384,7 @@ def parse_drop_infos(mime: QMimeData,
             # 提取指定长度的文件路径,解码为UTF-8
             path = paths_data[i:i + length].decode('UTF-8')
             i += length
-            if path.startswith("file://"):
-                path = path[7:]
+            path = path.removeprefix("file://")
             paths.append(path)
 
         for song in mime.text().splitlines():

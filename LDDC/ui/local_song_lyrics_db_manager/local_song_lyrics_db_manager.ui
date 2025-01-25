@@ -18,13 +18,6 @@
     <normaloff>:/LDDC/img/icon/logo.png</normaloff>:/LDDC/img/icon/logo.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="2">
-    <widget class="QPushButton" name="change_dir_button">
-     <property name="text">
-      <string>批量变更目录</string>
-     </property>
-    </widget>
-   </item>
    <item row="1" column="1">
     <widget class="QPushButton" name="clear_button">
      <property name="text">
@@ -32,10 +25,10 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
-    <widget class="QPushButton" name="delete_button">
+   <item row="1" column="2">
+    <widget class="QPushButton" name="change_dir_button">
      <property name="text">
-      <string>删除</string>
+      <string>批量变更目录</string>
      </property>
     </widget>
    </item>
@@ -46,16 +39,24 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="0" colspan="6">
-    <widget class="ProportionallyStretchedTableWidget" name="data_table">
-     <property name="editTriggers">
-      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+   <item row="1" column="4">
+    <widget class="QPushButton" name="backup_button">
+     <property name="text">
+      <string>备份</string>
      </property>
-     <property name="selectionMode">
-      <enum>QAbstractItemView::SelectionMode::MultiSelection</enum>
+    </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QPushButton" name="delete_button">
+     <property name="text">
+      <string>删除</string>
      </property>
-     <property name="selectionBehavior">
-      <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+    </widget>
+   </item>
+   <item row="1" column="6">
+    <widget class="QPushButton" name="export_lyrics_button">
+     <property name="text">
+      <string>导出歌词</string>
      </property>
     </widget>
    </item>
@@ -66,10 +67,16 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="4">
-    <widget class="QPushButton" name="backup_button">
-     <property name="text">
-      <string>备份</string>
+   <item row="0" column="0" colspan="7">
+    <widget class="ProportionallyStretchedTableWidget" name="data_table">
+     <property name="editTriggers">
+      <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+     </property>
+     <property name="selectionMode">
+      <enum>QAbstractItemView::SelectionMode::MultiSelection</enum>
+     </property>
+     <property name="selectionBehavior">
+      <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
      </property>
     </widget>
    </item>
