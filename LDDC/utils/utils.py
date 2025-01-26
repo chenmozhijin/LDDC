@@ -72,8 +72,6 @@ def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | 
             msg = "文件路径和文件数据不能同时为空"
             raise ValueError(msg)
 
-        from LDDC.utils.logger import logger
-        logger.debug(f"Charset normalizer results: {"\n".join([m.encoding for m in results])}")
 
         filtered_results = []
         if sign_word is not None:

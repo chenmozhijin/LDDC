@@ -50,6 +50,7 @@ class Config(dict):
             "lrc_ms_digit_count": 3,
             "add_end_timestamp_line": False,
             "last_ref_line_time_sty": 0,  # 0: 与当前原文起始时间相同 1: 与下一行原文起始时间接近
+            "lrc_tag_info_src": 0,  # 0: 从歌词源获取 1: 从歌曲文件获取
             "auto_check_update": True,
             "ID3_version": "v2.3",
             "color_scheme": "auto",
@@ -111,7 +112,7 @@ class Config(dict):
             super().__setitem__(key, value)
             self.write_config()
 
-        if key in ("langs_order", "lrc_ms_digit_count", "add_end_timestamp_line", "last_ref_line_time_sty"):
+        if key in ("langs_order", "lrc_ms_digit_count", "add_end_timestamp_line", "last_ref_line_time_sty", "lrc_tag_info_src"):
             self.lyrics_changed.emit((key, value))
         elif key in ("desktop_lyrics_font_family", "desktop_lyrics_played_colors", "desktop_lyrics_unplayed_colors",
                      "desktop_lyrics_default_langs", "desktop_lyrics_refresh_rate", "desktop_lyrics_langs_order"):

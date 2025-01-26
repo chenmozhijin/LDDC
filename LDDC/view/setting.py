@@ -46,6 +46,7 @@ class SettingWidget(QWidget, Ui_settings):
         self.add_end_timestamp_line_checkBox.setChecked(cfg["add_end_timestamp_line"])
         self.lrc_ms_digit_count_spinBox.setValue(cfg["lrc_ms_digit_count"])
         self.last_ref_line_time_sty_comboBox.setCurrentIndex(cfg["last_ref_line_time_sty"])
+        self.lrc_tag_info_src_comboBox.setCurrentIndex(cfg["lrc_tag_info_src"])
 
         # 桌面歌词部分
         self.played_color_list.set_colors(cfg["desktop_lyrics_played_colors"])
@@ -136,6 +137,10 @@ class SettingWidget(QWidget, Ui_settings):
 
         self.last_ref_line_time_sty_comboBox.currentIndexChanged.connect(
             lambda: cfg.setitem("last_ref_line_time_sty", self.last_ref_line_time_sty_comboBox.currentIndex()),
+        )
+
+        self.lrc_tag_info_src_comboBox.currentIndexChanged.connect(
+            lambda: cfg.setitem("lrc_tag_info_src", self.lrc_tag_info_src_comboBox.currentIndex()),
         )
 
         # 桌面歌词设置

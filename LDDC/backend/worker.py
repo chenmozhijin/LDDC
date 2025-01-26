@@ -567,6 +567,9 @@ class LocalMatchWorker(QRunnable):
                         raise ValueError(msg)
 
                     # 合并并转换歌词到指定格式
+                    if cfg["lrc_tag_info_src"] == 1:
+                        # 从歌曲文件获取标签信息
+                        lyrics = lyrics.update_info(song_info)
                     converted_lyrics = convert2(lyrics, langs, lyrics_format)
 
                     save_path = None
@@ -1028,16 +1031,20 @@ class LocalSongLyricsDBWorker(QRunnable):
             except Exception:
                 logger.exception("获取歌词失败: %s", lyrics_path)
                 continue
+            song_info = {"title": title,
+                         "artist": artist,
+                         "album": album,
+                         "duration": duration,
+                         "file_path": song_path,
+                         "track_number": track_number,
+                         "type": "song" if not song_path.endswith(".cue") else "cue"}
+            if cfg["lrc_tag_info_src"] == 1:
+                # 从歌曲文件获取标签信息
+                lyrics = lyrics.update_info(song_info)
             converted_lyrics = convert2(lyrics, langs, lyrics_format)
             save_path = get_local_match_save_path(save_mode=save_mode,
                                                   file_name_mode=file_name_mode,
-                                                  song_info={"title": title,
-                                                             "artist": artist,
-                                                             "album": album,
-                                                             "duration": duration,
-                                                             "file_path": song_path,
-                                                             "track_number": track_number,
-                                                             "type": "song" if not song_path.endswith(".cue") else "cue"},
+                                                  song_info=song_info,
                                                   lyrics_format=lyrics_format,
                                                   langs=langs,
                                                   save_root_path=save_root_path,

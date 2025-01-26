@@ -760,6 +760,9 @@ class SearchWidget(SearchWidgetBase):
             return
 
         if result.get("status") == "成功":
+            if cfg["lrc_tag_info_src"] == 1:
+                # 从歌曲文件获取标签信息
+                result["lyrics"] = result["lyrics"].update_info(result["orig_info"])
             self.preview_lyric_result = {"info": result["result_info"], "lyrics": result["lyrics"]}
             self.update_preview_lyric()
 

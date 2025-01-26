@@ -2,14 +2,6 @@
 <ui version="4.0">
  <class>settings</class>
  <widget class="QWidget" name="settings">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>540</width>
-    <height>360</height>
-   </rect>
-  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <property name="leftMargin">
     <number>0</number>
@@ -41,9 +33,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-551</y>
+        <y>0</y>
         <width>781</width>
-        <height>937</height>
+        <height>967</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -409,6 +401,27 @@ li.checked::marker { content: &quot;\2612&quot;; }
             <property name="value">
              <number>3</number>
             </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QLabel" name="label_3">
+            <property name="text">
+             <string>歌词文件标签信息来源:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="2" colspan="3">
+           <widget class="QComboBox" name="lrc_tag_info_src_comboBox">
+            <item>
+             <property name="text">
+              <string>歌词源</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>歌曲信息</string>
+             </property>
+            </item>
            </widget>
           </item>
          </layout>

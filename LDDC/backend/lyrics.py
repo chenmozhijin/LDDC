@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
+from copy import deepcopy
 from typing import TYPE_CHECKING, Literal, NewType, TypeVar, overload
 
 if TYPE_CHECKING:
@@ -17,6 +18,7 @@ FSLyricsData = NewType("FSLyricsData", list[FSLyricsLine])
 FSMultiLyricsData = NewType("FSMultiLyricsData", dict[str, FSLyricsData])
 
 T = TypeVar("T")
+LT = TypeVar('LT', bound='LyricsBase')
 
 
 @overload
@@ -128,10 +130,16 @@ class LyricsBase(dict):
             info["source"] = self.source
         if self.title:
             info["title"] = self.title
+        elif self.tags.get("ti"):
+            info["title"] = self.tags["ti"]
         if self.artist:
             info["artist"] = self.artist
+        elif self.tags.get("ar"):
+            info["artist"] = self.tags
         if self.album:
             info["album"] = self.album
+        elif self.tags.get("al"):
+            info["album"] = self.tags["al"]
         if self.id:
             info["id"] = self.id
         if self.mid:
@@ -141,6 +149,25 @@ class LyricsBase(dict):
         if self.accesskey:
             info["accesskey"] = self.accesskey
         return info
+
+    def update_info(self: LT, info: dict) -> LT:
+        lyrics = deepcopy(self)
+        mapping = {
+            "title": "ti",
+            "artist": "ar",
+            "album": "al",
+        }
+        for key in self.INFO_KEYS:
+            if key in info:
+                lyrics[key] = info[key]
+
+            if key in ("title", "artist", "album"):
+                if key in info:
+                    lyrics.tags[mapping[key]] = info[key]
+                else:
+                    lyrics.tags.pop(mapping[key], None)
+
+        return lyrics
 
     def get_duration(self) -> int:
         if self.duration is not None:
