@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 ################################################################################
 ## Form generated from reading UI file 'local_match.ui'
 ##
@@ -8,33 +6,39 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QAbstractScrollArea, QApplication, QCheckBox,
-    QComboBox, QGridLayout, QHeaderView, QLabel,
-    QListWidgetItem, QProgressBar, QPushButton, QSizePolicy,
-    QSpinBox, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtCore import QCoreApplication, QMetaObject, QSize, Qt
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QAbstractScrollArea,
+    QCheckBox,
+    QComboBox,
+    QGridLayout,
+    QLabel,
+    QProgressBar,
+    QPushButton,
+    QSizePolicy,
+    QSpinBox,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
-from LDDC.ui.custom_widgets import (CheckBoxListWidget, ProportionallyStretchedTableWidget)
+from LDDC.ui.custom_widgets import CheckBoxListWidget, ProportionallyStretchedTableWidget
 
-class Ui_local_match(object):
+
+class Ui_local_match:
     def setupUi(self, local_match):
         if not local_match.objectName():
-            local_match.setObjectName(u"local_match")
+            local_match.setObjectName("local_match")
         local_match.resize(858, 413)
         self.verticalLayout = QVBoxLayout(local_match)
-        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setObjectName("verticalLayout")
         self.control_bar = QWidget(local_match)
-        self.control_bar.setObjectName(u"control_bar")
+        self.control_bar.setObjectName("control_bar")
         self.gridLayout = QGridLayout(self.control_bar)
-        self.gridLayout.setObjectName(u"gridLayout")
+        self.gridLayout.setObjectName("gridLayout")
         self.label_3 = QLabel(self.control_bar)
-        self.label_3.setObjectName(u"label_3")
+        self.label_3.setObjectName("label_3")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -44,13 +48,13 @@ class Ui_local_match(object):
         self.gridLayout.addWidget(self.label_3, 0, 7, 1, 2)
 
         self.original_checkBox = QCheckBox(self.control_bar)
-        self.original_checkBox.setObjectName(u"original_checkBox")
+        self.original_checkBox.setObjectName("original_checkBox")
         self.original_checkBox.setChecked(True)
 
         self.gridLayout.addWidget(self.original_checkBox, 1, 8, 1, 1)
 
         self.source_listWidget = CheckBoxListWidget(self.control_bar)
-        self.source_listWidget.setObjectName(u"source_listWidget")
+        self.source_listWidget.setObjectName("source_listWidget")
         sizePolicy.setHeightForWidth(self.source_listWidget.sizePolicy().hasHeightForWidth())
         self.source_listWidget.setSizePolicy(sizePolicy)
         self.source_listWidget.setMinimumSize(QSize(0, 0))
@@ -62,14 +66,14 @@ class Ui_local_match(object):
         self.gridLayout.addWidget(self.source_listWidget, 1, 5, 4, 1)
 
         self.label_10 = QLabel(self.control_bar)
-        self.label_10.setObjectName(u"label_10")
+        self.label_10.setObjectName("label_10")
         sizePolicy.setHeightForWidth(self.label_10.sizePolicy().hasHeightForWidth())
         self.label_10.setSizePolicy(sizePolicy)
 
         self.gridLayout.addWidget(self.label_10, 4, 2, 1, 1)
 
         self.select_dirs_button = QPushButton(self.control_bar)
-        self.select_dirs_button.setObjectName(u"select_dirs_button")
+        self.select_dirs_button.setObjectName("select_dirs_button")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         sizePolicy1.setHorizontalStretch(0)
         sizePolicy1.setVerticalStretch(0)
@@ -79,7 +83,7 @@ class Ui_local_match(object):
         self.gridLayout.addWidget(self.select_dirs_button, 3, 0, 2, 1)
 
         self.start_cancel_pushButton = QPushButton(self.control_bar)
-        self.start_cancel_pushButton.setObjectName(u"start_cancel_pushButton")
+        self.start_cancel_pushButton.setObjectName("start_cancel_pushButton")
         sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
@@ -89,7 +93,7 @@ class Ui_local_match(object):
         self.gridLayout.addWidget(self.start_cancel_pushButton, 3, 7, 2, 4)
 
         self.romanized_checkBox = QCheckBox(self.control_bar)
-        self.romanized_checkBox.setObjectName(u"romanized_checkBox")
+        self.romanized_checkBox.setObjectName("romanized_checkBox")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         sizePolicy3.setHorizontalStretch(0)
         sizePolicy3.setVerticalStretch(0)
@@ -99,14 +103,14 @@ class Ui_local_match(object):
         self.gridLayout.addWidget(self.romanized_checkBox, 1, 10, 1, 1)
 
         self.label_8 = QLabel(self.control_bar)
-        self.label_8.setObjectName(u"label_8")
+        self.label_8.setObjectName("label_8")
         sizePolicy.setHeightForWidth(self.label_8.sizePolicy().hasHeightForWidth())
         self.label_8.setSizePolicy(sizePolicy)
 
         self.gridLayout.addWidget(self.label_8, 3, 2, 1, 1)
 
         self.translate_checkBox = QCheckBox(self.control_bar)
-        self.translate_checkBox.setObjectName(u"translate_checkBox")
+        self.translate_checkBox.setObjectName("translate_checkBox")
         sizePolicy3.setHeightForWidth(self.translate_checkBox.sizePolicy().hasHeightForWidth())
         self.translate_checkBox.setSizePolicy(sizePolicy3)
         self.translate_checkBox.setChecked(True)
@@ -114,7 +118,7 @@ class Ui_local_match(object):
         self.gridLayout.addWidget(self.translate_checkBox, 1, 9, 1, 1)
 
         self.min_score_spinBox = QSpinBox(self.control_bar)
-        self.min_score_spinBox.setObjectName(u"min_score_spinBox")
+        self.min_score_spinBox.setObjectName("min_score_spinBox")
         self.min_score_spinBox.setMinimumSize(QSize(70, 0))
         self.min_score_spinBox.setMaximum(100)
         self.min_score_spinBox.setValue(60)
@@ -122,21 +126,21 @@ class Ui_local_match(object):
         self.gridLayout.addWidget(self.min_score_spinBox, 0, 9, 1, 2)
 
         self.select_files_button = QPushButton(self.control_bar)
-        self.select_files_button.setObjectName(u"select_files_button")
+        self.select_files_button.setObjectName("select_files_button")
         sizePolicy2.setHeightForWidth(self.select_files_button.sizePolicy().hasHeightForWidth())
         self.select_files_button.setSizePolicy(sizePolicy2)
 
         self.gridLayout.addWidget(self.select_files_button, 0, 0, 3, 1)
 
         self.label_11 = QLabel(self.control_bar)
-        self.label_11.setObjectName(u"label_11")
+        self.label_11.setObjectName("label_11")
         sizePolicy2.setHeightForWidth(self.label_11.sizePolicy().hasHeightForWidth())
         self.label_11.setSizePolicy(sizePolicy2)
 
         self.gridLayout.addWidget(self.label_11, 0, 2, 1, 1)
 
         self.label = QLabel(self.control_bar)
-        self.label.setObjectName(u"label")
+        self.label.setObjectName("label")
 
         self.gridLayout.addWidget(self.label, 1, 2, 1, 1)
 
@@ -146,7 +150,7 @@ class Ui_local_match(object):
         self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.addItem("")
         self.lyricsformat_comboBox.addItem("")
-        self.lyricsformat_comboBox.setObjectName(u"lyricsformat_comboBox")
+        self.lyricsformat_comboBox.setObjectName("lyricsformat_comboBox")
 
         self.gridLayout.addWidget(self.lyricsformat_comboBox, 4, 3, 1, 1)
 
@@ -154,7 +158,7 @@ class Ui_local_match(object):
         self.save_mode_comboBox.addItem("")
         self.save_mode_comboBox.addItem("")
         self.save_mode_comboBox.addItem("")
-        self.save_mode_comboBox.setObjectName(u"save_mode_comboBox")
+        self.save_mode_comboBox.setObjectName("save_mode_comboBox")
         sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         sizePolicy4.setHorizontalStretch(0)
         sizePolicy4.setVerticalStretch(0)
@@ -166,12 +170,12 @@ class Ui_local_match(object):
         self.gridLayout.addWidget(self.save_mode_comboBox, 0, 3, 1, 2)
 
         self.label_9 = QLabel(self.control_bar)
-        self.label_9.setObjectName(u"label_9")
+        self.label_9.setObjectName("label_9")
 
         self.gridLayout.addWidget(self.label_9, 1, 7, 1, 1)
 
         self.label_2 = QLabel(self.control_bar)
-        self.label_2.setObjectName(u"label_2")
+        self.label_2.setObjectName("label_2")
         sizePolicy.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
         self.label_2.setSizePolicy(sizePolicy)
 
@@ -181,13 +185,13 @@ class Ui_local_match(object):
         self.save2tag_mode_comboBox.addItem("")
         self.save2tag_mode_comboBox.addItem("")
         self.save2tag_mode_comboBox.addItem("")
-        self.save2tag_mode_comboBox.setObjectName(u"save2tag_mode_comboBox")
+        self.save2tag_mode_comboBox.setObjectName("save2tag_mode_comboBox")
         self.save2tag_mode_comboBox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
         self.gridLayout.addWidget(self.save2tag_mode_comboBox, 1, 3, 1, 1)
 
         self.save_path_button = QPushButton(self.control_bar)
-        self.save_path_button.setObjectName(u"save_path_button")
+        self.save_path_button.setObjectName("save_path_button")
         sizePolicy2.setHeightForWidth(self.save_path_button.sizePolicy().hasHeightForWidth())
         self.save_path_button.setSizePolicy(sizePolicy2)
 
@@ -197,18 +201,17 @@ class Ui_local_match(object):
         self.filename_mode_comboBox.addItem("")
         self.filename_mode_comboBox.addItem("")
         self.filename_mode_comboBox.addItem("")
-        self.filename_mode_comboBox.setObjectName(u"filename_mode_comboBox")
+        self.filename_mode_comboBox.setObjectName("filename_mode_comboBox")
         sizePolicy4.setHeightForWidth(self.filename_mode_comboBox.sizePolicy().hasHeightForWidth())
         self.filename_mode_comboBox.setSizePolicy(sizePolicy4)
         self.filename_mode_comboBox.setMinimumSize(QSize(133, 0))
 
         self.gridLayout.addWidget(self.filename_mode_comboBox, 3, 3, 1, 1)
 
-
         self.verticalLayout.addWidget(self.control_bar)
 
         self.songs_table = ProportionallyStretchedTableWidget(local_match)
-        if (self.songs_table.columnCount() < 7):
+        if self.songs_table.columnCount() < 7:
             self.songs_table.setColumnCount(7)
         __qtablewidgetitem = QTableWidgetItem()
         self.songs_table.setHorizontalHeaderItem(0, __qtablewidgetitem)
@@ -224,7 +227,7 @@ class Ui_local_match(object):
         self.songs_table.setHorizontalHeaderItem(5, __qtablewidgetitem5)
         __qtablewidgetitem6 = QTableWidgetItem()
         self.songs_table.setHorizontalHeaderItem(6, __qtablewidgetitem6)
-        self.songs_table.setObjectName(u"songs_table")
+        self.songs_table.setObjectName("songs_table")
         sizePolicy5 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy5.setHorizontalStretch(0)
         sizePolicy5.setVerticalStretch(0)
@@ -242,14 +245,14 @@ class Ui_local_match(object):
         self.songs_table.horizontalHeader().setCascadingSectionResizes(False)
         self.songs_table.horizontalHeader().setDefaultSectionSize(100)
         self.songs_table.horizontalHeader().setHighlightSections(True)
-        self.songs_table.horizontalHeader().setProperty(u"showSortIndicator", False)
+        self.songs_table.horizontalHeader().setProperty("showSortIndicator", False)
         self.songs_table.horizontalHeader().setStretchLastSection(False)
         self.songs_table.verticalHeader().setVisible(True)
 
         self.verticalLayout.addWidget(self.songs_table)
 
         self.status_label = QLabel(local_match)
-        self.status_label.setObjectName(u"status_label")
+        self.status_label.setObjectName("status_label")
         sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         sizePolicy6.setHorizontalStretch(0)
         sizePolicy6.setVerticalStretch(0)
@@ -259,66 +262,76 @@ class Ui_local_match(object):
         self.verticalLayout.addWidget(self.status_label)
 
         self.progressBar = QProgressBar(local_match)
-        self.progressBar.setObjectName(u"progressBar")
+        self.progressBar.setObjectName("progressBar")
         self.progressBar.setOrientation(Qt.Orientation.Horizontal)
         self.progressBar.setInvertedAppearance(False)
-        self.progressBar.setFormat(u"%v/%m %p%")
+        self.progressBar.setFormat("%v/%m %p%")
 
         self.verticalLayout.addWidget(self.progressBar)
-
 
         self.retranslateUi(local_match)
 
         QMetaObject.connectSlotsByName(local_match)
+
     # setupUi
 
     def retranslateUi(self, local_match):
         local_match.setWindowTitle("")
-        self.label_3.setText(QCoreApplication.translate("local_match", u"\u6700\u4f4e\u5339\u914d\u5ea6(0~100):", None))
-        self.original_checkBox.setText(QCoreApplication.translate("local_match", u"\u539f\u6587", None))
-        self.label_10.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u683c\u5f0f:", None))
-        self.select_dirs_button.setText(QCoreApplication.translate("local_match", u"\u9009\u62e9\u6587\u4ef6\u5939", None))
-        self.start_cancel_pushButton.setText(QCoreApplication.translate("local_match", u"\u5f00\u59cb\u5339\u914d", None))
-        self.romanized_checkBox.setText(QCoreApplication.translate("local_match", u"\u7f57\u9a6c\u97f3", None))
-        self.label_8.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6587\u4ef6\u540d:", None))
-        self.translate_checkBox.setText(QCoreApplication.translate("local_match", u"\u8bd1\u6587", None))
-        self.select_files_button.setText(QCoreApplication.translate("local_match", u"\u9009\u62e9\u6587\u4ef6", None))
-        self.label_11.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6587\u4ef6\u4fdd\u5b58\u6a21\u5f0f:", None))
-        self.label.setText(QCoreApplication.translate("local_match", u"\u4fdd\u5b58\u5230\u6b4c\u8bcd\u6807\u7b7e:", None))
-        self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"LRC(\u9010\u5b57)", None))
-        self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"LRC(\u9010\u884c)", None))
-        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"\u589e\u5f3a\u578bLRC(ESLyric)", None))
-        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("local_match", u"SRT", None))
-        self.lyricsformat_comboBox.setItemText(4, QCoreApplication.translate("local_match", u"ASS", None))
+        self.label_3.setText(QCoreApplication.translate("local_match", "\u6700\u4f4e\u5339\u914d\u5ea6(0~100):", None))
+        self.original_checkBox.setText(QCoreApplication.translate("local_match", "\u539f\u6587", None))
+        self.label_10.setText(QCoreApplication.translate("local_match", "\u6b4c\u8bcd\u683c\u5f0f:", None))
+        self.select_dirs_button.setText(QCoreApplication.translate("local_match", "\u9009\u62e9\u6587\u4ef6\u5939", None))
+        self.start_cancel_pushButton.setText(QCoreApplication.translate("local_match", "\u5f00\u59cb\u5339\u914d", None))
+        self.romanized_checkBox.setText(QCoreApplication.translate("local_match", "\u7f57\u9a6c\u97f3", None))
+        self.label_8.setText(QCoreApplication.translate("local_match", "\u6b4c\u8bcd\u6587\u4ef6\u540d:", None))
+        self.translate_checkBox.setText(QCoreApplication.translate("local_match", "\u8bd1\u6587", None))
+        self.select_files_button.setText(QCoreApplication.translate("local_match", "\u9009\u62e9\u6587\u4ef6", None))
+        self.label_11.setText(QCoreApplication.translate("local_match", "\u6b4c\u8bcd\u6587\u4ef6\u4fdd\u5b58\u6a21\u5f0f:", None))
+        self.label.setText(QCoreApplication.translate("local_match", "\u4fdd\u5b58\u5230\u6b4c\u8bcd\u6807\u7b7e:", None))
+        self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("local_match", "LRC(\u9010\u5b57)", None))
+        self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("local_match", "LRC(\u9010\u884c)", None))
+        self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("local_match", "\u589e\u5f3a\u578bLRC(ESLyric)", None))
+        self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("local_match", "SRT", None))
+        self.lyricsformat_comboBox.setItemText(4, QCoreApplication.translate("local_match", "ASS", None))
 
-        self.save_mode_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"\u4fdd\u5b58\u5230\u6b4c\u66f2\u6587\u4ef6\u5939\u7684\u955c\u50cf\u6587\u4ef6\u5939", None))
-        self.save_mode_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"\u4fdd\u5b58\u5230\u6b4c\u66f2\u6587\u4ef6\u5939", None))
-        self.save_mode_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"\u4fdd\u5b58\u5230\u6307\u5b9a\u6587\u4ef6\u5939", None))
+        self.save_mode_comboBox.setItemText(
+            0, QCoreApplication.translate("local_match", "\u4fdd\u5b58\u5230\u6b4c\u66f2\u6587\u4ef6\u5939\u7684\u955c\u50cf\u6587\u4ef6\u5939", None)
+        )
+        self.save_mode_comboBox.setItemText(1, QCoreApplication.translate("local_match", "\u4fdd\u5b58\u5230\u6b4c\u66f2\u6587\u4ef6\u5939", None))
+        self.save_mode_comboBox.setItemText(2, QCoreApplication.translate("local_match", "\u4fdd\u5b58\u5230\u6307\u5b9a\u6587\u4ef6\u5939", None))
 
-        self.label_9.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u7c7b\u578b:", None))
-        self.label_2.setText(QCoreApplication.translate("local_match", u"\u6b4c\u8bcd\u6765\u6e90:", None))
-        self.save2tag_mode_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"\u53ea\u4fdd\u5b58\u5230\u6587\u4ef6", None))
-        self.save2tag_mode_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"\u53ea\u4fdd\u5b58\u5230\u6b4c\u8bcd\u6807\u7b7e(\u975ecue)", None))
-        self.save2tag_mode_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"\u4fdd\u5b58\u5230\u6b4c\u8bcd\u6807\u7b7e(\u975ecue)\u4e0e\u6587\u4ef6", None))
+        self.label_9.setText(QCoreApplication.translate("local_match", "\u6b4c\u8bcd\u7c7b\u578b:", None))
+        self.label_2.setText(QCoreApplication.translate("local_match", "\u6b4c\u8bcd\u6765\u6e90:", None))
+        self.save2tag_mode_comboBox.setItemText(0, QCoreApplication.translate("local_match", "\u53ea\u4fdd\u5b58\u5230\u6587\u4ef6", None))
+        self.save2tag_mode_comboBox.setItemText(
+            1, QCoreApplication.translate("local_match", "\u53ea\u4fdd\u5b58\u5230\u6b4c\u8bcd\u6807\u7b7e(\u975ecue)", None)
+        )
+        self.save2tag_mode_comboBox.setItemText(
+            2, QCoreApplication.translate("local_match", "\u4fdd\u5b58\u5230\u6b4c\u8bcd\u6807\u7b7e(\u975ecue)\u4e0e\u6587\u4ef6", None)
+        )
 
-        self.save_path_button.setText(QCoreApplication.translate("local_match", u"\u9009\u62e9\u4fdd\u5b58\u8def\u5f84", None))
-        self.filename_mode_comboBox.setItemText(0, QCoreApplication.translate("local_match", u"\u4f9d\u7167\u683c\u5f0f(\u6839\u636e\u6b4c\u8bcd\u4e2d\u7684\u4fe1\u606f)", None))
-        self.filename_mode_comboBox.setItemText(1, QCoreApplication.translate("local_match", u"\u4f9d\u7167\u683c\u5f0f(\u6839\u636e\u6b4c\u66f2\u4e2d\u7684\u4fe1\u606f)", None))
-        self.filename_mode_comboBox.setItemText(2, QCoreApplication.translate("local_match", u"\u4e0e\u6b4c\u66f2\u6587\u4ef6\u540d\u76f8\u540c", None))
+        self.save_path_button.setText(QCoreApplication.translate("local_match", "\u9009\u62e9\u4fdd\u5b58\u8def\u5f84", None))
+        self.filename_mode_comboBox.setItemText(
+            0, QCoreApplication.translate("local_match", "\u4f9d\u7167\u683c\u5f0f(\u6839\u636e\u6b4c\u8bcd\u4e2d\u7684\u4fe1\u606f)", None)
+        )
+        self.filename_mode_comboBox.setItemText(
+            1, QCoreApplication.translate("local_match", "\u4f9d\u7167\u683c\u5f0f(\u6839\u636e\u6b4c\u66f2\u4e2d\u7684\u4fe1\u606f)", None)
+        )
+        self.filename_mode_comboBox.setItemText(2, QCoreApplication.translate("local_match", "\u4e0e\u6b4c\u66f2\u6587\u4ef6\u540d\u76f8\u540c", None))
 
         ___qtablewidgetitem = self.songs_table.horizontalHeaderItem(0)
-        ___qtablewidgetitem.setText(QCoreApplication.translate("local_match", u"\u6b4c\u66f2\u540d", None));
+        ___qtablewidgetitem.setText(QCoreApplication.translate("local_match", "\u6b4c\u66f2\u540d", None))
         ___qtablewidgetitem1 = self.songs_table.horizontalHeaderItem(1)
-        ___qtablewidgetitem1.setText(QCoreApplication.translate("local_match", u"\u827a\u672f\u5bb6", None));
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("local_match", "\u827a\u672f\u5bb6", None))
         ___qtablewidgetitem2 = self.songs_table.horizontalHeaderItem(2)
-        ___qtablewidgetitem2.setText(QCoreApplication.translate("local_match", u"\u4e13\u8f91", None));
+        ___qtablewidgetitem2.setText(QCoreApplication.translate("local_match", "\u4e13\u8f91", None))
         ___qtablewidgetitem3 = self.songs_table.horizontalHeaderItem(3)
-        ___qtablewidgetitem3.setText(QCoreApplication.translate("local_match", u"\u6b4c\u66f2\u8def\u5f84", None));
+        ___qtablewidgetitem3.setText(QCoreApplication.translate("local_match", "\u6b4c\u66f2\u8def\u5f84", None))
         ___qtablewidgetitem4 = self.songs_table.horizontalHeaderItem(4)
-        ___qtablewidgetitem4.setText(QCoreApplication.translate("local_match", u"\u65f6\u957f", None));
+        ___qtablewidgetitem4.setText(QCoreApplication.translate("local_match", "\u65f6\u957f", None))
         ___qtablewidgetitem5 = self.songs_table.horizontalHeaderItem(5)
-        ___qtablewidgetitem5.setText(QCoreApplication.translate("local_match", u"\u4fdd\u5b58\u8def\u5f84", None));
+        ___qtablewidgetitem5.setText(QCoreApplication.translate("local_match", "\u4fdd\u5b58\u8def\u5f84", None))
         ___qtablewidgetitem6 = self.songs_table.horizontalHeaderItem(6)
-        ___qtablewidgetitem6.setText(QCoreApplication.translate("local_match", u"\u72b6\u6001", None));
-    # retranslateUi
+        ___qtablewidgetitem6.setText(QCoreApplication.translate("local_match", "\u72b6\u6001", None))
 
+    # retranslateUi
