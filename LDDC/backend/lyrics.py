@@ -135,7 +135,7 @@ class LyricsBase(dict):
         if self.artist:
             info["artist"] = self.artist
         elif self.tags.get("ar"):
-            info["artist"] = self.tags
+            info["artist"] = self.tags["ar"]
         if self.album:
             info["album"] = self.album
         elif self.tags.get("al"):
