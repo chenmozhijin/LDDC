@@ -46,16 +46,17 @@ def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | 
         sys_encoding = ["gb18030", "chinese", "csiso58gb231280", "euc-cn", "euccn", "eucgb2312-cn", "gb2312-1980", "gb2312-80", "iso-ir-58", "936", "cp936",
                         "ms936"]
     file_content = None
-    with contextlib.suppress(Exception):
-        if file_data is not None:
-            file_content = file_data.decode(sys_encoding[0])
-        elif file_path is not None:
-            with open(file_path, encoding=sys_encoding[0]) as f:
-                file_content = f.read()
-        else:
+
+    if not file_data:
+        if not file_path:
             msg = "文件路径和文件数据不能同时为空"
             raise ValueError(msg)
-        if sys_encoding[0] == "gb18030" and "锘縍EM" in file_content:
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+    with contextlib.suppress(Exception):
+        file_content = file_data.decode(sys_encoding[0])
+
+        if (sys_encoding[0] == "gb18030" and "锘縍EM" in file_content) or "�" not in file_data.decode("utf-8", errors='replace'):
             file_content = None
         if sign_word is not None and file_content is not None:
             for sign in sign_word:
@@ -71,7 +72,6 @@ def read_unknown_encoding_file(file_path: str | None = None, file_data: bytes | 
         else:
             msg = "文件路径和文件数据不能同时为空"
             raise ValueError(msg)
-
 
         filtered_results = []
         if sign_word is not None:
