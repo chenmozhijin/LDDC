@@ -45,7 +45,7 @@ from LDDC.utils.logger import DEBUG, logger
 from LDDC.utils.paths import auto_save_dir, command_line
 from LDDC.utils.thread import in_main_thread, threadpool
 from LDDC.utils.utils import escape_filename, get_artist_str, has_content
-from LDDC.view.desktop_lyrics import DesktopLyrics, DesktopLyricsWidget
+from LDDC.view.desktop_lyrics import DesktopLyrics, DesktopLyricsWidget, DesktopLyric
 from LDDC.view.update import check_update
 
 random = SystemRandom()
@@ -450,7 +450,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
     def handle_task(self, task: dict) -> None:
         """处理客户端发送的任务"""
         # 同步播放时间
-        if isinstance((playback_time := task.get("playback_time")), int):  # 单位为毫秒
+        if isinstance((playback_time := task.get("playback_time")), int) and False:  # 单位为毫秒
             if isinstance((send_time := task.get("send_time")), float):  # 单位为秒
                 delay = (time.time() - send_time) * 1000
 
@@ -516,8 +516,9 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                 elif not self.config.get("disable_auto_search"):
                     if isinstance(self.song_info["title"], str):
                         # 如果找不到,则自动获取歌词
+                        text = QCoreApplication.translate("DesktopLyrics", "自动获取歌词中...")
                         self.widget.update_lyrics.emit(
-                            DesktopLyrics(([(QCoreApplication.translate("DesktopLyrics", "自动获取歌词中..."), "", 0, "", 255, [])], [])),
+                            DesktopLyrics([DesktopLyric([(text, len(text), 255, [])])]),
                         )
                         self.taskid += 1
                         info = self.song_info.copy()
@@ -679,8 +680,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         """
         artist, title = self.song_info.get("artist", "").strip(), self.song_info.get("title", "").strip()
         artist_title = f"{artist if artist else '?'} - {title if title else '?'}"
-        self.widget.update_lyrics.emit(DesktopLyrics(([(artist_title, "", 0, "", 255, [])],
-                                                      [(msg, "", 0, "", 255, [])])))
+        self.widget.update_lyrics.emit(DesktopLyrics([DesktopLyric([(artist_title, len(artist_title), 255, [])]),
+                                                      DesktopLyric([(msg, len(msg), 255, [])])]))
 
     @Slot()
     def update_lyrics(self) -> None:  # noqa: C901, PLR0915
@@ -698,8 +699,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         current_lines: list[tuple[int, FSLyricsLine]] = []  # 支持同时多行
         next_lines: deque[tuple[int, FSLyricsLine]] = deque(maxlen=2)
 
-        right: list[tuple[str, str, float, str, int, list[tuple[int, int, str]]]] = []
-        left: list[tuple[str, str, float, str, int, list[tuple[int, int, str]]]] = []
+        right: DesktopLyric = DesktopLyric([])
+        left: DesktopLyric = DesktopLyric([])
 
         # 计算当前时间对应的歌词
         for index, (start, end, words) in enumerate(orig):
@@ -740,45 +741,33 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                 text = "".join(word[2] for word in _line[2])
                 if not has_content(text):
                     # 没有内容
-                    pos.append(("", "", 0, "", 0, []))
+                    pos.append(("", 0, 0, []))
                     return
                 match line_type:
                     case "perv":
-                        pos.append(("".join(word[2] for word in _line[2]), "", 0, "", alpha, rubys))
+                        pos.append((text, len(text), alpha, rubys))
                     case "next":
-                        pos.append(("", "", 0, "".join(word[2] for word in _line[2]), alpha, rubys))
+                        pos.append((text, 0, alpha, rubys))
                     case "current":
-                        before = ""
-                        current: tuple[str, float] | None = ("", 0)
-                        after = ""
+                        current: float = 0.0
 
-                        for i, (start, end, chars) in enumerate(_line[2]):
-
+                        for (start, end, chars) in _line[2]:
                             if end <= self.current_time:
-                                before += chars
-                            elif start < self.current_time < end:
+                                # 已经播放过的歌词字
+                                current += len(chars)
+
+                            if start < self.current_time < end:
                                 # 正在播放的歌词字
                                 kp = (self.current_time - start) / (end - start)
-                                for c_index, char in enumerate(chars, start=1):
+                                for c_index in range(1, len(chars) + 1):
                                     start_kp = (c_index - 1) / len(chars)
                                     end_kp = c_index / len(chars)
-                                    if start_kp < kp < end_kp:
+                                    if start_kp <= kp <= end_kp:
                                         # 正在播放的歌词字
-                                        current = (char, (kp - start_kp) / (end_kp - start_kp))
-                                    elif end_kp <= kp:
-                                        # 已经播放过的歌词字
-                                        before += char
-                                    elif kp <= start_kp:
-                                        # 未播放的歌词字
-                                        after += char
-                                if i + 1 < len(_line[2]):
-                                    after += "".join(w[2] for w in _line[2][i + 1:])
-                                break
-                            else:
-                                after += "".join(w[2] for w in _line[2][i:])
-                                break
+                                        current += (c_index - 1) + ((kp - start_kp) / (end_kp - start_kp))
+                                        break
 
-                        pos.append((before, current[0], current[1], after, alpha, rubys))
+                        pos.append((text, current, alpha, rubys))
 
             for lang in self.config.get("langs", self.default_langs):
                 if lang == "orig":
@@ -791,7 +780,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                             _line = FSLyricsLine((line[0], line[1], [FSLyricsWord((line[0], line[1], _line[2][0][2]))]))  # 翻译同步原文
                         _add(_line)
                     else:
-                        pos.append(("", "", 0, "", 0, []))
+                        pos.append(("", 0, 0, []))
 
         if len(current_lines) == 0:
             # 没有找到当前时间对应的歌词
@@ -839,7 +828,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             for line in current_lines:
                 add(line, "current")
 
-        self.widget.update_lyrics.emit(DesktopLyrics((left, right)))
+        self.widget.update_lyrics.emit(DesktopLyrics([left, right]))
 
     @Slot()
     def update_refresh_rate(self) -> None:

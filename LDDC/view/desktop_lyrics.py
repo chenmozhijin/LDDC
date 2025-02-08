@@ -42,10 +42,9 @@ from LDDC.utils.utils import LimitedSizeDict
 from .msg_box import MsgBox
 from .search import SearchWidgetBase
 
-# 歌词内容: ([(已播放文本, 当前文本, 当前文本已播放比例, 未播放文本, 透明度, [(起始引索, 结束引索, 注音文本)])], [...])
-DesktopLyrics = NewType("DesktopLyrics",
-                        tuple[list[tuple[str, str, float, str, int, list[tuple[int, int, str]]]],
-                              list[tuple[str, str, float, str, int, list[tuple[int, int, str]]]]])
+# 歌词内容: [(文本,当前文本引索(N) + 当前文本已播放比例(0-1), 透明度(0-255), [(起始引索, 结束引索, 注音文本)])]
+DesktopLyric = NewType("DesktopLyric", list[tuple[str, float, int, list[tuple[int, int, str]]]])
+DesktopLyrics = NewType("DesktopLyrics", list[DesktopLyric])
 DRAW_TEXT_FLAGS = Qt.TextFlag.TextSingleLine | Qt.TextFlag.TextWordWrap
 
 
@@ -500,7 +499,7 @@ class DesktopLyricsWidgetBase(QWidget):
 class LyricsText(QWidget):
     """逐字歌词文本显示实现"""
 
-    update_lyrics_signal = Signal(tuple)
+    update_lyrics_signal = Signal(list)
 
     def __init__(self, parent: DesktopLyricsWidgetBase) -> None:
         super().__init__(parent)
@@ -533,8 +532,8 @@ class LyricsText(QWidget):
         self.played_chars_cache = LimitedSizeDict(4)
         self.unplayed_chars_cache = LimitedSizeDict(4)
 
-        self.lyrics = DesktopLyrics(([], []))
-        self.update_lyrics(DesktopLyrics(([("欢迎使用LDDC桌面歌词", "", 0, "", 255, [(0, 12, "Welcome to LDDC Desktop Lyrics")])], [])))
+        self.lyrics = DesktopLyrics([])
+        self.update_lyrics(DesktopLyrics([DesktopLyric([("欢迎使用LDDC桌面歌词", 12, 255, [(0, 12, "Welcome to LDDC Desktop Lyrics")])])]))
 
     def clear_chars_cache(self, font: QFont) -> None:
         for _i in range(2):
@@ -544,7 +543,7 @@ class LyricsText(QWidget):
                 del self.unplayed_chars_cache[font]
             font.setPointSizeF(font.pointSizeF() * 0.6)
 
-    @Slot(tuple)
+    @Slot(list)
     def update_lyrics(self, lyrics: DesktopLyrics) -> None:
         if self.lyrics != lyrics:
             self.lyrics = lyrics
@@ -555,7 +554,7 @@ class LyricsText(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         if self._parent.resizing:
-            h = sum(1.8 if line[5] else 1.1 for lyrics_lines in self.lyrics for line in lyrics_lines)
+            h = sum(1.8 if line[3] else 1.1 for lyrics_lines in self.lyrics for line in lyrics_lines)
             if math.ceil(painter.fontMetrics().height() * h) * 2 != self.height():
                 self.clear_chars_cache(self.text_font)
                 self.text_font.setPointSizeF((72 / painter.fontMetrics().fontDpi()) * (self.height() / h) * 0.8)
@@ -654,8 +653,13 @@ class LyricsText(QWidget):
             return width
 
         for i, lyrics_lines in enumerate(self.lyrics):
-            for played, current_char, ratio, unplayed, alpha, rubys in lyrics_lines:
+            for text, current_index_ratio, alpha, rubys in lyrics_lines:
                 # played: 已经播放过的歌词字, current_char: 正在播放的歌词字, unplayed: 未播放的歌词字
+                current_index = int(current_index_ratio)
+                ratio = current_index_ratio - current_index
+                played = text[:current_index]
+                current_char = text[current_index] if current_index < len(text) else ""
+                unplayed = text[current_index + 1:] if current_index + 1 < len(text) else ""
                 texts_width = font_metrics.horizontalAdvance(played + current_char + unplayed)
 
                 # 计算字符串x坐标
