@@ -130,7 +130,7 @@ old/
 upx/
 *.log
 log/
-lyrics/
+/lyrics/
 output
 report.xml
 result.json

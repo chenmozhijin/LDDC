@@ -1,4 +1,4 @@
-requests
+httpx[http2]
 PySide6-Essentials>=6.8.0
 mutagen
 diskcache

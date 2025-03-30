@@ -3,21 +3,22 @@
 
 import os
 import shutil
+from pathlib import Path
 
 import pytest
 from PySide6.QtCore import QRectF
 from PySide6.QtGui import QImage, QPainter
 
-from LDDC.utils.data import cfg
+from LDDC.common.data.config import cfg
 
-img_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "img")
-tests_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tests")
-test_artifacts_path = os.path.join(tests_path, "artifacts")
-screenshot_path = os.path.join(test_artifacts_path, "screenshots")
+img_path = Path(__file__).parent.parent / "img"
+tests_path = Path(__file__).parent.parent / "tests"
+test_artifacts_path = tests_path / "artifacts"
+screenshot_path = test_artifacts_path / "screenshots"
 
 
 def get_image_path(image_name: str) -> str:
-    return os.path.join(screenshot_path, image_name + ".png")
+    return str(screenshot_path / (image_name + ".png"))
 
 
 def stitch_images_grid(image_names: list[str], rows: int, cols: int) -> QImage:
@@ -58,9 +59,10 @@ orig_lang = cfg["language"]
 for index, lang in enumerate(("zh-Hans", "zh-Hant", "en", "ja"), start=1):
     cfg["language"] = lang
     pytest.main(["--not-clear-cache"])
-    if os.path.exists(os.path.join(tests_path, "screenshots", lang)):
-        shutil.rmtree(os.path.join(tests_path, "screenshots", lang))
-    shutil.copytree(os.path.join(screenshot_path), os.path.join(tests_path, "screenshots", lang))
+    lang_screenshot_path = tests_path / "screenshots" / lang
+    if lang_screenshot_path.exists():
+        shutil.rmtree(lang_screenshot_path)
+    shutil.copytree(screenshot_path, lang_screenshot_path)
     image1 = stitch_images_grid(["preview_verbatimlrc", "preview_ass",
                                  "preview_linebylinelrc", "preview_srt",
                                  "preview_enhancedlrc", "save_album_lyrics"], 3, 2)
@@ -79,10 +81,10 @@ for index, lang in enumerate(("zh-Hans", "zh-Hant", "en", "ja"), start=1):
     painter.drawImage(0, open_lyrics_krc.height(), open_lyrics_qrc)
     painter.end()
 
-    image1.save(os.path.join(img_path, f"{lang}_1.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
-    image2.save(os.path.join(img_path, f"{lang}_2.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
-    QImage(get_image_path("local_match_finish_FORMAT_ONLY_FILE_MIRROR")).save(os.path.join(img_path, f"{lang}_3.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
+    image1.save(str(img_path / f"{lang}_1.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
+    image2.save(str(img_path / f"{lang}_2.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
+    QImage(get_image_path("local_match_finish_FORMAT_ONLY_FILE_MIRROR")).save(str(img_path / f"{lang}_3.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
 
-    from LDDC.view.main_window import main_window
+    from LDDC.gui.view.main_window import main_window
     main_window.settings_widget.language_comboBox.setCurrentIndex(index + 1)
 cfg["language"] = orig_lang

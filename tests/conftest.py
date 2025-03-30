@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-import os
 import shutil
 import sys
 import threading
@@ -12,10 +11,10 @@ from typing import Any
 import pytest
 from PySide6.QtCore import QCoreApplication, QRunnable, QThread
 
+from LDDC.common.data.cache import cache
+from LDDC.common.logger import logger
+from LDDC.common.thread import threadpool
 from LDDC.res import resource_rc
-from LDDC.utils.cache import cache
-from LDDC.utils.logger import logger
-from LDDC.utils.thread import threadpool
 
 from .helper import screenshot_path, test_artifacts_path, tmp_dir_root, tmp_dirs
 
@@ -26,11 +25,11 @@ def init(request: pytest.FixtureRequest) -> Generator[None, Any, None]:
     if request.config.getoption("clear_cache"):
         cache.clear()
 
-    if os.path.exists(test_artifacts_path):
+    if test_artifacts_path.exists():
         shutil.rmtree(test_artifacts_path)
-    os.makedirs(test_artifacts_path)
-    os.makedirs(screenshot_path)
-    os.makedirs(tmp_dir_root)
+    test_artifacts_path.mkdir()
+    screenshot_path.mkdir()
+    tmp_dir_root.mkdir()
 
     resource_rc.qInitResources()
 
