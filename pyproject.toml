@@ -61,7 +61,7 @@ include = ["LDDC/**"]
 exclude = ["*.ui", "*.qrc", "LDDC/res/img", "LDDC/res/i18n"]
 
 [tool.hatch.version]
-path = "LDDC/utils/version.py"
+path = "LDDC/common/version.py"
 
 [tool.ruff]
 target-version = "py310"
