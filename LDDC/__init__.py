@@ -7,4 +7,4 @@ __author__ = "沉默の金"
 __license__ = "GPL-3.0-only"
 __copyright__ = "Copyright (C) 2024 沉默の金 <cmzj@cmzj.org>"
 
-__all__ = ["__author__", "__copyright__", "__license__", "__version__", "get_lyrics", "get_lyricslist", "search"]
+__all__ = ["__author__", "__copyright__", "__license__", "__version__"]
