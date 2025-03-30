@@ -3,7 +3,7 @@ name = "LDDC"
 dynamic = ["version"]
 dependencies = [
     "PySide6-Essentials>=6.8.0",
-    "httpxhttpx[http2]",
+    "httpx[http2]",
     "mutagen",
     "diskcache",
     "charset-normalizer",
