@@ -656,9 +656,10 @@ class DesktopLyricsInstance(ServiceInstanceBase):
     def set_inst(self) -> None:
         """设置纯音乐时显示的字"""
         if self.song_info:
-            self.config["inst"] = True
             self.widget.new_lyrics.emit({"inst": True})
             self.unlink_lyrics(QCoreApplication.translate("DesktopLyrics", "纯音乐，请欣赏"))
+            self.config["inst"] = True
+            self.update_db_data()
 
     @Slot(bool)
     @Slot()
