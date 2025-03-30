@@ -100,7 +100,9 @@ class SongInfo(InfoBase):
             id=info["id"] if "id" in info and isinstance(info["id"], str) else None,
             mid=info["mid"] if "mid" in info and isinstance(info["mid"], str) else None,
             hash=info["hash"] if "hash" in info and isinstance(info["hash"], str) else None,
-            path=(info["path"] if isinstance(info["path"], Path) else Path(info["path"].removeprefix("file://"))) if "path" in info and isinstance(info["path"], str | Path) else None,
+            path=(info["path"] if isinstance(info["path"], Path) else Path(info["path"].removeprefix("file://")))
+            if "path" in info and isinstance(info["path"], str | Path)
+            else None,
             from_cue=info["from_cue"] if "from_cue" in info and isinstance(info["from_cue"], bool) else False,
             language=get_enum(Language, info["language"]) if "language" in info and isinstance(info["language"], str) else None,
         )
@@ -212,9 +214,6 @@ class APIResultList(Sequence[A]):
         if isinstance(ranges, Mapping):
             return dict(ranges)
 
-        if not sources:
-            msg = "传入元组类型范围但未提供有效数据源"
-            raise ValueError(msg)
         if len(sources) > 1:
             msg = "有多个数据源，但只提供了一个范围元组"
             raise ValueError(msg)
