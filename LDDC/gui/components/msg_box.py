@@ -105,7 +105,7 @@ class MsgBox(QObject):
         :param msg: 消息
         """
         title = title if title else QCoreApplication.translate("MsgBox", "错误")
-        MsgBox.critical(parent, title, "".join(f"{f'{msg}\n' if msg else ''}{e.__class__.__name__}: {e!s}" for e in (e,) if e))
+        MsgBox.critical(parent, title, "".join((f"{msg}\n" if msg else "") + f"{e.__class__.__name__}: {e!s}" for e in (e,) if e))
 
     @staticmethod
     def get_error_slot(parent: QWidget | None, title: str | None = None, msg: str = "") -> Callable[[Exception], None]:
