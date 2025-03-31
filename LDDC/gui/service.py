@@ -463,6 +463,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         """处理客户端发送的任务"""
         # 同步播放时间
         if isinstance((playback_time := task.get("playback_time")), int):  # 单位为毫秒
+            delay = 0
             if isinstance((send_time := task.get("send_time")), float):  # 单位为秒
                 delay = (time.time() - send_time) * 1000
 
@@ -502,7 +503,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                 self.song_info = SongInfo.from_dict(
                     {
                         **{k: v for k, v in song_info.items() if k in ("title", "artist", "album", "duration", "path") if v is not None},
-                        "id": str(song_info["track"]),
+                        "id": str(song_info["track"]) if song_info["track"] is not None else None,
                         "source": Source.Local,
                     },
                 )
