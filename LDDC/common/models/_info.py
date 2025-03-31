@@ -87,7 +87,7 @@ class SongInfo(InfoBase):
         return {k: v for k, v in asdict(self).items() if v is not None}
 
     @classmethod
-    def from_dict(cls, info: dict[str, str | int | Iterable[str] | Language | Source]) -> "SongInfo":
+    def from_dict(cls, info: dict[str, str | int | Iterable[str] | Language | Source | None]) -> "SongInfo":
         if isinstance(info["source"], Source):
             Source(info["source"])
         return cls(
@@ -147,7 +147,7 @@ class LyricInfo(InfoBase):
         return {k: v for k, v in asdict(self).items() if v is not None}
 
     @classmethod
-    def from_dict(cls, info: dict[str, str | int | bool | SongInfo | bytearray | bytes | dict | frozenset[str] | Language | Source]) -> "LyricInfo":
+    def from_dict(cls, info: dict[str, str | int | bool | SongInfo | bytearray | bytes | dict | frozenset[str] | Language | Source | None]) -> "LyricInfo":
         if "songinfo" not in info:
             songinfo = SongInfo.from_dict(info)  # type: ignore[]
         elif isinstance(info["songinfo"], (SongInfo, dict)):
@@ -222,7 +222,7 @@ class APIResultList(Sequence[A]):
     def _create_ordered_items(self, items: Iterable[A]) -> tuple[A, ...]:
         """预先生成交叉排序的元组"""
         if not self._source_ranges:
-            return self._items
+            return ()
 
         groups: dict[Source, list[A]] = {}
         for item in items:
