@@ -3,7 +3,7 @@
 import argparse
 import time
 
-from LDDC.utils.version import __version__, parse_version
+from LDDC.common.version import __version__, parse_version
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--task', choices=['get_version', 'get_year', 'get_num_version', 'get_qt_translations_path'], required=True)
