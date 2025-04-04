@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 import datetime
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from itertools import zip_longest
@@ -224,12 +224,18 @@ class APIResultList(Sequence[A]):
         if not self._source_ranges:
             return ()
 
-        groups: dict[Source, list[A]] = {}
+        groups: dict[Source, list[A]] = defaultdict(list)
         for item in items:
-            groups.setdefault(item.source, []).append(item)
+            groups[item.source].append(item)
 
-        ordered_groups = (groups.get(source, []) for source in self._source_ranges)
-        return tuple(item for group in zip_longest(*ordered_groups) for item in group if item is not None)
+        valid_sources = [source for source in Source.__members__.values() if source in groups]
+
+        return tuple(
+            item
+            for group in zip_longest(*(groups[source] for source in valid_sources))
+            for item in group
+            if item is not None
+        )
 
     def _validate_ranges(self) -> None:
         total_in_ranges = sum(end - start + 1 for start, end, _ in self._source_ranges.values())
