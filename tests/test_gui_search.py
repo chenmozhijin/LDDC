@@ -113,8 +113,11 @@ def test_save_to_tag(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_lyrics_langs(qtbot: QtBot) -> None:
     from LDDC.gui.view.main_window import main_window
 
+    assert main_window.search_widget.lyrics
+    support_langs = main_window.search_widget.lyrics.types.keys()
+
     def change_langs(langs: list[str]) -> None:
-        if set(main_window.search_widget.langs) != set(langs):
+        if {lang for lang in main_window.search_widget.langs if lang in support_langs} != {lang for lang in langs if lang in support_langs}:
             orig_text = main_window.search_widget.preview_plainTextEdit.toPlainText()
 
             if "orig" in langs:
@@ -176,11 +179,11 @@ def test_preview_enhanced_lrc(qtbot: QtBot) -> None:
 
 
 def test_preview_srt(qtbot: QtBot) -> None:
-    assert change_preview_format(qtbot, LyricsFormat.SRT) != ""
+    verify_lyrics(change_preview_format(qtbot, LyricsFormat.SRT))
 
 
 def test_preview_ass(qtbot: QtBot) -> None:
-    assert change_preview_format(qtbot, LyricsFormat.ASS) != ""
+    verify_lyrics(change_preview_format(qtbot, LyricsFormat.ASS))
 
 
 def test_preview_verbatimlrc(qtbot: QtBot) -> None:
@@ -231,4 +234,4 @@ def test_save_album_lyrics(qtbot: QtBot) -> None:
     main_window.search_widget.save_path_lineEdit.setText(orig_path)
 
     get_list_lyrics_box.close()
-    assert (test_artifacts_path/"lyrics"/"search album").iterdir()
+    assert (test_artifacts_path / "lyrics" / "search album").iterdir()

@@ -51,8 +51,7 @@ def test_gui_open_lyrics(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
         qtbot.wait(40)
         for lyrics_format in [LyricsFormat.VERBATIMLRC, LyricsFormat.LINEBYLINELRC, LyricsFormat.ENHANCEDLRC, LyricsFormat.ASS, LyricsFormat.SRT]:
             change_preview_format(qtbot, lyrics_format)
-            if lyrics_format in [LyricsFormat.VERBATIMLRC, LyricsFormat.LINEBYLINELRC, LyricsFormat.ENHANCEDLRC]:
-                verify_lyrics(main_window.open_lyrics_widget.plainTextEdit.toPlainText())
+            verify_lyrics(main_window.open_lyrics_widget.plainTextEdit.toPlainText())
             qtbot.wait(40)
             grab(main_window, screenshot_path/f"open_lyrics_{file_format}_{lyrics_format.name.lower()}")
         qtbot.wait(150)
