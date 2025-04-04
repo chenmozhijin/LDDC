@@ -6,7 +6,7 @@ from typing import Literal, overload
 
 from PySide6.QtCore import QEventLoop, QTimer
 
-from LDDC.common.exceptions import AutoFetchUnknownError, LyricsNotFoundError, NotEnoughInfoError
+from LDDC.common.exceptions import AutoFetchUnknownError, LDDCError, LyricsNotFoundError, NotEnoughInfoError
 from LDDC.common.logger import logger
 from LDDC.common.models import APIResultList, Language, LyricInfo, Lyrics, LyricsType, SearchInfo, SearchType, SongInfo, Source
 from LDDC.common.task_manager import TaskManager
@@ -188,6 +188,12 @@ def auto_fetch(
             if not [error for error in errors if not isinstance(error, LyricsNotFoundError)]:
                 msg = "没有找到符合要求的歌曲"
                 raise LyricsNotFoundError(msg)
+            from httpx import HTTPError
+
+            if not [error for error in errors if not isinstance(error, ConnectionError | HTTPError)]:
+                errors_str = "\n".join(f"{e.__class__.__name__}: {e!s}" for e in errors)
+                msg = f"网络错误: {errors_str}"
+                raise LDDCError(msg)
             msg = "自动获取时发生未知错误"
             raise AutoFetchUnknownError(msg, errors)
 

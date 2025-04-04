@@ -56,11 +56,12 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
         self.task_manager = TaskManager(
             parent_childs={
-                "table": ["search", "search_more"],
+                "table": ["search", "search_more", "get_lyricslist", "get_songlist"],
                 "search": [],
                 "search_more": [],
                 "get_lyrics": [],
                 "get_songlist": [],
+                "get_lyricslist": [],
             },
             task_callback={
                 "search": restore_search,

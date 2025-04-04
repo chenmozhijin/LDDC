@@ -195,8 +195,11 @@ def create_collecting_callbacks(
         else:
             state["exceptions"].append(exception)
         state["remaining"] -= 1
-        if state["remaining"] == 0 and state["results"]:
-            callback(reduce(lambda a, b: a + b, state["results"]))
+        if state["remaining"] == 0:
+            if state["results"]:
+                callback(reduce(lambda a, b: a + b, state["results"]))
+            elif state["exceptions"]:
+                callback(state["exceptions"])
 
     return result_collector, error_handler
 

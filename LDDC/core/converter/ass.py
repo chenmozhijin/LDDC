@@ -62,7 +62,7 @@ def ass_converter(lyrics: LyricsBase,
                                                   duration=lyrics.duration * 1000 if lyrics.duration is not None else None,
                                                   only_line=True)
 
-    lyrics_texts = {lang: "" for lang in langs_order[::-1]}
+    lyrics_texts = dict.fromkeys(langs_order[::-1], "")
     for orig_i, orig_line in enumerate(lyrics_orig):
         if orig_line.start is None or orig_line.end is None:
             continue

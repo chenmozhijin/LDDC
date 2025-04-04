@@ -42,7 +42,7 @@ def convert2(lyrics: LyricsBase,
                     json_info[key] = value.name
                 elif isinstance(value, frozenset):
                     json_info[key] = list(value)
-                else:
+                elif value is not None:
                     json_info[key] = value
             return json_info
 
@@ -63,8 +63,6 @@ def convert2(lyrics: LyricsBase,
                                               data3=lyrics_dict.get("orig_lrc"),
                                               source=lyrics.source)
                      for lang in langs_order if lang not in ("orig", "orig_lrc")}
-    if "orig" not in lyrics.types:
-        pass
     if lyrics.types["orig"] == LyricsType.PlainText:
         logger.warning("将纯文本转换为纯文本")
         lyrics_format = LyricsFormat.LINEBYLINELRC
