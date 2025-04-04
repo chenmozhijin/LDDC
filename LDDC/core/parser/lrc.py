@@ -65,7 +65,8 @@ def _lrc2list_data(lrc: str, source: Source | None = None) -> tuple[dict[str, st
 
             if "<" in line_content and ">" in line_content:
                 # 歌词行为增强格式
-                for s_m, s_s, s_ms, word_str, e_m, e_s, e_ms in _ENHANCED_WORD_SPLIT_PATTERN.finditer(line_content):
+                for enhanced_word_parts in _ENHANCED_WORD_SPLIT_PATTERN.finditer(line_content):
+                    s_m, s_s, s_ms, word_str, e_m, e_s, e_ms = enhanced_word_parts.groups()
                     word_start = time2ms(s_m, s_s, s_ms)
                     word_end = time2ms(e_m, e_s, e_ms) if e_m and e_s and e_ms else None
                     end = word_end or end
