@@ -71,13 +71,19 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             try:
                 if data.startswith(QRC_MAGICHEADER):
                     self.lyrics_type = "qrc"
-                    lyrics = qrc_decrypt(data, QrcType.LOCAL)
+                    lyrics_text = qrc_decrypt(data, QrcType.LOCAL)
                 elif data.startswith(KRC_MAGICHEADER):
                     self.lyrics_type = "krc"
-                    lyrics = krc_decrypt(data)
+                    lyrics_text = krc_decrypt(data)
                 elif file_path.suffix == ".lrc":
                     self.lyrics_type = "lrc"
-                    lyrics = read_unknown_encoding_file(file_data=data, sign_word=("[", "]", ":"))
+                    lyrics_text = read_unknown_encoding_file(file_data=data, sign_word=("[", "]", ":"))
+                elif file_path.suffix == ".ass":
+                    self.lyrics_type = "ass"
+                    lyrics_text = read_unknown_encoding_file(file_data=data)
+                elif file_path.suffix == ".srt":
+                    self.lyrics_type = "srt"
+                    lyrics_text = read_unknown_encoding_file(file_data=data)
                 else:
                     MsgBox.warning(self, self.tr("警告"), self.tr("不支持的文件格式！"))
                     return
@@ -87,18 +93,18 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
                 logger.exception("打开失败")
                 MsgBox.critical(self, self.tr("警告"), self.tr("打开失败：") + str(e))
                 return
-            if lyrics is None:
+            if lyrics_text is None:
                 self.lyrics_type = None
                 msg = self.tr("打开失败")
                 MsgBox.critical(self, self.tr("错误"), msg)
                 return
 
-            self.plainTextEdit.setPlainText(lyrics)
+            self.plainTextEdit.setPlainText(lyrics_text)
 
         dialog = QFileDialog(self)
         dialog.setWindowTitle(self.tr("打开本地歌词"))
         dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-        dialog.setNameFilter(self.tr("歌词文件(*.qrc *.krc *.lrc)"))
+        dialog.setNameFilter(self.tr("歌词文件(*.qrc *.krc *.lrc *.ass *.srt)"))
         dialog.fileSelected.connect(file_selected)
         dialog.open()
 

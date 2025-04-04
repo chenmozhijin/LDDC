@@ -14,7 +14,7 @@ import httpx
 from LDDC.common.exceptions import APIRequestError, LyricsNotFoundError
 from LDDC.common.models import APIResultList, Artist, Language, LyricInfo, Lyrics, SearchInfo, SearchType, SongInfo, SongListInfo, SongListType, Source
 from LDDC.core.decryptor import krc_decrypt
-from LDDC.core.parser.krc import krc2dict
+from LDDC.core.parser.krc import krc2mdata
 from LDDC.core.parser.utils import judge_lyrics_type
 
 from .models import CloudAPI
@@ -328,13 +328,13 @@ class KGAPI(CloudAPI):
         data = self.request(url, params, "Lyric")
         # data['contenttype'] == 2 无法解密
         lyrics = Lyrics(info.songinfo)
-        lyrics.tags, lyric = krc2dict(krc_decrypt(b64decode(data["content"])))
+        lyrics.tags, lyric = krc2mdata(krc_decrypt(b64decode(data["content"])))
         lyrics.update(lyric)
         for key, lyric in lyrics.items():
             lyrics.types[key] = judge_lyrics_type(lyric)
         return lyrics
 
-    def get_lyricslist(self, song_info: SongInfo) -> list[LyricInfo]:
+    def get_lyricslist(self, song_info: SongInfo) -> APIResultList[LyricInfo]:
         params = {
             "album_audio_id": song_info.id,
             "duration": song_info.duration,  # 毫秒
@@ -345,7 +345,8 @@ class KGAPI(CloudAPI):
         }
         url = "https://lyrics.kugou.com/v1/search"
         data = self.request(url, params, "Lyric")
-        return [
+        lyrics = data["candidates"]
+        return APIResultList([
             LyricInfo(
                 source=self.source,
                 id=lyric["id"],
@@ -355,5 +356,8 @@ class KGAPI(CloudAPI):
                 score=lyric["score"],
                 songinfo=song_info,
             )
-            for lyric in data["candidates"]
-        ]
+            for lyric in lyrics
+        ],
+        song_info,
+        (0, len(lyrics) - 1, len(lyrics)),
+        )

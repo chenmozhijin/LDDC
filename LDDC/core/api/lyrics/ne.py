@@ -18,9 +18,9 @@ from LDDC.common.logger import logger
 from LDDC.common.models import APIResultList, Artist, LyricInfo, Lyrics, SearchInfo, SearchType, SongInfo, SongListInfo, SongListType, Source
 from LDDC.common.version import __version__
 from LDDC.core.decryptor.eapi import eapi_params_encrypt, eapi_response_decrypt, get_anonimous_username, get_cache_key
-from LDDC.core.parser.lrc import lrc2list
+from LDDC.core.parser.lrc import lrc2data
 from LDDC.core.parser.utils import judge_lyrics_type, plaintext2list
-from LDDC.core.parser.yrc import yrc2list
+from LDDC.core.parser.yrc import yrc2data
 
 from .models import CloudAPI
 
@@ -435,9 +435,9 @@ class NEAPI(CloudAPI):
                 continue
             if isinstance(data[value]["lyric"], str) and len(data[value]["lyric"]) != 0:
                 if value == "yrc":
-                    lyrics[key] = yrc2list(data[value]["lyric"])
+                    lyrics[key] = yrc2data(data[value]["lyric"])
                 elif "[" in data[value]["lyric"] and "]" in data[value]["lyric"]:
-                    lyrics[key] = lrc2list(data[value]["lyric"], source=Source.NE)[1]
+                    lyrics[key] = lrc2data(data[value]["lyric"], source=Source.NE)[1]
                 else:
                     lyrics[key] = plaintext2list(data[value]["lyric"])
                 lyrics.types[key] = judge_lyrics_type(lyrics[key])

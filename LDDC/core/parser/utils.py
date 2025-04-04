@@ -1,10 +1,10 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-from LDDC.common.models import LyricsData, LyricsLine, LyricsType, LyricsWord
+from LDDC.common.models import FSLyricsData, LyricsData, LyricsLine, LyricsType, LyricsWord
 
 
-def judge_lyrics_type(lyrics: LyricsData) -> LyricsType:
+def judge_lyrics_type(lyrics: LyricsData | FSLyricsData) -> LyricsType:
     lyrics_type = LyricsType.PlainText
     for line in lyrics:
         if len(line[2]) > 1:
