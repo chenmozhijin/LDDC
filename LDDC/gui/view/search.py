@@ -259,9 +259,10 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
         self.lyric_langs_lineEdit.setText(self.tr("、").join(lyric_parts))
         self.songid_lineEdit.setText(str(self.lyrics.id) if self.lyrics.id is not None else "")
-        self.preview_plainTextEdit.setPlainText(
-            self.lyrics.to(LyricsFormat(self.lyricsformat_comboBox.currentIndex()), self.langs, self.offset_spinBox.value()),
-        )
+        if (
+            lyrics_text := self.lyrics.to(LyricsFormat(self.lyricsformat_comboBox.currentIndex()), self.langs, self.offset_spinBox.value())
+        ) and lyrics_text != self.preview_plainTextEdit.toPlainText():
+            self.preview_plainTextEdit.setPlainText(lyrics_text)
 
     def check_return(self) -> bool:
         if len(self.path) > 1:

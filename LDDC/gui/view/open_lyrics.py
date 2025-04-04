@@ -10,7 +10,6 @@ from LDDC.common.logger import logger
 from LDDC.common.models import Lyrics, LyricsFormat, QrcType
 from LDDC.common.utils import read_unknown_encoding_file
 from LDDC.core.api.lyrics import get_lyrics
-from LDDC.core.converter import convert2
 from LDDC.core.decryptor import krc_decrypt, qrc_decrypt
 from LDDC.core.parser.krc import KRC_MAGICHEADER
 from LDDC.core.parser.qrc import QRC_MAGICHEADER
@@ -32,9 +31,9 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         self.convert_pushButton.clicked.connect(self.convert)
         self.save_pushButton.clicked.connect(self.save)
 
-        self.translate_checkBox.stateChanged.connect(self.change_lyrics_type)
-        self.romanized_checkBox.stateChanged.connect(self.change_lyrics_type)
-        self.original_checkBox.stateChanged.connect(self.change_lyrics_type)
+        self.translate_checkBox.stateChanged.connect(self.update_lyrics)
+        self.romanized_checkBox.stateChanged.connect(self.update_lyrics)
+        self.original_checkBox.stateChanged.connect(self.update_lyrics)
 
         self.lyricsformat_comboBox.currentIndexChanged.connect(self.update_lyrics)
         self.offset_spinBox.valueChanged.connect(self.update_lyrics)
@@ -120,29 +119,24 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         try:
             self.lyrics = get_lyrics(path=self.path, data=self.data)
 
-            langs_order = [lang for lang in cfg["langs_order"] if lang in self.langs]
-            lrc = convert2(self.lyrics, langs_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value())
+            lyrics_text = self.lyrics.to(
+                lyrics_format=LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
+                langs=self.langs,
+                offset=self.offset_spinBox.value(),
+            )
         except Exception as e:
             logger.exception("转换失败")
             MsgBox.critical(self, self.tr("错误"), self.tr("转换失败：") + str(e))
             return
-        self.plainTextEdit.setPlainText(lrc)
+        self.plainTextEdit.setPlainText(lyrics_text)
         self.lyrics_type = "converted"
 
     @Slot()
     def update_lyrics(self) -> None:
-        if not (self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics)):
-            return
-
-        langs_order = [lang for lang in cfg["langs_order"] if lang in self.langs]
-        self.plainTextEdit.setPlainText(
-            convert2(self.lyrics, langs_order, LyricsFormat(self.lyricsformat_comboBox.currentIndex()), offset=self.offset_spinBox.value()),
-        )
-
-    @Slot()
-    def change_lyrics_type(self) -> None:
-        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics):
-            self.update_lyrics()
+        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics) and (
+            lyrics_text := self.lyrics.to(LyricsFormat(self.lyricsformat_comboBox.currentIndex()), self.langs, self.offset_spinBox.value())
+        ) and lyrics_text != self.plainTextEdit.toPlainText():
+            self.plainTextEdit.setPlainText(lyrics_text)
 
     @Slot()
     def save(self) -> None:
