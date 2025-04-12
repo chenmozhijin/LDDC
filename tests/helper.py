@@ -11,7 +11,6 @@ from mutagen.id3 import ID3, USLT  # type: ignore[reportPrivateImportUsage]
 from pydub import AudioSegment
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 
-from LDDC.common.models import LyricInfo, SongInfo, Source
 from LDDC.core.api.lyrics import get_lyrics
 
 tmp_dirs: list[TemporaryDirectory] = []

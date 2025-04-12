@@ -37,7 +37,7 @@ from LDDC.common.args import args
 from LDDC.common.data.config import cfg
 from LDDC.common.data.local_song_lyrics_db import local_song_lyrics
 from LDDC.common.logger import DEBUG, logger
-from LDDC.common.models import FSLyrics, FSLyricsLine, FSLyricsWord, LyricInfo, Lyrics, LyricsFormat, LyricsType, SongInfo, Source
+from LDDC.common.models import FSLyrics, FSLyricsLine, FSLyricsWord, Lyrics, LyricsFormat, LyricsType, SongInfo, Source
 from LDDC.common.path_processor import escape_filename
 from LDDC.common.paths import auto_save_dir, command_line
 from LDDC.common.task_manager import TaskManager

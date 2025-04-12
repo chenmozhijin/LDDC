@@ -32,7 +32,7 @@ from PySide6.QtWidgets import QFileDialog, QLabel, QMenu, QPushButton, QSizePoli
 
 from LDDC.common.data.config import cfg
 from LDDC.common.logger import logger
-from LDDC.common.models import Direction, LyricInfo, Lyrics, LyricsType, SongInfo, Source
+from LDDC.common.models import Direction, Lyrics, LyricsType, Source
 from LDDC.common.thread import cross_thread_func
 from LDDC.common.utils import LimitedSizeDict
 from LDDC.core.api.lyrics import get_lyrics
