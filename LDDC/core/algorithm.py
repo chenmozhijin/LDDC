@@ -3,8 +3,9 @@
 import re
 from collections.abc import Sequence
 from difflib import SequenceMatcher
+from typing import Literal
 
-from LDDC.common.models import FSLyricsLine, LyricsLine, Source
+from LDDC.common.models import Direction, FSLyricsData, FSLyricsLine, LyricsLine, Source
 
 symbol_map = {
     "（": "(",
@@ -395,3 +396,75 @@ def find_closest_match(
                 break
 
     return matched
+
+
+def assign_lyrics_positions(lines: FSLyricsData) -> dict[tuple[Literal[Direction.RIGHT, Direction.LEFT], int], list[tuple[int, FSLyricsLine]]]:
+    """根据时间重叠情况为歌词行分配显示位置(侧边/轨道)
+
+    Args:
+        lines: FSLyricsData对象
+
+    Returns:
+       一个字典,键为(侧边/轨道, 索引),值为该位置对应的(歌词行索引, 歌词行对象)的列表(按开始时间排序)
+
+    """
+    if not lines:
+        return {}
+
+    sorted_index_lines = sorted(enumerate(lines), key=lambda x: x[1].start) # 按开始时间排序
+    results: dict[tuple[Literal[Direction.RIGHT, Direction.LEFT], int], list[tuple[int, FSLyricsLine]]] = {}  # 结果字典
+
+    active_slots: list[tuple[int, Literal[Direction.RIGHT, Direction.LEFT], int]] = []  # 当前正在显示的歌词槽位列表(结束时间, 侧边, 轨道)
+    last_assigned_track1_side = Direction.RIGHT # 记录非重叠情况下Track 1最后分配的侧边, 初始化为Direction.RIGHT使得第一条歌词分配到Direction.LEFT
+
+    for index, current_line in sorted_index_lines:
+
+        active_slots = [slot for slot in active_slots if slot[0] > current_line.start] # 清理已结束的歌词行, 只保留结束时间晚于当前行开始时间的槽位
+        occupied_now: set[tuple[Literal[Direction.RIGHT, Direction.LEFT], int]] = {(slot[1], slot[2]) for slot in active_slots}  # 获取当前被占用的槽位
+
+        assigned_position: tuple[Literal[Direction.RIGHT, Direction.LEFT], int]  # 当前行分配的位置
+
+        # 确定分配位置
+        if not occupied_now:
+            # 情况1:与任何活动行无重叠
+            assigned_track = 1
+            # 在Track 1上交替分配侧边
+            assigned_side = Direction.LEFT if last_assigned_track1_side == Direction.RIGHT else Direction.RIGHT
+            last_assigned_track1_side = assigned_side  # 更新交替状态
+            assigned_position = (assigned_side, assigned_track)
+        else:
+            # 情况2:存在重叠
+            assigned_track = 1
+            while True:
+                # 尝试当前轨道的右侧
+                right_slot = (Direction.RIGHT, assigned_track)
+                if right_slot not in occupied_now:
+                    assigned_side = Direction.RIGHT
+                    assigned_position = (assigned_side, assigned_track)
+                    # 如果分配到Track 1,更新最后分配的侧边状态
+                    if assigned_track == 1:
+                        last_assigned_track1_side = assigned_side
+                    break  # 找到可用槽位
+
+                # 尝试当前轨道的左侧
+                left_slot = (Direction.LEFT, assigned_track)
+                if left_slot not in occupied_now:
+                    assigned_side = Direction.LEFT
+                    assigned_position = (assigned_side, assigned_track)
+                    # 如果分配到Track 1,更新最后分配的侧边状态
+                    if assigned_track == 1:
+                        last_assigned_track1_side = assigned_side
+                    break  # 找到可用槽位
+
+                # 当前轨道两侧都已占用,尝试下一个轨道
+                assigned_track += 1
+
+        # 记录分配结果
+        if assigned_position not in results:
+            results[assigned_position] = []
+        results[assigned_position].append((index, current_line))
+        # 将当前行加入活动槽位
+        active_slots.append((current_line.end, assigned_position[0], assigned_position[1]))
+    return results
+
+

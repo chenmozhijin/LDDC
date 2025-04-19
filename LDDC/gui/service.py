@@ -7,7 +7,6 @@ import subprocess
 import sys
 import time
 from abc import abstractmethod
-from collections import deque
 from copy import deepcopy
 from pathlib import Path
 from random import SystemRandom
@@ -37,17 +36,26 @@ from LDDC.common.args import args
 from LDDC.common.data.config import cfg
 from LDDC.common.data.local_song_lyrics_db import local_song_lyrics
 from LDDC.common.logger import DEBUG, logger
-from LDDC.common.models import FSLyrics, FSLyricsLine, FSLyricsWord, Lyrics, LyricsFormat, LyricsType, SongInfo, Source
+from LDDC.common.models import (
+    FSLyricsData,
+    FSLyricsLine,
+    FSLyricsWord,
+    Lyrics,
+    LyricsFormat,
+    LyricsType,
+    SongInfo,
+    Source,
+)
 from LDDC.common.path_processor import escape_filename
 from LDDC.common.paths import auto_save_dir, command_line
 from LDDC.common.task_manager import TaskManager
 from LDDC.common.thread import cross_thread_func, in_main_thread, in_other_thread
 from LDDC.common.utils import has_content
-from LDDC.core.algorithm import find_closest_match
+from LDDC.core.algorithm import assign_lyrics_positions, find_closest_match
 from LDDC.core.api.lyrics import get_lyrics
 from LDDC.core.auto_fetch import auto_fetch
 from LDDC.core.converter import convert2
-from LDDC.gui.view.desktop_lyrics import DesktopLyric, DesktopLyrics, DesktopLyricsWidget
+from LDDC.gui.view.desktop_lyrics import DesktopLyric, DesktopLyrics, DesktopLyricsWidget, Direction
 from LDDC.gui.view.update import check_update
 
 random = SystemRandom()
@@ -414,8 +422,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
             self.current_time = 0.0  # 当前已播放时间,单位:毫秒
         self.lyrics: None | Lyrics = None
         self.lyrics_path: None | Path = None
-        self.offseted_lyrics: None | FSLyrics = None
         self.song_info: SongInfo | None = None  # 歌曲信息
+        self.assigned_lyrics_datas: dict[tuple[Literal[Direction.RIGHT, Direction.LEFT], int], list[tuple[int, FSLyricsLine]]] | None = None
         self.config = {}
 
     @Slot(bool)
@@ -638,19 +646,43 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
     def set_lyrics(self, lyrics: Lyrics) -> None:
         self.widget.new_lyrics.emit({"type": lyrics.types.get("orig"), "source": lyrics.info.source, "inst": False})
-        self.lyrics, copied_lyrics = lyrics, deepcopy(lyrics)
-        self.offseted_lyrics = copied_lyrics.get_fslyrics(self.song_info.duration if self.song_info else None)
-        self.offseted_lyrics.set_data(self.offseted_lyrics.add_offset(self.config.get("offset", 0)))
+        self.lyrics = lyrics
+
+        self.duration = self.song_info.duration if self.song_info and self.song_info.duration else lyrics.get_duration()
+
+        if not lyrics:
+            self.assigned_lyrics_datas = None
+            self.lyrics_mapping = None
+            self.to_select(True)
+            return
+
+        offseted_lyrics = deepcopy(lyrics).get_fslyrics(self.song_info.duration if self.song_info else None)
+        mulyrics_data = offseted_lyrics.add_offset(self.config.get("offset", 0))
+        mulyrics_data["orig"] = FSLyricsData(
+            [
+                line
+                if not line.words or (line.words[0].start == line.start and line.words[-1].end == line.end)
+                else FSLyricsLine(line.words[0].start, line.words[-1].end, line.words)
+                for line in mulyrics_data["orig"]
+            ],
+        )
+
         self.lyrics_mapping = {
-            lang: find_closest_match(
-                data1=self.offseted_lyrics["orig"],
-                data2=self.offseted_lyrics[lang],
-                data3=self.offseted_lyrics.get("orig_lrc"),
-                source=lyrics.info.source,
-            )
-            for lang in self.offseted_lyrics
+            lang: {
+                orig_index: mulyrics_data[lang][index]
+                for orig_index, index in find_closest_match(
+                    data1=mulyrics_data["orig"],
+                    data2=mulyrics_data[lang],
+                    data3=mulyrics_data.get("orig_lrc"),
+                    source=lyrics.info.source,
+                ).items()
+            }
+            for lang in mulyrics_data
             if lang not in ("orig", "orig_lrc")
         }
+
+        self.assigned_lyrics_datas = assign_lyrics_positions(mulyrics_data["orig"])
+
         self.to_select(True)
 
     @Slot()
@@ -710,148 +742,125 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.widget.update_lyrics.emit(DesktopLyrics([DesktopLyric([(artist_title, len(artist_title), 255, [])]), DesktopLyric([(msg, len(msg), 255, [])])]))
 
     @Slot()
-    def update_lyrics(self) -> None:  # noqa: C901, PLR0915
+    def update_lyrics(self) -> None:
         # 更新界面的歌词,给Gui线程发送self.widget.update_lyrics信号
-        if self.offseted_lyrics is None or "orig" not in self.offseted_lyrics:
+        if self.assigned_lyrics_datas is None or self.lyrics_mapping is None:
             return
-
-        orig = self.offseted_lyrics["orig"]
-        duration = self.song_info.duration if self.song_info and self.song_info.duration else self.offseted_lyrics.get_duration()
-
         # 计算当前时间
         self.current_time = int(time.time() * 1000) - self.start_time
-
-        perv_lines: deque[tuple[int, FSLyricsLine]] = deque(maxlen=2)
-        current_lines: list[tuple[int, FSLyricsLine]] = []  # 支持同时多行
-        next_lines: deque[tuple[int, FSLyricsLine]] = deque(maxlen=2)
 
         right: DesktopLyric = DesktopLyric([])
         left: DesktopLyric = DesktopLyric([])
 
-        # 计算当前时间对应的歌词
-        for index, (start, end, words) in enumerate(orig):
-            if words:
-                start = words[0][0]  # noqa: PLW2901
-                end = words[-1][1]  # noqa: PLW2901
-            if end < self.current_time:
-                perv_lines.append((index, FSLyricsLine(start, end, words)))
-            elif start <= self.current_time <= end:
-                current_lines.append((index, FSLyricsLine(start, end, words)))
-            elif self.current_time < start and len(next_lines) < 2:
-                next_lines.append((index, FSLyricsLine(start, end, words)))
+        for position in sorted(self.assigned_lyrics_datas, key=lambda x: x[1]):
+            desktop_lyric = left if position[0] == Direction.LEFT else right
+            perv_line, current_line, next_line = None, None, None
+            perv_index, current_index, next_index = None, None, None
+            for index, other_line in self.assigned_lyrics_datas[position]:
+                if other_line.end < self.current_time:
+                    perv_line, perv_index = other_line, index
+                elif other_line.start <= self.current_time <= other_line.end:
+                    current_line, current_index = other_line, index
+                elif other_line.start > self.current_time:
+                    next_line, next_index = other_line, index
+                    break
 
-        def add(index_line: tuple[int, FSLyricsLine], line_type: Literal["perv", "current", "next"]) -> None:
-            i, line = index_line
-            alpha = 255  # 透明度
-            pos = right if i % 2 else left
-            match line_type:
-                case "perv":  # 已经播放过的行 -> 淡出
-                    # 本行与下一个在此位置显示的行的时间间隔
-                    interval = abs((orig[i + 2][2][0][0] if orig[i + 2][2] else orig[i + 2][0]) - line[1]) if i + 2 < len(orig) else abs(duration - line[1])
-                    if interval == 0:
-                        pass
-                    else:
-                        alpha = 255 * (0.5 - abs(self.current_time - line[1]) / interval) * 2
+            # 确定要显示的歌词行
+            if current_line:
+                orig_line, orig_index = current_line, current_index
+            elif perv_line and next_line:
+                # 决定显示上一行还是下一行
+                if abs(perv_line.end - self.current_time) < abs(next_line.start - self.current_time):
+                    orig_line, orig_index = perv_line, perv_index
+                else:
+                    orig_line, orig_index = next_line, next_index
+                interval = (next_line.start - perv_line.end) // 2
+            elif perv_line:
+                orig_line, orig_index = perv_line, perv_index
+                interval = self.duration - perv_line.end
+            elif next_line:
+                orig_line, orig_index = next_line, next_index
+                interval = next_line.start
+            else:
+                continue
 
-                case "next":  # 未播放过的行 -> 淡入
-                    # 本行与上一个在此位置显示的行的时间间隔
-                    interval = abs(line[0] - (orig[i - 2][2][-1][1] if orig[i - 2][2] else orig[i - 2][1])) if i - 2 >= 0 else abs(line[0])
-                    alpha = 0 if interval == 0 else 255 * (0.5 - abs(line[0] - self.current_time) / interval) * 2
+            if orig_index is None:
+                msg = f"未知的歌词行: {orig_line}"
+                raise ValueError(msg)
 
+            # 计算透明度(淡入淡出效果)
+            max_fade_time = 10000  # 第一行以外淡入淡出最长时间为10000ms
+            if orig_line is current_line:
+                alpha = 255
+            elif orig_line is perv_line:  # 淡出
+                fade_time, interval = (
+                    (min(self.current_time - orig_line.end, 10000), min(interval, max_fade_time))
+                    if position[1] != 0
+                    else (self.current_time - orig_line.end, interval)
+                )
+                alpha = 255 - int((fade_time / interval) * 255) if interval != 0 else 255
+            elif orig_line is next_line:  # 淡入
+                fade_time, interval = (
+                    (min(orig_line.start - self.current_time, 10000), min(interval, max_fade_time))
+                    if position[1] != 0
+                    else (orig_line.start - self.current_time, interval)
+                )
+                alpha = 255 - int((fade_time / interval) * 255) if interval != 0 else 255
+            else:
+                msg = f"未知的歌词行: {orig_line}"
+                raise ValueError(msg)
             alpha = int(min(max(alpha, 0), 255))  # 透明度限制在0-255
 
-            def _add(_line: FSLyricsLine, rubys: list | None = None) -> None:
-                if not rubys:
-                    rubys = []
-                text = "".join(word.text for word in _line.words)
+            for lang in self.config.get("langs", self.default_langs):
+                # 遍历所有语言的歌词行
+                if lang == "orig":
+                    display_line = orig_line
+                elif lang in self.lyrics_mapping and (other_line := self.lyrics_mapping[lang].get(orig_index)):
+                    if lang == "ts" and len(other_line.words) == 1:
+                        other_line = FSLyricsLine(
+                            orig_line.start,
+                            orig_line.end,
+                            [FSLyricsWord(orig_line.start, orig_line.end, other_line.words[0].text)],
+                        )  # 翻译同步原文
+                    display_line = other_line
+                else:
+                    continue
+
+
+                text = "".join(word.text for word in display_line.words)  # 获取当前行歌词文本
+                rubys = []
+
+                # 添加歌词行
                 if not has_content(text):
                     # 没有内容
-                    pos.append(("", 0, 0, []))
-                    return
-                match line_type:
-                    case "perv":
-                        pos.append((text, len(text), alpha, rubys))
-                    case "next":
-                        pos.append((text, 0, alpha, rubys))
-                    case "current":
-                        current: float = 0.0
+                    desktop_lyric.append(("", 0, 0, []))
+                elif orig_line is perv_line:
+                    # 上一行歌词,淡出效果
+                    desktop_lyric.append((text, len(text), alpha, rubys))
+                elif orig_line is next_line:
+                    # 下一行歌词,淡入效果
+                    desktop_lyric.append((text, 0, alpha, rubys))
+                elif orig_line is current_line:
+                    # 当前行歌词,淡入淡出效果
+                    current: float = 0.0
 
-                        for start, end, chars in _line[2]:
-                            if end <= self.current_time:
-                                # 已经播放过的歌词字
-                                current += len(chars)
+                    for start, end, chars in display_line.words:
+                        if end <= self.current_time:
+                            # 已经播放过的歌词字
+                            current += len(chars)
 
-                            if start < self.current_time < end:
-                                # 正在播放的歌词字
-                                kp = (self.current_time - start) / (end - start)
-                                for c_index in range(1, len(chars) + 1):
-                                    start_kp = (c_index - 1) / len(chars)
-                                    end_kp = c_index / len(chars)
-                                    if start_kp <= kp <= end_kp:
-                                        # 正在播放的歌词字
-                                        current += (c_index - 1) + ((kp - start_kp) / (end_kp - start_kp))
-                                        break
+                        if start < self.current_time < end:
+                            # 正在播放的歌词字
+                            kp = (self.current_time - start) / (end - start)
+                            for c_index in range(1, len(chars) + 1):
+                                start_kp = (c_index - 1) / len(chars)
+                                end_kp = c_index / len(chars)
+                                if start_kp <= kp <= end_kp:
+                                    # 正在播放的歌词字
+                                    current += (c_index - 1) + ((kp - start_kp) / (end_kp - start_kp))
+                                    break
 
-                        pos.append((text, current, alpha, rubys))
-
-            for lang in self.config.get("langs", self.default_langs):
-                if lang == "orig":
-                    _add(line, [])
-                elif lang in self.lyrics_mapping:
-                    index = self.lyrics_mapping[lang].get(i)
-                    if index is not None:
-                        _line = self.offseted_lyrics[lang][index]  # type: ignore[reportOptionalSubscript]  不是生成器函数self.offseted_lyrics != None
-                        if lang == "ts" and len(_line[2]) == 1:
-                            _line = FSLyricsLine(line.start, line.end, [FSLyricsWord(line.start, line.end, _line.words[0].text)])  # 翻译同步原文
-                        _add(_line)
-                    else:
-                        pos.append(("", 0, 0, []))
-
-        if len(current_lines) == 0:
-            # 没有找到当前时间对应的歌词
-            if perv_lines and not next_lines:
-                # 结尾
-                for line in perv_lines:
-                    add(line, "perv")
-            elif next_lines and not perv_lines:
-                # 开头
-                for line in next_lines:
-                    add(line, "next")
-            elif perv_lines and next_lines:
-                # 中间
-                if len(perv_lines) == 2 and abs(perv_lines[0][1].end - self.current_time) < abs(next_lines[0][1].start - self.current_time):
-                    # 上一行与当前行时间差较小
-                    add(perv_lines[0], "perv")
-                else:
-                    add(next_lines[0], "next")
-                if len(next_lines) == 2 and abs(next_lines[1][1].start - self.current_time) < abs(perv_lines[-1][1].end - self.current_time):
-                    # 下一行与当前行时间差较小
-                    add(next_lines[1], "next")
-                else:
-                    add(perv_lines[-1], "perv")
-
-        elif len(current_lines) == 1:
-            # 找到一行歌词
-            if perv_lines and next_lines:
-                if abs(perv_lines[-1][1][1] - self.current_time) < abs(next_lines[0][1].start - self.current_time):
-                    # 上一行与当前行时间差较小
-                    add(perv_lines[-1], "perv")
-                else:
-                    # 下一行与当前行时间差较小
-                    add(next_lines[0], "next")
-            elif perv_lines:
-                # 即将结尾
-                add(perv_lines[-1], "perv")
-            elif next_lines:
-                # 开头
-                add(next_lines[0], "next")
-
-            add(current_lines[0], "current")
-
-        else:
-            # 找到多行歌词(显示两行以上会导致淡入淡出错误)
-            for line in current_lines:
-                add(line, "current")
+                    desktop_lyric.append((text, current, alpha, rubys))
 
         self.widget.update_lyrics.emit(DesktopLyrics([left, right]))
 
