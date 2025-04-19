@@ -50,7 +50,7 @@ DRAW_TEXT_FLAGS = Qt.TextFlag.TextSingleLine | Qt.TextFlag.TextWordWrap
 class DesktopLyricsSelectWidget(SearchWidgetBase):
     """选择歌词界面"""
 
-    lyrics_selected = Signal(Lyrics, str, list, int)
+    lyrics_selected = Signal(Lyrics, Path, list, int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -135,7 +135,7 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
         if isinstance(self.lyrics, Lyrics):
             if self.lyrics.types.get("orig") != LyricsType.PlainText:
                 langs = self.langs
-                self.lyrics_selected.emit(self.lyrics, self.path,
+                self.lyrics_selected.emit(self.lyrics, self.lyrics_path,
                                           [lang for lang in cfg["desktop_lyrics_langs_order"] if lang in langs], self.offset_spinBox.value())
                 return
             MsgBox.warning(self, self.tr("提示"), self.tr("不支持纯文本歌词"))
