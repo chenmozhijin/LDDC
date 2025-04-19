@@ -5,14 +5,18 @@
 import hashlib
 import json
 import time
-from base64 import b64decode
+from base64 import b64decode, b64encode
 from datetime import datetime, timedelta, timezone
+from threading import Lock
 from typing import Literal, overload
 
 import httpx
 
+from LDDC.common.data.cache import cache
 from LDDC.common.exceptions import APIRequestError, LyricsNotFoundError
+from LDDC.common.logger import logger
 from LDDC.common.models import APIResultList, Artist, Language, LyricInfo, Lyrics, SearchInfo, SearchType, SongInfo, SongListInfo, SongListType, Source
+from LDDC.common.version import __version__
 from LDDC.core.decryptor import krc_decrypt
 from LDDC.core.parser.krc import krc2mdata
 from LDDC.core.parser.utils import judge_lyrics_type
@@ -42,9 +46,42 @@ class KGAPI(CloudAPI):
 
     def __init__(self) -> None:
         self.client = httpx.Client()
+        self.dfid = None
+        self.init_lock = Lock()
+        self.init()
+
+    def init(self) -> None:
+        with self.init_lock:
+            if self.dfid is not None:
+                return
+            dfid = cache.get(("KG dfid", __version__))
+            if not dfid:
+                mid = hashlib.md5(str(int(time.time() * 1000)).encode("utf-8")).hexdigest()
+                params = {"appid": "1014", "platid": "4", "mid": mid}
+
+                # 生成签名
+                sorted_values = sorted([str(v) for v in params.values() if v != ""])
+                params["signature"] = hashlib.md5(f"1014{''.join(sorted_values)}1014".encode()).hexdigest()
+                data = b64encode(b'{"uuid":""}').decode()
+
+                # 发送请求
+                response = httpx.post("https://userservice.kugou.com/risk/v1/r_register_dev", content=data, params=params)
+                dfid = response.json().get("data", {}).get("dfid")
+                if isinstance(dfid, str):
+                    self.dfid = dfid
+                    cache.set(("KG dfid", __version__), dfid, expire=1800)
+                else:
+                    logger.error("获取KG dfid 失败")
+                    self.dfid = "-"
 
     def request(
-        self, url: str, params: dict, module: str, method: Literal["GET", "POST"] = "GET", data: str | None = None, headers: dict | None = None,
+        self,
+        url: str,
+        params: dict,
+        module: str,
+        method: Literal["GET", "POST"] = "GET",
+        data: str | None = None,
+        headers: dict | None = None,
     ) -> dict:
         headers = {
             "User-Agent": f"Android14-1070-11070-201-0-{module}-wifi",
@@ -59,7 +96,7 @@ class KGAPI(CloudAPI):
         # web的mid生成方式,客户端好像也能用
         # hex_str = f"{random.getrandbits(128):032x}"
         # mid = hashlib.md5(f"{hex_str[:8]}-{hex_str[8:12]}-{hex_str[12:16]}-{hex_str[16:20]}-{hex_str[20:]}".encode()).hexdigest()
-        mid = hashlib.md5(b"-").hexdigest()
+        mid = hashlib.md5(str(int(time.time() * 1000)).encode("utf-8")).hexdigest()
 
         if module == "Lyric":
             params = {
@@ -69,7 +106,7 @@ class KGAPI(CloudAPI):
             }
         elif module == "album_song_list":
             params = {
-                "dfid": "-",
+                "dfid": self.dfid,
                 "appid": "3116",
                 "mid": mid,
                 "clientver": "11070",
@@ -87,7 +124,7 @@ class KGAPI(CloudAPI):
                 "uuid": "-",
                 # "uuid": "15e772e1213bdd0718d0c1d10d64e06f",
                 "mid": mid,
-                "dfid": "-",
+                "dfid": self.dfid,
                 "clientver": "11070",
                 "platform": "AndroidFilter",
                 **params,
@@ -346,18 +383,19 @@ class KGAPI(CloudAPI):
         url = "https://lyrics.kugou.com/v1/search"
         data = self.request(url, params, "Lyric")
         lyrics = data["candidates"]
-        return APIResultList([
-            LyricInfo(
-                source=self.source,
-                id=lyric["id"],
-                accesskey=lyric["accesskey"],
-                creator=lyric["nickname"],
-                duration=lyric["duration"],
-                score=lyric["score"],
-                songinfo=song_info,
-            )
-            for lyric in lyrics
-        ],
-        song_info,
-        (0, len(lyrics) - 1, len(lyrics)),
+        return APIResultList(
+            [
+                LyricInfo(
+                    source=self.source,
+                    id=lyric["id"],
+                    accesskey=lyric["accesskey"],
+                    creator=lyric["nickname"],
+                    duration=lyric["duration"],
+                    score=lyric["score"],
+                    songinfo=song_info,
+                )
+                for lyric in lyrics
+            ],
+            song_info,
+            (0, len(lyrics) - 1, len(lyrics)),
         )
