@@ -68,11 +68,11 @@ class KGAPI(CloudAPI):
                 response = httpx.post("https://userservice.kugou.com/risk/v1/r_register_dev", content=data, params=params)
                 dfid = response.json().get("data", {}).get("dfid")
                 if isinstance(dfid, str):
-                    self.dfid = dfid
                     cache.set(("KG dfid", __version__), dfid, expire=1800)
                 else:
                     logger.error("获取KG dfid 失败")
-                    self.dfid = "-"
+                    dfid = "-"
+            self.dfid = dfid
 
     def request(
         self,
@@ -145,7 +145,7 @@ class KGAPI(CloudAPI):
         response.raise_for_status()
         response_data = response.json()
         if response_data.get("error_code", 0) not in (0, 200):
-            raise APIRequestError("kg API请求错误,错误码:" + str(response_data.get("error_code")))
+            raise APIRequestError("kg API请求错误,错误码:" + str(response_data.get("error_code")) + f"错误信息: {response_data.get('error_msg')}")
         return response_data
 
     @overload
