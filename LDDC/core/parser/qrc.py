@@ -7,7 +7,7 @@ from LDDC.common.logger import logger
 from LDDC.common.models import LyricsData, LyricsLine, LyricsWord
 
 from .lrc import lrc2data
-from .utils import plaintext2list
+from .utils import plaintext2data
 
 QRC_MAGICHEADER = b"\x98%\xb0\xac\xe3\x02\x83h\xe8\xfcl"
 
@@ -61,4 +61,4 @@ def qrc_str_parse(lyric: str) -> tuple[dict, LyricsData]:
             return lrc2data(lyric)
         except Exception:
             logger.exception("尝试将歌词以lrc格式解析时失败,解析为纯文本")
-    return {}, plaintext2list(lyric)
+    return {}, plaintext2data(lyric)

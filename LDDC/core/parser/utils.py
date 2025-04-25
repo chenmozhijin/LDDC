@@ -17,7 +17,7 @@ def judge_lyrics_type(lyrics: LyricsData | FSLyricsData) -> LyricsType:
     return lyrics_type
 
 
-def plaintext2list(plaintext: str) -> LyricsData:
+def plaintext2data(plaintext: str) -> LyricsData:
     lrc_list = LyricsData([])
     for line in plaintext.splitlines():
         lrc_list.append(LyricsLine(None, None, [LyricsWord(None, None, line)]))
