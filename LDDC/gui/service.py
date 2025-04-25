@@ -825,7 +825,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                         )  # 翻译同步原文
                     display_line = other_line
                 else:
-                    continue
+                    display_line = FSLyricsLine(orig_line.start, orig_line.end, [])  # 没有翻译时显示空行,防止位置跳变
 
                 text = "".join(word.text for word in display_line.words)  # 获取当前行歌词文本
                 rubys = []
