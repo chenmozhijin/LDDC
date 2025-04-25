@@ -826,7 +826,6 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                 else:
                     continue
 
-
                 text = "".join(word.text for word in display_line.words)  # 获取当前行歌词文本
                 rubys = []
 

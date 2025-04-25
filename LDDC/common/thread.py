@@ -4,9 +4,10 @@ from collections.abc import Callable, Iterable
 from functools import partial, wraps
 from threading import Lock
 from typing import Any
-from .logger import logger
+
 from PySide6.QtCore import QCoreApplication, QEvent, QObject, QRunnable, Qt, QThread, QThreadPool, Signal, Slot
 
+from .logger import logger
 from .models import P, T
 
 threadpool = QThreadPool()
@@ -64,7 +65,8 @@ def in_main_thread(func: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T
 # 信号发射器类，用于线程间通信
 class SignalEmitter(QObject):
     success = Signal(object)  # 任务成功时发射，携带结果
-    error = Signal(object)    # 任务失败时发射，携带异常
+    error = Signal(object)  # 任务失败时发射，携带异常
+
 
 # 任务运行器类，在线程池中执行任务
 class TaskRunnable(QRunnable):
@@ -77,16 +79,17 @@ class TaskRunnable(QRunnable):
         try:
             self.emitter.success.emit(self.func())  # 成功时发射信号
         except Exception as e:
-            self.emitter.error.emit(e)         # 失败时发射信号
+            self.emitter.error.emit(e)  # 失败时发射信号
             logger.exception(e)
+
 
 # 主函数，支持在其他线程中执行任务
 def in_other_thread(
-    func: Callable[..., T],                          # 要执行的函数
+    func: Callable[..., T],  # 要执行的函数
     callback: Callable[[T], Any] | Iterable[Callable[[T], Any]] | None,  # 成功时的回调
     error_handling: Callable[[Exception], Any] | Iterable[Callable[[Exception], Any]] | None,  # 错误处理
-    *args: Any,                                      # func 的位置参数
-    **kwargs: Any,                                   # func 的关键字参数
+    *args: Any,  # func 的位置参数
+    **kwargs: Any,  # func 的关键字参数
 ) -> None:
     # 创建信号发射器
     emitter = SignalEmitter()
@@ -101,7 +104,6 @@ def in_other_thread(
 
     # 创建并启动任务
     threadpool.start(TaskRunnable(partial(func, *args, **kwargs), emitter))
-
 
 
 class CrossThreadSignalObject(QObject):
@@ -133,4 +135,3 @@ def cross_thread_func(func: Callable[P, T]) -> Callable[P, None | T]:
         return None
 
     return cross_thread_callback
-

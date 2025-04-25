@@ -381,7 +381,11 @@ def find_closest_match(
                 return {i: i for i in range(len(data1))}
 
     time_difference_list = [
-        (i1, i2, abs(s1 - s2)) for i1, (s1, e1, t1) in enumerate(data1) if isinstance(s1, int) for i2, (s2, e2, t2) in enumerate(data2) if isinstance(s2, int)
+        (i1, i2, abs(line1.start - line2.start))
+        for i1, line1 in enumerate(data1)
+        if isinstance(line1.start, int)
+        for i2, line2 in enumerate(data2)
+        if isinstance(line2.start, int)
     ]
     time_difference_list = sorted(time_difference_list, key=lambda x: x[2])
 
@@ -411,15 +415,14 @@ def assign_lyrics_positions(lines: FSLyricsData) -> dict[tuple[Literal[Direction
     if not lines:
         return {}
 
-    sorted_index_lines = sorted(enumerate(lines), key=lambda x: x[1].start) # 按开始时间排序
+    sorted_index_lines = sorted(enumerate(lines), key=lambda x: x[1].start)  # 按开始时间排序
     results: dict[tuple[Literal[Direction.RIGHT, Direction.LEFT], int], list[tuple[int, FSLyricsLine]]] = {}  # 结果字典
 
     active_slots: list[tuple[int, Literal[Direction.RIGHT, Direction.LEFT], int]] = []  # 当前正在显示的歌词槽位列表(结束时间, 侧边, 轨道)
-    last_assigned_track1_side = Direction.RIGHT # 记录非重叠情况下Track 1最后分配的侧边, 初始化为Direction.RIGHT使得第一条歌词分配到Direction.LEFT
+    last_assigned_track1_side = Direction.RIGHT  # 记录非重叠情况下Track 1最后分配的侧边, 初始化为Direction.RIGHT使得第一条歌词分配到Direction.LEFT
 
     for index, current_line in sorted_index_lines:
-
-        active_slots = [slot for slot in active_slots if slot[0] > current_line.start] # 清理已结束的歌词行, 只保留结束时间晚于当前行开始时间的槽位
+        active_slots = [slot for slot in active_slots if slot[0] > current_line.start]  # 清理已结束的歌词行, 只保留结束时间晚于当前行开始时间的槽位
         occupied_now: set[tuple[Literal[Direction.RIGHT, Direction.LEFT], int]] = {(slot[1], slot[2]) for slot in active_slots}  # 获取当前被占用的槽位
 
         assigned_position: tuple[Literal[Direction.RIGHT, Direction.LEFT], int]  # 当前行分配的位置
@@ -466,5 +469,3 @@ def assign_lyrics_positions(lines: FSLyricsData) -> dict[tuple[Literal[Direction
         # 将当前行加入活动槽位
         active_slots.append((current_line.end, assigned_position[0], assigned_position[1]))
     return results
-
-
