@@ -706,7 +706,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         if self.song_info:
             self.lyrics_path = None
             self.lyrics = None
-            self.offseted_lyrics = None
+            self.assigned_lyrics_datas = None
+            self.lyrics_mapping = None
             self.config = {}
             self.update_db_data()
             self.show_artist_title(msg)
@@ -731,7 +732,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
     def auto_search_fail(self, msg: str) -> None:
         self.show_artist_title(msg)
-        QTimer.singleShot(3000, lambda: self.show_artist_title() if not self.offseted_lyrics else None)
+        QTimer.singleShot(3000, lambda: self.show_artist_title() if not self.lyrics else None)
 
     def show_artist_title(self, msg: str = "") -> None:
         """显示歌手-歌曲名与msg
