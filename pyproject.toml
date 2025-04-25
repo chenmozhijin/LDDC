@@ -103,6 +103,8 @@ ignore = [
 preview = true
 explicit-preview-rules = true
 
+allowed-confusables = ["，", "（", "）", "："]
+
 [tool.ruff.lint.pylint]
 max-branches = 25  # PLR0912
 max-returns = 15  # PLR0911
