@@ -15,11 +15,24 @@ import httpx
 from LDDC.common.data.cache import cache
 from LDDC.common.exceptions import APIRequestError, LyricsNotFoundError
 from LDDC.common.logger import logger
-from LDDC.common.models import APIResultList, Artist, Language, LyricInfo, Lyrics, SearchInfo, SearchType, SongInfo, SongListInfo, SongListType, Source
+from LDDC.common.models import (
+    APIResultList,
+    Artist,
+    Language,
+    LyricInfo,
+    Lyrics,
+    MultiLyricsData,
+    SearchInfo,
+    SearchType,
+    SongInfo,
+    SongListInfo,
+    SongListType,
+    Source,
+)
 from LDDC.common.version import __version__
 from LDDC.core.decryptor import krc_decrypt
 from LDDC.core.parser.krc import krc2mdata
-from LDDC.core.parser.utils import judge_lyrics_type
+from LDDC.core.parser.utils import judge_lyrics_type, plaintext2data
 
 from .models import CloudAPI
 
@@ -363,9 +376,11 @@ class KGAPI(CloudAPI):
         }
         url = "http://lyrics.kugou.com/download"
         data = self.request(url, params, "Lyric")
-        # data['contenttype'] == 2 无法解密
         lyrics = Lyrics(info.songinfo)
-        lyrics.tags, lyric = krc2mdata(krc_decrypt(b64decode(data["content"])))
+        if data["contenttype"] == 2:  # 基于base64编码的纯文本歌词
+            lyric = MultiLyricsData({"orig": plaintext2data(b64decode(data["content"]).decode("utf-8"))})
+        else:
+            lyrics.tags, lyric = krc2mdata(krc_decrypt(b64decode(data["content"])))
         lyrics.update(lyric)
         for key, lyric in lyrics.items():
             lyrics.types[key] = judge_lyrics_type(lyric)
