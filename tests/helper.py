@@ -9,14 +9,15 @@ from mutagen import File, FileType  # type: ignore[reportPrivateImportUsage] mut
 from mutagen.easyid3 import EasyID3
 from mutagen.id3 import ID3, USLT  # type: ignore[reportPrivateImportUsage]
 from pydub import AudioSegment
+from PySide6.QtCore import QPoint
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox, QWidget
 
 from LDDC.core.api.lyrics import get_lyrics
 
 tmp_dirs: list[TemporaryDirectory] = []
-test_artifacts_path = Path(__file__).parent/"artifacts"
-screenshot_path = test_artifacts_path/ "screenshots"
-tmp_dir_root = test_artifacts_path/ "tmp"
+test_artifacts_path = Path(__file__).parent / "artifacts"
+screenshot_path = test_artifacts_path / "screenshots"
+tmp_dir_root = test_artifacts_path / "tmp"
 
 
 def get_tmp_dir() -> str:
@@ -72,10 +73,12 @@ def grab(widget: QWidget, path: Path | str, method: Literal["screen", "widget"] 
 
     """
     app = QApplication.instance()
+    screenshot_origin_global_pos = None
     if isinstance(app, QApplication):
         if method == "screen":
             rect = widget.frameGeometry()
             widget.screen().grabWindow(0, rect.x(), rect.y(), rect.width(), rect.height()).save(str(path) + ".png")
+            screenshot_origin_global_pos = rect.topLeft()
         elif method == "widget":
             widget.grab().save(str(path) + ".png")
 
@@ -88,8 +91,14 @@ def grab(widget: QWidget, path: Path | str, method: Literal["screen", "widget"] 
                 if isinstance(obj, QWidget) and obj.isVisible() and obj not in recorded_widget:
                     recorded_widget.append(obj)
                     rect = obj.geometry()
+                    pos = obj.mapToGlobal(QPoint(0, 0)) - screenshot_origin_global_pos if screenshot_origin_global_pos else rect.topLeft()
                     full_name = name if not prefix else f"{prefix}.{name}"
-                    rects[full_name] = (rect.x(), rect.y(), rect.width(), rect.height())
+                    rects[full_name] = (
+                        pos.x() * obj.devicePixelRatioF(),
+                        pos.y() * obj.devicePixelRatioF(),
+                        rect.width() * obj.devicePixelRatioF(),
+                        rect.height() * obj.devicePixelRatioF(),
+                    )
                     get_rects(obj, full_name)
 
         get_rects(widget)
@@ -142,7 +151,6 @@ def verify_audio_lyrics(path: str | Path) -> None:
             raise AssertionError(msg)
 
         for tag in audio:
-
             if tag in ["lyrics", "Lyrics", "WM/LYRICS", "©lyr", "LYRICS", "USLT"] or (isinstance(tag, str) and tag.startswith("USLT")):
                 try:
                     t = audio[tag]

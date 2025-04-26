@@ -103,6 +103,17 @@ def test_desktop_lyrics(qtbot: QtBot) -> None:
         return bool(instance.lyrics)
     qtbot.waitUntil(check_lyrics, timeout=30000)
 
+    # 尝试从关联数据库中获取歌词
+    send_msg({
+        "task": "chang_music",
+        "id": instance_id,
+        "title": "アスタロア",
+        "artist": "鈴木このみ",
+        "album": "アスタロア/青き此方/夏の砂時計",
+        "duration": 278000,
+        "path": "[test]test_music_path[test]"})
+    qtbot.waitUntil(check_lyrics, timeout=30000)
+
     # 播放音乐
     start_time = time.time()
     send_msg({
