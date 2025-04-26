@@ -816,16 +816,19 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                 # 遍历所有语言的歌词行
                 if lang == "orig":
                     display_line = orig_line
-                elif lang in self.lyrics_mapping and (other_line := self.lyrics_mapping[lang].get(orig_index)):
-                    if lang == "ts" and len(other_line.words) == 1:
-                        other_line = FSLyricsLine(
-                            orig_line.start,
-                            orig_line.end,
-                            [FSLyricsWord(orig_line.start, orig_line.end, other_line.words[0].text)],
-                        )  # 翻译同步原文
-                    display_line = other_line
+                elif lang in self.lyrics_mapping:
+                    if other_line := self.lyrics_mapping[lang].get(orig_index):
+                        if lang == "ts" and len(other_line.words) == 1:
+                            other_line = FSLyricsLine(
+                                orig_line.start,
+                                orig_line.end,
+                                [FSLyricsWord(orig_line.start, orig_line.end, other_line.words[0].text)],
+                            )  # 翻译同步原文
+                        display_line = other_line
+                    else:
+                        display_line = FSLyricsLine(orig_line.start, orig_line.end, [])  # 没有翻译时显示空行,防止位置跳变
                 else:
-                    display_line = FSLyricsLine(orig_line.start, orig_line.end, [])  # 没有翻译时显示空行,防止位置跳变
+                    continue
 
                 text = "".join(word.text for word in display_line.words)  # 获取当前行歌词文本
                 rubys = []
