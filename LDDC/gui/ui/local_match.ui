@@ -2,14 +2,6 @@
 <ui version="4.0">
  <class>local_match</class>
  <widget class="QWidget" name="local_match">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>858</width>
-    <height>413</height>
-   </rect>
-  </property>
   <property name="windowTitle">
    <string/>
   </property>
@@ -17,20 +9,7 @@
    <item>
     <widget class="QWidget" name="control_bar" native="true">
      <layout class="QGridLayout" name="gridLayout">
-      <item row="0" column="7" colspan="2">
-       <widget class="QLabel" name="label_3">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>最低匹配度(0~100):</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="8">
+      <item row="1" column="9">
        <widget class="QCheckBox" name="original_checkBox">
         <property name="text">
          <string>原文</string>
@@ -40,7 +19,88 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="5" rowspan="4">
+      <item row="3" column="0" rowspan="2">
+       <widget class="QPushButton" name="select_dirs_button">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>选择文件夹</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1" rowspan="5">
+       <widget class="QPushButton" name="save_path_button">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>选择保存路径</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="11">
+       <widget class="QCheckBox" name="romanized_checkBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>罗马音</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <widget class="QLabel" name="label_8">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>歌词文件名:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="4">
+       <widget class="QComboBox" name="lyricsformat_comboBox">
+        <item>
+         <property name="text">
+          <string>LRC(逐字)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>LRC(逐行)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>增强型LRC(ESLyric)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>SRT</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>ASS</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="2" rowspan="4">
        <widget class="CheckBoxListWidget" name="source_listWidget">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
@@ -71,34 +131,15 @@
         </property>
        </widget>
       </item>
-      <item row="4" column="2">
-       <widget class="QLabel" name="label_10">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
+      <item row="1" column="3">
+       <widget class="QLabel" name="label">
         <property name="text">
-         <string>歌词格式:</string>
+         <string>保存到歌词标签:</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="0" rowspan="2">
-       <widget class="QPushButton" name="select_dirs_button">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>选择文件夹</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="7" rowspan="2" colspan="4">
-       <widget class="QPushButton" name="start_cancel_pushButton">
+      <item row="0" column="3">
+       <widget class="QLabel" name="label_11">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -106,25 +147,12 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>开始匹配</string>
+         <string>歌词文件保存模式:</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="10">
-       <widget class="QCheckBox" name="romanized_checkBox">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>罗马音</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="2">
-       <widget class="QLabel" name="label_8">
+      <item row="0" column="2">
+       <widget class="QLabel" name="label_2">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -132,23 +160,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>歌词文件名:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="9">
-       <widget class="QCheckBox" name="translate_checkBox">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>译文</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
+         <string>歌词来源:</string>
         </property>
        </widget>
       </item>
@@ -168,69 +180,7 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0" rowspan="3">
-       <widget class="QPushButton" name="select_files_button">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>选择文件</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="QLabel" name="label_11">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>歌词文件保存模式:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>保存到歌词标签:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="3">
-       <widget class="QComboBox" name="lyricsformat_comboBox">
-        <item>
-         <property name="text">
-          <string>LRC(逐字)</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>LRC(逐行)</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>增强型LRC(ESLyric)</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>SRT</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>ASS</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="0" column="3" colspan="2">
+      <item row="0" column="4" colspan="2">
        <widget class="QComboBox" name="save_mode_comboBox">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -264,50 +214,8 @@
         </item>
        </widget>
       </item>
-      <item row="1" column="7">
-       <widget class="QLabel" name="label_9">
-        <property name="text">
-         <string>歌词类型:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="5">
-       <widget class="QLabel" name="label_2">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>歌词来源:</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="3">
-       <widget class="QComboBox" name="save2tag_mode_comboBox">
-        <property name="sizeAdjustPolicy">
-         <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
-        </property>
-        <item>
-         <property name="text">
-          <string>只保存到文件</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>只保存到歌词标签(非cue)</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>保存到歌词标签(非cue)与文件</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="0" column="1" rowspan="5">
-       <widget class="QPushButton" name="save_path_button">
+      <item row="3" column="7" rowspan="2" colspan="5">
+       <widget class="QPushButton" name="start_cancel_pushButton">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -315,11 +223,57 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>选择保存路径</string>
+         <string>开始匹配</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="3">
+      <item row="0" column="7" colspan="2">
+       <widget class="QLabel" name="label_3">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>最低匹配度(0~100):</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0" rowspan="3">
+       <widget class="QPushButton" name="select_files_button">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>选择文件</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="7" colspan="2">
+       <widget class="QLabel" name="label_9">
+        <property name="text">
+         <string>歌词类型:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="3">
+       <widget class="QLabel" name="label_10">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>歌词格式:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="4">
        <widget class="QComboBox" name="filename_mode_comboBox">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -348,6 +302,51 @@
           <string>与歌曲文件名相同</string>
          </property>
         </item>
+       </widget>
+      </item>
+      <item row="1" column="4">
+       <widget class="QComboBox" name="save2tag_mode_comboBox">
+        <property name="sizeAdjustPolicy">
+         <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+        </property>
+        <item>
+         <property name="text">
+          <string>只保存到文件</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>只保存到歌词标签(非cue)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>保存到歌词标签(非cue)与文件</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="10">
+       <widget class="QCheckBox" name="translate_checkBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>译文</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="11">
+       <widget class="QCheckBox" name="skip_existing_lyrics_checkbox">
+        <property name="text">
+         <string>跳过已经有歌词</string>
+        </property>
        </widget>
       </item>
      </layout>

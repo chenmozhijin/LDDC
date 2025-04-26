@@ -106,6 +106,93 @@ def get_audio_file_infos(file_path: Path) -> list[SongInfo]:
         return [metadata]
 
 
+def has_lyrics(file_path: Path | str) -> bool:
+    """检查音频文件是否包含歌词标签。
+
+    Args:
+        file_path: 音频文件的路径 (字符串或 Path 对象)。
+
+    Returns:
+        如果找到任何形式的歌词标签 (USLT, SYLT, 'LYRICS', '©lyr', 'WM/Lyrics', 'Lyrics')
+        且内容不为空，则返回 True，否则返回 False。
+        如果文件无法加载、不支持或发生错误，也返回 False。
+
+    """
+    try:
+        audio = File(file_path, easy=False)
+
+        if audio is None:
+            logger.warning("无法加载文件或文件格式无法识别: %s", file_path)
+            return False
+
+        if audio.tags is None:
+            logger.debug("文件 %s 没有找到标签", file_path)
+            return False
+
+        # 1. ID3 标签 (MP3)
+        if isinstance(audio.tags, ID3):
+            # 检查 USLT (非同步歌词) 或 SYLT (同步歌词) 标签是否存在
+            # getall 返回一个列表，如果列表非空，则表示标签存在
+            has_uslt = any(uslt.text for uslt in audio.tags.getall("USLT"))
+            has_sylt = any(sylt.text for sylt in audio.tags.getall("SYLT"))  # SYLT 的 text 是元组列表，非空即视为有内容
+            if has_uslt or has_sylt:
+                logger.debug("在 %s 中找到 ID3 歌词 (USLT/SYLT)", file_path)
+                return True
+
+        # 2. Vorbis Comment (FLAC, OGG, Opus) 或 APEv2 (APE)
+        elif isinstance(audio.tags, (VCommentDict, APEv2)):
+            # 检查 'LYRICS' 键是否存在且其值（通常是列表）非空且第一个元素非空字符串
+            lyrics_val = audio.tags.get("LYRICS")
+            # Vorbis/APE 标签值通常是列表，检查列表是否存在且包含非空字符串
+            if lyrics_val and isinstance(lyrics_val, list) and any(s and s.strip() for s in lyrics_val):
+                logger.debug("在 %s 中找到 Vorbis/APE 歌词 ('LYRICS')", file_path)
+                return True
+            # 处理 VCommentDict 可能返回单个字符串的情况 (虽然通常是列表)
+            if lyrics_val and isinstance(lyrics_val, str) and lyrics_val.strip():
+                logger.debug("在 %s 中找到 Vorbis/APE 歌词 ('LYRICS')", file_path)
+                return True
+
+        # 3. MP4 标签 (MP4, M4A)
+        elif isinstance(audio.tags, MP4Tags):
+            # 检查 '©lyr' 键是否存在，其值通常是包含一个字符串的列表
+            lyrics_list = audio.tags.get("©lyr")
+            if lyrics_list and isinstance(lyrics_list, list) and len(lyrics_list) > 0 and lyrics_list[0] and lyrics_list[0].strip():
+                logger.debug("在 %s 中找到 MP4 歌词 ('©lyr')", file_path)
+                return True
+
+        # 4. ASF 标签 (WMA)
+        elif isinstance(audio.tags, ASFTags):
+            # 检查 'WM/LYRICS' 或其别名 'Lyrics' 是否存在且包含非空内容
+            lyrics_present = False
+            wm_lyrics = audio.tags.get("WM/LYRICS")
+            if wm_lyrics and any(str(val.value).strip() for val in wm_lyrics if hasattr(val, "value")):
+                lyrics_present = True
+
+            if not lyrics_present:
+                alias_lyrics = audio.tags.get("Lyrics")
+                if alias_lyrics and any(str(val.value).strip() for val in alias_lyrics if hasattr(val, "value")):
+                    lyrics_present = True
+
+            if lyrics_present:
+                logger.debug("在 %s 中找到 ASF 歌词 ('WM/LYRICS' 或 'Lyrics')", file_path)
+                return True
+        else:
+            # 如果检查了所有类型但没有找到歌词
+            logger.debug("在 %s 中未找到已知格式的歌词标签", file_path)
+            return False
+
+    except FileNotFoundError:
+        logger.error("文件未找到: %s", file_path)
+        return False
+    except MutagenError as e:
+        logger.error("处理 %s 时发生 Mutagen 错误: %s", file_path, e)
+        return False
+    except Exception as e:
+        logger.error("处理 %s 时发生意外错误: %s", file_path, e)
+        return False
+    return False
+
+
 def write_lyrics(file_path: Path | str, lyrics_text: str, lyrics: Lyrics | None = None) -> None:
     audio = File(file_path)
 
@@ -164,13 +251,15 @@ def get_audio_duration(file_path: str) -> int | None:
         logger.error(f"获取音频时长失败: {file_path} - {e!s}")
         return None
 
+
 def cue_time_to_ms(time_str: str) -> int:
     """将CUE时间格式转换为毫秒"""
-    parts = list(map(int, time_str.split(':')))
+    parts = list(map(int, time_str.split(":")))
     while len(parts) < 3:
         parts.append(0)
     minutes, seconds, frames = parts
     return (minutes * 60 + seconds) * 1000 + int(frames * (1000 / 75))
+
 
 @overload
 def parse_drop_infos(

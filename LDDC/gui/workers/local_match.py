@@ -6,7 +6,7 @@ from pathlib import Path
 from threading import Lock
 from typing import ClassVar
 
-from mutagen._util import MutagenError
+from mutagen import MutagenError  # type: ignore[reportPrivateImportUsage]
 from PySide6.QtCore import (
     QCoreApplication,
     QMimeData,
@@ -20,7 +20,7 @@ from LDDC.common.path_processor import get_local_match_save_path
 from LDDC.common.task_manager import TaskSignal, TaskWorker
 from LDDC.core.auto_fetch import auto_fetch
 from LDDC.core.parser.cue import parse_cue
-from LDDC.core.song_info import audio_formats, get_audio_file_infos, parse_drop_infos, write_lyrics
+from LDDC.core.song_info import audio_formats, get_audio_file_infos, has_lyrics, parse_drop_infos, write_lyrics
 
 
 class LocalMatchSave2TagMode(Enum):
@@ -35,6 +35,7 @@ class LocalMatchingStatusType(Enum):
     AUTO_FETCH_FAIL = 2
     SAVE_FAIL = 3
     UNDERKNOWN_ERROR = 4
+    SKIP_EXISTING = 5
 
 
 @dataclass
@@ -186,16 +187,14 @@ class LocalMatchWorker(TaskWorker):
         save_root_path: Path | None,
         min_score: int,
         sources: list[Source],
+        skip_existing_lyrics: bool,
     ) -> None:
         """本地匹配歌词
 
         Args:
             task (Literal["get_infos", "match_lyrics"]): 任务类型
 
-            kwargs (Any): 以下参数
-            mime (QMimeData): 文件信息
-
-            infos (list[dict]): 要匹配的歌曲信息
+            infos_root_paths (list[dict]): 要匹配的歌曲信息与文件遍历的根路径
             save_mode (LocalMatchSaveMode): 保存模式
             file_name_mode (LocalMatchFileNameMode): 文件名模式
             save2tag_mode (LocalMatchSave2TagMode): 保存到标签模式
@@ -203,7 +202,9 @@ class LocalMatchWorker(TaskWorker):
             langs (list[str]): 语言
             save_root_path (str): 保存根路径
             min_score (int): 最小匹配分数
-            source (list[Source]): 歌词源
+            sources (list[Source]): 歌词源
+            skip_existing_lyrics (bool): 是否跳过已存在的歌词
+
 
         """
         super().__init__()
@@ -219,8 +220,30 @@ class LocalMatchWorker(TaskWorker):
         self.save_root_path = save_root_path
         self.min_score = min_score
         self.sources = sources
+        self.skip_existing_lyrics = skip_existing_lyrics
+
         self.skip_inst_lyrics = cfg["skip_inst_lyrics"]
         self.file_name_format = cfg["lyrics_file_name_fmt"]
+
+    def check_skip_existing_lyrics(self, info: SongInfo, song_root_path: Path | None) -> bool:
+        song_file_has_lyrics = has_lyrics(info.path) if info.path else False
+        if self.save2tag_mode == LocalMatchSave2TagMode.ONLY_TAG and song_file_has_lyrics:
+            return True
+        save_path = get_local_match_save_path(
+            save_mode=self.save_mode,
+            file_name_mode=self.file_name_mode,
+            local_info=info,
+            lyrics_format=self.lyrics_format,
+            file_name_format=self.file_name_format,
+            langs=self.langs,
+            save_root_path=self.save_root_path,
+            cloud_info=None,
+            song_root_path=song_root_path,
+        )
+        lyrics_file_exists = save_path.is_file() if isinstance(save_path, Path) else False
+        if self.save2tag_mode == LocalMatchSave2TagMode.ONLY_FILE and lyrics_file_exists:
+            return True
+        return bool(self.save2tag_mode == LocalMatchSave2TagMode.BOTH and (song_file_has_lyrics or lyrics_file_exists))
 
     def run_task(self) -> None:
         total = len(self.infos_root_paths)
@@ -229,7 +252,13 @@ class LocalMatchWorker(TaskWorker):
         for i, (info, song_root_path) in enumerate(self.infos_root_paths):
             if self.is_stopped:
                 break
+
             self.progress.emit(f"正在匹配 {info.artist_title(replace=True)} 的歌词...", i, total, status)
+
+            if self.skip_existing_lyrics and self.check_skip_existing_lyrics(info, song_root_path):
+                status = LocalMatchingStatus(LocalMatchingStatusType.SKIP_EXISTING, i, QCoreApplication.translate("LocalMatch", "跳过已存在的歌词"))
+                skip_count += 1
+                continue
 
             try:
                 lyrics = auto_fetch(info=info, min_score=self.min_score, sources=self.sources)

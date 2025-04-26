@@ -102,16 +102,25 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             MsgBox.warning(self, self.tr("警告"), self.tr("请选择要匹配的歌曲！"))
             return
 
+        skip_existing_lyrics = self.skip_existing_lyrics_checkbox.isChecked()  # 获取跳过已存在歌词的选项状态
+        save2tag_mode=LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex())
+        file_name_mode=FileNameMode(self.filename_mode_comboBox.currentIndex())
+        if skip_existing_lyrics and (save2tag_mode != LocalMatchSave2TagMode.ONLY_TAG and file_name_mode == FileNameMode.FORMAT_BY_LYRICS):
+            MsgBox.warning(self, self.tr("警告"), self.tr("跳过已存在歌词时,如果不仅保存到标签,则歌曲文件名模式不能为按歌词格式命名！"))
+            return
+
+
         worker = LocalMatchWorker(
             infos_root_paths=infos,
             save_mode=SaveMode(self.save_mode_comboBox.currentIndex()),
-            file_name_mode=FileNameMode(self.filename_mode_comboBox.currentIndex()),
-            save2tag_mode=LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex()),
+            file_name_mode=file_name_mode,
+            save2tag_mode=save2tag_mode,
             lyrics_format=LyricsFormat(self.lyricsformat_comboBox.currentIndex()),
             langs=self.langs,
             save_root_path=self.save_root_path,
             min_score=self.min_score_spinBox.value(),
             sources=sources,
+            skip_existing_lyrics=skip_existing_lyrics,
         )
         worker.progress.connect(
             lambda text, value, max_value, status: (self.update_progressbar(text, value, max_value), self.update_status(status) if status else None),
@@ -177,7 +186,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                         self.songs_table.setItem(status.index, 5, QTableWidgetItem(f"{self.tr('保存到标签')} + {status.path!s}"))
                     else:
                         self.songs_table.setItem(status.index, 5, QTableWidgetItem(str(status.path)))
-            case LocalMatchingStatusType.SKIP_INST:
+            case LocalMatchingStatusType.SKIP_INST | LocalMatchingStatusType.SKIP_EXISTING:
                 status_item.setForeground(Qt.GlobalColor.blue)
                 status_item.setText(self.tr("跳过"))
 
