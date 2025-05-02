@@ -36,7 +36,6 @@ class Ui_settings:
     def setupUi(self, settings):
         if not settings.objectName():
             settings.setObjectName("settings")
-        settings.resize(540, 360)
         self.verticalLayout = QVBoxLayout(settings)
         self.verticalLayout.setObjectName("verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -48,7 +47,7 @@ class Ui_settings:
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(-381, -206, 909, 1044))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 910, 1044))
         self.gridLayout_6 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_6.setObjectName("gridLayout_6")
         self.groupBox = QGroupBox(self.scrollAreaWidgetContents)
@@ -149,14 +148,17 @@ class Ui_settings:
 
         self.verticalLayout_2.addWidget(self.label_19)
 
-        self.auto_search_source_list_2 = CheckBoxListWidget(self.groupBox_4)
-        self.auto_search_source_list_2.setObjectName("auto_search_source_list_2")
-        sizePolicy1.setHeightForWidth(self.auto_search_source_list_2.sizePolicy().hasHeightForWidth())
-        self.auto_search_source_list_2.setSizePolicy(sizePolicy1)
-        self.auto_search_source_list_2.setMaximumSize(QSize(100, 16777215))
-        self.auto_search_source_list_2.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.multi_search_source_list = CheckBoxListWidget(self.groupBox_4)
+        self.multi_search_source_list.setObjectName("multi_search_source_list")
+        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        sizePolicy4.setHorizontalStretch(0)
+        sizePolicy4.setVerticalStretch(0)
+        sizePolicy4.setHeightForWidth(self.multi_search_source_list.sizePolicy().hasHeightForWidth())
+        self.multi_search_source_list.setSizePolicy(sizePolicy4)
+        self.multi_search_source_list.setMaximumSize(QSize(100, 16777215))
+        self.multi_search_source_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
 
-        self.verticalLayout_2.addWidget(self.auto_search_source_list_2)
+        self.verticalLayout_2.addWidget(self.multi_search_source_list)
 
         self.gridLayout_6.addWidget(self.groupBox_4, 1, 1, 1, 1)
 
@@ -255,9 +257,6 @@ class Ui_settings:
 
         self.label_18 = QLabel(self.groupBox_3)
         self.label_18.setObjectName("label_18")
-        sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
-        sizePolicy4.setHorizontalStretch(0)
-        sizePolicy4.setVerticalStretch(0)
         sizePolicy4.setHeightForWidth(self.label_18.sizePolicy().hasHeightForWidth())
         self.label_18.setSizePolicy(sizePolicy4)
         self.label_18.setWordWrap(True)
@@ -679,7 +678,9 @@ class Ui_settings:
         self.label_8.setText(QCoreApplication.translate("settings", "\u672b\u5c3e\u53c2\u7167\u884c\u65f6\u95f4\u6837\u5f0f(\u4ec5LRC):", None))
         self.skip_inst_lyrics_checkBox.setText(
             QCoreApplication.translate(
-                "settings", "\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd/\u672c\u5730\u5339\u914d\u65f6\u8df3\u8fc7\u7eaf\u97f3\u4e50", None,
+                "settings",
+                "\u4fdd\u5b58\u4e13\u8f91/\u6b4c\u5355\u6b4c\u8bcd/\u672c\u5730\u5339\u914d\u65f6\u8df3\u8fc7\u7eaf\u97f3\u4e50",
+                None,
             ),
         )
         self.add_end_timestamp_line_checkBox.setText(
@@ -690,10 +691,12 @@ class Ui_settings:
             QCoreApplication.translate("settings", "\u6b4c\u66f2\u641c\u7d22\u6b4c\u8bcd\u65f6\u81ea\u52a8\u9009\u62e9(\u9177\u72d7\u97f3\u4e50)", None),
         )
         self.last_ref_line_time_sty_comboBox.setItemText(
-            0, QCoreApplication.translate("settings", "\u4e0e\u5f53\u524d\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u76f8\u540c", None),
+            0,
+            QCoreApplication.translate("settings", "\u4e0e\u5f53\u524d\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u76f8\u540c", None),
         )
         self.last_ref_line_time_sty_comboBox.setItemText(
-            1, QCoreApplication.translate("settings", "\u4e0e\u4e0b\u4e00\u884c\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u63a5\u8fd1", None),
+            1,
+            QCoreApplication.translate("settings", "\u4e0e\u4e0b\u4e00\u884c\u539f\u6587\u8d77\u59cb\u65f6\u95f4\u63a5\u8fd1", None),
         )
 
         self.lrc_ms_digit_count_spinBox.setSpecialValueText("")

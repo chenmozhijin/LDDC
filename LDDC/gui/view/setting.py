@@ -103,6 +103,9 @@ class SettingWidget(QWidget, Ui_settings):
         self.oai_key_lineEdit.setText(cfg["openai_api_key"])
         self.oai_model_lineEdit.setText(cfg["openai_model"])
 
+        # 搜索设置
+        self.multi_search_source_list.set_soures(cfg["multi_search_sources"])
+
     @Slot()
     def select_default_save_path(self) -> None:
         @Slot(str)
@@ -226,6 +229,9 @@ class SettingWidget(QWidget, Ui_settings):
         self.oai_base_url_lineEdit.textChanged.connect(lambda: cfg.setitem("openai_base_url", self.oai_base_url_lineEdit.text()))
         self.oai_key_lineEdit.textChanged.connect(lambda: cfg.setitem("openai_api_key", self.oai_key_lineEdit.text()))
         self.oai_model_lineEdit.textChanged.connect(lambda: cfg.setitem("openai_model", self.oai_model_lineEdit.text()))
+
+        # 搜索设置
+        self.multi_search_source_list.data_changed.connect(lambda: cfg.setitem("multi_search_sources", self.multi_search_source_list.get_data()))
 
     @Slot(int)
     def color_scheme_changed(self, index: int) -> None:

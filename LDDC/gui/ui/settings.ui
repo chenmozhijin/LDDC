@@ -34,7 +34,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>909</width>
+        <width>910</width>
         <height>1044</height>
        </rect>
       </property>
@@ -215,9 +215,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
            </widget>
           </item>
           <item>
-           <widget class="CheckBoxListWidget" name="auto_search_source_list_2">
+           <widget class="CheckBoxListWidget" name="multi_search_source_list">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>

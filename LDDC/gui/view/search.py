@@ -111,7 +111,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
     def get_source(self) -> list[Source]:
         """返回选择了的源"""
         index = self.source_comboBox.currentIndex()
-        return [Source.QM, Source.KG, Source.NE] if index == 0 else [Source(index)]
+        return [Source[source] for source in cfg["multi_search_sources"]] if index == 0 else [Source(index)]
 
     @Slot()
     def search(self) -> None:
@@ -120,12 +120,17 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         if keyword == "":
             MsgBox.warning(self, self.tr("提示"), self.tr("请输入搜索关键词"))
             return
+        # 获取搜索源
+        sources = self.get_source()
+        if not sources:
+            MsgBox.critical(self, self.tr("错误"), self.tr("请选择搜索源"))
+            return
         # 设置搜索按钮文本为“正在搜索...”并禁用按钮
         self.search_pushButton.setText(self.tr("正在搜索..."))
         self.search_pushButton.setEnabled(False)
 
-        # 获取搜索源\选择的搜索类型
-        sources = self.get_source()
+        # 获取选择的搜索类型
+
         search_type = SearchType(self.search_type_comboBox.currentIndex())
         if search_type not in (SearchType.SONG, SearchType.SONGLIST, SearchType.ALBUM):
             MsgBox.critical(self, self.tr("错误"), self.tr("该搜索类型不支持"))
@@ -453,8 +458,6 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.translate_pushButton.setEnabled(True)
 
 
-
-
 class SearchWidget(SearchWidgetBase):
     def __init__(self) -> None:
         super().__init__()
@@ -664,12 +667,3 @@ class SearchWidget(SearchWidgetBase):
         # 清除表格
         self.results_tableWidget.setRowCount(0)
         self.results_tableWidget.setColumnCount(0)
-
-
-if __name__ == "__main__":
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication([])
-    view = SearchWidget()
-    view.show()
-    app.exec()

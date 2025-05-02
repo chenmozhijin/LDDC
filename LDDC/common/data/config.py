@@ -42,7 +42,7 @@ class Config(dict):
             "default_save_path": str(default_save_lyrics_dir),
             "ID3_version": "v2.3",
 
-            "auto_search_source": ["QM", "KG", "NE"],
+            "multi_search_sources": ["QM", "KG", "NE"],
 
             "langs_order": ["roma", "orig", "ts"],
             "skip_inst_lyrics": True,
