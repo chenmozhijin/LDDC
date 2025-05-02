@@ -36,6 +36,8 @@ def init(request: pytest.FixtureRequest) -> Generator[None, Any, None]:
 
     orig_cfg = cfg.copy()
     cfg.reset()
+    cfg["multi_search_sources"] = ["QM", "KG", "NE", "LRCLIB"]
+    cfg["desktop_lyrics_sources"] = ["QM", "KG", "NE", "LRCLIB"]
 
     yield
 

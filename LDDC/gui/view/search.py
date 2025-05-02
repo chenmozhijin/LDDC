@@ -46,6 +46,9 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.path: list[APIResultList | None] = []  # 页面路径
         self.lyrics: None | Lyrics = None
 
+        self.update_search_types()
+
+
     def _init_task_manager(self) -> None:
         def restore_search() -> None:
             self.search_pushButton.setText(self.tr("搜索"))
@@ -55,10 +58,6 @@ class SearchWidgetBase(QWidget, Ui_search_base):
                 MsgBox.warning(self, self.tr("错误"), self.tr("没有搜索到相关结果"))
             elif self.path and self.path[-1] is not None:
                 QTimer.singleShot(100, self._check_search_more)
-
-        def restore_translate() -> None:
-            self.translate_pushButton.setText(self.tr("翻译歌词"))
-            self.translate_pushButton.setEnabled(True)
 
         self.task_manager = TaskManager(
             parent_childs={
@@ -95,6 +94,23 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
         self.translate_pushButton.clicked.connect(self.translate_lyrics)
 
+        self.source_comboBox.currentIndexChanged.connect(self.update_search_types)
+
+    def update_search_types(self) -> None:
+        """更新搜索类型"""
+        type_str_map = {
+            SearchType.SONG: self.tr("单曲"),
+            SearchType.ALBUM: self.tr("专辑"),
+            SearchType.SONGLIST: self.tr("歌单"),
+            SearchType.ARTIST: self.tr("歌手"),
+            SearchType.LYRICS: self.tr("歌词"),
+        }
+        self.search_type_comboBox.clear()
+        for seatch_type in Source(self.source_comboBox.currentIndex()).supported_search_types:
+            self.search_type_comboBox.addItem(type_str_map[seatch_type])
+
+        self.search_type_comboBox.setCurrentIndex(0)
+
     @property
     def langs(self) -> list[str]:
         """返回选择了的歌词类型的列表"""
@@ -121,20 +137,22 @@ class SearchWidgetBase(QWidget, Ui_search_base):
             MsgBox.warning(self, self.tr("提示"), self.tr("请输入搜索关键词"))
             return
         # 获取搜索源
-        sources = self.get_source()
-        if not sources:
+        orig_sources = self.get_source()
+        if not orig_sources:
             MsgBox.critical(self, self.tr("错误"), self.tr("请选择搜索源"))
+            return
+        # 获取选择的搜索类型
+        search_type = SearchType(self.search_type_comboBox.currentIndex())
+        sources = [source for source in orig_sources if search_type in source.supported_search_types]
+        if not sources:
+            if len(orig_sources) == 1:
+                MsgBox.critical(self, self.tr("错误"), self.tr(f"{orig_sources[0].name} 不支持 {search_type.name} 搜索"))
+            else:
+                MsgBox.critical(self, self.tr("错误"), self.tr(f"所选源都不支持 {search_type.name} 搜索"))
             return
         # 设置搜索按钮文本为“正在搜索...”并禁用按钮
         self.search_pushButton.setText(self.tr("正在搜索..."))
         self.search_pushButton.setEnabled(False)
-
-        # 获取选择的搜索类型
-
-        search_type = SearchType(self.search_type_comboBox.currentIndex())
-        if search_type not in (SearchType.SONG, SearchType.SONGLIST, SearchType.ALBUM):
-            MsgBox.critical(self, self.tr("错误"), self.tr("该搜索类型不支持"))
-            return
 
         callback, error_handling = create_collecting_callbacks(len(sources), self.add2table, MsgBox.get_error_slot(self, msg=self.tr("搜索失败")))
         self.task_manager.clear_task("table")

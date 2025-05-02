@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 from LDDC.common.models import SearchType
 from LDDC.core.api.lyrics.kg import KGAPI
+from LDDC.core.api.lyrics.lrclib import LrclibAPI
 from LDDC.core.api.lyrics.ne import NEAPI
 from LDDC.core.api.lyrics.qm import QMAPI
 
@@ -37,6 +38,7 @@ def test_neapi() -> None:
     lyrics = neapi.get_lyrics(song)
     assert lyrics is not None
 
+
 def test_qmapi() -> None:
     qmapi = QMAPI()
 
@@ -69,6 +71,7 @@ def test_qmapi() -> None:
     lyrics = qmapi.get_lyrics(song)
     assert lyrics is not None
 
+
 def test_kgapi() -> None:
     kgapi = KGAPI()
 
@@ -100,3 +103,14 @@ def test_kgapi() -> None:
     assert song.title
     lyrics = kgapi.get_lyrics(song)
     assert lyrics is not None
+
+
+def test_Lrclib() -> None:
+    lrc_lib_api = LrclibAPI()
+
+    songs = lrc_lib_api.search("アルカテイル", SearchType.SONG)
+    assert len(songs) > 0
+    song = songs[0]
+    assert song.title
+    lyrics = lrc_lib_api.get_lyrics(song)
+    assert lyrics

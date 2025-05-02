@@ -79,6 +79,7 @@ class Source(Enum):
     QM = 1
     KG = 2
     NE = 3
+    LRCLIB = 4
     Local = 100
 
     def __str__(self) -> str:
@@ -93,10 +94,28 @@ class Source(Enum):
                 return QCoreApplication.translate("Source", "酷狗音乐")
             case Source.NE:
                 return QCoreApplication.translate("Source", "网易云音乐")
+            case Source.LRCLIB:
+                return QCoreApplication.translate("Source", "Lrclib")
             case Source.Local:
                 return QCoreApplication.translate("Source", "本地")
             case _:
                 return str(self.name)
+
+    @property
+    def supported_search_types(self) -> tuple[SearchType, ...]:
+        match self:
+            case Source.MULTI:
+                return (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM)
+            case Source.QM:
+                return (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM)
+            case Source.KG:
+                return (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM)
+            case Source.NE:
+                return (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM)
+            case Source.LRCLIB:
+                return (SearchType.SONG,)
+            case _:
+                return ()
 
 
 class TranslateSource(Enum):

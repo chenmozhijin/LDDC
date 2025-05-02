@@ -128,6 +128,7 @@ def test_gui_local_match(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
     qtbot.wait(300)  # 等待窗口加载完成
 
     monkeypatch.setattr(QFileDialog, "open", lambda *args, **kwargs: None)  # noqa: ARG005
+    main_window.local_match_widget.source_listWidget.set_soures(["QM", "KG", "NE", "LRCLIB"])
     orig_song_dir = get_song_dir()
     for file_name_mode_index, save2tagmode_index, save_mode_index in product(
         range(main_window.local_match_widget.filename_mode_comboBox.count()),

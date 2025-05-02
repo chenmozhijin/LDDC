@@ -45,15 +45,13 @@ class Ui_search_base:
         self.source_comboBox.addItem("")
         self.source_comboBox.addItem("")
         self.source_comboBox.addItem("")
+        self.source_comboBox.addItem("")
         self.source_comboBox.setObjectName("source_comboBox")
         self.source_comboBox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
         self.horizontalLayout.addWidget(self.source_comboBox)
 
         self.search_type_comboBox = QComboBox(search_base)
-        self.search_type_comboBox.addItem("")
-        self.search_type_comboBox.addItem("")
-        self.search_type_comboBox.addItem("")
         self.search_type_comboBox.setObjectName("search_type_comboBox")
         self.search_type_comboBox.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
@@ -307,10 +305,7 @@ class Ui_search_base:
         self.source_comboBox.setItemText(1, QCoreApplication.translate("search_base", "QQ\u97f3\u4e50", None))
         self.source_comboBox.setItemText(2, QCoreApplication.translate("search_base", "\u9177\u72d7\u97f3\u4e50", None))
         self.source_comboBox.setItemText(3, QCoreApplication.translate("search_base", "\u7f51\u6613\u4e91\u97f3\u4e50", None))
-
-        self.search_type_comboBox.setItemText(0, QCoreApplication.translate("search_base", "\u5355\u66f2", None))
-        self.search_type_comboBox.setItemText(1, QCoreApplication.translate("search_base", "\u4e13\u8f91", None))
-        self.search_type_comboBox.setItemText(2, QCoreApplication.translate("search_base", "\u6b4c\u5355", None))
+        self.source_comboBox.setItemText(4, QCoreApplication.translate("search_base", "Lrclib", None))
 
         self.search_keyword_lineEdit.setInputMask("")
         self.search_keyword_lineEdit.setText("")

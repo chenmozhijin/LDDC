@@ -30,6 +30,11 @@
          <string>网易云音乐</string>
         </property>
        </item>
+       <item>
+        <property name="text">
+         <string>Lrclib</string>
+        </property>
+       </item>
       </widget>
      </item>
      <item>
@@ -37,21 +42,6 @@
        <property name="sizeAdjustPolicy">
         <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
        </property>
-       <item>
-        <property name="text">
-         <string>单曲</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>专辑</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>歌单</string>
-        </property>
-       </item>
       </widget>
      </item>
      <item>

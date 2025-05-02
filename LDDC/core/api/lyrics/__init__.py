@@ -31,6 +31,7 @@ class LyricsAPI:
                 return
             from .kg import KGAPI
             from .local import LocalAPI
+            from .lrclib import LrclibAPI
             from .ne import NEAPI
             from .qm import QMAPI
 
@@ -38,6 +39,7 @@ class LyricsAPI:
                 KGAPI.source: KGAPI(),
                 NEAPI.source: NEAPI(),
                 QMAPI.source: QMAPI(),
+                LrclibAPI.source: LrclibAPI(),  # 添加LrclibAPI到cloud_apis字典中
             }
             self.apis: dict[Source, BaseAPI] = {**self.cloud_apis, LocalAPI.source: LocalAPI()}
             self.inited = True
@@ -169,7 +171,10 @@ class LyricsAPI:
                 raise ValueError(msg)
             if not info:
                 info = LyricInfo(
-                    Source.Local, SongInfo(Source.Local), path=path, data=bytes(data.encode("utf-8") if isinstance(data, str) else data) if data else None,
+                    Source.Local,
+                    SongInfo(Source.Local),
+                    path=path,
+                    data=bytes(data.encode("utf-8") if isinstance(data, str) else data) if data else None,
                 )
             lyrics = self.apis[Source.Local].get_lyrics(info)
         else:
