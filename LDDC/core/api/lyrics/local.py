@@ -52,7 +52,8 @@ class LocalAPI(BaseAPI):
 
         return path, bytes(data.encode("utf-8") if isinstance(data, str) else data)
 
-    def _parse_qrc(self, lyrics: Lyrics, data: bytes, path: Path | None = None) -> None:
+    @classmethod
+    def parse_qrc(cls, lyrics: Lyrics, data: bytes, path: Path | None = None) -> None:
         """QRC歌词格式解析"""
         # 做到打开任意qrc文件都会读取同一首歌其他类型的qrc
         if path:
@@ -86,8 +87,8 @@ class LocalAPI(BaseAPI):
 
         lyrics = Lyrics(info.songinfo if info else SongInfo(Source.Local))
         # 判断歌词格式
-        if data.startswith(QRC_MAGICHEADER) and path:
-            self._parse_qrc(lyrics, data, path)
+        if data.startswith(QRC_MAGICHEADER):
+            self.parse_qrc(lyrics, data, path)
 
         elif data.startswith(KRC_MAGICHEADER):
             # KRC歌词格式
@@ -130,6 +131,11 @@ class LocalAPI(BaseAPI):
                     except UnicodeDecodeError as e:
                         msg = f"不支持的歌词格式: {path}"
                         raise LyricsFormatError(msg) from e
+                else:
+                    msg = f"不支持的文件格式: {path}"
+                    raise LyricsFormatError(msg) from None
+
+
 
         for key, lyric in lyrics.items():
             lyrics.types[key] = judge_lyrics_type(lyric)

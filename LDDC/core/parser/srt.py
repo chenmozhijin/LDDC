@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 import re
+from collections.abc import Generator
 from re import Pattern
 
 from LDDC.common.logger import logger
@@ -35,20 +36,8 @@ def _parse_time(time_str: str) -> int:
     return (int(hours) * 3600 + int(minutes) * 60 + int(seconds)) * 1000 + int(milliseconds)
 
 
-def srt2mdata(srt_content: str) -> tuple[dict[str, str], MultiLyricsData]:
-    """解析SRT文件内容为MultiLyricsData
-
-    Args:
-        srt_content: srt文件内容
-
-    Returns:
-        dict[str, str]: 标签字典(为空)
-        MultiLyricsData: MultiLyricsData对象
-
-    """
-    lyrics_mdata = MultiLyricsData(
-        {k: LyricsData([]) for k in ["orig", "roma", "ts"]},
-    )
+def parse_srt(srt_content: str) -> Generator[tuple[int, int, list[str]], None, None]:
+    """解析SRT文件内容为对话行列表"""
     # 按空行分割成块, 移除首尾可能存在的空块
     blocks = BLOCK_SEPARATOR.split(srt_content.strip())
 
@@ -70,22 +59,50 @@ def srt2mdata(srt_content: str) -> tuple[dict[str, str], MultiLyricsData]:
                 start_time = _parse_time(start_time_str)
                 end_time = _parse_time(end_time_str)
 
-                # 3. 解析内容
-                contents = lines[2:]
-                if len(contents) == 1:
-                    lyrics_mdata["orig"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[0])]))
-                elif len(contents) == 2:
-                    lyrics_mdata["orig"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[0])]))
-                    lyrics_mdata["ts"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[1])]))
-                elif len(contents) == 3:
-                    lyrics_mdata["roma"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[0])]))
-                    lyrics_mdata["orig"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[1])]))
-                    lyrics_mdata["ts"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[2])]))
-                else:
-                    lyrics_mdata["orig"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, "".join(contents))]))
+                yield start_time, end_time, lines[2:]  # 返回开始时间、结束时间和内容行列表
 
             except Exception:
                 logger.exception("解析SRT文件时出错:")
                 continue
 
+
+def srt2mdata(srt_content: str) -> tuple[dict[str, str], MultiLyricsData]:
+    """解析SRT文件内容为MultiLyricsData
+
+    Args:
+        srt_content: srt文件内容
+
+    Returns:
+        dict[str, str]: 标签字典(为空)
+        MultiLyricsData: MultiLyricsData对象
+
+    """
+    lyrics_mdata = MultiLyricsData(
+        {k: LyricsData([]) for k in ["orig", "roma", "ts"]},
+    )
+    for start_time, end_time, contents in parse_srt(srt_content):
+        if len(contents) == 1:
+            lyrics_mdata["orig"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[0])]))
+        elif len(contents) == 2:
+            lyrics_mdata["orig"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[0])]))
+            lyrics_mdata["ts"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[1])]))
+        elif len(contents) == 3:
+            lyrics_mdata["roma"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[0])]))
+            lyrics_mdata["orig"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[1])]))
+            lyrics_mdata["ts"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, contents[2])]))
+        else:
+            lyrics_mdata["orig"].append(LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, "".join(contents))]))
+
     return {}, MultiLyricsData({k: v for k, v in lyrics_mdata.items() if v})
+
+
+def srt2data(srt_content: str) -> tuple[dict[str, str], LyricsData]:
+    """解析SRT文件内容为LyricsData"""
+    lyrics_data = LyricsData(
+        [
+            LyricsLine(start_time, end_time, [LyricsWord(start_time, end_time, content)])
+            for start_time, end_time, contents in parse_srt(srt_content)
+            for content in contents
+        ],
+    )
+    return {}, lyrics_data

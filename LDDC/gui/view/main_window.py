@@ -14,6 +14,7 @@ from LDDC.gui.components.sidebar_window import SidebarWindow
 from LDDC.gui.exit_manager import exit_manager
 
 from .about import AboutWidget
+from .batch_convert import BatchConvertWidget
 from .local_match import LocalMatchWidget
 from .open_lyrics import OpenLyricsWidget
 from .search import SearchWidget
@@ -45,6 +46,8 @@ class MainWindow(SidebarWindow):
         self.settings_widget = SettingWidget()
         self.about_widget = AboutWidget()
         self.open_lyrics_widget = OpenLyricsWidget()
+        self.batch_convert_widget = BatchConvertWidget()
+
         self.init_widgets()
         self.connect_signals()
         self.is_inited = True
@@ -53,6 +56,7 @@ class MainWindow(SidebarWindow):
         self.add_widget(self.tr("搜索"), self.search_widget)
         self.add_widget(self.tr("本地匹配"), self.local_match_widget)
         self.add_widget(self.tr("打开歌词"), self.open_lyrics_widget)
+        self.add_widget(self.tr("批量转换"), self.batch_convert_widget)
         self.add_widget(self.tr("关于"), self.about_widget, Direction.BOTTOM)
         self.add_widget(self.tr("设置"), self.settings_widget, Direction.BOTTOM)
 
@@ -84,6 +88,8 @@ class MainWindow(SidebarWindow):
 
         self.local_match_widget.search_song.connect(self.search_widget.auto_fetch)
         self.local_match_widget.search_song.connect(lambda: self.set_current_widget(0))
+        self.batch_convert_widget.open_lyrics.connect(self.open_lyrics_widget.open_file)
+        self.batch_convert_widget.open_lyrics.connect(lambda: self.set_current_widget(2))
 
     @Slot()
     def retranslateUi(self) -> None:
@@ -92,6 +98,7 @@ class MainWindow(SidebarWindow):
         self.settings_widget.retranslateUi(self.settings_widget)
         self.about_widget.retranslateUi(self.about_widget)
         self.open_lyrics_widget.retranslateUi(self.open_lyrics_widget)
+        self.batch_convert_widget.retranslateUi(self.batch_convert_widget)
 
         # 重新设置侧边栏按钮
         current_widget = self.current_widget

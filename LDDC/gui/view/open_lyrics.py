@@ -27,7 +27,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         self.data: bytes | None = None
 
     def connect_signals(self) -> None:
-        self.open_pushButton.clicked.connect(self.open_file)
+        self.open_pushButton.clicked.connect(self.select_file)
         self.convert_pushButton.clicked.connect(self.convert)
         self.save_pushButton.clicked.connect(self.save)
 
@@ -53,58 +53,58 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             if checkbox.isChecked()
         ]
 
+    @Slot(str)
+    def open_file(self, path_str: str | Path) -> None:
+        file_path = Path(path_str)
+        if not file_path.exists():
+            MsgBox.warning(self, self.tr("警告"), self.tr("文件不存在！"))
+            return
+        try:
+            with file_path.open("rb") as f:
+                data = f.read()
+        except Exception as e:
+            MsgBox.warning(self, self.tr("警告"), self.tr("读取文件失败：") + str(e))
+            return
+        try:
+            if data.startswith(QRC_MAGICHEADER):
+                self.lyrics_type = "qrc"
+                lyrics_text = qrc_decrypt(data, QrcType.LOCAL)
+            elif data.startswith(KRC_MAGICHEADER):
+                self.lyrics_type = "krc"
+                lyrics_text = krc_decrypt(data)
+            elif file_path.suffix == ".lrc":
+                self.lyrics_type = "lrc"
+                lyrics_text = read_unknown_encoding_file(file_data=data, sign_word=("[", "]", ":"))
+            elif file_path.suffix == ".ass":
+                self.lyrics_type = "ass"
+                lyrics_text = read_unknown_encoding_file(file_data=data)
+            elif file_path.suffix == ".srt":
+                self.lyrics_type = "srt"
+                lyrics_text = read_unknown_encoding_file(file_data=data)
+            else:
+                MsgBox.warning(self, self.tr("警告"), self.tr("不支持的文件格式！"))
+                return
+            self.path = Path(file_path)
+            self.data = data
+        except Exception as e:
+            logger.exception("打开失败")
+            MsgBox.critical(self, self.tr("警告"), self.tr("打开失败：") + str(e))
+            return
+        if lyrics_text is None:
+            self.lyrics_type = None
+            msg = self.tr("打开失败")
+            MsgBox.critical(self, self.tr("错误"), msg)
+            return
+
+        self.plainTextEdit.setPlainText(lyrics_text)
+
     @Slot()
-    def open_file(self) -> None:
-        @Slot(str)
-        def file_selected(path_str: str) -> None:
-            file_path = Path(path_str)
-            if not file_path.exists():
-                MsgBox.warning(self, self.tr("警告"), self.tr("文件不存在！"))
-                return
-            try:
-                with file_path.open("rb") as f:
-                    data = f.read()
-            except Exception as e:
-                MsgBox.warning(self, self.tr("警告"), self.tr("读取文件失败：") + str(e))
-                return
-            try:
-                if data.startswith(QRC_MAGICHEADER):
-                    self.lyrics_type = "qrc"
-                    lyrics_text = qrc_decrypt(data, QrcType.LOCAL)
-                elif data.startswith(KRC_MAGICHEADER):
-                    self.lyrics_type = "krc"
-                    lyrics_text = krc_decrypt(data)
-                elif file_path.suffix == ".lrc":
-                    self.lyrics_type = "lrc"
-                    lyrics_text = read_unknown_encoding_file(file_data=data, sign_word=("[", "]", ":"))
-                elif file_path.suffix == ".ass":
-                    self.lyrics_type = "ass"
-                    lyrics_text = read_unknown_encoding_file(file_data=data)
-                elif file_path.suffix == ".srt":
-                    self.lyrics_type = "srt"
-                    lyrics_text = read_unknown_encoding_file(file_data=data)
-                else:
-                    MsgBox.warning(self, self.tr("警告"), self.tr("不支持的文件格式！"))
-                    return
-                self.path = Path(file_path)
-                self.data = data
-            except Exception as e:
-                logger.exception("打开失败")
-                MsgBox.critical(self, self.tr("警告"), self.tr("打开失败：") + str(e))
-                return
-            if lyrics_text is None:
-                self.lyrics_type = None
-                msg = self.tr("打开失败")
-                MsgBox.critical(self, self.tr("错误"), msg)
-                return
-
-            self.plainTextEdit.setPlainText(lyrics_text)
-
+    def select_file(self) -> None:
         dialog = QFileDialog(self)
         dialog.setWindowTitle(self.tr("打开本地歌词"))
         dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
         dialog.setNameFilter(self.tr("歌词文件(*.qrc *.krc *.lrc *.ass *.srt)"))
-        dialog.fileSelected.connect(file_selected)
+        dialog.fileSelected.connect(self.open_file)
         dialog.open()
 
     @Slot()
@@ -133,9 +133,12 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
 
     @Slot()
     def update_lyrics(self) -> None:
-        if self.lyrics_type == "converted" and isinstance(self.lyrics, Lyrics) and (
-            lyrics_text := self.lyrics.to(LyricsFormat(self.lyricsformat_comboBox.currentIndex()), self.langs, self.offset_spinBox.value())
-        ) and lyrics_text != self.plainTextEdit.toPlainText():
+        if (
+            self.lyrics_type == "converted"
+            and isinstance(self.lyrics, Lyrics)
+            and (lyrics_text := self.lyrics.to(LyricsFormat(self.lyricsformat_comboBox.currentIndex()), self.langs, self.offset_spinBox.value()))
+            and lyrics_text != self.plainTextEdit.toPlainText()
+        ):
             self.plainTextEdit.setPlainText(lyrics_text)
 
     @Slot()

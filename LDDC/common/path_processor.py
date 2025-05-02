@@ -144,5 +144,3 @@ def get_local_match_save_path(
                 save_filename = escape_filename(replace_info_placeholders(file_name_format, local_info, langs)) + ext
 
     return save_folder / save_filename
-
-

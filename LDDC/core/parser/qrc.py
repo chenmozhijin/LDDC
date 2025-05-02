@@ -17,6 +17,7 @@ _LINE_SPLIT_PATTERN = re.compile(r"^\[(\d+),(\d+)\](.*)$")  # 逐行匹配
 _WORD_SPLIT_PATTERN = re.compile(r"(?:\[\d+,\d+\])?(?P<content>(?:(?!\(\d+,\d+\)).)+)\((?P<start>\d+),(?P<duration>\d+)\)")  # 逐字匹配
 _WORD_TIMESTAMP_PATTERN = re.compile(r"^\(\d+,\d+\)$")
 
+
 def qrc2data(s_qrc: str) -> tuple[dict, LyricsData]:
     """将qrc转换为列表LyricsData"""
     qrc_match = _QRC_PATTERN.search(s_qrc)
