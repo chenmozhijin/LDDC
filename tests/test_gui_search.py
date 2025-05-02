@@ -18,10 +18,15 @@ def search(qtbot: QtBot, search_type: SearchType, keyword: str) -> None:
     from LDDC.gui.view.main_window import main_window
 
     main_window.search_widget.search_keyword_lineEdit.setText(keyword)
-    main_window.search_widget.search_type_comboBox.setCurrentIndex(search_type.value)
 
     for i in range(main_window.search_widget.source_comboBox.count() - 1, -1, -1):
         main_window.search_widget.source_comboBox.setCurrentIndex(i)
+
+        if main_window.search_widget.search_type_comboBox.count() > search_type.value:
+            main_window.search_widget.search_type_comboBox.setCurrentIndex(search_type.value)
+        else:
+            continue
+
         main_window.search_widget.search_pushButton.click()
 
         def check_table() -> bool:

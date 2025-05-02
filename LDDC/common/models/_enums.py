@@ -105,13 +105,13 @@ class Source(Enum):
     def supported_search_types(self) -> tuple[SearchType, ...]:
         match self:
             case Source.MULTI:
-                return (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM)
+                return (SearchType.SONG, SearchType.SONGLIST, SearchType.ALBUM)
             case Source.QM:
-                return (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM)
+                return (SearchType.SONG, SearchType.SONGLIST, SearchType.ALBUM)
             case Source.KG:
-                return (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM)
+                return (SearchType.SONG, SearchType.SONGLIST, SearchType.ALBUM)
             case Source.NE:
-                return (SearchType.SONG, SearchType.ARTIST, SearchType.ALBUM)
+                return (SearchType.SONG, SearchType.SONGLIST, SearchType.ALBUM)
             case Source.LRCLIB:
                 return (SearchType.SONG,)
             case _:
