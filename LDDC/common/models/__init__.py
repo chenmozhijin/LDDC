@@ -3,7 +3,7 @@
 
 from typing import ParamSpec, TypeVar
 
-from ._enums import Direction, FileNameMode, LyricsFormat, LyricsType, QrcType, SaveMode, SearchType, Source
+from ._enums import Direction, FileNameMode, LyricsFormat, LyricsType, QrcType, SaveMode, SearchType, Source, TranslateSource, TranslateTargetLanguage
 from ._info import APIResultList, Artist, Language, LyricInfo, SearchInfo, SongInfo, SongListInfo, SongListType
 from ._lyrics import (
     FSLyrics,
@@ -51,6 +51,8 @@ __all__ = [
     "SongListType",
     "Source",
     "T",
+    "TranslateSource",
+    "TranslateTargetLanguage",
     "get_full_timestamps_lyrics_data",
 ]
 

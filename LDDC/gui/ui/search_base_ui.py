@@ -1,13 +1,15 @@
 ################################################################################
 ## Form generated from reading UI file 'search_base.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
 from PySide6.QtCore import QCoreApplication, QMetaObject, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import (
+    QFont,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractScrollArea,
@@ -275,6 +277,11 @@ class Ui_search_base:
 
         self.horizontalLayout_9.addWidget(self.lyricsformat_comboBox)
 
+        self.translate_pushButton = QPushButton(search_base)
+        self.translate_pushButton.setObjectName("translate_pushButton")
+
+        self.horizontalLayout_9.addWidget(self.translate_pushButton)
+
         self.control_verticalLayout.addLayout(self.horizontalLayout_9)
 
         self.control_verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
@@ -325,5 +332,7 @@ class Ui_search_base:
         self.lyricsformat_comboBox.setItemText(2, QCoreApplication.translate("search_base", "\u589e\u5f3a\u578bLRC(ESLyric)", None))
         self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("search_base", "SRT", None))
         self.lyricsformat_comboBox.setItemText(4, QCoreApplication.translate("search_base", "ASS", None))
+
+        self.translate_pushButton.setText(QCoreApplication.translate("search_base", "\u7ffb\u8bd1\u6b4c\u8bcd", None))
 
     # retranslateUi

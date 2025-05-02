@@ -14,6 +14,7 @@ from LDDC.common.models import (
     Language,
     LyricInfo,
     Lyrics,
+    LyricsData,
     LyricsFormat,
     LyricsType,
     SearchInfo,
@@ -26,6 +27,7 @@ from LDDC.common.models import (
 from LDDC.common.task_manager import TaskManager, create_collecting_callbacks
 from LDDC.common.utils import save2fomat_path
 from LDDC.core.api.lyrics import get_lyrics, get_lyricslist, get_songlist, search
+from LDDC.core.api.translate import translate_lyrics
 from LDDC.core.auto_fetch import auto_fetch
 from LDDC.core.song_info import audio_formats, parse_drop_infos, write_lyrics
 from LDDC.gui.components.msg_box import MsgBox
@@ -54,14 +56,19 @@ class SearchWidgetBase(QWidget, Ui_search_base):
             elif self.path and self.path[-1] is not None:
                 QTimer.singleShot(100, self._check_search_more)
 
+        def restore_translate() -> None:
+            self.translate_pushButton.setText(self.tr("翻译歌词"))
+            self.translate_pushButton.setEnabled(True)
+
         self.task_manager = TaskManager(
             parent_childs={
                 "table": ["search", "search_more", "get_lyricslist", "get_songlist"],
                 "search": [],
                 "search_more": [],
-                "get_lyrics": [],
+                "get_lyrics": ["translate"],
                 "get_songlist": [],
                 "get_lyricslist": [],
+                "translate": [],
             },
             task_callback={
                 "search": restore_search,
@@ -85,6 +92,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.results_tableWidget.doubleClicked.connect(self.open_table_item)
 
         self.return_toolButton.clicked.connect(self.table_return)
+
+        self.translate_pushButton.clicked.connect(self.translate_lyrics)
 
     @property
     def langs(self) -> list[str]:
@@ -264,6 +273,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         ) and lyrics_text != self.preview_plainTextEdit.toPlainText():
             self.preview_plainTextEdit.setPlainText(lyrics_text)
 
+        self.update_translate_button_state()
+
     def check_return(self) -> bool:
         if len(self.path) > 1:
             self.return_toolButton.setEnabled(True)
@@ -400,6 +411,48 @@ class SearchWidgetBase(QWidget, Ui_search_base):
             last_row = table.rowCount() - 1
             table.setSpan(last_row, 0, 1, table.columnCount())
             table.setItem(last_row, 0, loading_item)
+
+    @Slot()
+    def translate_lyrics(self) -> None:
+        if not self.lyrics:
+            MsgBox.warning(self, self.tr("警告"), self.tr("请先获取歌词"))
+            return
+        lyrics = self.lyrics
+        if "LDDC_ts" in lyrics:
+            self.lyrics.pop("LDDC_ts")
+            self.set_lyrics()
+            self.update_translate_button_state()
+            return
+
+        def callback(ts_data: LyricsData) -> None:
+            if self.lyrics:
+                self.lyrics["LDDC_ts"] = ts_data
+                self.set_lyrics()
+
+            self.update_translate_button_state()
+
+        self.task_manager.new_multithreaded_task(
+            "translate",
+            translate_lyrics,
+            callback,
+            (
+                MsgBox.get_error_slot(self, self.tr("翻译歌词失败")),
+                lambda _: (self.translate_pushButton.setText(self.tr("翻译歌词")), self.translate_pushButton.setEnabled(True)),
+            ),
+            lyrics,
+        )
+
+        self.translate_pushButton.setEnabled(False)
+        self.translate_pushButton.setText(self.tr("翻译中..."))
+
+    def update_translate_button_state(self) -> None:
+        if self.lyrics and self.lyrics.get("LDDC_ts"):
+            self.translate_pushButton.setText(self.tr("取消翻译"))
+        else:
+            self.translate_pushButton.setText(self.tr("翻译歌词"))
+        self.translate_pushButton.setEnabled(True)
+
+
 
 
 class SearchWidget(SearchWidgetBase):

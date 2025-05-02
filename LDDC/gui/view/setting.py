@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QFileDialog, QListWidgetItem, QWidget
 from LDDC.common.data.cache import cache
 from LDDC.common.data.config import cfg
 from LDDC.common.logger import logger
+from LDDC.common.models import TranslateSource, TranslateTargetLanguage
 from LDDC.common.paths import log_dir
 from LDDC.common.translator import load_translation
 from LDDC.gui.ui.settings_ui import Ui_settings
@@ -91,6 +92,17 @@ class SettingWidget(QWidget, Ui_settings):
         self.log_level_comboBox.setCurrentText(cfg["log_level"])
         self.auto_check_update_checkBox.setChecked(cfg["auto_check_update"])
 
+        # 翻译API设置
+        self.translate_source_comboBox.setCurrentIndex(TranslateSource.__members__.get(cfg["translate_source"], TranslateSource(0)).value)
+        self.translate_cfg_stackedWidget.setCurrentIndex(self.translate_source_comboBox.currentIndex())
+
+        self.translate_target_lang_comboBox.setCurrentIndex(
+            TranslateTargetLanguage.__members__.get(cfg["translate_target_lang"], TranslateTargetLanguage(0)).value,
+        )
+        self.oai_base_url_lineEdit.setText(cfg["openai_base_url"])
+        self.oai_key_lineEdit.setText(cfg["openai_api_key"])
+        self.oai_model_lineEdit.setText(cfg["openai_model"])
+
     @Slot()
     def select_default_save_path(self) -> None:
         @Slot(str)
@@ -116,7 +128,8 @@ class SettingWidget(QWidget, Ui_settings):
         # 歌词设置
         self.langs_order_listWidget.droped.connect(
             lambda: cfg.setitem(
-                "langs_order", [self.langs_order_listWidget.item(i).data(Qt.ItemDataRole.UserRole) for i in range(self.langs_order_listWidget.count())],
+                "langs_order",
+                [self.langs_order_listWidget.item(i).data(Qt.ItemDataRole.UserRole) for i in range(self.langs_order_listWidget.count())],
             ),
         )
 
@@ -201,6 +214,18 @@ class SettingWidget(QWidget, Ui_settings):
 
         # 缓存设置
         self.clear_cache_pushButton.clicked.connect(self.clear_cache)
+
+        # 翻译API设置
+        self.translate_source_comboBox.currentIndexChanged.connect(
+            lambda: cfg.setitem("translate_source", TranslateSource(self.translate_source_comboBox.currentIndex()).name),
+        )
+        self.translate_target_lang_comboBox.currentIndexChanged.connect(
+            lambda: cfg.setitem("translate_target_lang", self.translate_target_lang_comboBox.currentText()),
+        )
+
+        self.oai_base_url_lineEdit.textChanged.connect(lambda: cfg.setitem("openai_base_url", self.oai_base_url_lineEdit.text()))
+        self.oai_key_lineEdit.textChanged.connect(lambda: cfg.setitem("openai_api_key", self.oai_key_lineEdit.text()))
+        self.oai_model_lineEdit.textChanged.connect(lambda: cfg.setitem("openai_model", self.oai_model_lineEdit.text()))
 
     @Slot(int)
     def color_scheme_changed(self, index: int) -> None:

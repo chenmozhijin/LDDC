@@ -12,6 +12,7 @@ import pytest
 from PySide6.QtCore import QCoreApplication, QRunnable, QThread
 
 from LDDC.common.data.cache import cache
+from LDDC.common.data.config import cfg
 from LDDC.common.logger import logger
 from LDDC.common.thread import threadpool
 from LDDC.res import resource_rc
@@ -33,7 +34,15 @@ def init(request: pytest.FixtureRequest) -> Generator[None, Any, None]:
 
     resource_rc.qInitResources()
 
+    orig_cfg = cfg.copy()
+    cfg.reset()
+
     yield
+
+    # 恢复配置
+    cfg.update(orig_cfg)
+    cfg.write_config()
+
 
     # 后处理
     app = QCoreApplication.instance()
@@ -66,9 +75,8 @@ def apply_coverage_for_qthread(monkeypatch: pytest.MonkeyPatch) -> None:
         self._base_run()  # type: ignore[reportAttributeAccessIssue]
 
     def _start(worker: QRunnable | Callable, *args: Any, **kwargs: Any) -> None:
-
         if isinstance(worker, QRunnable):
-            worker._base_run = worker.run   # type: ignore[reportAttributeAccessIssue] # noqa: SLF001
+            worker._base_run = worker.run  # type: ignore[reportAttributeAccessIssue] # noqa: SLF001
             worker.run = partial(run_with_trace, worker)
             no_patch_start(worker, *args, **kwargs)
         else:

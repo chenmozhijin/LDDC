@@ -232,8 +232,9 @@ class LDDCService(QObject):
 
     def init_api(self) -> None:
         from LDDC.core.api.lyrics import lyrics_api
+        from LDDC.core.api.translate import translate_api
 
-        in_other_thread(lyrics_api.init, None, None)
+        in_other_thread(lambda: (lyrics_api.init(), translate_api.init()), None, None)
 
     @Slot()
     def stop_service(self) -> None:
@@ -658,6 +659,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
 
         offseted_lyrics = deepcopy(lyrics).get_fslyrics(self.song_info.duration if self.song_info else None)
         mulyrics_data = offseted_lyrics.add_offset(self.config.get("offset", 0))
+        if "LDDC_ts" in mulyrics_data:
+            mulyrics_data["ts"] = mulyrics_data.pop("LDDC_ts")
         mulyrics_data["orig"] = FSLyricsData(
             [
                 line

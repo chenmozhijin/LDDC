@@ -55,6 +55,10 @@ def convert2(lyrics: LyricsBase,
 
     lyrics_dict = lyrics.add_offset(offset=offset)
 
+    if "LDDC_ts" in lyrics_dict:  # 使用LDDC的翻译覆盖原本的翻译
+        lyrics_dict["ts"] = lyrics_dict.pop("LDDC_ts")
+
+
     langs_order: list[str] = [lang for lang in cfg["langs_order"] if lang in langs and lang in lyrics_dict]
     langs_order += [lang for lang in langs if lang not in langs_order and lang in lyrics_dict]
 

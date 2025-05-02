@@ -99,6 +99,25 @@ class Source(Enum):
                 return str(self.name)
 
 
+class TranslateSource(Enum):
+    BING = 0
+    GOOGLE = 1
+    OPENAI = 2
+
+
+class TranslateTargetLanguage(Enum):
+    SIMPLIFIED_CHINESE = 0
+    TRADITIONAL_CHINESE = 1
+    ENGLISH = 2
+    JAPANESE = 3
+    KOREAN = 4
+    SPANISH = 5
+    FRENCH = 6
+    PORTUGUESE = 7
+    GERMAN = 8
+    RUSSIAN = 9
+
+
 class Language(Enum):
     INSTRUMENTAL = 0
     OTHER = 1

@@ -440,6 +440,13 @@
            </item>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="translate_pushButton">
+           <property name="text">
+            <string>翻译歌词</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
        <item>

@@ -20,10 +20,10 @@ screenshot_path = test_artifacts_path / "screenshots"
 tmp_dir_root = test_artifacts_path / "tmp"
 
 
-def get_tmp_dir() -> str:
+def get_tmp_dir() -> Path:
     directory = TemporaryDirectory(dir=tmp_dir_root)
     tmp_dirs.append(directory)
-    return directory.name
+    return Path(directory.name)
 
 
 def verify_lyrics(lyrics_text: str) -> None:
@@ -39,7 +39,7 @@ def close_msg_boxs(widget: QWidget) -> None:
             child.defaultButton().click()
 
 
-def select_file(widget: QWidget, path: str | list[str] | Path) -> None:
+def select_file(widget: QWidget, path: str | list[str] | Path | list[Path]) -> None:
     for child in widget.children():
         if isinstance(child, QFileDialog):
             if child.property("opened"):

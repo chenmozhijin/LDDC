@@ -105,7 +105,7 @@ SONGS_INFO = [
 ]
 
 
-def get_song_dir() -> str:
+def get_song_dir() -> Path:
     song_dir = get_tmp_dir()
     for song_ in SONGS_INFO:
         song = song_.copy()
