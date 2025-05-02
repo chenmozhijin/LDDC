@@ -153,7 +153,7 @@ class GetInfosWorker(TaskWorker):
                     self.errors.append(f"{e.__class__.__name__}: {e!s}")
 
             # 排除cue文件中的音频文件
-            audio_paths = [path for path in audio_paths if path not in exclude_audio_paths]
+            audio_paths = [path for path in audio_paths if path[1] not in exclude_audio_paths]
             # 解析音频文件
             for i, (root_path, audio_path) in enumerate(audio_paths, start=1 + len(cue_paths)):
                 if self.is_stopped:
