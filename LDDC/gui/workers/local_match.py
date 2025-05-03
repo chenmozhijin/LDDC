@@ -296,7 +296,7 @@ class LocalMatchWorker(TaskWorker):
                         status = LocalMatchingStatus(
                             LocalMatchingStatusType.SKIP_INST,
                             i,
-                            QCoreApplication.translate("LocalMatch", f"没有获取到{info.artist_title(replace=True)}的歌曲路径,无法保存到标签"),
+                            QCoreApplication.translate("LocalMatch", "没有获取到{}的歌曲路径,无法保存到标签").format(info.artist_title(replace=True)),
                         )
                         continue
                     write_lyrics(info.path, lyrics_text, lyrics)
