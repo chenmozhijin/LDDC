@@ -475,6 +475,10 @@ class SearchWidgetBase(QWidget, Ui_search_base):
             self.translate_pushButton.setText(self.tr("翻译歌词"))
         self.translate_pushButton.setEnabled(True)
 
+    def retranslateUi(self, _search_base: "SearchWidgetBase | None" = None) -> None:
+        self.update_search_types()
+        super().retranslateUi(self)
+
 
 class SearchWidget(SearchWidgetBase):
     def __init__(self) -> None:
