@@ -1,5 +1,7 @@
 # LDDC
 
+[中文](./README.md) | English | [日本語](./README_ja.md)
+
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/015f636391584ffc82790ff7038da5ca)](https://app.codacy.com/gh/chenmozhijin/LDDC/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/chenmozhijin/LDDC/total)](https://github.com/chenmozhijin/LDDC/releases/latest)
 [![Static Badge](https://img.shields.io/badge/Python-3.10%2B-brightgreen)](https://www.python.org/downloads/)
@@ -14,7 +16,7 @@ LDDC是一个简单易用的精准歌词(逐字歌词)下载匹配工具。
 1. ⚡ **多线程快速匹配**：所有歌词匹配功能均采用多线程技术，实现**自动搜索**与**极速精准匹配**每一个歌词。
 2. 📝 **逐字歌词样式**：绝大多数歌曲都能获取到**逐字样式**的歌词，精准同步到每个字。
 3. 💾 **多种格式支持**：支持保存歌词为**逐字LRC**、**逐行LRC**、**增强型LRC**、**SRT**和**ASS**等格式，满足不同需求。
-4. 🎵 **多音乐平台歌词搜索**：支持搜索**QQ音乐**、**酷狗音乐**、**网易云音乐**中的单曲、专辑和歌单。
+4. 🎵 **多音乐平台歌词搜索**：支持搜索**QQ音乐**、**酷狗音乐**、**网易云音乐**中的单曲、专辑和歌单，支持从**[Lrclib](https://lrclib.net/)**获取歌词。
 5. 🖱️ **拖拽搜索**：将歌曲文件拖入界面，使用**多线程匹配**快速搜索匹配。
 6. 🎯 **本地歌词匹配**：一键为本地歌曲文件精准匹配歌词，采用**多线程匹配**提高匹配速度。
 7. 📥 **专辑/歌单歌词下载**：一键为整个**专辑**或**歌单**下载歌词。
@@ -31,6 +33,8 @@ LDDC是一个简单易用的精准歌词(逐字歌词)下载匹配工具。
     - 🔍 提供类似搜索界面的窗口，方便手动选择歌词。
     - ✨ 实现字符缓存，降低系统资源占用。
     - 🌟 支持自定义**字符渐变色**效果。
+14. 🔁 **歌词翻译功能**：支持使用**Bing/Google/OpenAI兼容API**进行歌词翻译
+15. ♻️ **批量格式转换**：支持歌词格式批量转换功能
 
 ## 预览
 
@@ -55,6 +59,10 @@ LDDC是一个简单易用的精准歌词(逐字歌词)下载匹配工具。
 ![image](img/zh-Hans_4.jpg)
 ![gif](img/desktop_lyrics.gif)
 
+### 批量转换
+
+![image](img/zh-Hans_5.jpg)
+
 ## 使用方法
 
 见[LDDC使用指南](https://github.com/chenmozhijin/LDDC/wiki)
@@ -67,7 +75,3 @@ LDDC是一个简单易用的精准歌词(逐字歌词)下载匹配工具。
 
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=QQMusicDecoder)](https://github.com/WXRIW/QQMusicDecoder)
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=jixunmoe&repo=qmc-decode)](https://github.com/jixunmoe/qmc-decode)
-
-### 音乐平台api
-
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=MCQTSS&repo=MCQTSS_QQMusic)](https://github.com/MCQTSS/MCQTSS_QQMusic)

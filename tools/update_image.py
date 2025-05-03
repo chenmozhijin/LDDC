@@ -1,12 +1,11 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-import os
 import shutil
 from pathlib import Path
 
 import pytest
-from PySide6.QtCore import QRectF
+from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QImage, QPainter
 
 from LDDC.common.data.config import cfg
@@ -56,35 +55,49 @@ def stitch_images_grid(image_names: list[str], rows: int, cols: int) -> QImage:
 
 
 orig_lang = cfg["language"]
-for index, lang in enumerate(("zh-Hans", "zh-Hant", "en", "ja"), start=1):
+for lang in ("zh-Hans", "zh-Hant", "en", "ja"):
     cfg["language"] = lang
-    pytest.main(["--not-clear-cache"])
+    pytest.main(["--not-clear-cache", "--language", lang, "-v", "-k", "test_gui_", "tests/"])
     lang_screenshot_path = tests_path / "screenshots" / lang
     if lang_screenshot_path.exists():
         shutil.rmtree(lang_screenshot_path)
     shutil.copytree(screenshot_path, lang_screenshot_path)
-    image1 = stitch_images_grid(["preview_verbatimlrc", "preview_ass",
-                                 "preview_linebylinelrc", "preview_srt",
-                                 "preview_enhancedlrc", "save_album_lyrics"], 3, 2)
+    image1 = stitch_images_grid(
+        ["preview_verbatimlrc", "preview_ass", "preview_linebylinelrc", "preview_srt", "preview_enhancedlrc", "save_album_lyrics"],
+        3,
+        2,
+    )
 
     setting = QImage(get_image_path("setting"))
     open_lyrics_krc = QImage(get_image_path("open_lyrics_krc"))
     open_lyrics_qrc = QImage(get_image_path("open_lyrics_qrc"))
     setting_width = setting.width() * ((open_lyrics_krc.height() + open_lyrics_qrc.height()) / setting.height())
     image2 = QImage(int(setting_width) + open_lyrics_krc.width(), open_lyrics_krc.height() + open_lyrics_qrc.height(), QImage.Format.Format_ARGB32)
-    image2.fill(0)  # 透明背景
+    image2.fill(Qt.GlobalColor.transparent)  # 透明背景
     painter = QPainter(image2)
-    painter.drawImage(QRectF(open_lyrics_krc.width(), 0,
-                             setting_width,
-                             open_lyrics_krc.height() + open_lyrics_qrc.height()), setting)
+    painter.drawImage(QRectF(open_lyrics_krc.width(), 0, setting_width, open_lyrics_krc.height() + open_lyrics_qrc.height()), setting)
     painter.drawImage(0, 0, open_lyrics_qrc)
     painter.drawImage(0, open_lyrics_krc.height(), open_lyrics_qrc)
     painter.end()
 
     image1.save(str(img_path / f"{lang}_1.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
     image2.save(str(img_path / f"{lang}_2.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
-    QImage(get_image_path("local_match_finish_FORMAT_ONLY_FILE_MIRROR")).save(str(img_path / f"{lang}_3.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
+    QImage(get_image_path("local_match_finish_FORMAT_BY_LYRICS_ONLY_FILE_FORMAT_BY_LYRICS")).save(str(img_path / f"{lang}_3.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
 
-    from LDDC.gui.view.main_window import main_window
-    main_window.settings_widget.language_comboBox.setCurrentIndex(index + 1)
+    desktop_lyrics_img = QImage(get_image_path("desktop_lyrics_playing_with_control_bar"))
+    desktop_lyrics_selector_img = QImage(get_image_path("desktop_lyrics_selector"))
+    manager_img = QImage(get_image_path("desktop_lyrics_db_manager"))
+    height = int(manager_img.height() * 0.5 + desktop_lyrics_selector_img.height())
+    width = int(manager_img.width() * 0.5 + desktop_lyrics_selector_img.width())
+    image4 = QImage(width, height, QImage.Format.Format_ARGB32)
+    image4.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(image4)
+    painter.drawImage(width - manager_img.width(), 0, manager_img)
+    painter.drawImage(0, manager_img.height() // 2, desktop_lyrics_selector_img)
+    painter.drawImage(0, height - desktop_lyrics_selector_img.height() // 2, desktop_lyrics_img)
+    image4.save(str(img_path / f"{lang}_4.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
+
+    QImage(get_image_path("batch_convert_before_VERBATIMLRC")).save(str(img_path / f"{lang}_5.jpg"), "JPG", 20)  # type: ignore[reportCallIssue]
+
+
 cfg["language"] = orig_lang

@@ -2,71 +2,76 @@
 
 [中文](./README.md) | [English](./README_en.md) | 日本語
 
-> 高精度な歌詞（逐字歌詞）のダウンロード、復号、変換ツール
-
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/015f636391584ffc82790ff7038da5ca)](https://app.codacy.com/gh/chenmozhijin/LDDC/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)  
-[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/chenmozhijin/LDDC/total)](https://github.com/chenmozhijin/LDDC/releases/latest)  
-[![Static Badge](https://img.shields.io/badge/Python-3.10%2B-brightgreen)](https://www.python.org/downloads/)  
-[![Static Badge](https://img.shields.io/badge/License-GPLv3-blue)](https://github.com/chenmozhijin/LDDC/blob/main/LICENSE)  
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/015f636391584ffc82790ff7038da5ca)](https://app.codacy.com/gh/chenmozhijin/LDDC/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+[![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/chenmozhijin/LDDC/total)](https://github.com/chenmozhijin/LDDC/releases/latest)
+[![Static Badge](https://img.shields.io/badge/Python-3.10%2B-brightgreen)](https://www.python.org/downloads/)
+[![Static Badge](https://img.shields.io/badge/License-GPLv3-blue)](https://github.com/chenmozhijin/LDDC/blob/main/LICENSE)
 [![release](https://img.shields.io/github/v/release/chenmozhijin/LDDC?color=blue)](https://github.com/chenmozhijin/LDDC/releases/latest)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-## 機能
+LDDCは、簡単で正確なリリック（文字単位のリリック）ダウンロードおよびマッチングツールです。
 
-- [x] QQ音楽、酷狗音楽、NetEase Cloud Musicの楽曲、アルバム、プレイリストを検索可能
-- [x] 楽曲を検索画面にドラッグ＆ドロップして自動的に歌詞を検索・マッチング
-- [x] ローカル楽曲ファイルにワンクリックで歌詞をマッチング
-- [x] アルバムやプレイリスト全体の歌詞をワンクリックでダウンロード
-- [x] 多様な形式で保存可能（逐字lrc、逐行lrc、拡張型lrc、srt、ass）
-- [x] ダブルクリックで歌詞をプレビューし、即保存
-- [x] 原文、翻訳、ローマ字の組み合わせ自由
-- [x] 保存パスに多様なプレースホルダーを利用可能
-- [x] 暗号化されたローカル歌詞ファイルを開くことに対応
-- [x] マルチプラットフォーム対応
-- [x] デスクトップ歌詞（現在foobar2000のみ対応: [foo_lddc](https://github.com/chenmozhijin/foo_lddc)）
-    1. マルチスレッドによる高速検索で歌詞を自動マッチング（ほとんどが逐字形式）
-    2. カラオケ形式の歌詞表示に対応
-    3. 原文、翻訳、ローマ字の行分け表示に対応
-    4. フェードイン・フェードアウトエフェクトと画面リフレッシュレートの同期で滑らかな表示を実現
-    5. 検索画面に似たウィンドウで手動で歌詞を選択可能
-    6. 文字キャッシュの実装でリソース使用量を低減
-    7. カスタマイズ可能な文字のグラデーションカラー対応
+## 主な特徴
+
+1. ⚡ **マルチスレッド高速マッチング**: すべてのリリックマッチング機能はマルチスレッド技術を使用し、**自動検索**と**非常に高速で正確なリリックのマッチング**を実現しています。
+2. 📝 **文字単位のリリック形式**: 多くの楽曲で**文字単位のリリック**を取得でき、各文字と正確に同期します。
+3. 💾 **複数フォーマット対応**: **文字単位LRC**、**行単位LRC**、**拡張LRC**、**SRT**、**ASS**などのフォーマットでリリックを保存でき、さまざまなニーズに対応します。
+4. 🎵 **複数音楽プラットフォームのリリック検索**: **QQ Music**、**Kugou Music**、**NetEase Cloud Music**のシングル、アルバム、プレイリストの検索に対応し、**[Lrclib](https://lrclib.net/)**からリリックを取得できます。
+5. 🖱️ **ドラッグアンドドロップ検索**: ソングファイルをインターフェースにドラッグアンドドロップして、**マルチスレッドマッチング**によりリリックを素早く検索できます。
+6. 🎯 **ローカルリリックマッチング**: 1クリックでローカルの音楽ファイルに正確なリリックをマッチングし、**マルチスレッドマッチング**でマッチング速度を向上させます。
+7. 📥 **アルバム/プレイリストリリックダウンロード**: **アルバム**または**プレイリスト**全体のリリックを1クリックでダウンロードできます。
+8. 👀 **リリックプレビューと保存**: ダブルクリックでリリックをプレビューし、**リリックファイル**として保存するか、直接**音楽タグ**に書き込むことができます。
+9. 🛠️ **多様なリリックの組み合わせ**: **オリジナルリリック**、**翻訳**、**ローマ字**を柔軟に組み合わせ、カスタマイズされたリリックのニーズに対応します。
+10. 💻 **マルチシステムサポート**: **Windows**、**macOS**、**Linux**のオペレーティングシステムをサポートし、さまざまなユーザーのニーズに対応しています。
+11. 🔧 **柔軟な保存パス**: 多様なパスプレースホルダーを使用してカスタマイズ可能な保存パスをサポートしています。
+12. 🔓 **暗号化リリックサポート**: ローカルの暗号化リリックファイルを開くことができます。
+13. 🎤 **デスクトップリリック(foobar2000プラグイン: [foo_lddc](https://github.com/chenmozhijin/foo_lddc))**:
+    - 🚀 再生中の楽曲の**マルチスレッド高速マッチング**。
+    - 🎶 **カラオケスタイル**のリリック表示をサポート。
+    - 🖊️ **複数行リリック表示**をサポートし、オリジナル、翻訳、ローマ字のリリックを別々に表示できます。
+    - 🌈 リリックの**フェードイン/ペードアウト**効果をサポートし、画面のリフレッシュレートに自動的にマッチしてリリック表示をスムーズにします。
+    - 🔍 手動でリリックを選択するための検索風のウィンドウを提供します。
+    - ✨ キャラクターキャッシュを実装し、システムリソースの使用を削減します。
+    - 🌟 **カスタムキャラクターグラデーションカラー**効果をサポート。
+14. 🔁 **リリック翻訳機能**: **Bing/Google/OpenAI互換API**を使用したリリック翻訳をサポート。
+15. ♻️ **一括フォーマット変換**: リリックフォーマットの一括変換をサポート。
 
 ## プレビュー
 
-### 楽曲をドラッグして歌詞を迅速にマッチング
+### ドラッグアンドドロップ
 
 ![gif](img/drop.gif)
 
-### 検索画面
+### 検索インターフェース
 
 ![image](img/ja_1.jpg)
 
-### ローカルファイルのマッチング
-
-![image](img/ja_3.jpg)
-
-### 歌詞を開く/設定画面
+### ローカルマッチング
 
 ![image](img/ja_2.jpg)
 
-### デスクトップ歌詞
+### リリック/設定インターフェースを開く
 
-![image](img/zh-Hans_4.jpg)
+![image](img/ja_3.jpg)
+
+### デスクトップリリック
+
+![image](img/ja_4.jpg)
 ![gif](img/desktop_lyrics.gif)
+
+### バッチ変換
+
+![image](img/ja_5.jpg)
 
 ## 使用方法
 
-詳細は[LDDC使用ガイド](https://github.com/chenmozhijin/LDDC/wiki)を参照してください。
+[LDDC使用ガイド](https://github.com/chenmozhijin/LDDC/wiki)を参照してください
 
-## 感謝
+## ありがとう
 
-一部の機能は以下のプロジェクトを参考にしています:
+一部の機能は以下のプロジェクトに基づいて実装されています:
 
-### 歌詞の復号
+### リリックデコード
 
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=QQMusicDecoder)](https://github.com/WXRIW/QQMusicDecoder)  
+[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=WXRIW&repo=QQMusicDecoder)](https://github.com/WXRIW/QQMusicDecoder)
 [![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=jixunmoe&repo=qmc-decode)](https://github.com/jixunmoe/qmc-decode)
-
-### 音楽プラットフォームAPI
-
-[![Readme Card](https://github-readme-stats.vercel.app/api/pin/?username=MCQTSS&repo=MCQTSS_QQMusic)](https://github.com/MCQTSS/MCQTSS_QQMusic)
