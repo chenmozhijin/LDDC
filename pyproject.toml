@@ -3,7 +3,7 @@ name = "LDDC"
 dynamic = ["version"]
 dependencies = [
     "PySide6-Essentials>=6.8.0",
-    "requests",
+    "httpx[brotli,http2]",
     "mutagen",
     "diskcache",
     "charset-normalizer",
@@ -12,7 +12,7 @@ dependencies = [
     "pyobjc-framework-Cocoa; sys_platform == 'darwin'",
 ]
 requires-python = ">= 3.10"
-description = "A lyrics acquisition tool"
+description = "A Practical Tool for Downloading verbatim Lyrics"
 readme = "README.md"
 maintainers = [
     {name = "沉默の金", email = "cmzj@cmzj.org"}
@@ -20,19 +20,28 @@ maintainers = [
 license = {file = "LICENSE"}
 keywords = ["lyrics","music","download","acquisition","tool"]
 classifiers = [
-    "Development Status :: 4 - Beta",
     "Intended Audience :: End Users/Desktop",
+
     "Environment :: MacOS X",
     "Environment :: Win32 (MS Windows)",
     "Environment :: X11 Applications :: Qt",
+
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+
     "Natural Language :: Chinese (Simplified)",
     "Natural Language :: English",
-    "Operating System :: OS Independent",
+    "Natural Language :: Japanese",
+
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+
+    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+
     "Topic :: Multimedia :: Sound/Audio",
     "Topic :: Utilities",
 ]
@@ -52,7 +61,7 @@ include = ["LDDC/**"]
 exclude = ["*.ui", "*.qrc", "LDDC/res/img", "LDDC/res/i18n"]
 
 [tool.hatch.version]
-path = "LDDC/utils/version.py"
+path = "LDDC/common/version.py"
 
 [tool.ruff]
 target-version = "py310"
@@ -61,6 +70,9 @@ line-length = 159
 [tool.ruff.lint]
 select = [
     "ALL",
+
+    "W",
+    "E",
 
     "CPY001",
 ]
@@ -85,11 +97,13 @@ ignore = [
     "N802",  # invalid-function-name
     "N999",  # invalid-name
 
-    "PTH",  # flake8-use-pathlib
+    # "PTH",  # flake8-use-pathlib
     "FBT",  # flake8-boolean-trap
 ]
 preview = true
 explicit-preview-rules = true
+
+allowed-confusables = ["，", "（", "）", "："]
 
 [tool.ruff.lint.pylint]
 max-branches = 25  # PLR0912
@@ -99,3 +113,8 @@ max-args = 10  # PLR0913
 
 [tool.ruff.lint.mccabe]
 max-complexity = 30  # C901
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/**.py" = ["S101"]
+"tools/**.py" = ["T201", "INP001"]
+"LDDC/gui/ui/**.py" = ["N801", "N802", "N803", "N806"]

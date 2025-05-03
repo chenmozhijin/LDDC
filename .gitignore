@@ -130,7 +130,7 @@ old/
 upx/
 *.log
 log/
-lyrics/
+/lyrics/
 output
 report.xml
 result.json
@@ -145,3 +145,4 @@ Logs/
 update_ts.ps1
 
 tests/artifacts/
+tests/screenshots/

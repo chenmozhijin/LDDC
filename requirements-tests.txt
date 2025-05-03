@@ -3,3 +3,4 @@ pydub
 pytest
 pytest-qt
 pytest-cov
+coredumpy

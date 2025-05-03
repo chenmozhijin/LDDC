@@ -1,11 +1,11 @@
-# SPDX-FileCopyrightText: Copyright (C) 2024 沉默の金 <cmzj@cmzj.org>
+# SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-# ruff: noqa: T201 INP001
+from pathlib import Path
 from xml.etree import ElementTree as ET
 
 
-def get_ts_text(ts_file: str) -> list[tuple[str, str | None]]:
+def get_ts_text(ts_file: Path) -> list[tuple[str, str | None]]:
     tree = ET.parse(ts_file)  # noqa: S314
     root = tree.getroot()
     msgs = []
@@ -19,11 +19,11 @@ def get_ts_text(ts_file: str) -> list[tuple[str, str | None]]:
 
 
 if __name__ == "__main__":
-    import os
-    i18n_path = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "LDDC", "res", "i18n"))
-    for lang in os.listdir(i18n_path):
-        if lang.endswith(".ts"):
-            msgs = get_ts_text(os.path.join(i18n_path, lang))
-            print(f"{lang}: {len(msgs)}")
+    i18n_path = Path(__file__).parent.parent / "LDDC" / "res" / "i18n"
+    for lang in i18n_path.iterdir():
+        if lang.suffix == ".ts":
+            msgs = get_ts_text(lang)
+            print(f"{lang.name}: {len(msgs)}")
             for i, msg in enumerate(msgs, start=1):
-                print(f"[{i}]{msg[0].replace('\n', '\\n')} --> {msg[1]}")
+                modified_source = msg[0].replace('\n', '\\n')
+                print(f"[{i}]{modified_source} --> {msg[1]}")

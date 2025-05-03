@@ -1,12 +1,12 @@
-# SPDX-FileCopyrightText: Copyright (C) 2024 沉默の金 <cmzj@cmzj.org>
+# SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-# ruff: noqa: T201 INP001
+from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import opencc
 
-converter = opencc.OpenCC('s2t.json')
+converter = opencc.OpenCC("s2t.json")
 
 
 def s2t(ts_file: str) -> None:
@@ -23,8 +23,7 @@ def s2t(ts_file: str) -> None:
 
 
 if __name__ == "__main__":
-    import os
-    i18n_path = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "LDDC", "res", "i18n"))
-    for file in os.listdir(i18n_path):
-        if file == "LDDC_zh-Hant.ts":
-            msgs = s2t(os.path.join(i18n_path, file))
+    i18n_path = Path(__file__).parent.parent / "LDDC" / "res" / "i18n"
+    for file in i18n_path.iterdir():
+        if file.name == "LDDC_zh-Hant.ts":
+            s2t(str(file))

@@ -1,20 +1,23 @@
-# SPDX-FileCopyrightText: Copyright (C) 2024 沉默の金 <cmzj@cmzj.org>
+# SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 
-# ruff: noqa: S101
-import os
 import shutil
 from itertools import product
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QFileDialog
 from pytestqt.qtbot import QtBot
 
-from LDDC.utils.enum import LocalMatchFileNameMode, LocalMatchSave2TagMode, LocalMatchSaveMode
+from LDDC.common.models import FileNameMode
+from LDDC.gui.workers.local_match import LocalMatchingStatusType, LocalMatchSave2TagMode
 
 from .helper import close_msg_boxs, create_audio_file, get_tmp_dir, grab, screenshot_path, select_file, test_artifacts_path, verify_audio_lyrics, verify_lyrics
 
+if TYPE_CHECKING:
+    from LDDC.gui.view.main_window import MainWindow
 SONGS_INFO = [
     {
         "title": "Little Busters!",
@@ -105,14 +108,14 @@ SONGS_INFO = [
 ]
 
 
-def get_song_dir() -> str:
+def get_song_dir() -> Path:
     song_dir = get_tmp_dir()
     for song_ in SONGS_INFO:
         song = song_.copy()
         duration, path = song["duration"], song["path"]
         del song["duration"], song["path"]
         create_audio_file(
-            os.path.join(song_dir, *path, f"{song["artist"]} - {song["title"]}.flac"),
+            Path(song_dir).joinpath(*path) / f"{song['artist']} - {song['title']}.flac",
             "flac",
             duration,
             song,
@@ -120,14 +123,13 @@ def get_song_dir() -> str:
     return song_dir
 
 
-def test_gui_local_match(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
-    from LDDC.view.main_window import main_window
-
+def test_gui_local_match(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch, main_window: "MainWindow") -> None:
     main_window.show()
     main_window.set_current_widget(1)
     qtbot.wait(300)  # 等待窗口加载完成
 
     monkeypatch.setattr(QFileDialog, "open", lambda *args, **kwargs: None)  # noqa: ARG005
+    main_window.local_match_widget.source_listWidget.set_soures(["QM", "KG", "NE", "LRCLIB"])
     orig_song_dir = get_song_dir()
     for file_name_mode_index, save2tagmode_index, save_mode_index in product(
         range(main_window.local_match_widget.filename_mode_comboBox.count()),
@@ -136,45 +138,63 @@ def test_gui_local_match(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
     ):
         main_window.local_match_widget.songs_table.setRowCount(0)
 
-        file_name_mode = LocalMatchFileNameMode(file_name_mode_index)
-        save2tagmode = LocalMatchSave2TagMode(save2tagmode_index)
-        save_mode = LocalMatchSaveMode(save_mode_index)
+        file_name_mode = FileNameMode(file_name_mode_index)
+        save2tag_mode = LocalMatchSave2TagMode(save2tagmode_index)
+        save_mode = FileNameMode(save_mode_index)
 
-        song_dir = os.path.join(test_artifacts_path, "audio", "local_match", f"{file_name_mode.name}_{save2tagmode.name}_{save_mode.name}")
+        song_dir = test_artifacts_path / "audio" / "local_match" / f"{file_name_mode.name}_{save2tag_mode.name}_{save_mode.name}"
         shutil.copytree(orig_song_dir, song_dir)
         main_window.local_match_widget.select_dirs_button.click()
         select_file(main_window.local_match_widget, song_dir)
 
-        save_path = os.path.join(test_artifacts_path, "lyrics", "local_match", f"{file_name_mode.name}_{save2tagmode.name}_{save_mode.name}")
+        save_path = test_artifacts_path / "lyrics" / "local_match" / f"{file_name_mode.name}_{save2tag_mode.name}_{save_mode.name}"
         main_window.local_match_widget.save_path_button.click()
         select_file(main_window.local_match_widget, save_path)
 
         main_window.local_match_widget.filename_mode_comboBox.setCurrentIndex(file_name_mode_index)
         main_window.local_match_widget.save2tag_mode_comboBox.setCurrentIndex(save2tagmode_index)
         main_window.local_match_widget.save_mode_comboBox.setCurrentIndex(save_mode_index)
+        main_window.local_match_widget.skip_existing_lyrics_checkbox.setChecked(False)
 
         def check_finished() -> bool:
-            return not main_window.local_match_widget.workers and not main_window.local_match_widget.status_label.text()
+            return (
+                main_window.local_match_widget.taskmanager.is_finished()
+                and not main_window.local_match_widget.status_label.text()
+                and bool(main_window.local_match_widget.songs_table.rowCount())
+            )
 
         qtbot.waitUntil(check_finished, timeout=10000)
         assert main_window.local_match_widget.songs_table.rowCount() == len(SONGS_INFO)
         qtbot.wait(20)
-        grab(main_window, os.path.join(screenshot_path, f"local_match_prepare_{file_name_mode.name}_{save2tagmode.name}_{save_mode.name}.png"))
-        main_window.local_match_widget.start_cancel()
+        grab(main_window, screenshot_path / f"local_match_prepare_{file_name_mode.name}_{save2tag_mode.name}_{save_mode.name}")
+        main_window.local_match_widget.start_cancel_pushButton.click()
         qtbot.waitUntil(check_finished, timeout=100000)
         close_msg_boxs(main_window.local_match_widget)
         qtbot.wait(150)
-        grab(main_window, os.path.join(screenshot_path, f"local_match_finish_{file_name_mode.name}_{save2tagmode.name}_{save_mode.name}.png"))
+        grab(main_window, screenshot_path / f"local_match_finish_{file_name_mode.name}_{save2tag_mode.name}_{save_mode.name}")
 
         for row in range(main_window.local_match_widget.songs_table.rowCount()):
-            status_item = main_window.local_match_widget.songs_table.item(row, 6)
-            assert status_item
-            assert status_item.data(Qt.ItemDataRole.UserRole)["status"] == "成功"
-            if save2tagmode != LocalMatchSave2TagMode.ONLY_TAG:
-                with open(status_item.data(Qt.ItemDataRole.UserRole)["save_path"], encoding="utf-8") as f:
+            info_item = main_window.local_match_widget.songs_table.item(row, 0)
+            assert info_item
+            assert info_item.data(Qt.ItemDataRole.UserRole + 2).status == LocalMatchingStatusType.SUCCESS
+            if save2tag_mode != LocalMatchSave2TagMode.ONLY_TAG:
+                with info_item.data(Qt.ItemDataRole.UserRole + 2).path.open(encoding="utf-8") as f:
                     verify_lyrics(f.read())
-        if save2tagmode != LocalMatchSave2TagMode.ONLY_FILE:
-            for root, _dirs, files in os.walk(song_dir):
+        if save2tag_mode != LocalMatchSave2TagMode.ONLY_FILE:
+            for root, _dirs, files in song_dir.walk():
                 for file in files:
                     if file.endswith(".flac"):
-                        verify_audio_lyrics(os.path.join(root, file))
+                        verify_audio_lyrics(root / file)
+
+        if save2tag_mode == LocalMatchSave2TagMode.ONLY_TAG or file_name_mode != FileNameMode.FORMAT_BY_LYRICS:
+            # 检查能否跳过已存在歌词
+            main_window.local_match_widget.skip_existing_lyrics_checkbox.setChecked(True)
+            main_window.local_match_widget.start_cancel_pushButton.click()
+            qtbot.waitUntil(check_finished, timeout=100000)
+            close_msg_boxs(main_window.local_match_widget)
+            qtbot.wait(150)
+            grab(main_window.local_match_widget, screenshot_path / f"local_match_skip_existing_{file_name_mode.name}_{save2tag_mode.name}_{save_mode.name}")
+            for row in range(main_window.local_match_widget.songs_table.rowCount()):
+                info_item = main_window.local_match_widget.songs_table.item(row, 0)
+                assert info_item
+                assert info_item.data(Qt.ItemDataRole.UserRole + 2).status == LocalMatchingStatusType.SKIP_EXISTING
