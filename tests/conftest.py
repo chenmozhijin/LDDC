@@ -6,7 +6,7 @@ import sys
 import threading
 from collections.abc import Callable, Generator
 from functools import partial
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from PySide6.QtCore import QCoreApplication, QRunnable, QThread
@@ -15,13 +15,17 @@ from LDDC.common.data.cache import cache
 from LDDC.common.data.config import cfg
 from LDDC.common.logger import logger
 from LDDC.common.thread import threadpool
+from LDDC.common.translator import load_translation
 from LDDC.res import resource_rc
 
 from .helper import screenshot_path, test_artifacts_path, tmp_dir_root, tmp_dirs
 
+if TYPE_CHECKING:
+    from LDDC.gui.view.main_window import MainWindow
+
 
 @pytest.fixture(scope="session", autouse=True)
-def init(request: pytest.FixtureRequest) -> Generator[None, Any, None]:
+def init(request: pytest.FixtureRequest, main_window: "MainWindow") -> Generator[None, Any, None]:
     # 预处理
     if request.config.getoption("clear_cache"):
         cache.clear()
@@ -39,16 +43,26 @@ def init(request: pytest.FixtureRequest) -> Generator[None, Any, None]:
     cfg["multi_search_sources"] = ["QM", "KG", "NE", "LRCLIB"]
     cfg["desktop_lyrics_sources"] = ["QM", "KG", "NE", "LRCLIB"]
 
+    cfg["language"] = request.config.getoption("language")
+
+    load_translation(False)
+    main_window.show()
+
     yield
 
     # 恢复配置
     cfg.update(orig_cfg)
     cfg.write_config()
 
-
     # 后处理
+    cfg.lyrics_changed.disconnect()
+    cfg.desktop_lyrics_changed.disconnect()
     app = QCoreApplication.instance()
+    main_window.hide()
+    main_window.destroy()
+    main_window.deleteLater()
     if app:
+        app.processEvents()
         app.quit()
 
     for tmp_dir in tmp_dirs:
@@ -63,6 +77,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         dest="clear_cache",
         default=True,
         help="Do not clear cache before and after testing",
+    )
+    group.addoption(
+        "--language",
+        action="store",
+        dest="language",
+        default="auto",
+        help="Set language for testing",
     )
 
 
@@ -95,3 +116,10 @@ def apply_coverage_for_qthread(monkeypatch: pytest.MonkeyPatch) -> None:
         self.run = partial(run_with_trace, self)
 
     monkeypatch.setattr(QThread, "__init__", _init)
+
+
+@pytest.fixture(scope="session")
+def main_window(qapp: QCoreApplication) -> "MainWindow":  # noqa: ARG001
+    from LDDC.gui.view.main_window import MainWindow
+
+    return MainWindow()

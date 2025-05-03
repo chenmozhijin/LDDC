@@ -4,6 +4,7 @@
 import shutil
 from itertools import product
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from PySide6.QtCore import Qt
@@ -15,6 +16,8 @@ from LDDC.gui.workers.local_match import LocalMatchingStatusType, LocalMatchSave
 
 from .helper import close_msg_boxs, create_audio_file, get_tmp_dir, grab, screenshot_path, select_file, test_artifacts_path, verify_audio_lyrics, verify_lyrics
 
+if TYPE_CHECKING:
+    from LDDC.gui.view.main_window import MainWindow
 SONGS_INFO = [
     {
         "title": "Little Busters!",
@@ -120,9 +123,7 @@ def get_song_dir() -> Path:
     return song_dir
 
 
-def test_gui_local_match(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
-    from LDDC.gui.view.main_window import main_window
-
+def test_gui_local_match(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch, main_window: "MainWindow") -> None:
     main_window.show()
     main_window.set_current_widget(1)
     qtbot.wait(300)  # 等待窗口加载完成
@@ -197,4 +198,3 @@ def test_gui_local_match(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
                 info_item = main_window.local_match_widget.songs_table.item(row, 0)
                 assert info_item
                 assert info_item.data(Qt.ItemDataRole.UserRole + 2).status == LocalMatchingStatusType.SKIP_EXISTING
-

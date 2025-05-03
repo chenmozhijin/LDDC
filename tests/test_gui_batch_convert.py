@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from PySide6.QtCore import Qt
@@ -12,7 +13,9 @@ from LDDC.gui.view.batch_convert import BatchConvertWidget, ConverStatusType
 
 from .helper import close_msg_boxs, get_tmp_dir, grab, screenshot_path, select_file, test_artifacts_path, verify_lyrics
 
-# 测试文件定义 - 包含更复杂的歌词内容和边缘情况
+if TYPE_CHECKING:
+    from LDDC.gui.view.main_window import MainWindow
+# 测试文件定义
 TEST_LYRICS = [
     {
         "name": "逐字LRC_复杂时间",
@@ -88,14 +91,12 @@ def verify_covered_lyrics(lyrics_text: str, lyrics_format: LyricsFormat) -> None
 
     if lyrics_format == LyricsFormat.SRT:
         # SRT需要特殊处理，检查完整段落结构
-        if not re.search(patterns[LyricsFormat.SRT],
-                        lyrics_text, re.MULTILINE):
+        if not re.search(patterns[LyricsFormat.SRT], lyrics_text, re.MULTILINE):
             msg = f"{lyrics_format.name}格式错误: 未找到有效的SRT段落结构"
             raise AssertionError(msg)
     elif lyrics_format == LyricsFormat.ASS:
         # ASS需要检查完整文件结构
-        if not re.search(patterns[LyricsFormat.ASS],
-                        lyrics_text, re.DOTALL):
+        if not re.search(patterns[LyricsFormat.ASS], lyrics_text, re.DOTALL):
             msg = f"{lyrics_format.name}格式错误: 未找到有效的ASS文件结构"
             raise AssertionError(msg)
     else:
@@ -123,10 +124,8 @@ def get_test_files_dir() -> Path:
     return test_dir
 
 
-def test_gui_batch_convert(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gui_batch_convert(qtbot: QtBot, monkeypatch: pytest.MonkeyPatch, main_window: "MainWindow") -> None:
     """测试批量转换功能 - 测试多个不同格式文件同时转换"""
-    from LDDC.gui.view.main_window import main_window
-
     main_window.show()
     main_window.set_current_widget(3)  # 切换到批量转换标签页
     qtbot.wait(300)  # 等待窗口加载

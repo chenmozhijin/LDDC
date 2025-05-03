@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 from itertools import combinations
+from typing import TYPE_CHECKING
 
 import pytest
 from PySide6.QtCore import QPoint, Qt
@@ -13,10 +14,11 @@ from LDDC.common.models import LyricsFormat, SearchType, SongListInfo, SongListT
 
 from .helper import close_msg_boxs, create_audio_file, grab, screenshot_path, select_file, test_artifacts_path, verify_audio_lyrics, verify_lyrics
 
+if TYPE_CHECKING:
+    from LDDC.gui.view.main_window import MainWindow
 
-def search(qtbot: QtBot, search_type: SearchType, keyword: str) -> None:
-    from LDDC.gui.view.main_window import main_window
 
+def search(qtbot: QtBot, search_type: SearchType, keyword: str, main_window: "MainWindow") -> None:
     main_window.search_widget.search_keyword_lineEdit.setText(keyword)
 
     for i in range(main_window.search_widget.source_comboBox.count() - 1, -1, -1):
@@ -77,18 +79,14 @@ def search(qtbot: QtBot, search_type: SearchType, keyword: str) -> None:
     qtbot.wait(200)
 
 
-def test_search_song(qtbot: QtBot) -> None:
-    from LDDC.gui.view.main_window import main_window
-
+def test_search_song(qtbot: QtBot, main_window: "MainWindow") -> None:
     main_window.show()
     main_window.set_current_widget(0)
     qtbot.wait(300)  # 等待窗口加载完成
-    search(qtbot, SearchType.SONG, "鈴木このみ - アルカテイル")
+    search(qtbot, SearchType.SONG, "鈴木このみ - アルカテイル", main_window)
 
 
-def test_save_to_dir(qtbot: QtBot) -> None:
-    from LDDC.gui.view.main_window import main_window
-
+def test_save_to_dir(qtbot: QtBot, main_window: "MainWindow") -> None:
     assert main_window.search_widget.preview_plainTextEdit.toPlainText() != ""
     orig_path = main_window.search_widget.save_path_lineEdit.text()
     main_window.search_widget.save_path_lineEdit.setText(str(test_artifacts_path / "lyrics" / "search song"))
@@ -101,9 +99,7 @@ def test_save_to_dir(qtbot: QtBot) -> None:
     assert (test_artifacts_path / "lyrics" / "search song").iterdir()
 
 
-def test_save_to_tag(monkeypatch: pytest.MonkeyPatch) -> None:
-    from LDDC.gui.view.main_window import main_window
-
+def test_save_to_tag(monkeypatch: pytest.MonkeyPatch, main_window: "MainWindow") -> None:
     monkeypatch.setattr(QFileDialog, "open", lambda *args, **kwargs: None)  # noqa: ARG005
     assert main_window.search_widget.preview_plainTextEdit.toPlainText() != ""
     for audio_format in ["mp3", "ogg", "tta", "wav", "flac"]:
@@ -115,9 +111,7 @@ def test_save_to_tag(monkeypatch: pytest.MonkeyPatch) -> None:
         verify_audio_lyrics(path)
 
 
-def test_lyrics_langs(qtbot: QtBot) -> None:
-    from LDDC.gui.view.main_window import main_window
-
+def test_lyrics_langs(qtbot: QtBot, main_window: "MainWindow") -> None:
     assert main_window.search_widget.lyrics
     support_langs = main_window.search_widget.lyrics.types.keys()
 
@@ -154,9 +148,7 @@ def test_lyrics_langs(qtbot: QtBot) -> None:
     change_langs(["orig", "ts"])
 
 
-def change_preview_format(qtbot: QtBot, lyrics_format: LyricsFormat) -> str:
-    from LDDC.gui.view.main_window import main_window
-
+def change_preview_format(qtbot: QtBot, lyrics_format: LyricsFormat, main_window: "MainWindow") -> str:
     assert main_window.search_widget.lyrics is not None
 
     if main_window.search_widget.lyricsformat_comboBox.currentIndex() != lyrics_format.value:
@@ -175,37 +167,49 @@ def change_preview_format(qtbot: QtBot, lyrics_format: LyricsFormat) -> str:
     return main_window.search_widget.preview_plainTextEdit.toPlainText()
 
 
-def test_preview_linebyline_lrc(qtbot: QtBot) -> None:
-    verify_lyrics(change_preview_format(qtbot, LyricsFormat.LINEBYLINELRC))
+def test_preview_linebyline_lrc(qtbot: QtBot, main_window: "MainWindow") -> None:
+    verify_lyrics(change_preview_format(qtbot, LyricsFormat.LINEBYLINELRC, main_window))
 
 
-def test_preview_enhanced_lrc(qtbot: QtBot) -> None:
-    verify_lyrics(change_preview_format(qtbot, LyricsFormat.ENHANCEDLRC))
+def test_preview_enhanced_lrc(qtbot: QtBot, main_window: "MainWindow") -> None:
+    verify_lyrics(change_preview_format(qtbot, LyricsFormat.ENHANCEDLRC, main_window))
 
 
-def test_preview_srt(qtbot: QtBot) -> None:
-    verify_lyrics(change_preview_format(qtbot, LyricsFormat.SRT))
+def test_preview_srt(qtbot: QtBot, main_window: "MainWindow") -> None:
+    verify_lyrics(change_preview_format(qtbot, LyricsFormat.SRT, main_window))
 
 
-def test_preview_ass(qtbot: QtBot) -> None:
-    verify_lyrics(change_preview_format(qtbot, LyricsFormat.ASS))
+def test_preview_ass(qtbot: QtBot, main_window: "MainWindow") -> None:
+    verify_lyrics(change_preview_format(qtbot, LyricsFormat.ASS, main_window))
 
 
-def test_preview_verbatimlrc(qtbot: QtBot) -> None:
-    verify_lyrics(change_preview_format(qtbot, LyricsFormat.VERBATIMLRC))
+def test_preview_verbatimlrc(qtbot: QtBot, main_window: "MainWindow") -> None:
+    verify_lyrics(change_preview_format(qtbot, LyricsFormat.VERBATIMLRC, main_window))
 
 
-def test_search_song_list(qtbot: QtBot) -> None:
-    search(qtbot, SearchType.SONGLIST, "key社")
+def test_translate_lyrics(qtbot: QtBot, main_window: "MainWindow") -> None:
+    """测试歌词翻译功能"""
+    main_window.show()
+    main_window.set_current_widget(0)
+    qtbot.wait(300)
+
+    # 点击翻译按钮
+    main_window.search_widget.translate_pushButton.click()
+
+    qtbot.waitUntil(lambda: bool(main_window.search_widget.lyrics and "LDDC_ts" in main_window.search_widget.lyrics), timeout=15000)
+    assert main_window.search_widget.lyrics
+    assert "LDDC_ts" in main_window.search_widget.lyrics
 
 
-def test_search_album(qtbot: QtBot) -> None:
-    search(qtbot, SearchType.ALBUM, "アスタロア/青き此方/夏の砂時計")
+def test_search_song_list(qtbot: QtBot, main_window: "MainWindow") -> None:
+    search(qtbot, SearchType.SONGLIST, "key社", main_window)
 
 
-def test_save_album_lyrics(qtbot: QtBot) -> None:
-    from LDDC.gui.view.main_window import main_window
+def test_search_album(qtbot: QtBot, main_window: "MainWindow") -> None:
+    search(qtbot, SearchType.ALBUM, "アスタロア/青き此方/夏の砂時計", main_window)
 
+
+def test_save_album_lyrics(qtbot: QtBot, main_window: "MainWindow") -> None:
     assert main_window.search_widget.results_tableWidget.rowCount() > 0
     path = main_window.search_widget.path
     assert path
@@ -224,13 +228,13 @@ def test_save_album_lyrics(qtbot: QtBot) -> None:
             get_list_lyrics_box = child
             break
     else:
-        assert False
+        pytest.fail("GetListLyrics not found")
 
     def check_progress() -> bool:
         return get_list_lyrics_box.progressBar.value() == get_list_lyrics_box.progressBar.maximum()
 
     qtbot.waitUntil(check_progress, timeout=50000)
-    close_msg_boxs(main_window.search_widget)
+    close_msg_boxs(get_list_lyrics_box)
 
     qtbot.wait(120)
     grab(main_window, screenshot_path / "save_album_lyrics")
@@ -240,3 +244,16 @@ def test_save_album_lyrics(qtbot: QtBot) -> None:
 
     get_list_lyrics_box.close()
     assert (test_artifacts_path / "lyrics" / "search album").iterdir()
+
+
+def test_empty_keyword_search(qtbot: QtBot, main_window: "MainWindow") -> None:
+    """测试空关键词搜索"""
+    main_window.show()
+    main_window.set_current_widget(0)
+    qtbot.wait(300)
+
+    main_window.search_widget.search_keyword_lineEdit.setText("")
+    main_window.search_widget.search_pushButton.click()
+
+    assert main_window.search_widget.search_pushButton.isEnabled() is True
+    close_msg_boxs(main_window.search_widget)

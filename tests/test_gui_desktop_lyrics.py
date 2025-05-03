@@ -123,6 +123,12 @@ def test_desktop_lyrics(qtbot: QtBot) -> None:
         "send_time": start_time})
     qtbot.wait(5000)
     grab(instance.widget, screenshot_path/  "desktop_lyrics_playing", "widget")
+    instance.widget.control_bar.show()
+    qtbot.wait(100)
+    instance.widget.set_transparency(True)
+    grab(instance.widget, screenshot_path/  "desktop_lyrics_playing_with_control_bar", "widget")
+    instance.widget.control_bar.hide()
+    instance.widget.set_transparency(False)
 
     # 暂停音乐
     send_msg({

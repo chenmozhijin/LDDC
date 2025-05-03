@@ -4,4 +4,4 @@ import sys
 
 import pytest
 
-sys.exit(pytest.main(["--cov=LDDC", "--cov-report=xml", "--cov-report=html", "--cov-report=term", "--not-clear-cache"]))
+sys.exit(pytest.main(["--cov=LDDC", "--cov-report=xml", "--cov-report=html", "--cov-report=term", "--not-clear-cache", "-v"]))
