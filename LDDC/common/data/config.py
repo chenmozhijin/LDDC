@@ -66,7 +66,7 @@ class Config(dict):
             "desktop_lyrics_font_family": "",
             "desktop_lyrics_refresh_rate": -1,  # -1为自动
             "desktop_lyrics_rect": (),  # 默认为空自动移动到屏幕中央
-            "desktop_lyrics_font_size": 18.0,
+            "desktop_lyrics_font_size": 30.0,
 
             "language": "auto",
             "color_scheme": "auto",

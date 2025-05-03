@@ -744,7 +744,6 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
 
     def __init__(self, available_tasks: list) -> None:
         super().__init__()
-        self.setGeometry(0, 0, 800, 200)
 
         self.menu = DesktopLyricsMenu(self)
         self.tray_icon = DesktopLyricsTrayIcon(self)
@@ -765,6 +764,7 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
 
         if not cfg["desktop_lyrics_rect"]:
             self.move_to_center()
+            self.resize(1200, 150)
         else:
             self.setGeometry(QRect(*cfg["desktop_lyrics_rect"]))
 
@@ -805,7 +805,7 @@ class DesktopLyricsWidget(DesktopLyricsWidgetBase):
         self.verticalLayout.addWidget(self.control_bar)
         self.verticalLayout.addWidget(self.lyrics_text)
 
-        self.selector = DesktopLyricsSelectWidget(self)
+        self.selector = DesktopLyricsSelectWidget()
 
     def move_to_center(self) -> None:
         screen_geometry = self.screen().geometry()
