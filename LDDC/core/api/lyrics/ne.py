@@ -413,7 +413,7 @@ class NEAPI(CloudAPI):
         tags = {}
 
         if info.artist:
-            tags.update({"ar": "/".join(info.artist) if isinstance(info.artist, frozenset) else info.artist})
+            tags.update({"ar": "/".join(info.artist) if not isinstance(info.artist, str) else info.artist})
         if info.album:
             tags.update({"al": info.album})
         if info.title:
