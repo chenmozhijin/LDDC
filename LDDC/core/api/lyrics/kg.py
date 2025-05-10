@@ -4,6 +4,7 @@
 # ruff: noqa: S311 S324
 import hashlib
 import json
+import random
 import time
 from base64 import b64decode, b64encode
 from datetime import datetime, timedelta, timezone
@@ -137,7 +138,8 @@ class KGAPI(CloudAPI):
                 "uuid": "-",
                 # "uuid": "15e772e1213bdd0718d0c1d10d64e06f",
                 "mid": mid,
-                "dfid": self.dfid,
+                # "dfid": self.dfid,
+                "dfid": "-",
                 "clientver": "11070",
                 "platform": "AndroidFilter",
                 **params,
@@ -181,7 +183,11 @@ class KGAPI(CloudAPI):
             "page": page,
         }
         url, module = SEARCH_TYPE_MAPPING[search_type]
-        data = self.request(url, params, module, headers={"x-router": "complexsearch.kugou.com"})
+        try:
+            data = self.request(url, params, module, headers={"x-router": "complexsearch.kugou.com"})
+        except APIRequestError:
+            logger.exception("kg API请求错误,尝试使用旧接口")
+            return self._old_search(keyword, search_type, page)
 
         if not data["data"]["lists"]:
             return APIResultList(
@@ -294,6 +300,155 @@ class KGAPI(CloudAPI):
                     ),
                 )
 
+            case _:
+                raise NotImplementedError
+
+    def _old_search(self, keyword: str, search_type: SearchType, page: int = 1) -> APIResultList[SongInfo] | APIResultList[SongListInfo]:
+        """备用搜索API"""
+        domain = random.choice(["mobiles.kugou.com", "msearchcdn.kugou.com", "mobilecdnbj.kugou.com", "msearch.kugou.com"])
+        pagesize = 20
+
+        match search_type:
+            case SearchType.SONG:
+                url = f"http://{domain}/api/v3/search/song"
+                params = {
+                    "showtype": "14",
+                    "highlight": "",
+                    "pagesize": "30",
+                    "tag_aggr": "1",
+                    "plat": "0",
+                    "sver": "5",
+                    "keyword": keyword,
+                    "correct": "1",
+                    "api_ver": "1",
+                    "version": "9108",
+                    "page": page,
+                }
+            case SearchType.SONGLIST:
+                url = f"http://{domain}/api/v3/search/special"
+                params = {
+                    "version": "9108",
+                    "highlight": "",
+                    "keyword": keyword,
+                    "pagesize": "20",
+                    "filter": "0",
+                    "page": page,
+                    "sver": "2",
+                }
+            case SearchType.ALBUM:
+                url = f"http://{domain}/api/v3/search/album"
+                params = {
+                    "version": "9108",
+                    "iscorrection": "1",
+                    "highlight": "",
+                    "plat": "0",
+                    "keyword": keyword,
+                    "pagesize": "20",
+                    "page": page,
+                    "sver": "2",
+                }
+
+        response = self.client.get(url, params=params, timeout=3)
+        response.raise_for_status()
+        data = response.json()
+        start_index = (page - 1) * pagesize
+        match search_type:
+            case SearchType.SONG:
+                return APIResultList(
+                    [
+                        SongInfo(
+                            source=self.source,
+                            id=info["album_audio_id"],
+                            hash=info["hash"],
+                            title=info["songname"],
+                            subtitle=info["topic"],
+                            artist=Artist(info["singername"].split("、")),
+                            album=info["album_name"],
+                            duration=info["duration"] * 1000,
+                            language=LANGUAGE_MAPPING.get(info["trans_param"].get("language"), Language.OTHER),
+                        )
+                        for info in data["data"]["info"]
+                    ],
+                    SearchInfo(
+                        source=self.source,
+                        keyword=keyword,
+                        search_type=search_type,
+                        page=page,
+                    ),
+                    (
+                        start_index,
+                        start_index + len(data["data"]["info"]) - 1,
+                        data["data"]["total"] if len(data["data"]["info"]) == pagesize else start_index + len(data["data"]["info"]),
+                    ),
+                )
+            case SearchType.SONGLIST:
+                return APIResultList(
+                    [
+                        SongListInfo(
+                            source=self.source,
+                            type=SongListType.SONGLIST,
+                            id=info["specialid"],
+                            title=info["specialname"],
+                            imgurl=info["imgurl"],
+                            songcount=info["songcount"],
+                            publishtime=int(
+                                datetime.strptime(info["publishtime"], "%Y-%m-%d %H:%M:%S")
+                                .replace(tzinfo=timezone(timedelta(hours=8)))
+                                .astimezone(timezone.utc)
+                                .timestamp(),
+                            )
+                            if info["publishtime"] != "0000-00-00 00:00:00"
+                            else None,
+                            author=info["nickname"],
+                        )
+                        for info in data["data"]["info"]
+                    ],
+                    SearchInfo(
+                        source=self.source,
+                        keyword=keyword,
+                        search_type=search_type,
+                        page=page,
+                    ),
+                    (
+                        start_index,
+                        start_index + len(data["data"]["info"]) - 1,
+                        data["data"]["total"] if len(data["data"]["info"]) == pagesize else start_index + len(data["data"]["info"]),
+                    ),
+                )
+            case SearchType.ALBUM:
+                return APIResultList(
+                    [
+                        SongListInfo(
+                            source=self.source,
+                            type=SongListType.ALBUM,
+                            id=info["albumid"],
+                            title=info["albumname"],
+                            imgurl=info["imgurl"],
+                            songcount=info["songcount"],
+                            publishtime=int(
+                                datetime.strptime(info["publishtime"], "%Y-%m-%d %H:%M:%S")
+                                .replace(tzinfo=timezone(timedelta(hours=8)))
+                                .astimezone(timezone.utc)
+                                .timestamp(),
+                            )
+                            if info["publishtime"] != "0000-00-00 00:00:00"
+                            else None,
+                            author=info["singer"],
+                        )
+                        for info in data["data"]["info"]
+                    ],
+                    SearchInfo(
+                        source=self.source,
+                        keyword=keyword,
+                        search_type=search_type,
+                        page=page,
+                    ),
+                    (
+                        start_index,
+                        start_index + len(data["data"]["info"]) - 1,
+                        data["data"]["total"] if len(data["data"]["info"]) == pagesize else start_index + len(data["data"]["info"]),
+                    ),
+                )
             case _:
                 raise NotImplementedError
 
