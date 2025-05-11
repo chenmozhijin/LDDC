@@ -136,8 +136,8 @@ class QMAPI(CloudAPI):
         )
         response.raise_for_status()
         response_data = response.json()
-        if response_data["code"] != 0:
-            raise APIRequestError("qm API请求错误,错误码:" + str(response_data["code"]))
+        if response_data["code"] != 0 or response_data["request"]["code"] != 0:
+            raise APIRequestError("qm API请求错误,错误码:" + str(response_data["code"] if response_data["code"] != 0 else response_data["request"]["code"]))
         return response_data["request"]["data"]
 
     def format_songinfos(self, songinfos: list) -> list[SongInfo]:
