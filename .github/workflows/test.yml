@@ -61,9 +61,11 @@ jobs:
             - name: Save test artifacts
               if: always()
               run: |
-                mkdir -p tests/artifacts/reports
+                mkdir -p tests/artifacts/reports tests/artifacts/logs
                 cp -r htmlcov ./tests/artifacts/reports
                 cp coverage.xml ./tests/artifacts/reports
+                export log_dir=$(python build_helper.py --task log_dir)
+                cp $log_dir/* .tests/artifacts/logs
 
             - name: Upload artifacts
               uses: actions/upload-artifact@v4
