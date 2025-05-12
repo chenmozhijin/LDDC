@@ -125,10 +125,10 @@ class QMAPI(CloudAPI):
             separators=(",", ":"),
         ).encode("utf-8")
         domains = [
-            "lite.y.qq.com",
+            # "lite.y.qq.com",
             # "u6.y.qq.com",
             # "shu6.y.qq.com",
-            # "u.y.qq.com",
+            "u.y.qq.com",
         ]
         response = self.client.post(
             f"https://{random.choice(domains)}/cgi-bin/musicu.fcg",
