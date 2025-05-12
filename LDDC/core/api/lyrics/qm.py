@@ -290,7 +290,7 @@ class QMAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.SONGLIST,
-                            id=songlist["dissid"],
+                            id=str(songlist["dissid"]),
                             title=songlist["dissname"],
                             imgurl=songlist["logo"],
                             songcount=songlist["songnum"],

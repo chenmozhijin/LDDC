@@ -208,7 +208,7 @@ class KGAPI(CloudAPI):
                     [
                         SongInfo(
                             source=self.source,
-                            id=info["ID"],
+                            id=str(info["ID"]),
                             hash=info["FileHash"],
                             title=info["SongName"],
                             subtitle=info["Auxiliary"],
@@ -238,7 +238,7 @@ class KGAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.ALBUM,
-                            id=info["albumid"],
+                            id=str(info["albumid"]),
                             title=info["albumname"],
                             imgurl=info["img"],
                             songcount=info["songcount"],
@@ -273,7 +273,7 @@ class KGAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.SONGLIST,
-                            id=info["gid"],
+                            id=str(info["gid"]),
                             title=info["specialname"],
                             imgurl=info["img"],
                             songcount=info["song_count"],
@@ -358,7 +358,7 @@ class KGAPI(CloudAPI):
                     [
                         SongInfo(
                             source=self.source,
-                            id=info["album_audio_id"],
+                            id=str(info["album_audio_id"]),
                             hash=info["hash"],
                             title=info["songname"],
                             subtitle=info["topic"],
@@ -387,7 +387,7 @@ class KGAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.SONGLIST,
-                            id=info["specialid"],
+                            id=str(info["specialid"]),
                             title=info["specialname"],
                             imgurl=info["imgurl"],
                             songcount=info["songcount"],
@@ -421,7 +421,7 @@ class KGAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.ALBUM,
-                            id=info["albumid"],
+                            id=str(info["albumid"]),
                             title=info["albumname"],
                             imgurl=info["imgurl"],
                             songcount=info["songcount"],
@@ -557,7 +557,7 @@ class KGAPI(CloudAPI):
             [
                 LyricInfo(
                     source=self.source,
-                    id=lyric["id"],
+                    id=str(lyric["id"]),
                     accesskey=lyric["accesskey"],
                     creator=lyric["nickname"],
                     duration=lyric["duration"],

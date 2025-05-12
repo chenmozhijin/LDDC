@@ -291,7 +291,7 @@ class NEAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.ALBUM,
-                            id=album["id"],
+                            id=str(album["id"]),
                             title=album["name"],
                             imgurl=album["picUrl"],
                             songcount=album["size"],
@@ -329,7 +329,7 @@ class NEAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.SONGLIST,
-                            id=songlist["id"],
+                            id=str(songlist["id"]),
                             title=songlist["name"],
                             imgurl=songlist["coverImgUrl"],
                             songcount=songlist["trackCount"],
