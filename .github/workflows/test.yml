@@ -62,11 +62,10 @@ jobs:
               if: always()
               run: |
                 mkdir -p tests/artifacts/reports
-                mkdir -p tests/artifacts/logs
                 cp -r htmlcov ./tests/artifacts/reports
                 cp coverage.xml ./tests/artifacts/reports
                 export log_dir=$(python build_helper.py --task log_dir)
-                cp $log_dir/* ./tests/artifacts/logs
+                cp -r $log_dir ./tests/artifacts
               shell: bash
 
             - name: Upload artifacts
