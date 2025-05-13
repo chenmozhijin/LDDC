@@ -12,7 +12,7 @@ from PySide6.QtCore import QObject, QRunnable, Qt, Signal, Slot
 
 from .logger import logger
 from .models import P, T
-from .thread import in_other_thread, threadpool
+from .thread import in_other_thread, is_exited, threadpool
 
 
 class TaskManager:
@@ -252,7 +252,7 @@ class TaskWorker(QRunnable):
 
     @property
     def is_stopped(self) -> bool:
-        return self.taskmanager.is_finished(self.task_type, self.taskid)
+        return self.taskmanager.is_finished(self.task_type, self.taskid) or is_exited()
 
     def finished_task(self) -> None:
         self.taskmanager.finished_task(self.task_type, self.taskid)

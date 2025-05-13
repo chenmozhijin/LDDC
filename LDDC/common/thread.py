@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 from collections.abc import Callable, Iterable
 from functools import partial, wraps
-from threading import Lock
+from threading import Event, Lock
 from typing import Any
 
 from PySide6.QtCore import QCoreApplication, QEvent, QObject, QRunnable, Qt, QThread, QThreadPool, Signal, Slot
@@ -10,7 +10,18 @@ from PySide6.QtCore import QCoreApplication, QEvent, QObject, QRunnable, Qt, QTh
 from .logger import logger
 from .models import P, T
 
-threadpool = QThreadPool()
+exit_event = Event()
+
+
+def is_exited() -> bool:
+    return exit_event.is_set()
+
+
+def set_exited() -> None:
+    exit_event.set()
+
+
+threadpool = QThreadPool(QCoreApplication.instance())
 if threadpool.maxThreadCount() < 8:
     threadpool.setMaxThreadCount(8)
 
@@ -76,8 +87,13 @@ class TaskRunnable(QRunnable):
         self.emitter = emitter
 
     def run(self) -> None:
+        if is_exited():
+            return
         try:
-            self.emitter.success.emit(self.func())  # 成功时发射信号
+            result = self.func()
+            if is_exited():
+                return
+            self.emitter.success.emit(result)  # 成功时发射信号
         except Exception as e:
             self.emitter.error.emit(e)  # 失败时发射信号
             logger.exception(e)
