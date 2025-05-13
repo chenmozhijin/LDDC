@@ -312,6 +312,7 @@ class LocalMatchWorker(TaskWorker):
             except (OSError, FileExistsError, FileNotFoundError):
                 status = LocalMatchingStatus(LocalMatchingStatusType.SAVE_FAIL, i, QCoreApplication.translate("LocalMatch", "保存失败"))
             except Exception as e:
+                logger.exception("本地匹配歌词时发生错误未知: %s", info.artist_title(replace=True))
                 status = LocalMatchingStatus(
                     LocalMatchingStatusType.UNDERKNOWN_ERROR,
                     i,

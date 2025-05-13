@@ -125,10 +125,10 @@ class QMAPI(CloudAPI):
             separators=(",", ":"),
         ).encode("utf-8")
         domains = [
-            "lite.y.qq.com",
+            # "lite.y.qq.com",
             # "u6.y.qq.com",
             # "shu6.y.qq.com",
-            # "u.y.qq.com",
+            "u.y.qq.com",
         ]
         response = self.client.post(
             f"https://{random.choice(domains)}/cgi-bin/musicu.fcg",
@@ -136,8 +136,8 @@ class QMAPI(CloudAPI):
         )
         response.raise_for_status()
         response_data = response.json()
-        if response_data["code"] != 0:
-            raise APIRequestError("qm API请求错误,错误码:" + str(response_data["code"]))
+        if response_data["code"] != 0 or response_data["request"]["code"] != 0:
+            raise APIRequestError("qm API请求错误,错误码:" + str(response_data["code"] if response_data["code"] != 0 else response_data["request"]["code"]))
         return response_data["request"]["data"]
 
     def format_songinfos(self, songinfos: list) -> list[SongInfo]:
@@ -290,7 +290,7 @@ class QMAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.SONGLIST,
-                            id=songlist["dissid"],
+                            id=str(songlist["dissid"]),
                             title=songlist["dissname"],
                             imgurl=songlist["logo"],
                             songcount=songlist["songnum"],

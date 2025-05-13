@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
+import atexit
 from collections.abc import Callable
 from typing import Any, Literal, ParamSpec, TypeVar, overload
 
@@ -8,7 +9,7 @@ from diskcache import Cache
 from LDDC.common.paths import cache_dir
 
 cache = Cache(cache_dir, sqlitecache_size=512)
-cache_version = 5
+cache_version = 6
 if "version" not in cache or cache["version"] != cache_version:
     cache.clear()
 cache["version"] = cache_version
@@ -54,23 +55,42 @@ def cached_call(
     cache.set(key, result, expire=expire)
     return result
 
-@overload
-def get_cached_func(
-    func: Callable[P, T], typed: bool = True, ignore: set[int | str] | None = None, expire: int | None = None,
-) -> Callable[P, T]:...
 
 @overload
 def get_cached_func(
-    func: Callable[P, T], typed: bool = True, ignore: set[int | str] | None = None, expire: int | None = None, with_status: Literal[False] = False,
-) -> Callable[P, T]:...
+    func: Callable[P, T],
+    typed: bool = True,
+    ignore: set[int | str] | None = None,
+    expire: int | None = None,
+) -> Callable[P, T]: ...
+
 
 @overload
 def get_cached_func(
-    func: Callable[P, T], typed: bool = True, ignore: set[int | str] | None = None, expire: int | None = None, with_status: Literal[True] = True,
-) -> Callable[P, tuple[T, bool]]:...
+    func: Callable[P, T],
+    typed: bool = True,
+    ignore: set[int | str] | None = None,
+    expire: int | None = None,
+    with_status: Literal[False] = False,
+) -> Callable[P, T]: ...
+
+
+@overload
+def get_cached_func(
+    func: Callable[P, T],
+    typed: bool = True,
+    ignore: set[int | str] | None = None,
+    expire: int | None = None,
+    with_status: Literal[True] = True,
+) -> Callable[P, tuple[T, bool]]: ...
+
 
 def get_cached_func(
-    func: Callable[P, T], typed: bool = True, ignore: set[int | str] | None = None, expire: int | None = None, with_status: bool = False,
+    func: Callable[P, T],
+    typed: bool = True,
+    ignore: set[int | str] | None = None,
+    expire: int | None = None,
+    with_status: bool = False,
 ) -> Callable[P, T] | Callable[P, tuple[T, bool]]:
     cache_settings = {"typed": typed, "ignore": ignore if ignore else set(), "expire": expire}
     if with_status:
@@ -151,3 +171,12 @@ def _buildcache_key(
         key += type_sig
 
     return key
+
+
+def _atexit() -> None:
+    cache["version"] = cache_version
+    cache.expire()
+    cache.close()
+
+
+atexit.register(_atexit)

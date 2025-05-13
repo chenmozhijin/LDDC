@@ -64,6 +64,9 @@ jobs:
                 mkdir -p tests/artifacts/reports
                 cp -r htmlcov ./tests/artifacts/reports
                 cp coverage.xml ./tests/artifacts/reports
+                export log_dir=$(python build_helper.py --task log_dir)
+                cp -r $log_dir ./tests/artifacts
+              shell: bash
 
             - name: Upload artifacts
               uses: actions/upload-artifact@v4

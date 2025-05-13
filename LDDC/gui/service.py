@@ -243,6 +243,7 @@ class LDDCService(QObject):
             self.socketserver.close()
         self.shared_memory.detach()
         self.check_any_instance_alive_timer.stop()
+        logger.info("LDDC服务停止完成")
 
     @Slot()
     def on_q_server_new_connection(self) -> None:

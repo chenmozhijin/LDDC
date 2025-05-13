@@ -3,8 +3,8 @@
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import QApplication, QWidget
 
-from LDDC.common.data.cache import cache, cache_version
 from LDDC.common.logger import logger
+from LDDC.common.thread import set_exited, threadpool
 from LDDC.gui.service import check_any_instance_alive
 
 
@@ -22,6 +22,7 @@ class ExitManager(QObject):
     def get_window_show_state(self) -> bool:
         try:
             from LDDC.gui.view.main_window import main_window
+
             return not main_window.isHidden()
         except Exception:
             return False
@@ -47,9 +48,16 @@ class ExitManager(QObject):
             window.destroy()
             window.deleteLater()
 
-        cache["version"] = cache_version
-        cache.expire()
-        cache.close()
+        set_exited()
+
+        # 设置超时等待线程退出
+        logger.info("等待线程池清理完成...")
+        threadpool.setMaxThreadCount(1)
+        threadpool.clear()
+        if not threadpool.waitForDone(3000):  # 3秒超时
+            logger.warning("部分线程未能在超时时间内退出")
+
+        logger.info("线程池清理完成")
         app = QApplication.instance()
         if app:
             app.quit()

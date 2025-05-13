@@ -106,6 +106,12 @@ class NEAPI(CloudAPI):
             self.session = httpx.Client(http2=True)  # 创建session
             self.inited = True
 
+            def _atexit() -> None:
+                if self.expire > int(time.time()):
+                    cache.set(("NE_anonimous", __version__), {"user_id": self.user_id, "cookies": self.cookies, "expire": self.expire})
+            import atexit
+            atexit.register(_atexit)
+
     def request(self, path: str, params: dict) -> dict:
         """eapi接口请求
 
@@ -291,7 +297,7 @@ class NEAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.ALBUM,
-                            id=album["id"],
+                            id=str(album["id"]),
                             title=album["name"],
                             imgurl=album["picUrl"],
                             songcount=album["size"],
@@ -329,7 +335,7 @@ class NEAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.SONGLIST,
-                            id=songlist["id"],
+                            id=str(songlist["id"]),
                             title=songlist["name"],
                             imgurl=songlist["coverImgUrl"],
                             songcount=songlist["trackCount"],
@@ -413,7 +419,7 @@ class NEAPI(CloudAPI):
         tags = {}
 
         if info.artist:
-            tags.update({"ar": "/".join(info.artist) if isinstance(info.artist, frozenset) else info.artist})
+            tags.update({"ar": "/".join(info.artist) if not isinstance(info.artist, str) else info.artist})
         if info.album:
             tags.update({"al": info.album})
         if info.title:

@@ -175,22 +175,22 @@
 <context>
     <name>DesktopLyrics</name>
     <message>
-        <location filename="../../gui/service.py" line="550"/>
+        <location filename="../../gui/service.py" line="551"/>
         <source>自动获取歌词中...</source>
         <translation type="unfinished">自動歌詞取得中...</translation>
     </message>
     <message>
-        <location filename="../../gui/service.py" line="558"/>
+        <location filename="../../gui/service.py" line="559"/>
         <source>自动获取的歌词为纯文本，无法显示</source>
         <translation type="unfinished">自動取得された歌詞はプレーンテキストで表示できません</translation>
     </message>
     <message>
-        <location filename="../../gui/service.py" line="570"/>
+        <location filename="../../gui/service.py" line="571"/>
         <source>没有获取到标题或文件名信息, 无法自动获取歌词</source>
         <translation type="unfinished">曲名またはファイル名情報を取得できず、自動で歌詞を取得できません</translation>
     </message>
     <message>
-        <location filename="../../gui/service.py" line="696"/>
+        <location filename="../../gui/service.py" line="697"/>
         <source>纯音乐，请欣赏</source>
         <translation type="unfinished">インストゥルメンタルです。ご鑑賞ください</translation>
     </message>
@@ -343,10 +343,10 @@
 <context>
     <name>DirSelectorDialog</name>
     <message>
-        <location filename="../../gui/view/local_song_lyrics_db_manager.py" line="51"/>
         <location filename="../../gui/ui/local_song_lyrics_db_manager/dir_selector.ui" line="6"/>
         <location filename="../../gui/ui/local_song_lyrics_db_manager/dir_selector.ui" line="26"/>
         <location filename="../../gui/ui/local_song_lyrics_db_manager/dir_selector.ui" line="36"/>
+        <location filename="../../gui/view/local_song_lyrics_db_manager.py" line="51"/>
         <source>选择文件夹</source>
         <translation type="unfinished">フォルダを選択</translation>
     </message>
@@ -1145,122 +1145,122 @@
 <context>
     <name>SearchWidget</name>
     <message>
-        <location filename="../../gui/view/search.py" line="550"/>
+        <location filename="../../gui/view/search.py" line="551"/>
         <source>搜索</source>
         <translation type="unfinished">検索</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="551"/>
+        <location filename="../../gui/view/search.py" line="552"/>
         <source>从云端搜索并下载歌词</source>
         <translation type="unfinished">クラウドから歌詞を検索してダウンロード</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="553"/>
+        <location filename="../../gui/view/search.py" line="554"/>
         <source>保存到:</source>
         <translation type="unfinished">保存先:</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="554"/>
-        <location filename="../../gui/view/search.py" line="636"/>
+        <location filename="../../gui/view/search.py" line="555"/>
+        <location filename="../../gui/view/search.py" line="637"/>
         <source>选择保存路径</source>
         <translation type="unfinished">保存先を選択</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="556"/>
+        <location filename="../../gui/view/search.py" line="557"/>
         <source>保存歌词到目录</source>
         <translation type="unfinished">歌詞をディレクトリに保存</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="557"/>
+        <location filename="../../gui/view/search.py" line="558"/>
         <source>保存到歌曲标签</source>
         <translation type="unfinished">曲タグに保存</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="558"/>
+        <location filename="../../gui/view/search.py" line="559"/>
         <source>保存专辑/歌单的歌词</source>
         <translation type="unfinished">アルバム/プレイリストの歌詞を保存</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="564"/>
-        <location filename="../../gui/view/search.py" line="568"/>
-        <location filename="../../gui/view/search.py" line="573"/>
-        <location filename="../../gui/view/search.py" line="587"/>
-        <location filename="../../gui/view/search.py" line="591"/>
-        <location filename="../../gui/view/search.py" line="603"/>
-        <location filename="../../gui/view/search.py" line="618"/>
+        <location filename="../../gui/view/search.py" line="565"/>
+        <location filename="../../gui/view/search.py" line="569"/>
+        <location filename="../../gui/view/search.py" line="574"/>
+        <location filename="../../gui/view/search.py" line="588"/>
+        <location filename="../../gui/view/search.py" line="592"/>
+        <location filename="../../gui/view/search.py" line="604"/>
+        <location filename="../../gui/view/search.py" line="619"/>
         <source>警告</source>
         <translation type="unfinished">警告</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="564"/>
+        <location filename="../../gui/view/search.py" line="565"/>
         <source>请先下载并预览歌词</source>
         <translation type="unfinished">歌詞をダウンロードしてプレビューしてください</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="568"/>
+        <location filename="../../gui/view/search.py" line="569"/>
         <source>歌词内容为空</source>
         <translation type="unfinished">歌詞内容が空です</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="573"/>
+        <location filename="../../gui/view/search.py" line="574"/>
         <source>请先选择保存路径</source>
         <translation type="unfinished">保存パスを選択してください</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="585"/>
-        <location filename="../../gui/view/search.py" line="601"/>
+        <location filename="../../gui/view/search.py" line="586"/>
+        <location filename="../../gui/view/search.py" line="602"/>
         <source>提示</source>
         <translation type="unfinished">ヒント</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="585"/>
-        <location filename="../../gui/view/search.py" line="601"/>
+        <location filename="../../gui/view/search.py" line="586"/>
+        <location filename="../../gui/view/search.py" line="602"/>
         <source>歌词保存成功</source>
         <translation type="unfinished">歌詞の保存が成功しました</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="587"/>
-        <location filename="../../gui/view/search.py" line="603"/>
+        <location filename="../../gui/view/search.py" line="588"/>
+        <location filename="../../gui/view/search.py" line="604"/>
         <source>歌词保存失败：</source>
         <translation type="unfinished">歌詞の保存に失敗しました：</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="591"/>
+        <location filename="../../gui/view/search.py" line="592"/>
         <source>歌曲标签中的歌词应为LRC格式</source>
         <translation type="unfinished">曲タグの歌詞はLRCフォーマットである必要があります</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="606"/>
+        <location filename="../../gui/view/search.py" line="607"/>
         <source>选择歌曲文件</source>
         <translation type="unfinished">曲ファイルを選択</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="608"/>
+        <location filename="../../gui/view/search.py" line="609"/>
         <source>歌曲文件</source>
         <translation type="unfinished">曲ファイル</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="618"/>
+        <location filename="../../gui/view/search.py" line="619"/>
         <source>请先选择一个专辑或歌单</source>
         <translation type="unfinished">アルバムまたはプレイリストを選択してください</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="661"/>
+        <location filename="../../gui/view/search.py" line="662"/>
         <source>错误</source>
         <translation type="unfinished">エラー</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="661"/>
+        <location filename="../../gui/view/search.py" line="662"/>
         <source>拖动文件解析失败：</source>
         <translation type="unfinished">ドラッグファイル解析失敗：</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="672"/>
+        <location filename="../../gui/view/search.py" line="673"/>
         <source>正在自动获取 {0} 的歌词...</source>
         <translation type="unfinished">{0} の歌詞を自動取得中...</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="685"/>
+        <location filename="../../gui/view/search.py" line="686"/>
         <source>自动获取歌词失败：</source>
         <translation type="unfinished">自動歌詞取得に失敗しました：</translation>
     </message>
@@ -1274,9 +1274,9 @@
     </message>
     <message>
         <location filename="../../gui/view/search.py" line="58"/>
-        <location filename="../../gui/view/search.py" line="142"/>
-        <location filename="../../gui/view/search.py" line="149"/>
-        <location filename="../../gui/view/search.py" line="151"/>
+        <location filename="../../gui/view/search.py" line="143"/>
+        <location filename="../../gui/view/search.py" line="150"/>
+        <location filename="../../gui/view/search.py" line="152"/>
         <source>错误</source>
         <translation type="unfinished">エラー</translation>
     </message>
@@ -1286,230 +1286,230 @@
         <translation type="unfinished">関連結果が見つかりません</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="102"/>
+        <location filename="../../gui/view/search.py" line="103"/>
         <source>单曲</source>
         <translation type="unfinished">シングル</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="103"/>
-        <location filename="../../gui/view/search.py" line="186"/>
+        <location filename="../../gui/view/search.py" line="104"/>
         <location filename="../../gui/view/search.py" line="187"/>
+        <location filename="../../gui/view/search.py" line="188"/>
         <source>专辑</source>
         <translation type="unfinished">アルバム</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="104"/>
-        <location filename="../../gui/view/search.py" line="188"/>
+        <location filename="../../gui/view/search.py" line="105"/>
+        <location filename="../../gui/view/search.py" line="189"/>
         <source>歌单</source>
         <translation type="unfinished">プレイリスト</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="105"/>
+        <location filename="../../gui/view/search.py" line="106"/>
         <source>歌手</source>
         <translation type="unfinished">アーティスト</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="106"/>
+        <location filename="../../gui/view/search.py" line="107"/>
         <source>歌词</source>
         <translation type="unfinished">歌詞</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="137"/>
+        <location filename="../../gui/view/search.py" line="138"/>
         <source>提示</source>
         <translation type="unfinished">ヒント</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="137"/>
+        <location filename="../../gui/view/search.py" line="138"/>
         <source>请输入搜索关键词</source>
         <translation type="unfinished">検索キーワードを入力してください</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="142"/>
+        <location filename="../../gui/view/search.py" line="143"/>
         <source>请选择搜索源</source>
         <translation type="unfinished">検索ソースを選択してください</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="149"/>
+        <location filename="../../gui/view/search.py" line="150"/>
         <source>{orig_sources[0].name} 不支持 {search_type.name} 搜索</source>
         <translation type="unfinished">{orig_sources[0].name} は {search_type.name} 検索をサポートしていません</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="151"/>
+        <location filename="../../gui/view/search.py" line="152"/>
         <source>所选源都不支持 {search_type.name} 搜索</source>
         <translation type="unfinished">選択されたソースはすべて {search_type.name} 検索をサポートしていません</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="154"/>
+        <location filename="../../gui/view/search.py" line="155"/>
         <source>正在搜索...</source>
         <translation type="unfinished">検索中...</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="157"/>
+        <location filename="../../gui/view/search.py" line="158"/>
         <source>搜索失败</source>
         <translation type="unfinished">検索失敗</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="186"/>
+        <location filename="../../gui/view/search.py" line="187"/>
         <source>歌曲</source>
         <translation type="unfinished">曲</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="186"/>
         <location filename="../../gui/view/search.py" line="187"/>
+        <location filename="../../gui/view/search.py" line="188"/>
         <source>艺术家</source>
         <translation type="unfinished">アーティスト</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="186"/>
-        <location filename="../../gui/view/search.py" line="189"/>
+        <location filename="../../gui/view/search.py" line="187"/>
+        <location filename="../../gui/view/search.py" line="190"/>
         <source>时长</source>
         <translation type="unfinished">再生時間</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="187"/>
+        <location filename="../../gui/view/search.py" line="188"/>
         <source>发行日期</source>
         <translation type="unfinished">リリース日</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="187"/>
         <location filename="../../gui/view/search.py" line="188"/>
+        <location filename="../../gui/view/search.py" line="189"/>
         <source>歌曲数量</source>
         <translation type="unfinished">曲数</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="188"/>
         <location filename="../../gui/view/search.py" line="189"/>
+        <location filename="../../gui/view/search.py" line="190"/>
         <source>创建者</source>
         <translation type="unfinished">作成者</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="188"/>
+        <location filename="../../gui/view/search.py" line="189"/>
         <source>创建时间</source>
         <translation type="unfinished">作成時間</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="189"/>
+        <location filename="../../gui/view/search.py" line="190"/>
         <source>id</source>
         <translation type="unfinished">ID</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="189"/>
+        <location filename="../../gui/view/search.py" line="190"/>
         <source>评分</source>
         <translation type="unfinished">評価</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="204"/>
+        <location filename="../../gui/view/search.py" line="205"/>
         <source>来源</source>
         <translation type="unfinished">出典</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="271"/>
+        <location filename="../../gui/view/search.py" line="272"/>
         <source>纯文本</source>
         <translation type="unfinished">プレーンテキスト</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="272"/>
+        <location filename="../../gui/view/search.py" line="273"/>
         <source>逐字</source>
         <translation type="unfinished">字ごと</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="273"/>
+        <location filename="../../gui/view/search.py" line="274"/>
         <source>逐行</source>
         <translation type="unfinished">行ごと</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="276"/>
+        <location filename="../../gui/view/search.py" line="277"/>
         <source>原文</source>
         <translation type="unfinished">原文</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="277"/>
+        <location filename="../../gui/view/search.py" line="278"/>
         <source>译文</source>
         <translation type="unfinished">翻訳</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="278"/>
+        <location filename="../../gui/view/search.py" line="279"/>
         <source>罗马音</source>
         <translation type="unfinished">ローマ字</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="292"/>
+        <location filename="../../gui/view/search.py" line="293"/>
         <source>、</source>
         <translation type="unfinished">、</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="315"/>
+        <location filename="../../gui/view/search.py" line="316"/>
         <source>无法返回</source>
         <translation type="unfinished">戻れません</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="343"/>
+        <location filename="../../gui/view/search.py" line="344"/>
         <source>获取歌词列表失败</source>
         <translation type="unfinished">歌詞リストの取得に失敗しました</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="357"/>
+        <location filename="../../gui/view/search.py" line="358"/>
         <source>获取歌曲列表失败</source>
         <translation type="unfinished">曲リストの取得に失敗しました</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="368"/>
+        <location filename="../../gui/view/search.py" line="369"/>
         <source>处理中...</source>
         <translation type="unfinished">処理中...</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="376"/>
+        <location filename="../../gui/view/search.py" line="377"/>
         <source>获取纯音乐{}的歌词失败</source>
         <translation type="unfinished">インストゥルメンタル{}の歌詞取得に失敗しました</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="380"/>
+        <location filename="../../gui/view/search.py" line="381"/>
         <source>获取歌词失败</source>
         <translation type="unfinished">歌詞取得に失敗しました</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="401"/>
+        <location filename="../../gui/view/search.py" line="402"/>
         <source>搜索更多结果时错误</source>
         <translation type="unfinished">追加結果の検索中にエラー</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="405"/>
+        <location filename="../../gui/view/search.py" line="406"/>
         <source>没有更多结果</source>
         <translation type="unfinished">追加結果はありません</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="428"/>
+        <location filename="../../gui/view/search.py" line="429"/>
         <source>加载中...</source>
         <translation type="unfinished">読み込み中...</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="441"/>
+        <location filename="../../gui/view/search.py" line="442"/>
         <source>警告</source>
         <translation type="unfinished">警告</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="441"/>
+        <location filename="../../gui/view/search.py" line="442"/>
         <source>请先获取歌词</source>
         <translation type="unfinished">歌詞を取得してください</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="462"/>
+        <location filename="../../gui/view/search.py" line="463"/>
         <source>翻译歌词失败</source>
         <translation type="unfinished">歌詞翻訳に失敗しました</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="463"/>
-        <location filename="../../gui/view/search.py" line="475"/>
+        <location filename="../../gui/view/search.py" line="464"/>
+        <location filename="../../gui/view/search.py" line="476"/>
         <source>翻译歌词</source>
         <translation type="unfinished">歌詞を翻訳</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="469"/>
+        <location filename="../../gui/view/search.py" line="470"/>
         <source>翻译中...</source>
         <translation type="unfinished">翻訳中...</translation>
     </message>
     <message>
-        <location filename="../../gui/view/search.py" line="473"/>
+        <location filename="../../gui/view/search.py" line="474"/>
         <source>取消翻译</source>
         <translation type="unfinished">翻訳をキャンセル</translation>
     </message>
