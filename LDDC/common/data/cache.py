@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (C) 2024-2025 沉默の金 <cmzj@cmzj.org>
 # SPDX-License-Identifier: GPL-3.0-only
+import atexit
 from collections.abc import Callable
 from typing import Any, Literal, ParamSpec, TypeVar, overload
 
@@ -170,3 +171,12 @@ def _buildcache_key(
         key += type_sig
 
     return key
+
+
+def _atexit() -> None:
+    cache["version"] = cache_version
+    cache.expire()
+    cache.close()
+
+
+atexit.register(_atexit)

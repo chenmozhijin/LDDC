@@ -106,6 +106,12 @@ class NEAPI(CloudAPI):
             self.session = httpx.Client(http2=True)  # 创建session
             self.inited = True
 
+            def _atexit() -> None:
+                if self.expire > int(time.time()):
+                    cache.set(("NE_anonimous", __version__), {"user_id": self.user_id, "cookies": self.cookies, "expire": self.expire})
+            import atexit
+            atexit.register(_atexit)
+
     def request(self, path: str, params: dict) -> dict:
         """eapi接口请求
 
