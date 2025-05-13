@@ -96,6 +96,7 @@ class SearchWidgetBase(QWidget, Ui_search_base):
 
         self.source_comboBox.currentIndexChanged.connect(self.update_search_types)
 
+    @Slot()
     def update_search_types(self) -> None:
         """更新搜索类型"""
         type_str_map = {

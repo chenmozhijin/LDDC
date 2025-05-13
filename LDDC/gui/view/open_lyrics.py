@@ -53,7 +53,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
             if checkbox.isChecked()
         ]
 
-    @Slot(str)
+    @Slot(object)
     def open_file(self, path_str: str | Path) -> None:
         file_path = Path(path_str)
         if not file_path.exists():
