@@ -177,7 +177,7 @@ class LocalSongLyricsDB(QObject):
             "title": info["title"] if info["title"] else None,
             "artist": info["artist"] if info["artist"] else None,
             "album": info["album"] if info["album"] else None,
-            "duration": info["duration"] if info["duration"] > 0 else None,
+            "duration": info["duration"] if info["duration"] and info["duration"] > 0 else None,
             "path": info["song_path"] if info["song_path"] else None,
             "id": info["track_number"] if info["track_number"] else None,
         }
