@@ -688,6 +688,7 @@ class DesktopLyricsInstance(ServiceInstanceBase):
         self.assigned_lyrics_datas = assign_lyrics_positions(mulyrics_data["orig"])
 
         self.to_select(True)
+        self.update_lyrics()
 
     @Slot()
     def set_inst(self) -> None:
