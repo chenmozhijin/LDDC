@@ -1,6 +1,6 @@
 # LDDC
 
-[中文](./README.md) | English | [日本語](./README_ja.md)
+中文 | [English](./README_en.md) | [日本語](./README_ja.md)
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/015f636391584ffc82790ff7038da5ca)](https://app.codacy.com/gh/chenmozhijin/LDDC/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/chenmozhijin/LDDC/total)](https://github.com/chenmozhijin/LDDC/releases/latest)
