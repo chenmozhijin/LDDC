@@ -154,7 +154,7 @@ jobs:
               uses: Nuitka/Nuitka-Action@main
               if : ${{ runner.os == 'Windows' }}
               with:
-                nuitka-version: 2.7.5
+                nuitka-version: 2.7.4
                 script-name: LDDC
 
                 mode: standalone
