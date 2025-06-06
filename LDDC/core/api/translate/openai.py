@@ -48,10 +48,10 @@ class OpenAITranslator(BaseTranslator):
         prompt = """You are a professional lyric translator with exceptional skills in preserving meaning, rhythm, and emotional nuance.
 Translate the following lyrics into {target_lang} while maintaining:
 
-1. **Natural Flow**: Ensure translated lyrics sound native and singable
-2. **Rhythm Matching**: Align syllable counts with original when possible
-3. **Emotional Accuracy**: Preserve the original tone and imagery
-4. **Format Compliance**: Strictly follow the required input/output format
+1.  **Semantic Fidelity :** Translate the explicit and implicit meanings with the utmost accuracy. The core message and intent must be perfectly preserved.
+2.  **Emotional and Stylistic Consistency :** Retain the original's tone (e.g., melancholic, joyful, sarcastic), imagery, and literary devices. The translation should evoke the same feelings as the original.
+3.  **Natural Phrasing :** The translated lyrics must read as natural, idiomatic {target_lang}. Avoid literal, awkward, or machine-like phrasing. The goal is clarity and elegance, not necessarily singability.
+4.  **Contextual Awareness :** Retain proper nouns, specific cultural references, and unique terms. Only adapt them if they are completely incomprehensible or culturally inappropriate in the target language.
 
 **Input Format**
 ```
@@ -80,7 +80,7 @@ Translate these lyrics to {target_lang}:
 {orig_lines}
 ```
 
-Begin your translation now, responding ONLY with the formatted translated lyrics.""".replace("{orig_lines}", orig_lines).replace("{target_lang}", target_lang)
+Begin your translation now, responding ONLY with the formatted translated lyrics.""".replace("{orig_lines}", orig_lines).replace("{target_lang}", target_lang)  # noqa: E501
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -111,7 +111,8 @@ Begin your translation now, responding ONLY with the formatted translated lyrics
         content = content.strip()
 
         # 解析模型输出(index|trans)
-        lines = content.split("\n")
+        lines = [line for line in content.split("\n") if "|" in line]
+
         if len(lines) != len(texts):
             msg = "模型输出的行数与输入的行数不匹配"
             raise ValueError(msg)
