@@ -85,7 +85,7 @@ Begin your translation now, responding ONLY with the formatted translated lyrics
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
-            "User-Agent": "LDDC",
+            "User-Agent": f"LDDC/{__version__}",
             "Accept-Charset": "utf-8",
             "Accept-Encoding": "gzip, deflate, br",
         }
@@ -96,8 +96,12 @@ Begin your translation now, responding ONLY with the formatted translated lyrics
             ],
             "temperature": 1.3,
             "stream": False,
-            "enable_thinking": False,
         }
+        if "siliconflow" in base_url:
+            data["enable_thinking"] = False
+        if "openrouter" in base_url:
+            data["reasoning"] = {"max_tokens": 0}
+
         response = httpx.post(f"{base_url}/chat/completions", headers=headers, json=data, timeout=120)
         response.raise_for_status()
         response_json = response.json()
