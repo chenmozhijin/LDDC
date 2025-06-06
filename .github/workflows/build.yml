@@ -154,7 +154,7 @@ jobs:
               uses: Nuitka/Nuitka-Action@main
               if : ${{ runner.os == 'Windows' }}
               with:
-                nuitka-version: main
+                nuitka-version: develop
                 script-name: LDDC
 
                 mode: standalone
@@ -241,7 +241,7 @@ jobs:
                 echo "Categories=Application" >> deb/usr/share/applications/LDDC.desktop
                 chmod +x deb/usr/share/applications/LDDC.desktop
   
-                sudo dpkg -b -Zgzip deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                sudo dpkg-deb -Zgzip deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
                 sudo apt install ./LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
   
                 cd ..
