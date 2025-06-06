@@ -29,7 +29,7 @@ from LDDC.common.utils import save2fomat_path
 from LDDC.core.api.lyrics import get_lyrics, get_lyricslist, get_songlist, search
 from LDDC.core.api.translate import translate_lyrics
 from LDDC.core.auto_fetch import auto_fetch
-from LDDC.core.song_info import audio_formats, parse_drop_infos, write_lyrics
+from LDDC.core.song_info import AUDIO_FORMATS, parse_drop_infos, write_lyrics
 from LDDC.gui.components.msg_box import MsgBox
 from LDDC.gui.ui.search_base_ui import Ui_search_base
 from LDDC.gui.view.get_list_lyrics import GetListLyrics
@@ -606,7 +606,7 @@ class SearchWidget(SearchWidgetBase):
             dialog = QFileDialog(self)
             dialog.setWindowTitle(self.tr("选择歌曲文件"))
             dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-            dialog.setNameFilter(self.tr("歌曲文件") + "*." + " *.".join(audio_formats))
+            dialog.setNameFilter(self.tr("歌曲文件") + "*." + " *.".join(AUDIO_FORMATS))
             dialog.fileSelected.connect(file_selected)
             if self.auto_fetch_file_path:
                 dialog.setDirectory(str(self.auto_fetch_file_path.parent))

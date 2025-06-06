@@ -20,7 +20,7 @@ from LDDC.common.path_processor import get_local_match_save_path
 from LDDC.common.task_manager import TaskSignal, TaskWorker
 from LDDC.core.auto_fetch import auto_fetch
 from LDDC.core.parser.cue import parse_cue
-from LDDC.core.song_info import audio_formats, get_audio_file_infos, has_lyrics, parse_drop_infos, write_lyrics
+from LDDC.core.song_info import AUDIO_FORMATS, get_audio_file_infos, has_lyrics, parse_drop_infos, write_lyrics
 
 
 class LocalMatchSave2TagMode(Enum):
@@ -117,7 +117,7 @@ class GetInfosWorker(TaskWorker):
                 elif path.is_file():
                     if path.suffix.lower() == ".cue":
                         cue_paths.append((None, path))
-                    elif path.suffix.lower().removeprefix(".") in audio_formats:
+                    elif path.suffix.lower().removeprefix(".") in AUDIO_FORMATS:
                         audio_paths.append((None, path))
 
             for directory in dirs:
@@ -131,7 +131,7 @@ class GetInfosWorker(TaskWorker):
                             return
                         if file.lower().endswith(".cue"):
                             cue_paths.append((directory, root / file))
-                        elif file.lower().split(".")[-1] in audio_formats:
+                        elif file.lower().split(".")[-1] in AUDIO_FORMATS:
                             audio_paths.append((directory, root / file))
 
             total = len(audio_paths) + len(cue_paths)

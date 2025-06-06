@@ -20,7 +20,7 @@ from LDDC.common.logger import logger
 from LDDC.common.models import Artist, Lyrics, SongInfo, Source
 from LDDC.core.parser.cue import parse_cue
 
-audio_formats = [
+AUDIO_FORMATS = [
     "3g2",
     "aac",
     "aif",
@@ -56,7 +56,7 @@ def get_audio_file_infos(file_path: Path) -> list[SongInfo]:
         msg = f"未找到文件: {file_path}"
         raise GetSongInfoError(msg)
     try:
-        if file_path.suffix.lower().removeprefix(".") in audio_formats:
+        if file_path.suffix.lower().removeprefix(".") in AUDIO_FORMATS:
             audio = File(file_path, easy=True)  # type: ignore[reportPrivateImportUsage] mutagen中的File被误定义为私有 quodlibet/mutagen#647
             if isinstance(audio, FileType) and audio.info:
                 if "cuesheet" in audio:
@@ -192,6 +192,91 @@ def has_lyrics(file_path: Path | str) -> bool:
         return False
     return False
 
+def read_lyrics(file_path: Path | str) -> str:
+    """从音频文件中读取歌词。
+
+    Args:
+        file_path: 音频文件的路径 (字符串或 Path 对象)。
+
+    Returns:
+        返回找到的歌词文本。
+        优先顺序:
+        - ID3: USLT > SYLT
+        - Vorbis/APE: 'LYRICS'
+        - MP4: '©lyr'
+        - ASF: 'WM/LYRICS' or 'Lyrics'
+
+    Raises:
+        GetSongInfoError: 如果文件无法加载、格式不受支持、未找到歌词或在处理过程中发生错误。
+
+    """
+    try:
+        audio = File(file_path, easy=False)
+
+        if audio is None:
+            msg = f"无法加载文件或文件格式无法识别: {file_path}"
+            raise GetSongInfoError(msg)
+
+        if audio.tags is None:
+            msg = f"在 {file_path} 中未找到歌词"
+            raise GetSongInfoError(msg)
+
+        # 1. ID3 标签 (MP3)
+        if isinstance(audio.tags, ID3):
+            # 优先使用 USLT (非同步歌词)
+            uslt_frames = audio.tags.getall("USLT")
+            for frame in uslt_frames:
+                if frame.text:
+                    logger.debug("在 %s 中找到 ID3 USLT 歌词", file_path)
+                    return frame.text
+
+            # 其次使用 SYLT (同步歌词)
+            sylt_frames = audio.tags.getall("SYLT")
+            for frame in sylt_frames:
+                if frame.text:
+                    # SYLT 的 text 是 (text, timestamp) 的元组列表
+                    # 我们将它们连接成一个字符串
+                    full_lyrics = "".join(lyric_part for lyric_part, _timestamp in frame.text)
+                    if full_lyrics:
+                        logger.debug("在 %s 中找到 ID3 SYLT 歌词", file_path)
+                        return full_lyrics
+
+        # 2. Vorbis Comment (FLAC, OGG, Opus) 或 APEv2 (APE)
+        elif isinstance(audio.tags, (VCommentDict, APEv2)):
+            lyrics_val = audio.tags.get("LYRICS")
+            if lyrics_val:
+                logger.debug("在 %s 中找到 Vorbis/APE 歌词 ('LYRICS')", file_path)
+                if isinstance(lyrics_val, list):
+                    return "\n".join(lyrics_val)
+                if isinstance(lyrics_val, str):
+                    return lyrics_val
+
+        # 3. MP4 标签 (MP4, M4A)
+        elif isinstance(audio.tags, MP4Tags):
+            lyrics_list = audio.tags.get("©lyr")
+            if lyrics_list and isinstance(lyrics_list, list) and len(lyrics_list) > 0 and lyrics_list[0]:
+                logger.debug("在 %s 中找到 MP4 歌词 ('©lyr')", file_path)
+                return lyrics_list[0]
+
+        # 4. ASF 标签 (WMA)
+        elif isinstance(audio.tags, ASFTags):
+            lyrics_val = audio.tags.get("WM/LYRICS") or audio.tags.get("Lyrics")
+            if lyrics_val:
+                lyrics_text = "\n".join(str(val.value) for val in lyrics_val if hasattr(val, "value") and str(val.value).strip())
+                if lyrics_text:
+                    logger.debug("在 %s 中找到 ASF 歌词 ('WM/LYRICS' 或 'Lyrics')", file_path)
+                    return lyrics_text
+        else:
+            msg = f"文件 {file_path} 的标签格式不受支持: {type(audio.tags)}"
+            raise GetSongInfoError(msg)
+
+        msg = f"在 {file_path} 中未找到歌词"
+        raise GetSongInfoError(msg)
+
+    except (MutagenError, FileNotFoundError) as e:
+        logger.error("读取 %s 的歌词时出错: %s", file_path, e)
+        msg = f"读取歌词失败: {e.__class__.__name__}: {e!s}"
+        raise GetSongInfoError(msg) from e
 
 def write_lyrics(file_path: Path | str, lyrics_text: str, lyrics: Lyrics | None = None) -> None:
     audio = File(file_path)

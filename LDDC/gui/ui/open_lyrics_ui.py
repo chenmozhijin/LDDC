@@ -1,7 +1,7 @@
 ################################################################################
 ## Form generated from reading UI file 'open_lyrics.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -107,6 +107,11 @@ class Ui_open_lyrics:
 
         self.horizontalLayout_2.addWidget(self.lyricsformat_comboBox)
 
+        self.translate_pushButton = QPushButton(open_lyrics)
+        self.translate_pushButton.setObjectName("translate_pushButton")
+
+        self.horizontalLayout_2.addWidget(self.translate_pushButton)
+
         self.verticalLayout.addLayout(self.horizontalLayout_2)
 
         self.horizontalLayout = QHBoxLayout()
@@ -133,6 +138,11 @@ class Ui_open_lyrics:
 
         self.horizontalLayout.addWidget(self.save_pushButton)
 
+        self.save2tag_pushButton = QPushButton(open_lyrics)
+        self.save2tag_pushButton.setObjectName("save2tag_pushButton")
+
+        self.horizontalLayout.addWidget(self.save2tag_pushButton)
+
         self.verticalLayout.addLayout(self.horizontalLayout)
 
         self.retranslateUi(open_lyrics)
@@ -154,8 +164,10 @@ class Ui_open_lyrics:
         self.lyricsformat_comboBox.setItemText(3, QCoreApplication.translate("open_lyrics", "SRT", None))
         self.lyricsformat_comboBox.setItemText(4, QCoreApplication.translate("open_lyrics", "ASS", None))
 
+        self.translate_pushButton.setText(QCoreApplication.translate("open_lyrics", "\u7ffb\u8bd1\u6b4c\u8bcd", None))
         self.open_pushButton.setText(QCoreApplication.translate("open_lyrics", "\u6253\u5f00\u6b4c\u8bcd\u6587\u4ef6", None))
         self.convert_pushButton.setText(QCoreApplication.translate("open_lyrics", "\u8f6c\u6362\u683c\u5f0f", None))
         self.save_pushButton.setText(QCoreApplication.translate("open_lyrics", "\u4fdd\u5b58\u6b4c\u8bcd", None))
+        self.save2tag_pushButton.setText(QCoreApplication.translate("open_lyrics", "\u4fdd\u5b58\u5230\u6b4c\u66f2\u6807\u7b7e", None))
 
     # retranslateUi
