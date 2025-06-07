@@ -106,6 +106,8 @@ jobs:
                   
                   # 4. 创建符号链接，使 'pwsh' 命令在 PATH 中可用
                   ln -s /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh
+                  chmod +x /usr/bin/pwsh
+                  chmod +x /opt/microsoft/powershell/7/pwsh
                   
                   # 5. 清理
                   rm powershell.tar.gz
