@@ -79,7 +79,7 @@ jobs:
                 echo "deb-src http://debian-archive.trafficmanager.net/debian bullseye-updates main contrib non-free" >> /etc/apt/sources.list
 
                 apt-get update
-                apt-get install -y libegl1 upx sudo unzip wget apt-transport-https gnupg git jq curl libglib2.0-dev
+                apt-get install -y libegl1 upx sudo unzip wget apt-transport-https gnupg git jq curl libglib2.0-dev build-essential ccache
 
                 echo "--- Installing PowerShell for ${{ matrix.arch }} ---"
 
