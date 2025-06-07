@@ -15,7 +15,7 @@ on:
 jobs:
 
     build:
-        container: ${{ matrix.container_image }}
+        container: ${{ matrix.container }}
         strategy:
             fail-fast: false
             matrix:
@@ -26,10 +26,17 @@ jobs:
                     arch: arm64
                   - os: ubuntu-24.04-arm
                     arch: arm64
-                    container_image: debian:11
+                    container: 
+                      image: debian:11
+                      volumes:
+                        - /home/runner
                   - os: ubuntu-latest
                     arch: x64
-                    container_image: debian:11
+                    container: 
+                      image: debian:11
+                      volumes:
+                        - /home/runner
+
 
         runs-on: ${{ matrix.os }}
         
@@ -76,7 +83,7 @@ jobs:
                 # 验证安装
                 pwsh --version
 
-            - uses: chenmozhijin/setup-python@master
+            - uses: MatteoH2O1999/setup-python@v5
               if: ${{ runner.os == 'Linux' }}
               with:
                 python-version: 3.12
