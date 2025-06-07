@@ -68,7 +68,7 @@ jobs:
               if: ${{ runner.os == 'Linux' }}
               run: |
                 apt-get update
-                apt-get install -y libegl1 upx python3-pip sudo unzip wget apt-transport-https gnupg
+                apt-get install -y libegl1 upx python3-pip sudo unzip wget apt-transport-https gnupg git
 
                 # 下载并安装 Microsoft 仓库配置
                 wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb
