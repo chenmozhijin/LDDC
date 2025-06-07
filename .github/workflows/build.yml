@@ -41,22 +41,6 @@ jobs:
         runs-on: ${{ matrix.os }}
         
         steps:
-            - name: output tree for debugging
-              run: |
-                apt-get update
-                apt-get install -y tree
-                tree -a -h -p -u -f /home/runner/work/_actions
-
-                tree -a -h -p -u -f /home/runner/work
-
-                tree -a -h -p -u -f /home/runner
-
-                tree -a -h -p -u -f /__w/_actions
-
-                tree -a -h -p -u -f /__w
-
-
-
             - uses: actions/checkout@v4
 
             - uses: actions/setup-python@v5
