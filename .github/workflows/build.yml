@@ -15,6 +15,7 @@ on:
 jobs:
 
     build:
+        container: ${{ matrix.container_image }}
         strategy:
             fail-fast: false
             matrix:
@@ -25,6 +26,10 @@ jobs:
                     arch: arm64
                   - os: ubuntu-24.04-arm
                     arch: arm64
+                    container_image: debian:11-slim
+                  - os: ubuntu-latest
+                    arch: x64
+                    container_image: debian:11-slim
 
         runs-on: ${{ matrix.os }}
         
