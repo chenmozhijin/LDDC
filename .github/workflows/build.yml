@@ -61,7 +61,7 @@ jobs:
               if: ${{ runner.os == 'Linux' }}
               run: |
                 apt-get update
-                apt-get install libegl1 upx python3-pip sudo -y
+                apt-get install libegl1 upx python3-pip sudo unzip -y
 
             - uses: MatteoH2O1999/setup-python@v5
               if: ${{ runner.os == 'Linux' }}
