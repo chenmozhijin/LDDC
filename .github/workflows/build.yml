@@ -61,7 +61,20 @@ jobs:
               if: ${{ runner.os == 'Linux' }}
               run: |
                 apt-get update
-                apt-get install libegl1 upx python3-pip sudo unzip -y
+                apt-get install -y libegl1 upx python3-pip sudo unzip wget apt-transport-https gnupg
+
+                # 导入 Microsoft GPG 密钥
+                wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg
+      
+                # 添加 Microsoft 软件仓库
+                echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-debian-bullseye-prod bullseye main" > /etc/apt/sources.list.d/microsoft.list
+      
+                # 安装 PowerShell
+                apt-get update
+                apt-get install -y powershell
+      
+                # 验证安装
+                pwsh --version
 
             - uses: MatteoH2O1999/setup-python@v5
               if: ${{ runner.os == 'Linux' }}
