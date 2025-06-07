@@ -15,28 +15,16 @@ on:
 jobs:
 
     build:
-        container: ${{ matrix.container }}
         strategy:
             fail-fast: false
             matrix:
-                os: [macos-13, windows-latest]
+                os: [macos-13, ubuntu-22.04, windows-latest]
                 arch: [x64]
                 include:
                   - os: macos-latest
                     arch: arm64
                   - os: ubuntu-24.04-arm
                     arch: arm64
-                    container: 
-                      image: debian:11
-                      volumes:
-                        - /home/runner/work:/home/runner/work
-                  - os: ubuntu-latest
-                    arch: x64
-                    container: 
-                      image: debian:11
-                      volumes:
-                        - /home/runner/work:/home/runner/work
-
 
         runs-on: ${{ matrix.os }}
         
@@ -44,7 +32,6 @@ jobs:
             - uses: actions/checkout@v4
 
             - uses: actions/setup-python@v5
-              if: ${{ runner.os != 'Linux' }}
               with:
                 python-version: 3.12
                 architecture: ${{ matrix.arch }}
@@ -63,98 +50,25 @@ jobs:
                   echo "arch=x86" >> $GITHUB_OUTPUT
                   echo "nuitka_arch=universal" >> $GITHUB_OUTPUT
                 fi
-
-            - name: Install Linux dependencies
-              if: ${{ runner.os == 'Linux' }}
-              shell: bash
-              run: |
-
-                echo "deb http://debian-archive.trafficmanager.net/debian bullseye main contrib non-free" > /etc/apt/sources.list
-                echo "deb-src http://debian-archive.trafficmanager.net/debian bullseye main contrib non-free" >> /etc/apt/sources.list
-
-                echo "deb http://debian-archive.trafficmanager.net/debian-security bullseye-security main contrib non-free" >> /etc/apt/sources.list
-                echo "deb-src http://debian-archive.trafficmanager.net/debian-security bullseye-security main contrib non-free" >> /etc/apt/sources.list
-
-                echo "deb http://debian-archive.trafficmanager.net/debian bullseye-updates main contrib non-free" >> /etc/apt/sources.list
-                echo "deb-src http://debian-archive.trafficmanager.net/debian bullseye-updates main contrib non-free" >> /etc/apt/sources.list
-
-                apt-get update
-                apt-get install -y libegl1 upx sudo unzip wget apt-transport-https gnupg git jq curl libglib2.0-dev build-essential ccache patchelf
-
-                echo "--- Installing PowerShell for ${{ matrix.arch }} ---"
-
-                if [[ "${{ matrix.arch }}" == "x64" ]]; then
-                  # x64/amd64 架构可以使用 apt 安装，它通常会跟踪一个较新的版本
-                  echo "Installing PowerShell for x64 via apt..."
-                  wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb
-                  dpkg -i packages-microsoft-prod.deb
-                  rm packages-microsoft-prod.deb
-                  apt-get update
-                  apt-get install -y powershell
-
-                elif [[ "${{ matrix.arch }}" == "arm64" ]]; then
-                  # arm64 架构需要从 GitHub Releases 手动安装最新版本
-                  echo "Installing latest PowerShell for arm64 manually from GitHub API..."
-                  
-                  # 1. 使用 GitHub API 找到最新 arm64 版本的下载链接
-                  echo "Querying GitHub API for the latest release..."
-                  LATEST_URL=$(curl -s https://api.github.com/repos/PowerShell/PowerShell/releases/latest | jq -r '.assets[] | select(.name | test("linux-arm64.tar.gz")) | .browser_download_url')
-
-                  if [ -z "$LATEST_URL" ]; then
-                    echo "::error::Could not find the latest PowerShell arm64 download URL from the GitHub API."
-                    exit 1
-                  fi
-                  
-                  echo "Found download URL: $LATEST_URL"
-
-                  # 2. 下载压缩包
-                  wget -q --show-progress "$LATEST_URL" -O powershell.tar.gz
-                  
-                  # 3. 创建安装目录并解压
-                  mkdir -p /opt/microsoft/powershell/7
-                  tar zxf powershell.tar.gz -C /opt/microsoft/powershell/7
-                  
-                  # 4. 创建符号链接，使 'pwsh' 命令在 PATH 中可用
-                  ln -s /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh
-                  chmod +x /usr/bin/pwsh
-                  chmod +x /opt/microsoft/powershell/7/pwsh
-                  
-                  # 5. 清理
-                  rm powershell.tar.gz
-                  echo "PowerShell for arm64 installed successfully."
-                else
-                  echo "::error::Unsupported architecture for PowerShell installation: ${{ matrix.arch }}"
-                  exit 1
-                fi
-
-                echo "--- Verifying PowerShell installation ---"
-                pwsh --version
-
-
-
-            - uses: MatteoH2O1999/setup-python@v5
-              if: ${{ runner.os == 'Linux' }}
-              with:
-                python-version: 3.12
-                architecture: ${{ matrix.arch }}
-                allow-build: force
-                cache-build: true
-
-            - name: Install python dependencies
+            
+            - name: Install dependencies
               run: |
                 pip install -Ur requirements.txt
                 pip install imageio
             
+            - name: Install EGL/upx
+              if: ${{ runner.os == 'Linux' }}
+              run: |
+                sudo apt-get update
+                sudo apt-get install libegl1 upx
             - name: Install create-dmg
               if: ${{ runner.os == 'macOS' }}
               run: |
                 brew install create-dmg
-
             - name: Install upx/7zip
               if: ${{ runner.os == 'Windows' }}
               run: |
                 choco install upx 7zip -y
-
             # Remove problematic brew libs if Intel Mac https://github.com/Nuitka/Nuitka/issues/2853#issuecomment-2119520735
             - name: Remove problematic brew libs
               run: |
@@ -176,7 +90,6 @@ jobs:
                 echo "num_version=$(python build_helper.py --task get_num_version)" >> $GITHUB_OUTPUT
                 echo "qt_translations_path=$(python build_helper.py --task get_qt_translations_path)" >> $GITHUB_OUTPUT
                 cat $GITHUB_OUTPUT
-
             - name: Build Executable(Linux)
               uses: Nuitka/Nuitka-Action@main
               if : ${{ runner.os == 'Linux'}}
@@ -257,7 +170,6 @@ jobs:
                   ${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_CN.qm=PySide6/translations/qtbase_zh_CN.qm
                   ${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_TW.qm=PySide6/translations/qtbase_zh_TW.qm
                   ${{ steps.info.outputs.qt_translations_path }}/qtbase_ja.qm=PySide6/translations/qtbase_ja.qm
-
               env:
                 PYTHONPATH: ${{ github.workspace }}
 
@@ -269,7 +181,6 @@ jobs:
                 path: |
                   nuitka-crash-report.xml
                   nuitka-report.xml
-
             - name: create dmg
               if: ${{ runner.os == 'macOS' }}
               run: |
@@ -283,9 +194,7 @@ jobs:
                   --app-drop-link  600 185 \
                   dist/LDDC.dmg \
                   build/LDDC.app
-
                 mv dist/LDDC.dmg upload/LDDC-${{ steps.info.outputs.version }}-${{ steps.arch.outputs.arch }}.dmg
-
             - name: Add fcitx5 support
               if: ${{ runner.os == 'Linux' }}
               uses: chenmozhijin/fcitx5-pyside@main
@@ -324,8 +233,8 @@ jobs:
                 echo "Categories=Application" >> deb/usr/share/applications/LDDC.desktop
                 chmod +x deb/usr/share/applications/LDDC.desktop
   
-                dpkg-deb -Zgzip --build deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
-                apt install ./LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                sudo dpkg-deb -Zgzip --build deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                sudo apt install ./LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
   
                 cd ..
                 mv dist/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb upload/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
@@ -338,7 +247,6 @@ jobs:
                 Copy-Item -Path build/LDDC.dist/LDDC.exe -Destination dist/exe/main/LDDC.exe -Force
                 Copy-Item -Path build/LDDC.dist/ -Destination dist/exe/other/ -Recurse -Force
                 Remove-Item -Path dist/exe/other/LDDC.exe -Force
-
             - name: Generate evb
               if: ${{ runner.os == 'Windows' }}
               uses: chenmozhijin/generate-evb@master
@@ -356,22 +264,16 @@ jobs:
                 New-Item -Path "dist\exe\chen" -ItemType Directory -Force
                 New-Item -Path "dist\exe\tools" -ItemType Directory -Force
                 cd dist/exe/chen
-
                 $latest_release = Invoke-RestMethod -Uri "https://api.github.com/repos/dscharrer/innoextract/releases/latest"
                 $download_url = ($latest_release.assets | Where-Object { $_.browser_download_url -like "*windows.zip" }).browser_download_url
                 Invoke-WebRequest -Uri $download_url -OutFile "innoextract_windows.zip"
                 Expand-Archive -Path "innoextract_windows.zip" -DestinationPath "../tools" -Force
-
                 $enigmavb_url = "http://enigmaprotector.com/assets/files/enigmavb.exe"
                 Invoke-WebRequest -Uri $enigmavb_url -OutFile "../tools/enigmavb.exe"
-
                 cd ../tools
                 .\innoextract.exe enigmavb.exe
-
                 cd ../../..
                 dist/exe/tools/app/enigmavbconsole.exe dist/exe/LDDC.evb
-
-
             - name: Upload dist
               if: success() || failure()
               uses: actions/upload-artifact@v4
@@ -380,7 +282,6 @@ jobs:
                 path: |
                     dist/
                     build/
-
             - name: Compress exe
               if: ${{ runner.os == 'Windows' }}
               run: |
@@ -390,7 +291,6 @@ jobs:
                 Rename-Item -Path "build/LDDC.dist" -NewName "LDDC"
                 cd build
                 7z a -tzip -mx=9 ../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}.zip LDDC
-
             - name: Upload
               uses: actions/upload-artifact@v4
               with:
@@ -411,11 +311,9 @@ jobs:
         - name: Install dependencies
           run: |
             pip install -Ur requirements-dev.txt
-
         - name: Build wheel
           run: |
             python -m build
-
         - name: Upload
           uses: actions/upload-artifact@v4
           with:
