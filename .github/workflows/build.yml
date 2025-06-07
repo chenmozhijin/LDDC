@@ -59,8 +59,8 @@ jobs:
             - name: Install Linux dependencies
               if: ${{ runner.os == 'Linux' }}
               run: |
-                sudo apt-get update
-                sudo apt-get install libegl1 upx python3-pip
+                apt-get update
+                apt-get install libegl1 upx python3-pip
 
             - name: Install python dependencies
               run: |
@@ -246,8 +246,8 @@ jobs:
                 echo "Categories=Application" >> deb/usr/share/applications/LDDC.desktop
                 chmod +x deb/usr/share/applications/LDDC.desktop
   
-                sudo dpkg-deb -Zgzip --build deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
-                sudo apt install ./LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                dpkg-deb -Zgzip --build deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                apt install ./LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
   
                 cd ..
                 mv dist/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb upload/LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
