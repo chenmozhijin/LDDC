@@ -68,18 +68,53 @@ jobs:
               if: ${{ runner.os == 'Linux' }}
               run: |
                 apt-get update
-                apt-get install -y libegl1 upx python3-pip sudo unzip wget apt-transport-https gnupg git
+                apt-get install -y libegl1 upx python3-pip sudo unzip wget apt-transport-https gnupg git jq
 
-                # 下载并安装 Microsoft 仓库配置
-                wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb
-                dpkg -i packages-microsoft-prod.deb
-                rm packages-microsoft-prod.deb
-      
-                # 更新并安装 PowerShell
-                apt-get update
-                apt-get install -y powershell
-      
-                # 验证安装
+                echo "--- Installing PowerShell for ${{ matrix.arch }} ---"
+
+                if [[ "${{ matrix.arch }}" == "x64" ]]; then
+                  # x64/amd64 架构可以使用 apt 安装，它通常会跟踪一个较新的版本
+                  echo "Installing PowerShell for x64 via apt..."
+                  wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb
+                  dpkg -i packages-microsoft-prod.deb
+                  rm packages-microsoft-prod.deb
+                  apt-get update
+                  apt-get install -y powershell
+
+                elif [[ "${{ matrix.arch }}" == "arm64" ]]; then
+                  # arm64 架构需要从 GitHub Releases 手动安装最新版本
+                  echo "Installing latest PowerShell for arm64 manually from GitHub API..."
+                  
+                  # 1. 使用 GitHub API 找到最新 arm64 版本的下载链接
+                  echo "Querying GitHub API for the latest release..."
+                  LATEST_URL=$(curl -s https://api.github.com/repos/PowerShell/PowerShell/releases/latest | jq -r '.assets[] | select(.name | test("linux-arm64.tar.gz")) | .browser_download_url')
+
+                  if [ -z "$LATEST_URL" ]; then
+                    echo "::error::Could not find the latest PowerShell arm64 download URL from the GitHub API."
+                    exit 1
+                  fi
+                  
+                  echo "Found download URL: $LATEST_URL"
+
+                  # 2. 下载压缩包
+                  wget -q --show-progress "$LATEST_URL" -O powershell.tar.gz
+                  
+                  # 3. 创建安装目录并解压
+                  mkdir -p /opt/microsoft/powershell/7
+                  tar zxf powershell.tar.gz -C /opt/microsoft/powershell/7
+                  
+                  # 4. 创建符号链接，使 'pwsh' 命令在 PATH 中可用
+                  ln -s /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh
+                  
+                  # 5. 清理
+                  rm powershell.tar.gz
+                  echo "PowerShell for arm64 installed successfully."
+                else
+                  echo "::error::Unsupported architecture for PowerShell installation: ${{ matrix.arch }}"
+                  exit 1
+                fi
+
+                echo "--- Verifying PowerShell installation ---"
                 pwsh --version
 
 
