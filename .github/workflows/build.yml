@@ -26,10 +26,10 @@ jobs:
                     arch: arm64
                   - os: ubuntu-24.04-arm
                     arch: arm64
-                    container_image: debian:11-slim
+                    container_image: debian:11
                   - os: ubuntu-latest
                     arch: x64
-                    container_image: debian:11-slim
+                    container_image: debian:11
 
         runs-on: ${{ matrix.os }}
         
