@@ -69,7 +69,7 @@ jobs:
               shell: bash
               run: |
                 apt-get update
-                apt-get install -y libegl1 upx python3-pip sudo unzip wget apt-transport-https gnupg git jq curl
+                apt-get install -y libegl1 upx python3-pip sudo unzip wget apt-transport-https gnupg git jq curl libglib2.0-dev
 
                 echo "--- Installing PowerShell for ${{ matrix.arch }} ---"
 
