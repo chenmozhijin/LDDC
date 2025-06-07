@@ -66,6 +66,7 @@ jobs:
 
             - name: Install Linux dependencies
               if: ${{ runner.os == 'Linux' }}
+              shell: bash
               run: |
                 apt-get update
                 apt-get install -y libegl1 upx python3-pip sudo unzip wget apt-transport-https gnupg git jq
