@@ -41,6 +41,18 @@ jobs:
         runs-on: ${{ matrix.os }}
         
         steps:
+            - name: output tree for debugging
+              run: |
+                apt-get update
+                apt-get install -y tree
+                tree -a -h -p -u -f /home/runner/work/_actions
+
+                tree -a -h -p -u -f /home/runner/work
+
+                tree -a -h -p -u -f /home/runner
+
+
+
             - uses: actions/checkout@v4
 
             - uses: actions/setup-python@v5
@@ -83,11 +95,7 @@ jobs:
                 # 验证安装
                 pwsh --version
 
-            - name: output tree for debugging
-              run: |
-                apt-get update
-                apt-get install -y tree
-                tree -a -h -p -u -f /home/runner/work/_actions/
+
 
             - uses: MatteoH2O1999/setup-python@v5
               if: ${{ runner.os == 'Linux' }}
