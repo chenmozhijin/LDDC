@@ -70,13 +70,12 @@ jobs:
                 apt-get update
                 apt-get install -y libegl1 upx python3-pip sudo unzip wget apt-transport-https gnupg
 
-                # 导入 Microsoft GPG 密钥
-                wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg
+                # 下载并安装 Microsoft 仓库配置
+                wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb
+                dpkg -i packages-microsoft-prod.deb
+                rm packages-microsoft-prod.deb
       
-                # 添加 Microsoft 软件仓库
-                echo "deb [arch=$(dpkg --print-architecture)] https://packages.microsoft.com/repos/microsoft-debian-bullseye-prod bullseye main" > /etc/apt/sources.list.d/microsoft.list
-      
-                # 安装 PowerShell
+                # 更新并安装 PowerShell
                 apt-get update
                 apt-get install -y powershell
       
