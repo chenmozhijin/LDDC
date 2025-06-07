@@ -76,7 +76,7 @@ jobs:
                 # 验证安装
                 pwsh --version
 
-            - uses: MatteoH2O1999/setup-python@v5
+            - uses: chenmozhijin/setup-python@master
               if: ${{ runner.os == 'Linux' }}
               with:
                 python-version: 3.12
