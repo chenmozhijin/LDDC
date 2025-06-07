@@ -83,6 +83,12 @@ jobs:
                 # 验证安装
                 pwsh --version
 
+            - name: output tree for debugging
+              run: |
+                apt-get update
+                apt-get install -y tree
+                tree -a -h -p -u -f /home/runner/work/_actions/
+
             - uses: MatteoH2O1999/setup-python@v5
               if: ${{ runner.os == 'Linux' }}
               with:
