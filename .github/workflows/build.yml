@@ -29,13 +29,13 @@ jobs:
                     container: 
                       image: debian:11
                       volumes:
-                        - /home/runner
+                        - /home/runner/work:/home/runner/work
                   - os: ubuntu-latest
                     arch: x64
                     container: 
                       image: debian:11
                       volumes:
-                        - /home/runner
+                        - /home/runner/work:/home/runner/work
 
 
         runs-on: ${{ matrix.os }}
