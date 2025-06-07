@@ -19,7 +19,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                os: [macos-13, ubuntu-22.04, windows-latest]
+                os: [macos-13, windows-latest]
                 arch: [x64]
                 include:
                   - os: macos-latest
@@ -55,18 +55,18 @@ jobs:
                   echo "arch=x86" >> $GITHUB_OUTPUT
                   echo "nuitka_arch=universal" >> $GITHUB_OUTPUT
                 fi
-            
-            - name: Install dependencies
+
+            - name: Install Linux dependencies
+              if: ${{ runner.os == 'Linux' }}
+              run: |
+                sudo apt-get update
+                sudo apt-get install libegl1 upx python3-pip
+
+            - name: Install python dependencies
               run: |
                 pip install -Ur requirements.txt
                 pip install imageio
             
-            - name: Install EGL/upx
-              if: ${{ runner.os == 'Linux' }}
-              run: |
-                sudo apt-get update
-                sudo apt-get install libegl1 upx
-
             - name: Install create-dmg
               if: ${{ runner.os == 'macOS' }}
               run: |
