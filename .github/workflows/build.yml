@@ -42,15 +42,6 @@ jobs:
                 python-version: 3.12
                 architecture: ${{ matrix.arch }}
 
-            - uses: MatteoH2O1999/setup-python@v5
-              if: ${{ runner.os == 'Linux' }}
-              with:
-                python-version: 3.12
-                architecture: ${{ matrix.arch }}
-                allow-build: force
-                cache-build: true
-
-
             - name: Get arch
               id: arch
               shell: bash
@@ -70,8 +61,15 @@ jobs:
               if: ${{ runner.os == 'Linux' }}
               run: |
                 apt-get update
-                apt-get install libegl1 upx python3-pip -y
+                apt-get install libegl1 upx python3-pip sudo -y
 
+            - uses: MatteoH2O1999/setup-python@v5
+              if: ${{ runner.os == 'Linux' }}
+              with:
+                python-version: 3.12
+                architecture: ${{ matrix.arch }}
+                allow-build: force
+                cache-build: true
 
             - name: Install python dependencies
               run: |
