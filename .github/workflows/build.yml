@@ -60,7 +60,8 @@ jobs:
               if: ${{ runner.os == 'Linux' }}
               run: |
                 apt-get update
-                apt-get install libegl1 upx python3-pip
+                apt-get install libegl1 upx python3-pip -y
+
 
             - name: Install python dependencies
               run: |
