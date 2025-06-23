@@ -94,7 +94,6 @@ Begin your translation now, responding ONLY with the formatted translated lyrics
             "messages": [
                 {"role": "user", "content": prompt},
             ],
-            "temperature": 1.3,
             "stream": False,
         }
         if "siliconflow" in base_url:
@@ -118,7 +117,7 @@ Begin your translation now, responding ONLY with the formatted translated lyrics
         lines = [line for line in content.split("\n") if "|" in line]
 
         if len(lines) != len(texts):
-            msg = "模型输出的行数与输入的行数不匹配"
+            msg = f"模型输出的行数与输入的行数不匹配, 输入行数: {len(texts)}, 输出行数: {len(lines)}"
             raise ValueError(msg)
 
         trans_data = self.texts2data([line.split("|", 1)[1] for line in lines], lyrics)  # 将解析后的数据存储到texts2data中
