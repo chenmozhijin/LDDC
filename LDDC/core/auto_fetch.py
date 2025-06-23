@@ -103,9 +103,9 @@ def auto_fetch(
             else:
                 # 根据 文件名 计算得分
                 score = max(
-                    text_difference(keywords["file_name"], info.title or "") * 100,
-                    text_difference(keywords["file_name"], f"{info.artist!s} - {info.title}") * 100,
-                    text_difference(keywords["file_name"], f"{info.title} - {info.artist!s}") * 100,
+                    text_difference(keywords["file_name"], result.title or "") * 100,
+                    text_difference(keywords["file_name"], f"{result.artist!s} - {result.title}") * 100,
+                    text_difference(keywords["file_name"], f"{result.title} - {result.artist!s}") * 100,
                 )
 
             if score > min_score:
