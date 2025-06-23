@@ -233,7 +233,7 @@ jobs:
                 echo "Categories=Application" >> deb/usr/share/applications/LDDC.desktop
                 chmod +x deb/usr/share/applications/LDDC.desktop
   
-                sudo dpkg-deb -Zgzip --build deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
+                sudo dpkg -b deb LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
                 sudo apt install ./LDDC_${{ steps.info.outputs.version }}_${{ steps.arch.outputs.arch }}.deb
   
                 cd ..
