@@ -103,9 +103,9 @@ def auto_fetch(
             else:
                 # 根据 文件名 计算得分
                 score = max(
-                    text_difference(keywords["file_name"], info.title or "") * 100,
-                    text_difference(keywords["file_name"], f"{info.artist!s} - {info.title}") * 100,
-                    text_difference(keywords["file_name"], f"{info.title} - {info.artist!s}") * 100,
+                    text_difference(keywords["file_name"], result.title or "") * 100,
+                    text_difference(keywords["file_name"], f"{result.artist!s} - {result.title}") * 100,
+                    text_difference(keywords["file_name"], f"{result.title} - {result.artist!s}") * 100,
                 )
 
             if score > min_score:
@@ -239,9 +239,14 @@ def auto_fetch(
                     if not return_search_results
                     else (
                         lyrics,
-                        (search_results[info] + reduce(lambda a, b: a + b, [result for song_info, result in search_results.items() if song_info != info])),
+                        (
+                            (search_results[info] + reduce(lambda a, b: a + b, other_search_results))
+                            if (other_search_results := [result for song_info, result in search_results.items() if song_info != info])
+                            else search_results[info]
+                        ),
                     )
                 )
+
         continue
     msg = "自动获取时发生未知错误"
     raise AutoFetchUnknownError(msg, errors)

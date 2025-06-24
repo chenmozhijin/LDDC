@@ -103,12 +103,11 @@ class LocalMatchWidget(QWidget, Ui_local_match):
             return
 
         skip_existing_lyrics = self.skip_existing_lyrics_checkbox.isChecked()  # 获取跳过已存在歌词的选项状态
-        save2tag_mode=LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex())
-        file_name_mode=FileNameMode(self.filename_mode_comboBox.currentIndex())
+        save2tag_mode = LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex())
+        file_name_mode = FileNameMode(self.filename_mode_comboBox.currentIndex())
         if skip_existing_lyrics and (save2tag_mode != LocalMatchSave2TagMode.ONLY_TAG and file_name_mode == FileNameMode.FORMAT_BY_LYRICS):
             MsgBox.warning(self, self.tr("警告"), self.tr("跳过已存在歌词时,如果不仅保存到标签,则歌曲文件名模式不能为按歌词格式命名！"))
             return
-
 
         worker = LocalMatchWorker(
             infos_root_paths=infos,
@@ -178,10 +177,10 @@ class LocalMatchWidget(QWidget, Ui_local_match):
                 status_item.setForeground(Qt.GlobalColor.green)
                 status_item.setText(self.tr("成功"))
                 if status.path:
-                    info = info_item.data(Qt.ItemDataRole.UserRole)
+                    info: SongInfo = info_item.data(Qt.ItemDataRole.UserRole)
                     if (
                         LocalMatchSave2TagMode(self.save2tag_mode_comboBox.currentIndex()) in (LocalMatchSave2TagMode.ONLY_TAG, LocalMatchSave2TagMode.BOTH)
-                        and info["type"] != "cue"
+                        and not info.from_cue
                     ):
                         self.songs_table.setItem(status.index, 5, QTableWidgetItem(f"{self.tr('保存到标签')} + {status.path!s}"))
                     else:

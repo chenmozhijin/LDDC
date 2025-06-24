@@ -14,7 +14,7 @@ QRC_MAGICHEADER = b"\x98%\xb0\xac\xe3\x02\x83h\xe8\xfcl"
 _QRC_PATTERN = re.compile(r'<Lyric_1 LyricType="1" LyricContent="(?P<content>.*?)"/>', re.DOTALL)
 _TAG_SPLIT_PATTERN = re.compile(r"^\[(\w+):([^\]]*)\]$")
 _LINE_SPLIT_PATTERN = re.compile(r"^\[(\d+),(\d+)\](.*)$")  # 逐行匹配
-_WORD_SPLIT_PATTERN = re.compile(r"(?:\[\d+,\d+\])?(?P<content>(?:(?!\(\d+,\d+\)).)+)\((?P<start>\d+),(?P<duration>\d+)\)")  # 逐字匹配
+_WORD_SPLIT_PATTERN = re.compile(r"(?:\[\d+,\d+\])?(?P<content>(?:(?!\(\d+,\d+\)).)*)\((?P<start>\d+),(?P<duration>\d+)\)")  # 逐字匹配
 _WORD_TIMESTAMP_PATTERN = re.compile(r"^\(\d+,\d+\)$")
 
 

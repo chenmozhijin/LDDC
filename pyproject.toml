@@ -117,4 +117,4 @@ max-complexity = 30  # C901
 [tool.ruff.lint.extend-per-file-ignores]
 "tests/**.py" = ["S101"]
 "tools/**.py" = ["T201", "INP001"]
-"LDDC/gui/ui/**.py" = ["N801", "N802", "N803", "N806"]
+"LDDC/gui/ui/**.py" = ["N801", "N802", "N803", "N806", "ANN001", "ANN201", "ARG002", "E501", "CPY001"]

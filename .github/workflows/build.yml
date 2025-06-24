@@ -61,17 +61,14 @@ jobs:
               run: |
                 sudo apt-get update
                 sudo apt-get install libegl1 upx
-
             - name: Install create-dmg
               if: ${{ runner.os == 'macOS' }}
               run: |
                 brew install create-dmg
-
             - name: Install upx/7zip
               if: ${{ runner.os == 'Windows' }}
               run: |
                 choco install upx 7zip -y
-
             # Remove problematic brew libs if Intel Mac https://github.com/Nuitka/Nuitka/issues/2853#issuecomment-2119520735
             - name: Remove problematic brew libs
               run: |
@@ -93,7 +90,6 @@ jobs:
                 echo "num_version=$(python build_helper.py --task get_num_version)" >> $GITHUB_OUTPUT
                 echo "qt_translations_path=$(python build_helper.py --task get_qt_translations_path)" >> $GITHUB_OUTPUT
                 cat $GITHUB_OUTPUT
-
             - name: Build Executable(Linux)
               uses: Nuitka/Nuitka-Action@main
               if : ${{ runner.os == 'Linux'}}
@@ -151,7 +147,7 @@ jobs:
                 PYTHONPATH: ${{ github.workspace }}
 
             - name: Build Executable(Windows)
-              uses: Nuitka/Nuitka-Action@main
+              uses: chenmozhijin/Nuitka-Action@main
               if : ${{ runner.os == 'Windows' }}
               with:
                 nuitka-version: main
@@ -174,7 +170,6 @@ jobs:
                   ${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_CN.qm=PySide6/translations/qtbase_zh_CN.qm
                   ${{ steps.info.outputs.qt_translations_path }}/qtbase_zh_TW.qm=PySide6/translations/qtbase_zh_TW.qm
                   ${{ steps.info.outputs.qt_translations_path }}/qtbase_ja.qm=PySide6/translations/qtbase_ja.qm
-
               env:
                 PYTHONPATH: ${{ github.workspace }}
 
@@ -186,7 +181,6 @@ jobs:
                 path: |
                   nuitka-crash-report.xml
                   nuitka-report.xml
-
             - name: create dmg
               if: ${{ runner.os == 'macOS' }}
               run: |
@@ -200,9 +194,7 @@ jobs:
                   --app-drop-link  600 185 \
                   dist/LDDC.dmg \
                   build/LDDC.app
-
                 mv dist/LDDC.dmg upload/LDDC-${{ steps.info.outputs.version }}-${{ steps.arch.outputs.arch }}.dmg
-
             - name: Add fcitx5 support
               if: ${{ runner.os == 'Linux' }}
               uses: chenmozhijin/fcitx5-pyside@main
@@ -255,7 +247,6 @@ jobs:
                 Copy-Item -Path build/LDDC.dist/LDDC.exe -Destination dist/exe/main/LDDC.exe -Force
                 Copy-Item -Path build/LDDC.dist/ -Destination dist/exe/other/ -Recurse -Force
                 Remove-Item -Path dist/exe/other/LDDC.exe -Force
-
             - name: Generate evb
               if: ${{ runner.os == 'Windows' }}
               uses: chenmozhijin/generate-evb@master
@@ -273,22 +264,16 @@ jobs:
                 New-Item -Path "dist\exe\chen" -ItemType Directory -Force
                 New-Item -Path "dist\exe\tools" -ItemType Directory -Force
                 cd dist/exe/chen
-
                 $latest_release = Invoke-RestMethod -Uri "https://api.github.com/repos/dscharrer/innoextract/releases/latest"
                 $download_url = ($latest_release.assets | Where-Object { $_.browser_download_url -like "*windows.zip" }).browser_download_url
                 Invoke-WebRequest -Uri $download_url -OutFile "innoextract_windows.zip"
                 Expand-Archive -Path "innoextract_windows.zip" -DestinationPath "../tools" -Force
-
                 $enigmavb_url = "http://enigmaprotector.com/assets/files/enigmavb.exe"
                 Invoke-WebRequest -Uri $enigmavb_url -OutFile "../tools/enigmavb.exe"
-
                 cd ../tools
                 .\innoextract.exe enigmavb.exe
-
                 cd ../../..
                 dist/exe/tools/app/enigmavbconsole.exe dist/exe/LDDC.evb
-
-
             - name: Upload dist
               if: success() || failure()
               uses: actions/upload-artifact@v4
@@ -297,7 +282,6 @@ jobs:
                 path: |
                     dist/
                     build/
-
             - name: Compress exe
               if: ${{ runner.os == 'Windows' }}
               run: |
@@ -307,7 +291,6 @@ jobs:
                 Rename-Item -Path "build/LDDC.dist" -NewName "LDDC"
                 cd build
                 7z a -tzip -mx=9 ../upload/LDDC-${{ steps.info.outputs.version }}-windows-${{ steps.arch.outputs.arch }}.zip LDDC
-
             - name: Upload
               uses: actions/upload-artifact@v4
               with:
@@ -328,11 +311,9 @@ jobs:
         - name: Install dependencies
           run: |
             pip install -Ur requirements-dev.txt
-
         - name: Build wheel
           run: |
             python -m build
-
         - name: Upload
           uses: actions/upload-artifact@v4
           with:
