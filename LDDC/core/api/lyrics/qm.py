@@ -66,15 +66,15 @@ class QMAPI(CloudAPI):
         )
         self.comm = {
             "ct": 11,
-            "cv": "1003006",
-            "v": "1003006",
+            "cv": "2111",
+            "v": "2111",
             # "QIMEI36": ""
             # "QIMEI": "",
             "os_ver": "15",
             "phonetype": "24122RKC7C",  # REDMI K80 Pro https://mifirm.net/model/miro.ttt
             "rom": f"Redmi/miro/miro:15/AE3A.240806.005/OS2.0.10{random.choice(['5', '4', '2'])}.0.VOMCNXM:user/release-keys",
             # "aid"
-            "tmeAppID": "qqmusiclight",
+            "tmeAppID": "qqmusic",
             "nettype": "NETWORK_WIFI",
             # "uid"
             # "sid"
@@ -193,7 +193,7 @@ class QMAPI(CloudAPI):
             "grp": 1,
         }
         data = self.request(
-            "DoSearchForQQMusicLite" if search_type != SearchType.ALBUM else "DoSearchForQQMusicDesktop",
+            "DoSearchForQQMusicDesktop",
             "music.search.SearchCgiService",
             param,
         )
@@ -202,7 +202,7 @@ class QMAPI(CloudAPI):
         match search_type:
             case SearchType.SONG:
                 return APIResultList(
-                    self.format_songinfos(data["body"]["item_song"]),
+                    self.format_songinfos(data["body"]["song"]["list"]),
                     SearchInfo(
                         source=self.source,
                         keyword=keyword,
@@ -211,8 +211,8 @@ class QMAPI(CloudAPI):
                     ),
                     (
                         start_index,
-                        start_index + len(data["body"]["item_song"]) - 1,
-                        data["meta"]["sum"] if len(data["body"]["item_song"]) == pagesize else start_index + len(data["body"]["item_song"]),
+                        start_index + len(data["body"]["song"]["list"]) - 1,
+                        data["meta"]["sum"] if len(data["body"]["song"]["list"]) == pagesize else start_index + len(data["body"]["song"]["list"]),
                     ),
                 )
 
@@ -302,7 +302,7 @@ class QMAPI(CloudAPI):
                             ),
                             author=songlist["nickname"],
                         )
-                        for songlist in data["body"]["item_songlist"]
+                        for songlist in data["body"]["songlist"]["list"]
                     ],
                     SearchInfo(
                         source=self.source,
@@ -312,8 +312,8 @@ class QMAPI(CloudAPI):
                     ),
                     (
                         start_index,
-                        start_index + len(data["body"]["item_songlist"]) - 1,
-                        data["meta"]["sum"] if len(data["body"]["item_songlist"]) == pagesize else start_index + len(data["body"]["item_songlist"]),
+                        start_index + len(data["body"]["songlist"]["list"]) - 1,
+                        data["meta"]["sum"] if len(data["body"]["songlist"]["list"]) == pagesize else start_index + len(data["body"]["songlist"]["list"]),
                     ),
                 )
 
