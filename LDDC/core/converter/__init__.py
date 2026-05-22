@@ -4,7 +4,7 @@ import json
 
 from LDDC.common.data.config import cfg
 from LDDC.common.logger import logger
-from LDDC.common.models import Language, LyricsBase, LyricsFormat, LyricsType, Source
+from LDDC.common.models import Language, LyricsBase, LyricsFormat, LyricsType, Source, FSLyricsData, FSLyricsLine, FSLyricsWord
 from LDDC.common.data.config import cfg
 from LDDC.core.algorithm import find_closest_match
 from LDDC.core.romaji import romaji_to_hiragana
