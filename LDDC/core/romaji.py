@@ -222,6 +222,7 @@ def romaji_to_hiragana(text: str) -> str:
 
     Returns:
         Hiragana string without spaces.
+
     """
     if not text or not text.strip():
         return ""
