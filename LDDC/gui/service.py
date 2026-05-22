@@ -51,6 +51,7 @@ from LDDC.common.paths import auto_save_dir, command_line
 from LDDC.common.task_manager import TaskManager
 from LDDC.common.thread import cross_thread_func, in_main_thread, in_other_thread
 from LDDC.common.utils import has_content
+from LDDC.core.romaji import romaji_to_hiragana
 from LDDC.core.algorithm import assign_lyrics_positions, find_closest_match
 from LDDC.core.api.lyrics import get_lyrics
 from LDDC.core.auto_fetch import auto_fetch
@@ -847,6 +848,8 @@ class DesktopLyricsInstance(ServiceInstanceBase):
                     continue
 
                 text = "".join(word.text for word in display_line.words)  # 获取当前行歌词文本
+                if lang == "roma" and self.config.get("kana"):
+                    text = romaji_to_hiragana(text)
                 if lang == "orig" and self.rubys_mapping:
                     rubys = self.rubys_mapping.get(orig_index, [(0, 0, "")])
                     if not rubys:

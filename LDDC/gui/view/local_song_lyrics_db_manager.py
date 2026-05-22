@@ -118,7 +118,10 @@ class ExportLyricsDialog(QDialog, Ui_export_lyrics):
 
         self.save_path_button.clicked.connect(self.select_path)
         self.accepted.connect(self.to_export)
+        self.romanized_checkBox.stateChanged.connect(lambda: self.kana_checkBox.setEnabled(self.romanized_checkBox.isChecked()))
+        self.kana_checkBox.stateChanged.connect(lambda: cfg.setitem("kana", self.kana_checkBox.isChecked()))
         self._parent = parent
+        self.kana_checkBox.setEnabled(self.romanized_checkBox.isChecked())
 
     def get_langs(self) -> list[str]:
         """获取选择的的语言"""

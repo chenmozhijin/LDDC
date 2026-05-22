@@ -231,6 +231,13 @@ class Ui_search_base:
 
         self.horizontalLayout_8.addWidget(self.romanized_checkBox)
 
+        self.kana_checkBox = QCheckBox(search_base)
+        self.kana_checkBox.setObjectName("kana_checkBox")
+        sizePolicy.setHeightForWidth(self.kana_checkBox.sizePolicy().hasHeightForWidth())
+        self.kana_checkBox.setSizePolicy(sizePolicy)
+
+        self.horizontalLayout_8.addWidget(self.kana_checkBox)
+
         self.label_5 = QLabel(search_base)
         self.label_5.setObjectName("label_5")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
@@ -320,6 +327,7 @@ class Ui_search_base:
         self.original_checkBox.setText(QCoreApplication.translate("search_base", "\u539f\u6587", None))
         self.translate_checkBox.setText(QCoreApplication.translate("search_base", "\u8bd1\u6587", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("search_base", "\u7f57\u9a6c\u97f3", None))
+        self.kana_checkBox.setText(QCoreApplication.translate("search_base", "\u5e73\u5047\u540d", None))
         self.label_5.setText(QCoreApplication.translate("search_base", "\u504f\u79fb\u91cf:", None))
         self.label_9.setText(QCoreApplication.translate("search_base", "\u6b4c\u8bcd\u683c\u5f0f:", None))
         self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("search_base", "LRC(\u9010\u5b57)", None))

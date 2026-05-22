@@ -43,6 +43,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self._init_task_manager()
         self._connect_signals()
 
+        self.kana_checkBox.setEnabled(self.romanized_checkBox.isChecked())
+
         self.path: list[APIResultList | None] = []  # 页面路径
         self.lyrics: None | Lyrics = None
 
@@ -79,7 +81,8 @@ class SearchWidgetBase(QWidget, Ui_search_base):
         self.search_pushButton.clicked.connect(self.search)
 
         self.translate_checkBox.stateChanged.connect(lambda: self.set_lyrics())
-        self.romanized_checkBox.stateChanged.connect(lambda: self.set_lyrics())
+        self.romanized_checkBox.stateChanged.connect(lambda: (self.kana_checkBox.setEnabled(self.romanized_checkBox.isChecked()), self.set_lyrics()))
+        self.kana_checkBox.stateChanged.connect(lambda: (cfg.setitem("kana", self.kana_checkBox.isChecked()), self.set_lyrics()))
         self.original_checkBox.stateChanged.connect(lambda: self.set_lyrics())
         self.lyricsformat_comboBox.currentTextChanged.connect(lambda: self.set_lyrics())
         self.offset_spinBox.valueChanged.connect(lambda: self.set_lyrics())
