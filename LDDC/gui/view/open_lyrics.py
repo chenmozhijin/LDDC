@@ -26,6 +26,7 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         super().__init__()
         self.setupUi(self)
         self.connect_signals()
+        self.kana_checkBox.setEnabled(self.romanized_checkBox.isChecked())
         self.setAcceptDrops(True)  # 启用拖放功能
         self.lyrics_type = None
         self.path: Path | None = None
@@ -45,7 +46,8 @@ class OpenLyricsWidget(QWidget, Ui_open_lyrics):
         self.save2tag_pushButton.clicked.connect(self.save2tag)
 
         self.translate_checkBox.stateChanged.connect(self.update_lyrics)
-        self.romanized_checkBox.stateChanged.connect(self.update_lyrics)
+        self.romanized_checkBox.stateChanged.connect(lambda: (self.kana_checkBox.setEnabled(self.romanized_checkBox.isChecked()), self.update_lyrics()))
+        self.kana_checkBox.stateChanged.connect(lambda: (cfg.setitem("kana", self.kana_checkBox.isChecked()), self.update_lyrics()))
         self.original_checkBox.stateChanged.connect(self.update_lyrics)
 
         self.lyricsformat_comboBox.currentIndexChanged.connect(self.update_lyrics)

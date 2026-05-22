@@ -72,6 +72,13 @@ class Ui_local_match:
 
         self.gridLayout.addWidget(self.romanized_checkBox, 1, 11, 1, 1)
 
+        self.kana_checkBox = QCheckBox(self.control_bar)
+        self.kana_checkBox.setObjectName("kana_checkBox")
+        sizePolicy2.setHeightForWidth(self.kana_checkBox.sizePolicy().hasHeightForWidth())
+        self.kana_checkBox.setSizePolicy(sizePolicy2)
+
+        self.gridLayout.addWidget(self.kana_checkBox, 1, 12, 1, 1)
+
         self.label_8 = QLabel(self.control_bar)
         self.label_8.setObjectName("label_8")
         sizePolicy3 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
@@ -285,6 +292,7 @@ class Ui_local_match:
         self.select_dirs_button.setText(QCoreApplication.translate("local_match", "\u9009\u62e9\u6587\u4ef6\u5939", None))
         self.save_path_button.setText(QCoreApplication.translate("local_match", "\u9009\u62e9\u4fdd\u5b58\u8def\u5f84", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("local_match", "\u7f57\u9a6c\u97f3", None))
+        self.kana_checkBox.setText(QCoreApplication.translate("local_match", "\u5e73\u5047\u540d", None))
         self.label_8.setText(QCoreApplication.translate("local_match", "\u6b4c\u8bcd\u6587\u4ef6\u540d:", None))
         self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("local_match", "LRC(\u9010\u5b57)", None))
         self.lyricsformat_comboBox.setItemText(1, QCoreApplication.translate("local_match", "LRC(\u9010\u884c)", None))

@@ -65,6 +65,13 @@ class Ui_open_lyrics:
 
         self.horizontalLayout_2.addWidget(self.romanized_checkBox, 0, Qt.AlignmentFlag.AlignLeft)
 
+        self.kana_checkBox = QCheckBox(open_lyrics)
+        self.kana_checkBox.setObjectName("kana_checkBox")
+        sizePolicy.setHeightForWidth(self.kana_checkBox.sizePolicy().hasHeightForWidth())
+        self.kana_checkBox.setSizePolicy(sizePolicy)
+
+        self.horizontalLayout_2.addWidget(self.kana_checkBox, 0, Qt.AlignmentFlag.AlignLeft)
+
         self.label_5 = QLabel(open_lyrics)
         self.label_5.setObjectName("label_5")
         sizePolicy1 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
@@ -156,6 +163,7 @@ class Ui_open_lyrics:
         self.original_checkBox.setText(QCoreApplication.translate("open_lyrics", "\u539f\u6587", None))
         self.translate_checkBox.setText(QCoreApplication.translate("open_lyrics", "\u8bd1\u6587", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("open_lyrics", "\u7f57\u9a6c\u97f3", None))
+        self.kana_checkBox.setText(QCoreApplication.translate("open_lyrics", "\u5e73\u5047\u540d", None))
         self.label_5.setText(QCoreApplication.translate("open_lyrics", "\u504f\u79fb\u91cf:", None))
         self.label_2.setText(QCoreApplication.translate("open_lyrics", "\u8f6c\u6362\u7684\u683c\u5f0f\uff1a", None))
         self.lyricsformat_comboBox.setItemText(0, QCoreApplication.translate("open_lyrics", "LRC(\u9010\u5b57)", None))

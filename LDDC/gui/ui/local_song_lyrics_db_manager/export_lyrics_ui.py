@@ -119,6 +119,13 @@ class Ui_export_lyrics:
 
         self.gridLayout.addWidget(self.romanized_checkBox, 2, 3, 1, 2)
 
+        self.kana_checkBox = QCheckBox(export_lyrics)
+        self.kana_checkBox.setObjectName("kana_checkBox")
+        sizePolicy1.setHeightForWidth(self.kana_checkBox.sizePolicy().hasHeightForWidth())
+        self.kana_checkBox.setSizePolicy(sizePolicy1)
+
+        self.gridLayout.addWidget(self.kana_checkBox, 3, 3, 1, 2)
+
 
         self.retranslateUi(export_lyrics)
         self.buttonBox.accepted.connect(export_lyrics.accept)
@@ -146,5 +153,6 @@ class Ui_export_lyrics:
         self.label_9.setText(QCoreApplication.translate("export_lyrics", "\u6b4c\u8bcd\u7c7b\u578b:", None))
         self.original_checkBox.setText(QCoreApplication.translate("export_lyrics", "\u539f\u6587", None))
         self.romanized_checkBox.setText(QCoreApplication.translate("export_lyrics", "\u7f57\u9a6c\u97f3", None))
+        self.kana_checkBox.setText(QCoreApplication.translate("export_lyrics", "\u5e73\u5047\u540d", None))
     # retranslateUi
 

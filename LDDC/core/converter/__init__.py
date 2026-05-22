@@ -4,8 +4,9 @@ import json
 
 from LDDC.common.data.config import cfg
 from LDDC.common.logger import logger
-from LDDC.common.models import Language, LyricsBase, LyricsFormat, LyricsType, Source
+from LDDC.common.models import FSLyricsData, FSLyricsLine, FSLyricsWord, Language, LyricsBase, LyricsFormat, LyricsType, Source
 from LDDC.core.algorithm import find_closest_match
+from LDDC.core.romaji import romaji_to_hiragana
 
 from .ass import ass_converter
 from .lrc import lrc_converter
@@ -57,6 +58,15 @@ def convert2(lyrics: LyricsBase,
 
     if "LDDC_ts" in lyrics_dict:  # 使用LDDC的翻译覆盖原本的翻译
         lyrics_dict["ts"] = lyrics_dict.pop("LDDC_ts")
+
+    if cfg["kana"] and "roma" in lyrics_dict:
+        lyrics_dict["roma"] = FSLyricsData([
+            FSLyricsLine(line.start, line.end, [
+                FSLyricsWord(word.start, word.end, romaji_to_hiragana(word.text))
+                for word in line.words
+            ])
+            for line in lyrics_dict["roma"]
+        ])
 
 
     langs_order: list[str] = [lang for lang in cfg["langs_order"] if lang in langs and lang in lyrics_dict]

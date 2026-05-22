@@ -68,6 +68,7 @@ class Config(dict):
             "desktop_lyrics_rect": (),  # 默认为空自动移动到屏幕中央
             "desktop_lyrics_font_size": 30.0,
             "desktop_lyrics_show_furigana": True,
+            "kana": False,
 
             "language": "auto",
             "color_scheme": "auto",
@@ -120,7 +121,7 @@ class Config(dict):
             super().__setitem__(key, value)
             self.write_config()
 
-        if key in ("langs_order", "lrc_ms_digit_count", "add_end_timestamp_line", "last_ref_line_time_sty", "lrc_tag_info_src"):
+        if key in ("langs_order", "lrc_ms_digit_count", "add_end_timestamp_line", "last_ref_line_time_sty", "lrc_tag_info_src", "kana"):
             self.lyrics_changed.emit((key, value))
         elif key in (
             "desktop_lyrics_font_family",

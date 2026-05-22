@@ -33,6 +33,7 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.setupUi(self)
         self.setAcceptDrops(True)  # 启用拖放功能
         self.connect_signals()
+        self.kana_checkBox.setEnabled(self.romanized_checkBox.isChecked())
 
         self.songs_table.set_proportions([0.2, 0.1, 0.1, 0.3, 2, 0.3, 2])  # 设置列宽比例
         self.source_listWidget.set_soures(["QM", "KG", "NE"])
@@ -58,6 +59,9 @@ class LocalMatchWidget(QWidget, Ui_local_match):
         self.select_dirs_button.clicked.connect(self.select_dirs)
         self.save_path_button.clicked.connect(self.select_save_root_path)
         self.start_cancel_pushButton.clicked.connect(self.start_cancel)
+
+        self.romanized_checkBox.stateChanged.connect(lambda: self.kana_checkBox.setEnabled(self.romanized_checkBox.isChecked()))
+        self.kana_checkBox.stateChanged.connect(lambda: cfg.setitem("kana", self.kana_checkBox.isChecked()))
 
         self.save_mode_comboBox.currentIndexChanged.connect(self.update_save_paths)
         self.filename_mode_comboBox.currentIndexChanged.connect(self.update_save_paths)

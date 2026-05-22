@@ -180,6 +180,8 @@ class DesktopLyricsSelectWidget(SearchWidgetBase):
                     self.romanized_checkBox.setChecked(True)
                 else:
                     self.romanized_checkBox.setChecked(False)
+                self.kana_checkBox.setChecked(cfg["kana"])
+                self.kana_checkBox.setEnabled(self.romanized_checkBox.isChecked())
         self.raise_()
         if self.isMinimized():
             self.showNormal()
