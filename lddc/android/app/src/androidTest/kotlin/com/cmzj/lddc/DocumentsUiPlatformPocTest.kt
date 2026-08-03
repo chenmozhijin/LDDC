@@ -98,7 +98,7 @@ class DocumentsUiPlatformPocTest {
             device.executeShellCommand("am force-stop $packageName")
         }
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        assertTrue("LDDC 未进入前台", device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), TIMEOUT_MS))
+        assertTrue("LDDC 未进入前台", waitForLddcForeground())
     }
 
     @After
@@ -140,14 +140,14 @@ class DocumentsUiPlatformPocTest {
             // 音频页会在会话期间持有只读 fd。重建 Activity 可直接验证旧实例的
             // onDestroy 是否把 registry 清零，而不是把合法会话 fd 误判为泄漏。
             scenario?.recreate()
-            assertTrue("Activity 重建后 LDDC 未恢复", device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), TIMEOUT_MS))
+            assertTrue("Activity 重建后 LDDC 未恢复", waitForLddcForeground())
             selectSeededAudio()
             recordCapability("media", "saved_tag_reopened_after_activity_recreation")
             recordSelectedArtifact()
 
             // 第二次打开留下的会话 fd 也必须在场景结束前由 Activity 生命周期释放。
             scenario?.recreate()
-            assertTrue("第二次 Activity 重建后 LDDC 未恢复", device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), TIMEOUT_MS))
+            assertTrue("第二次 Activity 重建后 LDDC 未恢复", waitForLddcForeground())
         }
     }
 
@@ -157,7 +157,7 @@ class DocumentsUiPlatformPocTest {
             openSongPicker()
             device.pressBack()
 
-            assertTrue("取消后没有返回 LDDC", device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), TIMEOUT_MS))
+            assertTrue("取消后没有返回 LDDC", waitForLddcForeground())
             assertNotNull(
                 "取消后打开歌曲动作不可再次发现",
                 device.wait(Until.findObject(By.res(OPEN_SONG_FILE)), TIMEOUT_MS),
@@ -200,7 +200,7 @@ class DocumentsUiPlatformPocTest {
                 "DocumentsUI 没有暴露保存动作",
             ).click()
 
-            assertTrue("保存后没有返回 LDDC", device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), TIMEOUT_MS))
+            assertTrue("保存后没有返回 LDDC", waitForLddcForeground())
             val output = waitForSavedDocumentFromUi(outputName)
             seededExportUri = output.first
             assertTrue("真实 ACTION_CREATE_DOCUMENT 输出没有歌词正文", output.second.toString(Charsets.UTF_8).contains(EMBEDDED_LYRICS))
@@ -211,7 +211,7 @@ class DocumentsUiPlatformPocTest {
             // 打开歌曲后仍持有只读 fd；重建 Activity 后再做最终资源快照，证明保存流程
             // 没有用残留媒体句柄掩盖文件导出结果。
             scenario?.recreate()
-            assertTrue("保存后的 Activity 重建没有恢复 LDDC", device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), TIMEOUT_MS))
+            assertTrue("保存后的 Activity 重建没有恢复 LDDC", waitForLddcForeground())
             assertTrue(
                 "真实 ACTION_CREATE_DOCUMENT 输出未能通过 DocumentsContract 删除",
                 deleteSavedDocument(output.first),
@@ -274,7 +274,7 @@ class DocumentsUiPlatformPocTest {
             scenario = ActivityScenario.launch(MainActivity::class.java)
             assertTrue(
                 "Activity 销毁后无法重新启动 LDDC",
-                device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), TIMEOUT_MS),
+                waitForLddcForeground(),
             )
             assertTrue(
                 "新 Activity 继承了旧实例的 pending picker",
@@ -285,7 +285,7 @@ class DocumentsUiPlatformPocTest {
             device.pressBack()
             assertTrue(
                 "重启后取消 DocumentsUI 没有返回 LDDC",
-                device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), TIMEOUT_MS),
+                waitForLddcForeground(),
             )
             assertTrue(
                 "重启后的取消流程没有清空 pending picker",
@@ -358,7 +358,7 @@ class DocumentsUiPlatformPocTest {
     private fun selectSeededAudio() {
         openSongPicker()
         findSeededAudioInDocumentsUi().click()
-        assertTrue("选择文件后没有返回 LDDC", device.wait(Until.hasObject(By.pkg(APP_PACKAGE).depth(0)), TIMEOUT_MS))
+        assertTrue("选择文件后没有返回 LDDC", waitForLddcForeground())
         assertTrue(
             "生产 TagLib 没有从 SAF fd 回读匿名内嵌歌词",
             device.wait(Until.hasObject(By.textContains(EMBEDDED_LYRICS)), TIMEOUT_MS),
@@ -373,6 +373,14 @@ class DocumentsUiPlatformPocTest {
             Until.findObject(By.text(seededAudioName).clazz("android.widget.TextView")),
             TIMEOUT_MS,
         ) ?: throw AssertionError("DocumentsUI 进入测试 provider 后没有返回 seed 音频")
+    }
+
+    private fun waitForLddcForeground(): Boolean {
+        // Android 15 的无障碍窗口会在系统装饰节点下暴露应用语义树，应用包节点
+        // 不再保证位于 depth(0)。固定根深度会把已经 RESUMED、完成首帧的 LDDC
+        // 误判为未启动；包名仍由系统提供且不会匹配 DocumentsUI，因此只移除错误
+        // 的层级假设，不降低“必须真实返回应用窗口”的前台证据。
+        return device.wait(Until.hasObject(By.pkg(APP_PACKAGE)), TIMEOUT_MS)
     }
 
     private fun openFixtureRunDirectoryInDocumentsUi() {

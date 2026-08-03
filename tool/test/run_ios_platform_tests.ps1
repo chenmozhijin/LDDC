@@ -195,6 +195,7 @@ try {
       Method = "testTerminatedExportIsCleanedOnNextLaunch"
     }
   )
+  $overallExitCode = 0
   foreach ($entry in $scenarios) {
     $scenario = $entry.Name
     $method = $entry.Method
@@ -334,14 +335,11 @@ try {
     $junitPath = Join-Path $junitDir "$scenario.xml"
     & python $junitConverter --input $summaryPath --output $junitPath --scenario $scenario
     $junitExitCode = $LASTEXITCODE
-    if ($testExitCode -ne 0) {
-      exit $testExitCode
-    }
-    if ($normalizeExitCode -ne 0) {
-      exit $normalizeExitCode
-    }
-    if ($junitExitCode -ne 0) {
-      exit $junitExitCode
+    if ($testExitCode -ne 0 -or $normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
+      # Document Picker 的选择、取消、导出和生命周期场景彼此独立。单个失败
+      # 不能阻断后续证据收集，但最终退出码仍必须失败，避免 CI 假绿。
+      $overallExitCode = 1
+      Write-Warning "iOS XCUITest 场景 $scenario 失败，继续收集其余独立场景"
     }
   }
 } finally {
@@ -359,7 +357,8 @@ try {
   --run-id $runId `
   --matrix $matrix
 if ($LASTEXITCODE -ne 0) {
-  exit $LASTEXITCODE
+  $overallExitCode = 1
 }
 
 Write-Host "iOS platform reports: $runRoot"
+exit $overallExitCode

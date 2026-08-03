@@ -411,7 +411,13 @@ class DesktopFloatingWindowShellPageState
       }
     }
     await windowManager.setAlwaysOnTop(flags.alwaysOnTop);
-    await windowManager.setIgnoreMouseEvents(flags.clickThrough);
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      // window_manager 0.5.2 的鼠标穿透通道仅在 Windows 和 macOS 注册。
+      // Linux 无条件调用会抛出 MissingPluginException，使浮窗创建反复失败，
+      // 并阻断最后实例删除后的服务退出；Linux 继续使用原生窗口默认命中行为。
+      await windowManager.setIgnoreMouseEvents(flags.clickThrough);
+    }
     await windowManager.setOpacity(flags.opacity);
     // Windows 上 frameless、阴影和分层透明度都会改写底层窗口样式；
     // 如果只依赖 waitUntilReadyToShow() 里的初始 backgroundColor，

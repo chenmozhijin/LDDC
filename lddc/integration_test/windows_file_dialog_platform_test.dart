@@ -136,5 +136,8 @@ void main() {
         );
       });
     },
+    // FlaUI 只负责真实 IFileDialog，不需要 Flutter 测试框架额外持有
+    // semantics 句柄；显式关闭可避免测试结束时把辅助功能句柄误判为泄漏。
+    semanticsEnabled: false,
   );
 }

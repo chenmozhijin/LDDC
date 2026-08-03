@@ -28,13 +28,13 @@ void main() {
     }
   });
 
-  AppStoragePaths createPaths() {
+  AppStoragePaths createPaths({bool? isWindows, bool? isLinux, bool? isMacOS}) {
     return AppStoragePaths(
       // 文件并发测试必须使用当前宿主的路径分隔规则；Windows 路径纯语义由
       // AppStoragePaths 的独立单测覆盖，不能在 Linux 上把反斜杠当真实目录。
-      isWindows: Platform.isWindows,
-      isLinux: Platform.isLinux,
-      isMacOS: Platform.isMacOS,
+      isWindows: isWindows ?? Platform.isWindows,
+      isLinux: isLinux ?? Platform.isLinux,
+      isMacOS: isMacOS ?? Platform.isMacOS,
       windowsKnownFolderResolver: (String folderId) async => tempDir.path,
       linuxConfigHomeResolver: () async => tempDir,
       linuxDataHomeResolver: () async => tempDir,
@@ -53,6 +53,20 @@ void main() {
           const DesktopServiceLaunchCommand(executable: r'C:\LDDC\lddc.exe'),
     );
   }
+
+  test('macOS 单实例 socket 使用稳定应用数据目录而不是进程临时目录', () async {
+    final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
+      paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
+      isMacOS: true,
+    );
+
+    final File socket = await runtimePaths.resolveControlSocketFile();
+
+    expect(
+      socket.path.replaceAll('\\', '/'),
+      '${tempDir.path.replaceAll('\\', '/')}/Application Support/LDDC/runtime/service.sock',
+    );
+  });
 
   test('主窗口首次成为 primary 时会写入 info.json 并继续启动', () async {
     final _FakeSingletonBootstrapPort port = _FakeSingletonBootstrapPort(

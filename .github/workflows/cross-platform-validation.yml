@@ -367,7 +367,10 @@ jobs:
         if: always() && steps.simulator.outcome == 'success'
         continue-on-error: true
         shell: pwsh
-        run: ./tool/test/run_real_integration.ps1 -Profile offline -Device $env:DEVICE_ID -Platform ios
+        # iOS hosted runner 首个 integration target 需要完成原生编译、安装和 VM
+        # 调试连接；此前 300 秒只终止在隐藏 loading 用例，业务场景尚未开始。
+        # 这里只扩大 testStart 前的基础设施窗口，场景步骤仍使用原有严格超时。
+        run: ./tool/test/run_real_integration.ps1 -Profile offline -Device $env:DEVICE_ID -Platform ios -StartupTimeoutSeconds 600
       - name: Run native channel flows
         id: native_channel
         if: always() && steps.simulator.outcome == 'success'

@@ -871,9 +871,24 @@ final class DesktopWindowsSingletonBootstrapPort
 }
 
 final class DesktopServiceRuntimePaths {
-  const DesktopServiceRuntimePaths();
+  const DesktopServiceRuntimePaths({AppStoragePathsPort? paths, bool? isMacOS})
+    : _paths = paths,
+      _isMacOS = isMacOS;
+
+  final AppStoragePathsPort? _paths;
+  final bool? _isMacOS;
 
   Future<File> resolveControlSocketFile() async {
+    if (_isMacOS ?? Platform.isMacOS) {
+      // App Sandbox 会重写 TMPDIR，直接启动 app executable 与 LaunchServices
+      // 启动的 CLI 进程可能看到不同临时目录。旧实现会让已经监听的主进程无法
+      // 被第二实例发现。控制 socket 改放同一 bundle 数据容器的 runtime 子目录；
+      // stale socket 仍由 claimPrimary 清理，不改变用户配置或 Python 兼容文件。
+      final Directory dataDirectory =
+          await (_paths ?? AppStoragePathsRegistry.current)
+              .resolveDataDirectory();
+      return File(p.join(dataDirectory.path, 'runtime', 'service.sock'));
+    }
     final Directory baseDirectory = await _resolveBaseDirectory();
     return File(p.join(baseDirectory.path, 'LDDC', 'service.sock'));
   }
@@ -883,12 +898,6 @@ final class DesktopServiceRuntimePaths {
       final String? runtimeDir = Platform.environment['XDG_RUNTIME_DIR'];
       if (runtimeDir != null && runtimeDir.trim().isNotEmpty) {
         return Directory(runtimeDir);
-      }
-    }
-    if (Platform.isMacOS) {
-      final String? tmpDir = Platform.environment['TMPDIR'];
-      if (tmpDir != null && tmpDir.trim().isNotEmpty) {
-        return Directory(tmpDir);
       }
     }
     return Directory.systemTemp;

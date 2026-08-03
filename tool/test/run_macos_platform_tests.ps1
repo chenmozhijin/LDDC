@@ -123,7 +123,6 @@ try {
     -configuration Debug `
     -destination "platform=macOS" `
     -derivedDataPath $derivedData `
-    CODE_SIGNING_ALLOWED=NO `
     "LDDC_IT_RUN_ID=$runId" `
     "LDDC_FIXTURE_PATH=$fixture" `
     "LDDC_FIXTURE_SIZE=$fixtureSize" `
@@ -141,6 +140,7 @@ try {
     @{ Name = "macos_open_panel_select"; Method = "testOpenPanelSelectsFixture" },
     @{ Name = "macos_open_panel_cancel"; Method = "testOpenPanelCancellationReturnsToFlutter" }
   )
+  $overallExitCode = 0
   foreach ($entry in $scenarios) {
     $scenario = $entry.Name
     $method = $entry.Method
@@ -202,14 +202,12 @@ try {
     $junitPath = Join-Path $junitDir "$scenario.xml"
     & python $junitConverter --input $summaryPath --output $junitPath --scenario $scenario
     $junitExitCode = $LASTEXITCODE
-    if ($testExitCode -ne 0) {
-      exit $testExitCode
-    }
-    if ($normalizeExitCode -ne 0) {
-      exit $normalizeExitCode
-    }
-    if ($junitExitCode -ne 0) {
-      exit $junitExitCode
+    if ($testExitCode -ne 0 -or $normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
+      # 文件面板选择和取消是独立场景。旧 runner 在首个失败后立即退出，
+      # hosted CI 只能得到半份证据并需要再次提交才能发现后续问题。
+      # 继续执行剩余场景，但最终仍返回非零，不能把失败降级为成功。
+      $overallExitCode = 1
+      Write-Warning "macOS XCUITest 场景 $scenario 失败，继续收集其余独立场景"
     }
   }
 } finally {
@@ -224,7 +222,8 @@ try {
   --run-id $runId `
   --matrix $matrix
 if ($LASTEXITCODE -ne 0) {
-  exit $LASTEXITCODE
+  $overallExitCode = 1
 }
 
 Write-Host "macOS platform reports: $runRoot"
+exit $overallExitCode

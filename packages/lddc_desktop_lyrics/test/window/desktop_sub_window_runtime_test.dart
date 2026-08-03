@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lddc_desktop_lyrics/lddc_desktop_lyrics.dart';
@@ -136,6 +137,50 @@ void main() {
     await expectLater(close, completion(isNull));
     await Future<void>.delayed(const Duration(milliseconds: 150));
     expect(events, <String>['prepare', 'prepared', 'detach', 'drain']);
+  });
+
+  testWidgets('浮窗 flags 热更新会应用有边框样式和受支持的鼠标穿透通道', (WidgetTester tester) async {
+    final _FakeRemoteWindow current = await _initializeFloatingRuntime(
+      runtime,
+      lifecycle,
+    );
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: DesktopFloatingWindowShellPage(
+          launch: DesktopWindowLaunchArguments(
+            role: DesktopWindowRole.floating,
+            instanceId: 7,
+            hostWindowId: 'main-1',
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    windowManagerCalls.clear();
+
+    await current.dispatch(
+      DesktopWindowMethodNames.floatingUpdateFlags,
+      DesktopWindowPayloadCodec.encodeFloatingFlagsPayload(
+        const DesktopFloatingFlagsPayload(
+          revision: 1,
+          flags: DesktopFloatingWindowFlags(
+            frameless: false,
+            clickThrough: true,
+          ),
+        ),
+      ),
+    );
+
+    final Iterable<String> methods = windowManagerCalls.map(
+      (MethodCall call) => call.method,
+    );
+    expect(methods, contains('setTitleBarStyle'));
+    expect(methods, contains('setHasShadow'));
+    expect(methods, contains('setIgnoreMouseEvents'));
+    // Widget 测试的全局 debug invariant 早于普通 tearDown 执行，因此必须
+    // 在用例体结束前恢复平台覆盖，避免把测试平台配置误判为全局状态泄漏。
+    debugDefaultTargetPlatformOverride = null;
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   test('dispose 会解绑方法通道并清空当前窗口缓存', () async {

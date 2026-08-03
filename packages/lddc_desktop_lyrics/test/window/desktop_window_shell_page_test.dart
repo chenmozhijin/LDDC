@@ -70,7 +70,7 @@ void main() {
     expect(find.byType(DesktopPanelWindowShellPage), findsNothing);
   });
 
-  testWidgets('Linux 浮窗配置不会调用未实现的窗口阴影通道', (WidgetTester tester) async {
+  testWidgets('Linux 浮窗配置不会调用未实现的窗口通道', (WidgetTester tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     try {
       await tester.pumpWidget(
@@ -96,6 +96,7 @@ void main() {
       );
       expect(methods, contains('setAsFrameless'));
       expect(methods, isNot(contains('setHasShadow')));
+      expect(methods, isNot(contains('setIgnoreMouseEvents')));
     } finally {
       await tester.pumpWidget(const SizedBox.shrink());
       debugDefaultTargetPlatformOverride = null;
@@ -106,7 +107,7 @@ void main() {
     TargetPlatform.windows,
     TargetPlatform.macOS,
   ]) {
-    testWidgets('${platform.name} 浮窗配置保留窗口阴影通道', (WidgetTester tester) async {
+    testWidgets('${platform.name} 浮窗配置保留受支持的窗口通道', (WidgetTester tester) async {
       debugDefaultTargetPlatformOverride = platform;
       try {
         await tester.pumpWidget(
@@ -132,6 +133,7 @@ void main() {
         );
         expect(methods, contains('setAsFrameless'));
         expect(methods, contains('setHasShadow'));
+        expect(methods, contains('setIgnoreMouseEvents'));
       } finally {
         await tester.pumpWidget(const SizedBox.shrink());
         debugDefaultTargetPlatformOverride = null;

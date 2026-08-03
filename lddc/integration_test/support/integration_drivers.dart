@@ -201,10 +201,25 @@ class SearchDriver {
     final Finder openPreview = find.byKey(
       const ValueKey<String>('search_result_open_preview_button'),
     );
-    // 移动端点开歌曲后会异步展示预览 BottomSheet。旧驱动在弹层动画尚未
-    // 建立操作区时立即点击底层“预览”按钮，按钮虽然仍在树中，却被模态遮罩
-    // 覆盖而不可命中。先等待弹层动作出现，或等待底层按钮确实可命中，再选择
-    // 后续动作；这保持严格 hit test，也不会依赖坐标或吞掉真实布局问题。
+    // Android 的结果操作条可能把“预览”入口放在横向 viewport 外。旧驱动先
+    // 等待 hitTestable，导致真正负责滚动的 tapVisible 永远没有机会执行。先等待
+    // 入口建立并把它滚入视口，再判断异步 BottomSheet 是否已经出现；后续仍由
+    // tapVisible 做严格命中检查，不使用坐标或吞掉真实遮挡问题。
+    await pumpUntil(
+      tester,
+      () => target.evaluate().length == 1 || openPreview.evaluate().length == 1,
+      timeout: const Duration(seconds: 5),
+      reason: '等待移动端预览弹层或预览入口建立',
+    );
+    if (target.evaluate().length == 1) {
+      return;
+    }
+    await Scrollable.ensureVisible(
+      tester.element(openPreview),
+      alignment: 0.5,
+      duration: Duration.zero,
+    );
+    await pumpForInteraction(tester);
     await pumpUntil(
       tester,
       () =>

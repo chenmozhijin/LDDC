@@ -78,9 +78,9 @@ public sealed class FileDialogPlatformTests
         // AutomationId 1148 同时用于外层 ComboBox 和实际 Edit；只有 Edit 的
         // ValuePattern 会成为最终提交文件名，禁止按本地化名称或元素顺序猜测。
         var result = Retry.WhileNull(
-            () => root.FindAllDescendants().FirstOrDefault(element =>
-                element.Properties.AutomationId.ValueOrDefault == "1148"
-                && element.Properties.ControlType.ValueOrDefault == ControlType.Edit),
+            () => root.FindFirstDescendant(condition =>
+                condition.ByAutomationId("1148")
+                    .And(condition.ByControlType(ControlType.Edit))),
             DialogCloseTimeout).Result;
         return result?.AsTextBox()
             ?? throw new AssertFailedException("IFileDialog 缺少原生文件名 Edit 控件");
@@ -93,9 +93,9 @@ public sealed class FileDialogPlatformTests
         string message)
     {
         return Retry.WhileNull(
-            () => root.FindAllDescendants().FirstOrDefault(element =>
-                element.Properties.AutomationId.ValueOrDefault == automationId
-                && element.Properties.ControlType.ValueOrDefault == controlType),
+            () => root.FindFirstDescendant(condition =>
+                condition.ByAutomationId(automationId)
+                    .And(condition.ByControlType(controlType))),
             DialogCloseTimeout).Result ?? throw new AssertFailedException(message);
     }
 
@@ -208,10 +208,12 @@ public sealed class FileDialogPlatformTests
 
         private AutomationElement[] FindFileDialogCandidates()
         {
-            // FlaUI 只扫描原生 Window 节点并校验 IFileDialog 的三个稳定控件 ID；
-            // Flutter 控件不参与选择。进程名约束可避免误操作桌面上其他应用的对话框。
+            // Hosted Windows 的桌面 UIA 树包含任务栏、Shell 和其他 runner 进程，
+            // 对 Desktop 做 FindAllDescendants 会触发跨进程递归并在 COM 层超时。
+            // IFileDialog 是桌面的直接顶层 Window，只枚举该层后再校验稳定控件 ID；
+            // Flutter 控件不参与选择，进程名约束仍避免误操作其他应用的对话框。
             return _automation.GetDesktop()
-                .FindAllDescendants(condition => condition.ByControlType(ControlType.Window))
+                .FindAllChildren(condition => condition.ByControlType(ControlType.Window))
                 .Where(IsFileDialogRoot)
                 .Where(IsLddcProcess)
                 .GroupBy(element => element.Properties.NativeWindowHandle.ValueOrDefault)
@@ -223,16 +225,15 @@ public sealed class FileDialogPlatformTests
         {
             try
             {
-                var descendants = element.FindAllDescendants();
-                return descendants.Any(candidate =>
-                           candidate.Properties.AutomationId.ValueOrDefault == "1148"
-                           && candidate.Properties.ControlType.ValueOrDefault == ControlType.Edit)
-                    && descendants.Any(candidate =>
-                           candidate.Properties.AutomationId.ValueOrDefault == "1"
-                           && candidate.Properties.ControlType.ValueOrDefault == ControlType.Button)
-                    && descendants.Any(candidate =>
-                           candidate.Properties.AutomationId.ValueOrDefault == "2"
-                           && candidate.Properties.ControlType.ValueOrDefault == ControlType.Button);
+                return element.FindFirstDescendant(condition =>
+                           condition.ByAutomationId("1148")
+                               .And(condition.ByControlType(ControlType.Edit))) is not null
+                    && element.FindFirstDescendant(condition =>
+                           condition.ByAutomationId("1")
+                               .And(condition.ByControlType(ControlType.Button))) is not null
+                    && element.FindFirstDescendant(condition =>
+                           condition.ByAutomationId("2")
+                               .And(condition.ByControlType(ControlType.Button))) is not null;
             }
             catch
             {
