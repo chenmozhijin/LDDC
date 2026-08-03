@@ -167,7 +167,8 @@ class SearchDriver {
     // 窄桌面和移动布局会把预览放在模态底部弹层中。
     // 下一次搜索前执行用户可见的返回动作，避免弹层遮住工具栏；
     // 宽屏布局没有 BottomSheet，因此不会额外弹出页面路由。
-    await tester.pageBack();
+    final bool handled = await tester.binding.handlePopRoute();
+    expect(handled, isTrue, reason: '搜索预览底部弹层必须能响应系统返回动作');
     await pumpUntilGone(
       tester,
       sheet,

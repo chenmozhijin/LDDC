@@ -15,6 +15,8 @@ param(
   [ValidateRange(0, 1)]
   [int]$InfrastructureRetryCount = 1,
   [int]$StepTimeoutMs = 20000,
+  [ValidateRange(60, 600)]
+  [int]$StartupTimeoutSeconds = 300,
   [ValidateRange(300, 1800)]
   [int]$TargetTimeoutSeconds = 1200,
   [switch]$ValidateOnly
@@ -90,7 +92,10 @@ function Copy-ContainerScenarioReport {
   )
 
   if ($Platform -eq "android") {
-    $relativePath = "cache/$ContainerReportDir/$Scenario.json" -replace '\\', '/'
+    # Dart VM 在 Android 应用进程中把 Directory.systemTemp 映射到 code_cache，
+    # 不是普通 cache。旧路径会在应用明确打印 report written 后仍稳定拉取失败，
+    # 使业务成功被错误归类为基础设施失败。
+    $relativePath = "code_cache/$ContainerReportDir/$Scenario.json" -replace '\\', '/'
     $jsonLines = & adb -s $Device exec-out run-as com.cmzj.lddc cat $relativePath 2>&1
     $pullExitCode = $LASTEXITCODE
     $content = ($jsonLines -join [Environment]::NewLine).Trim()
@@ -156,8 +161,37 @@ function Copy-ContainerScenarioReport {
   [IO.File]::WriteAllText($Destination, $content, [Text.UTF8Encoding]::new($false))
 }
 
+function Test-ScenarioExecutionStarted {
+  param([Parameter(Mandatory = $true)][string]$EventReportPath)
+
+  if (-not (Test-Path -LiteralPath $EventReportPath -PathType Leaf)) {
+    return $false
+  }
+  foreach ($line in Get-Content -LiteralPath $EventReportPath -ErrorAction SilentlyContinue) {
+    try {
+      $event = $line | ConvertFrom-Json
+    } catch {
+      continue
+    }
+    if ($event.type -ne "testStart") {
+      continue
+    }
+    $testName = [string]$event.test.name
+    # Flutter 会先写入隐藏的 `loading <target>` 用例。它只能证明 runner
+    # 启动过，不能证明应用已建立 debug 连接或业务场景实际开始执行。
+    if (-not [string]::IsNullOrWhiteSpace($testName) -and
+        -not $testName.StartsWith("loading ")) {
+      return $true
+    }
+  }
+  return $false
+}
+
 function Invoke-BoundedFlutterTest {
-  param([Parameter(Mandatory = $true)][string[]]$Arguments)
+  param(
+    [Parameter(Mandatory = $true)][string[]]$Arguments,
+    [Parameter(Mandatory = $true)][string]$EventReportPath
+  )
 
   $flutterCommand = (Get-Command flutter).Source
   $startInfo = [Diagnostics.ProcessStartInfo]::new()
@@ -175,16 +209,31 @@ function Invoke-BoundedFlutterTest {
     }
   }
   $process = [Diagnostics.Process]::Start($startInfo)
+  $stopwatch = [Diagnostics.Stopwatch]::StartNew()
   try {
-    if (-not $process.WaitForExit($TargetTimeoutSeconds * 1000)) {
-      # Flutter tool、设备桥或原生 runner 可能在测试框架产出事件前挂住。
-      # 必须终止完整进程树并返回明确超时码，后续 normalizer 才能生成失败 JUnit。
-      $process.Kill($true)
-      $process.WaitForExit()
-      return 124
+    while (-not $process.WaitForExit(1000)) {
+      if ($stopwatch.Elapsed.TotalSeconds -ge $TargetTimeoutSeconds) {
+        # Flutter tool、设备桥或原生 runner 可能在场景执行期间挂住。
+        # 必须终止完整进程树并返回明确超时码，后续 normalizer 才能生成失败 JUnit。
+        $process.Kill($true)
+        $process.WaitForExit()
+        return 124
+      }
+      if ($stopwatch.Elapsed.TotalSeconds -ge $StartupTimeoutSeconds -and
+          -not (Test-ScenarioExecutionStarted -EventReportPath $EventReportPath)) {
+        # 设备只写出隐藏 loading 用例时，应用尚未真正开始场景。及时回收并
+        # 返回独立基础设施码，允许 runner 执行唯一一次启动重试。
+        $process.Kill($true)
+        $process.WaitForExit()
+        return 125
+      }
+    }
+    if (-not (Test-ScenarioExecutionStarted -EventReportPath $EventReportPath)) {
+      return 125
     }
     return $process.ExitCode
   } finally {
+    $stopwatch.Stop()
     $process.Dispose()
   }
 }
@@ -266,13 +315,14 @@ try {
       if (Test-Path -LiteralPath $jsonPath) {
         Remove-Item -LiteralPath $jsonPath -Force
       }
-      $testExitCode = Invoke-BoundedFlutterTest -Arguments $flutterArguments
+      $testExitCode = Invoke-BoundedFlutterTest `
+        -Arguments $flutterArguments `
+        -EventReportPath $jsonPath
       if ($testExitCode -eq 0) {
         break
       }
 
-      $testStarted = (Test-Path -LiteralPath $jsonPath) -and
-        (Select-String -LiteralPath $jsonPath -Pattern '"type"\s*:\s*"testStart"' -Quiet)
+      $testStarted = Test-ScenarioExecutionStarted -EventReportPath $jsonPath
       if ($testStarted -or $infrastructureAttempt -ge $InfrastructureRetryCount) {
         break
       }

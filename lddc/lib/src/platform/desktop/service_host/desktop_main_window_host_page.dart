@@ -24,7 +24,7 @@ final AppLogger _mainWindowLogger = AppLogger.scope('main-window');
 ///
 /// 职责：
 /// - 主窗口首次构建后绑定主实例唤起处理；
-/// - 在 Windows 后台服务模式下保持主窗口隐藏；
+/// - 在三类桌面平台的后台服务模式下保持主窗口隐藏；
 /// - 处理桌面歌词插件或托盘转发过来的 `show` 请求。
 class DesktopMainWindowHostPage extends ConsumerStatefulWidget {
   const DesktopMainWindowHostPage({required this.child, super.key});
@@ -154,6 +154,16 @@ class _DesktopMainWindowHostPageState
       'show handler attached, shouldStartHidden=${bootstrap.shouldStartHidden}',
     );
     final bool shouldStartHidden = bootstrap.shouldStartHidden;
+    if (shouldStartHidden && defaultTargetPlatform != TargetPlatform.windows) {
+      // Windows runner 会在创建原生窗口前识别 `--not-show`，不需要重复隐藏。
+      // macOS/Linux runner 没有对应的启动参数入口；如果这里只更新逻辑状态，
+      // 原生窗口仍然可见，退出守卫也会拒绝在最后一个歌词实例删除后退出。
+      // 在 window_manager 初始化完成后显式隐藏，可让三平台遵循同一后台服务契约。
+      await windowManager.hide();
+      if (_disposed || !mounted) {
+        return;
+      }
+    }
     _setMainWindowOwnership(
       shouldStartHidden
           ? DesktopMainWindowOwnershipState.hidden

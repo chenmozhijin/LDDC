@@ -295,6 +295,16 @@ def failures() -> list[str]:
     ):
         if marker not in macos_project:
             problems.append(f"macOS UI 测试工程缺少: {marker}")
+    # UI test bundle 只通过 XCTest 启动 Runner，不应继承应用 CocoaPods 的
+    # plugin linker 参数。否则测试二进制会直接依赖 desktop_multi_window 等
+    # framework，而这些 framework 只应嵌入被测应用，运行时会导致 bundle 加载失败。
+    for marker in (
+        'FRAMEWORK_SEARCH_PATHS = "";',
+        'LIBRARY_SEARCH_PATHS = "";',
+        'OTHER_LDFLAGS = "";',
+    ):
+        if macos_project.count(marker) < 3:
+            problems.append(f"macOS UI 测试 target 未隔离第三方链接参数: {marker}")
     try:
         macos_scheme = ET.parse(
             ROOT
@@ -506,6 +516,7 @@ def failures() -> list[str]:
         "android-offline",
         "android-platform",
         "android-uiautomator",
+        "-StartupTimeoutSeconds 180",
         "run_android_platform_tests.ps1",
         "android-phases.json",
     ):
@@ -522,7 +533,6 @@ def failures() -> list[str]:
         "run_ios_platform_tests.ps1",
         "run_windows_platform_tests.ps1",
         "run_macos_platform_tests.ps1",
-        "run_linux_platform_tests.sh",
         "run_desktop_process_e2e.ps1",
         "Snapshot Windows production application",
         "Snapshot macOS production application",
@@ -532,18 +542,35 @@ def failures() -> list[str]:
         "-AppExe lddc/build/production_e2e/linux/lddc",
         "run_platform_media_resource.ps1",
         "Run iOS native unit tests",
+        "Restore iOS debug application after Flutter integration",
+        "flutter build ios --debug --simulator",
         "-scheme Runner",
     ):
         if marker not in workflow:
             problems.append(f"跨平台验证 workflow 缺少原生平台入口: {marker}")
+    # Flutter Linux 的 Semantics identifier 当前没有进入 AT-SPI 子树。
+    # hosted CI 不得用坐标脚本伪造覆盖，但 Dogtail 场景和固定依赖仍需保留，
+    # 便于在具备可访问性桥接的真实桌面环境中人工执行。
+    if "Dogtail 脚本继续保留供人工环境验证" not in workflow:
+        problems.append("Linux Dogtail 必须在 workflow 中明确标记为人工验证")
+    for manual_linux_asset in (
+        ROOT / "tool/test/run_linux_platform_tests.sh",
+        ROOT / "tool/test/requirements-linux-platform.txt",
+    ):
+        if not manual_linux_asset.is_file():
+            problems.append(f"Linux 人工平台测试资产缺失: {manual_linux_asset.name}")
     integration_runner = (ROOT / "tool/test/run_real_integration.ps1").read_text(
         encoding="utf-8"
     )
     for marker in (
+        "[int]$StartupTimeoutSeconds = 300",
         "[int]$TargetTimeoutSeconds = 1200",
-        "$process.WaitForExit($TargetTimeoutSeconds * 1000)",
+        "Test-ScenarioExecutionStarted",
+        'StartsWith("loading ")',
+        '"code_cache/$ContainerReportDir/$Scenario.json"',
         "$process.Kill($true)",
         "return 124",
+        "return 125",
     ):
         if marker not in integration_runner:
             problems.append(f"真实集成 runner 缺少 target 级硬超时或进程树清理: {marker}")

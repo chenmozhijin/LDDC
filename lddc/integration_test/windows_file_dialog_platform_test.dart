@@ -23,28 +23,22 @@ void main() {
   ensureIntegrationBinding();
 
   final String scenarioName = 'windows_file_dialog_$_dialogAction';
-  testWidgets('Windows 文件对话框由 Flutter 与 FlaUI 协同验证', (
-    WidgetTester tester,
-  ) async {
-    // FlaUI 需要 Flutter semantics 才能从 UIA 树定位控件。integration_test
-    // 不会替 testWidgets 的 semanticsEnabled 参数稳定释放原生辅助功能连接，
-    // 因此在场景内显式持有，并在测试主体返回前同步释放，
-    // 避免业务步骤成功后因句柄泄漏假红。
-    final SemanticsHandle semantics = tester.ensureSemantics();
-    expect(
-      _dialogAction,
-      anyOf('select', 'cancel'),
-      reason: 'runner 必须显式指定 select 或 cancel',
-    );
-    final IntegrationRuntimeConfig runtime =
-        IntegrationRuntimeConfig.fromEnvironment(scenarioName: scenarioName);
-    final IntegrationReporter reporter = IntegrationReporter(
-      scenarioName: scenarioName,
-      runtimeConfig: runtime,
-    );
-    addTearDown(reporter.writeSummary);
+  testWidgets(
+    'Windows 文件对话框由 Flutter 与 FlaUI 协同验证',
+    (WidgetTester tester) async {
+      expect(
+        _dialogAction,
+        anyOf('select', 'cancel'),
+        reason: 'runner 必须显式指定 select 或 cancel',
+      );
+      final IntegrationRuntimeConfig runtime =
+          IntegrationRuntimeConfig.fromEnvironment(scenarioName: scenarioName);
+      final IntegrationReporter reporter = IntegrationReporter(
+        scenarioName: scenarioName,
+        runtimeConfig: runtime,
+      );
+      addTearDown(reporter.writeSummary);
 
-    try {
       await reporter.runScenario(() async {
         expect(Platform.isWindows, isTrue, reason: '该场景只能在 Windows 运行');
         expect(runtime.profile, 'platform');
@@ -141,10 +135,10 @@ void main() {
           'file_selector_cancel_and_reopen_returned_to_flutter',
         );
       });
-    } finally {
-      // addTearDown 晚于 WidgetTester 的句柄泄漏校验执行。必须在
-      // testWidgets 主体返回前同步释放，否则原生操作已成功仍会假红。
-      semantics.dispose();
-    }
-  });
+    },
+    // UIA 在 hosted runner 中可能在测试期间再次激活辅助功能。
+    // 交给 testWidgets 持有唯一 semantics 句柄，框架会在泄漏校验前释放；
+    // 手动 ensureSemantics/addTearDown 会在 UIA 时序下产生句柄竞态。
+    semanticsEnabled: true,
+  );
 }

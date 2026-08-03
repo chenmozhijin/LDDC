@@ -105,7 +105,7 @@ $androidRoot = Join-Path $appRoot "android"
 $normalizer = Join-Path $repoRoot "tool/test/normalize_integration_report.py"
 $verifier = Join-Path $repoRoot "tool/test/verify_integration_reports.py"
 $matrix = Join-Path $repoRoot "tool/test/platform_capability_matrix.json"
-$gradle = if ($IsWindows) { ".\gradlew.bat" } else { "./gradlew" }
+$gradle = Join-Path $androidRoot $(if ($IsWindows) { "gradlew.bat" } else { "gradlew" })
 
 # CI 通常会把 adb 放入 PATH，但本地提权或非交互 shell 可能不会继承该 PATH。
 # 这里复用 Android 标准的 SDK 环境变量和 local.properties，只解析运行时路径，

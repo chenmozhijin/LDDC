@@ -377,6 +377,65 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     });
 
+    testWidgets('macOS 和 Linux 隐藏启动会同步隐藏原生主窗口', (WidgetTester tester) async {
+      for (final TargetPlatform platform in <TargetPlatform>[
+        TargetPlatform.macOS,
+        TargetPlatform.linux,
+      ]) {
+        debugDefaultTargetPlatformOverride = platform;
+        final List<String> calls = <String>[];
+        _installWindowManagerMock(tester, windowManagerChannel, calls: calls);
+        final DesktopWindowLifecycleRegistryController lifecycleRegistry =
+            DesktopWindowLifecycleRegistryController.instance;
+        lifecycleRegistry.debugResetForTests();
+        final DesktopExitGuardController exitGuard = DesktopExitGuardController(
+          lifecycleRegistry: lifecycleRegistry,
+        );
+        final DesktopServiceCoordinator coordinator = _buildCoordinator(
+          exitGuard: exitGuard,
+        );
+        final _FakeBootstrap bootstrap = _FakeBootstrap(
+          shouldStartHidden: true,
+        );
+        final _FakeTrayPortFactory trayFactory = _FakeTrayPortFactory();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              desktopExitGuardProvider.overrideWithValue(exitGuard),
+              desktopServiceCoordinatorProvider.overrideWithValue(coordinator),
+              desktopServiceBootstrapProvider.overrideWithValue(bootstrap),
+              desktopTrayPortFactoryProvider.overrideWithValue(
+                trayFactory.call,
+              ),
+              desktopWindowLifecycleRegistryProvider.overrideWithValue(
+                lifecycleRegistry,
+              ),
+            ],
+            child: _localizedHostApp(),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(calls, contains('hide'), reason: '${platform.name} 必须隐藏原生窗口');
+        final DesktopWindowRef mainRef = lifecycleRegistry.ensureMainWindow();
+        final DesktopWindowLifecycleSnapshot? snapshot = lifecycleRegistry
+            .snapshotForRef(mainRef);
+        expect(snapshot?.desiredState, DesktopWindowDesiredState.hidden);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await coordinator.dispose();
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          windowManagerChannel,
+          null,
+        );
+        lifecycleRegistry.debugResetForTests();
+      }
+      debugDefaultTargetPlatformOverride = null;
+    });
+
     testWidgets('show handler 中 window_manager 失败不会冒泡', (
       WidgetTester tester,
     ) async {

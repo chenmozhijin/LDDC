@@ -49,10 +49,12 @@ void main() {
         find.byType(SearchPage),
       );
       expect(await _readExportedLyrics(app.workspace.exportsDir), isEmpty);
-      // iOS 没有 Android SAF 目录树能力，生产界面也不会提供列表批量保存。
-      // 该平台仍覆盖专辑/歌单导航，但明确断言不出现不可用动作；桌面和
-      // Android 则继续验证真实批量产物，不能用 Fake 按钮补齐能力。
-      final bool supportsListBatchSave = !Platform.isIOS;
+      // 移动端列表批量保存依赖真实 SAF tree。offline profile 明确使用
+      // scripted picker，不应调用真实 Android MethodChannel；这里继续覆盖
+      // 专辑/歌单导航并断言动作不暴露。Android SAF 保存由 platform/UI
+      // Automator 场景形成真实证据，桌面离线流程仍验证最终文件产物。
+      final bool supportsListBatchSave =
+          Platform.isWindows || Platform.isMacOS || Platform.isLinux;
       Map<String, String> albumArtifacts = <String, String>{};
       // 专辑和歌单步骤各自串行等待搜索结果、曲目列表与批量保存完成。
       // 外层总预算必须覆盖三个长等待，否则慢设备会先抛出笼统的组合步骤超时，

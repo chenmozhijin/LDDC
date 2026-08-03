@@ -12,7 +12,7 @@ import 'support/integration_reporter.dart';
 void main() {
   ensureIntegrationBinding();
 
-  testWidgets('settings/about integration: 设置修改并从设置进入关联管理器', (
+  testWidgets('settings/about integration: 设置修改、桌面关联入口与关于页', (
     WidgetTester tester,
   ) async {
     final IntegrationRuntimeConfig runtime =
@@ -86,76 +86,101 @@ void main() {
         expect(find.text('Settings'), findsWidgets);
       });
 
-      await reporter.runStep(
-        'open_association_manager_from_settings',
-        () async {
-          await _openSettingsSection(
-            tester,
-            sectionName: 'tools',
-            target: find.byKey(
+      final bool isDesktopPlatform = switch (runtime.deviceName) {
+        'windows' || 'macos' || 'linux' => true,
+        _ => false,
+      };
+      if (isDesktopPlatform) {
+        await reporter.runStep(
+          'open_association_manager_from_settings',
+          () async {
+            await _openSettingsSection(
+              tester,
+              sectionName: 'tools',
+              target: find.byKey(
+                const ValueKey<String>(
+                  'settings_tools_open_association_manager',
+                ),
+              ),
+            );
+            final Finder associationManagerEntry = find.byKey(
               const ValueKey<String>('settings_tools_open_association_manager'),
-            ),
+            );
+            // 1280x720 真实内容区下，工具分组的关联管理器入口可能在
+            // 可滚动详情区的当前 viewport 之外。先让 Scrollable 把真实目标
+            // 带入可点击区，再等待 hit test 成功；这样既覆盖用户需要的滚动，
+            // 也不会用 warnIfMissed=false 把未命中伪装成正常点击。
+            await tapVisible(
+              tester,
+              associationManagerEntry,
+              timeout: runtime.defaultStepTimeout,
+              reason: '等待关联管理器入口滚动到可点击位置',
+            );
+            await pumpUntil(
+              tester,
+              () => find
+                  .byKey(
+                    const ValueKey<AppShellRoute>(
+                      AppShellRoute.associationManager,
+                    ),
+                  )
+                  .evaluate()
+                  .isNotEmpty,
+              timeout: runtime.defaultStepTimeout,
+              reason: '等待关联管理器路由打开',
+            );
+            expect(
+              find.byKey(
+                const ValueKey<AppShellRoute>(AppShellRoute.associationManager),
+              ),
+              findsOneWidget,
+            );
+          },
+        );
+
+        await reporter.runStep('return_to_settings', () async {
+          final Finder associationManager = find.byKey(
+            const ValueKey<AppShellRoute>(AppShellRoute.associationManager),
           );
-          final Finder associationManagerEntry = find.byKey(
-            const ValueKey<String>('settings_tools_open_association_manager'),
-          );
-          // 1280x720 真实内容区下，工具分组的关联管理器入口可能在
-          // 可滚动详情区的当前 viewport 之外。先让 Scrollable 把真实目标
-          // 带入可点击区，再等待 hit test 成功；这样既覆盖用户需要的滚动，
-          // 也不会用 warnIfMissed=false 把未命中伪装成正常点击。
           await tapVisible(
             tester,
-            associationManagerEntry,
-            timeout: runtime.defaultStepTimeout,
-            reason: '等待关联管理器入口滚动到可点击位置',
+            find.descendant(
+              of: associationManager,
+              matching: find.byIcon(Icons.arrow_back_outlined),
+            ),
+            reason: '等待关联管理器返回按钮可点击',
           );
           await pumpUntil(
             tester,
             () => find
-                .byKey(
-                  const ValueKey<AppShellRoute>(
-                    AppShellRoute.associationManager,
-                  ),
-                )
+                .byKey(const ValueKey<AppShellRoute>(AppShellRoute.settings))
                 .evaluate()
                 .isNotEmpty,
             timeout: runtime.defaultStepTimeout,
-            reason: '等待关联管理器路由打开',
+            reason: '等待返回设置页',
+          );
+          expect(
+            find.byKey(const ValueKey<AppShellRoute>(AppShellRoute.settings)),
+            findsOneWidget,
+          );
+          expect(find.text('Settings'), findsWidgets);
+        });
+      } else {
+        await reporter.runStep('mobile_desktop_tools_not_exposed', () async {
+          // 关联管理器和日志目录属于桌面工具。移动端不应为了复用同一场景
+          // 伪造 tools 分区；这里直接验证产品边界，再继续测试公共的关于页。
+          expect(
+            find.byKey(const ValueKey<String>('settings_compact_entry_tools')),
+            findsNothing,
           );
           expect(
             find.byKey(
-              const ValueKey<AppShellRoute>(AppShellRoute.associationManager),
+              const ValueKey<String>('settings_tools_open_association_manager'),
             ),
-            findsOneWidget,
+            findsNothing,
           );
-        },
-      );
-
-      await reporter.runStep('return_to_settings', () async {
-        final Finder associationManager = find.byKey(
-          const ValueKey<AppShellRoute>(AppShellRoute.associationManager),
-        );
-        await tester.tap(
-          find.descendant(
-            of: associationManager,
-            matching: find.byIcon(Icons.arrow_back_outlined),
-          ),
-        );
-        await pumpUntil(
-          tester,
-          () => find
-              .byKey(const ValueKey<AppShellRoute>(AppShellRoute.settings))
-              .evaluate()
-              .isNotEmpty,
-          timeout: runtime.defaultStepTimeout,
-          reason: '等待返回设置页',
-        );
-        expect(
-          find.byKey(const ValueKey<AppShellRoute>(AppShellRoute.settings)),
-          findsOneWidget,
-        );
-        expect(find.text('Settings'), findsWidgets);
-      });
+        });
+      }
 
       await reporter.runStep('open_about_route', () async {
         await shell.openRoute(AppShellRoute.about);

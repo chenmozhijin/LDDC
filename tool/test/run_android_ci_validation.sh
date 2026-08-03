@@ -37,10 +37,12 @@ run_phase android-jvm 25m bash -lc \
   'cd lddc/android && chmod +x gradlew && ./gradlew :app:testDebugUnitTest' || status=1
 run_phase android-offline 35m pwsh -NoProfile -File \
   tool/test/run_real_integration.ps1 -Profile offline \
-  -Device emulator-5554 -Platform android || status=1
+  -Device emulator-5554 -Platform android \
+  -StartupTimeoutSeconds 180 || status=1
 run_phase android-platform 35m pwsh -NoProfile -File \
   tool/test/run_real_integration.ps1 -Profile platform \
-  -Device emulator-5554 -Platform android || status=1
+  -Device emulator-5554 -Platform android \
+  -StartupTimeoutSeconds 180 || status=1
 run_phase android-uiautomator 30m pwsh -NoProfile -File \
   tool/test/run_android_platform_tests.ps1 -Device emulator-5554 || status=1
 jq -s '.' "$phase_events" >"$report_root/android-phases.json"

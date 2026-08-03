@@ -235,6 +235,10 @@ Future<IntegrationAppHandle> launchIntegrationApp(
     config ?? buildIntegrationConfig(),
     workspace.exportsDir.path,
   );
+  final AppCapability resolvedCapability = _resolveIntegrationCapability(
+    runtimeConfig: runtimeConfig,
+    explicitCapability: capability,
+  );
   await workspace.configRepository.update(
     _ConfigPatchEncoder.encode(resolvedConfig),
   );
@@ -242,7 +246,7 @@ Future<IntegrationAppHandle> launchIntegrationApp(
       await launchLddcForIntegrationTest(
         options: LddcIntegrationLaunchOptions(
           configRepository: workspace.configRepository,
-          capability: capability ?? AppCapabilityResolver.resolveCurrent(),
+          capability: resolvedCapability,
           overrides: resolvedOverrides,
           serviceBootstrap: serviceBootstrap,
           startDesktopServiceHost: startDesktopServiceHost,
@@ -273,6 +277,38 @@ Future<IntegrationAppHandle> launchIntegrationApp(
   );
   reporter.registerFailureArtifactWriter(handle.captureFailureScreenshot);
   return handle;
+}
+
+AppCapability _resolveIntegrationCapability({
+  required IntegrationRuntimeConfig runtimeConfig,
+  AppCapability? explicitCapability,
+}) {
+  final AppCapability resolved =
+      explicitCapability ?? AppCapabilityResolver.resolveCurrent();
+  if (explicitCapability != null ||
+      runtimeConfig.profile != 'offline' ||
+      !Platform.isAndroid) {
+    return resolved;
+  }
+
+  // Android 的生产能力会把本地匹配和列表保存切换到 SAF tree。offline
+  // profile 按契约使用 scripted picker 和 mocked native channels，若仍暴露
+  // SAF UI，测试会调用未注入的真实 MethodChannel，既不是离线业务测试，
+  // 也无法形成真实平台证据。这里只关闭 offline 的 SAF 分支；platform
+  // 与 UI Automator 仍使用完整生产能力验证真实目录授权、FD 和生命周期。
+  return AppCapability(
+    multiWindow: resolved.multiWindow,
+    desktopPanelDetached: resolved.desktopPanelDetached,
+    desktopPanelEmbedded: resolved.desktopPanelEmbedded,
+    systemTray: resolved.systemTray,
+    globalHotkey: resolved.globalHotkey,
+    audioTagWrite: resolved.audioTagWrite,
+    directoryRecursiveScan: resolved.directoryRecursiveScan,
+    androidSafTreeAccess: false,
+    androidCueTrackResolve: false,
+    webFileSystemAccess: resolved.webFileSystemAccess,
+    webTaglibWasmReady: resolved.webTaglibWasmReady,
+  );
 }
 
 List<Object> buildIntegrationOfflineApiOverrides({
@@ -355,9 +391,21 @@ Future<void> tapVisible(
         final ScrollPosition position = tester
             .state<ScrollableState>(scrollable)
             .position;
+        // 横向操作条与纵向页面都复用该辅助方法。旧实现始终使用 dy，
+        // 导致横向 SingleChildScrollView 即使目标在右侧也计算出零位移，
+        // 最终在真实手机 viewport 上等待到超时。按实际滚动轴选择中心坐标，
+        // 不改变严格 hit test，也不使用坐标点击或忽略未命中。
+        final double targetCenter = position.axis == Axis.horizontal
+            ? targetRect.center.dx
+            : targetRect.center.dy;
+        final double viewportCenter = position.axis == Axis.horizontal
+            ? viewportRect.center.dx
+            : viewportRect.center.dy;
         final double nextOffset =
-            (position.pixels + targetRect.center.dy - viewportRect.center.dy)
-                .clamp(position.minScrollExtent, position.maxScrollExtent);
+            (position.pixels + targetCenter - viewportCenter).clamp(
+              position.minScrollExtent,
+              position.maxScrollExtent,
+            );
         if ((nextOffset - position.pixels).abs() < 0.5) {
           break;
         }

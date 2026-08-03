@@ -207,11 +207,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev \
             liblzma-dev libstdc++-12-dev libayatana-appindicator3-dev dbus-x11 \
-            xvfb xauth at-spi2-core gir1.2-atspi-2.0 gir1.2-gtk-3.0 \
-            python3-gi python3-pyatspi python3-pytest python3-venv ffmpeg
-          python3 -m venv --system-site-packages .venv-linux-platform
-          .venv-linux-platform/bin/python -m pip install \
-            --no-deps --require-hashes -r tool/test/requirements-linux-platform.txt
+            xvfb xauth ffmpeg
       - run: flutter pub get
       - name: Build Linux release
         id: release_build
@@ -225,6 +221,7 @@ jobs:
         run: |
           destination='lddc/build/production_e2e/linux'
           rm -rf "$destination"
+          mkdir -p "$(dirname "$destination")"
           cp -a 'lddc/build/linux/x64/release/bundle' "$destination"
           test -x "$destination/lddc"
       - name: Build Linux debug application for native automation
@@ -246,14 +243,9 @@ jobs:
           xvfb-run -a --server-args="-screen 0 1600x1000x24"
           pwsh -NoProfile -File tool/test/run_real_integration.ps1
           -Profile platform -Device linux -Platform linux
-      - name: Run Linux file dialog automation
-        id: system_ui
-        if: always() && steps.debug_build.outcome == 'success'
-        continue-on-error: true
-        run: >-
-          dbus-run-session -- xvfb-run -a --server-args="-screen 0 1600x1000x24"
-          env LDDC_PLATFORM_PYTHON="$PWD/.venv-linux-platform/bin/python"
-          bash tool/test/run_linux_platform_tests.sh
+      # Flutter Linux 当前不会把 Semantics identifier 暴露到 AT-SPI 子树。
+      # Dogtail 脚本继续保留供人工环境验证；hosted CI 不使用坐标回退，
+      # 也不把无法发现 Flutter 控件的场景伪装成自动化覆盖。
       - name: Run real desktop process and service tests
         id: desktop_process
         continue-on-error: true
@@ -283,7 +275,6 @@ jobs:
             '${{ steps.debug_build.outcome }}'
             '${{ steps.offline.outcome }}'
             '${{ steps.native_channel.outcome }}'
-            '${{ steps.system_ui.outcome }}'
             '${{ steps.desktop_process.outcome }}'
             '${{ steps.media_resource.outcome }}'
           )
@@ -293,7 +284,10 @@ jobs:
 
   android-validation:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # 四个验证阶段的独立硬超时合计 125 分钟，前面还包含 Release 构建、
+    # 模拟器启动和失败报告回收。job 总上限必须覆盖这些固定开销，否则
+    # GitHub 会在 always() 诊断步骤前直接终止，反而丢失真正的失败证据。
+    timeout-minutes: 180
     env:
       LDDC_ALLOW_UNSIGNED_CI_RELEASE: '1'
     steps:
@@ -376,9 +370,18 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_real_integration.ps1 -Profile platform -Device $env:DEVICE_ID -Platform ios
+      - name: Restore iOS debug application after Flutter integration
+        id: debug_rebuild
+        if: always() && steps.simulator.outcome == 'success'
+        continue-on-error: true
+        working-directory: lddc
+        # flutter test 会把 Generated.xcconfig 暂时指向 test listener；测试结束后
+        # 临时 listener 会被删除。原生测试前重建默认 main.dart，避免 Xcode
+        # 继续引用已不存在的临时入口。
+        run: flutter build ios --debug --simulator
       - name: Run iOS native unit tests
         id: native_tests
-        if: always() && steps.simulator.outcome == 'success'
+        if: always() && steps.debug_rebuild.outcome == 'success'
         continue-on-error: true
         working-directory: lddc
         run: >-
@@ -389,7 +392,7 @@ jobs:
           CODE_SIGNING_ALLOWED=NO
       - name: Run iOS Document Picker automation
         id: system_ui
-        if: always() && steps.simulator.outcome == 'success'
+        if: always() && steps.debug_rebuild.outcome == 'success'
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID
@@ -414,6 +417,7 @@ jobs:
             '${{ steps.release_build.outcome }}'
             '${{ steps.offline.outcome }}'
             '${{ steps.native_channel.outcome }}'
+            '${{ steps.debug_rebuild.outcome }}'
             '${{ steps.native_tests.outcome }}'
             '${{ steps.system_ui.outcome }}'
           )
