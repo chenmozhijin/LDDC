@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
@@ -7,9 +9,17 @@ import 'package:path/path.dart' as p;
 void main() {
   group('LyricsPathTemplateFormatter', () {
     test('search 与 local match 共享同一组路径模板规则', () {
+      final String songRoot = p.join(
+        Directory.systemTemp.path,
+        'lddc_path_template_song',
+      );
+      final String saveRoot = p.join(
+        Directory.systemTemp.path,
+        'lddc_path_template_lyrics',
+      );
       final SongInfo info = SongInfo(
         source: Source.qm,
-        path: r'D:\Music\Singer\Demo.flac',
+        path: p.join(songRoot, 'Singer', 'Demo.flac'),
         id: '12:3',
         title: 'Ti/tle:01',
         artist: SongArtist(<String>['Ar/tist', 'Second']),
@@ -17,7 +27,7 @@ void main() {
       );
 
       final String searchPath = SearchPathFormatter.buildSavePath(
-        folder: r'D:\Lyrics',
+        folder: saveRoot,
         fileNameFormat: '%<artist> - %<title> (%<id>) [%<langs>].lrc',
         songInfo: info,
         lyricLangs: const <String>['orig', 'ts'],
@@ -30,7 +40,7 @@ void main() {
             lyricsFormat: LyricsFormat.lineByLineLrc,
             fileNameFormat: '%<artist> - %<title> (%<id>) [%<langs>]',
             langs: const <String>['orig', 'ts'],
-            saveRootPath: r'D:\Lyrics',
+            saveRootPath: saveRoot,
             cloudInfo: info,
             allowPlaceholder: false,
             songRootPath: null,
@@ -38,9 +48,7 @@ void main() {
 
       expect(
         searchPath,
-        p.normalize(
-          r'D:\Lyrics\Ar／tist／Second - Ti／tle：01 (12：3) [orig-ts].lrc',
-        ),
+        p.join(saveRoot, 'Ar／tist／Second - Ti／tle：01 (12：3) [orig-ts].lrc'),
       );
       expect(resolution, isA<LocalMatchSavePathResolved>());
       expect((resolution as LocalMatchSavePathResolved).path, searchPath);

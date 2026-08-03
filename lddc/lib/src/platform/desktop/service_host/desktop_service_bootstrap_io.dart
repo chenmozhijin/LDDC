@@ -177,6 +177,7 @@ final class DesktopServiceInfoWriter {
 
   final AppStoragePathsPort? _paths;
   final DesktopServiceLaunchCommandProvider _commandProvider;
+  static final Map<String, Future<void>> _writeTails = <String, Future<void>>{};
 
   DesktopServiceLaunchCommand buildLaunchCommand() => _commandProvider();
 
@@ -185,6 +186,28 @@ final class DesktopServiceInfoWriter {
     // DesktopServiceBootstrap 在尚未注册 app 组合根时提前触碰文件系统。
     final File infoFile = await (_paths ?? AppStoragePathsRegistry.current)
         .resolveInfoFile();
+    final String normalizedPath = p.normalize(infoFile.absolute.path);
+    final String queueKey = Platform.isWindows
+        ? normalizedPath.toLowerCase()
+        : normalizedPath;
+    final Future<void> previous = _writeTails[queueKey] ?? Future<void>.value();
+    final Completer<void> completion = Completer<void>();
+    final Future<void> current = completion.future;
+    _writeTails[queueKey] = current;
+    await previous;
+    try {
+      return await _writeResolvedInfo(infoFile);
+    } finally {
+      completion.complete();
+      if (identical(_writeTails[queueKey], current)) {
+        // POSIX 文件锁按进程生效，不能阻止同一 Dart 进程内的并发 Future。
+        // 队尾完成后立即移除键，既补齐进程内串行边界，也不让路径长期驻留内存。
+        _writeTails.remove(queueKey);
+      }
+    }
+  }
+
+  Future<File> _writeResolvedInfo(File infoFile) async {
     final Directory parent = infoFile.parent;
     if (!await parent.exists()) {
       await parent.create(recursive: true);
@@ -524,6 +547,10 @@ final class DesktopWindowsSingletonBootstrapPort
         } else if (error == ERROR_PIPE_LISTENING || error == ERROR_NO_DATA) {
           return;
         } else {
+          _bootstrapLogger.warning(
+            'windows singleton pipe connect failed',
+            fields: <String, Object?>{'error': error.toString()},
+          );
           _recreateServerPipe();
           return;
         }
@@ -731,7 +758,10 @@ final class DesktopWindowsSingletonBootstrapPort
       );
       if (!readResult.value) {
         final WIN32_ERROR error = readResult.error;
-        if (error == ERROR_NO_DATA) {
+        // PIPE_NOWAIT 下，客户端刚连接但尚未提交首字节时，不同 Windows
+        // 版本可能返回 NO_DATA 或 PIPE_LISTENING。两者都不是管道损坏；保持
+        // 当前连接并让下一次有界 pump 继续读取，避免端口发现偶发断开客户端。
+        if (error == ERROR_NO_DATA || error == ERROR_PIPE_LISTENING) {
           return null;
         }
         if (error == ERROR_BROKEN_PIPE) {

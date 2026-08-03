@@ -110,6 +110,13 @@ function Write-FallbackEvidence {
 
 Push-Location $appRoot
 try {
+  # flutter test 会把临时 listener.dart 写入 Debug 构建设置；Xcode 若复用该产物，
+  # listener 清理后 kernel_snapshot 会失败。先重建正常 main.dart Debug 应用，
+  # 再让 XCUITest build-for-testing 使用稳定入口。
+  & flutter build macos --debug
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
   & xcodebuild build-for-testing `
     -workspace macos/Runner.xcworkspace `
     -scheme RunnerPlatformTests `

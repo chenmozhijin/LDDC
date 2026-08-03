@@ -79,7 +79,7 @@ function Resolve-CapabilityContract {
   return (($encoded -join "").Trim())
 }
 
-function Copy-MobileScenarioReport {
+function Copy-ContainerScenarioReport {
   param(
     [Parameter(Mandatory = $true)][string]$Scenario,
     [Parameter(Mandatory = $true)][string]$ContainerReportDir,
@@ -113,6 +113,20 @@ function Copy-MobileScenarioReport {
     $source = Join-Path $source "$Scenario.json"
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
       throw "iOS 应用沙箱没有生成 $Scenario.json"
+    }
+    $content = [IO.File]::ReadAllText($source)
+  } elseif ($Platform -eq "macos") {
+    # 开启 App Sandbox 的 macOS 测试应用不能写 runner 的仓库绝对路径。
+    # 应用把相对目录解析到 NSTemporaryDirectory，测试结束后再由宿主回收。
+    $source = [IO.Path]::GetTempPath()
+    foreach ($segment in ($ContainerReportDir -split '[/\\]+')) {
+      if (-not [string]::IsNullOrWhiteSpace($segment)) {
+        $source = Join-Path $source $segment
+      }
+    }
+    $source = Join-Path $source "$Scenario.json"
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+      throw "macOS 应用临时目录没有生成 $Scenario.json"
     }
     $content = [IO.File]::ReadAllText($source)
   }
@@ -177,7 +191,7 @@ try {
     $junitPath = Join-Path $junitReportDir "$scenarioName.xml"
     $scenarioPath = Join-Path $scenarioReportDir "$scenarioName.json"
     $diagnosticPath = Join-Path $scenarioReportDir "$scenarioName.report-pull.txt"
-    $processReportDir = if ($Platform -in @("android", "ios")) {
+    $processReportDir = if ($Platform -in @("android", "ios", "macos")) {
       $containerReportDir
     } else {
       $scenarioReportDir
@@ -226,9 +240,9 @@ try {
     } while ($true)
 
     $collectionExitCode = 0
-    if ($Platform -in @("android", "ios")) {
+    if ($Platform -in @("android", "ios", "macos")) {
       try {
-        Copy-MobileScenarioReport `
+        Copy-ContainerScenarioReport `
           -Scenario $scenarioName `
           -ContainerReportDir $containerReportDir `
           -Destination $scenarioPath `

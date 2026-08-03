@@ -57,4 +57,4 @@ jq -n \
 echo "DEVICE_ID=$udid" >>"$GITHUB_ENV"
 echo "IOS_SIMULATOR_RUNTIME=$runtime" >>"$GITHUB_ENV"
 echo "IOS_SIMULATOR_MODEL=$model" >>"$GITHUB_ENV"
-echo "Created iOS simulator: $model $runtimeVersion ($udid)"
+echo "Created iOS simulator: $model $runtime_version ($udid)"

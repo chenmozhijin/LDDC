@@ -482,6 +482,19 @@ def failures() -> list[str]:
     ):
         if marker not in process_runner:
             problems.append(f"桌面进程 runner 缺少有界执行或清理约束: {marker}")
+    android_ci_runner = (
+        ROOT / "tool/test/run_android_ci_validation.sh"
+    ).read_text(encoding="utf-8")
+    for marker in (
+        "android-jvm",
+        "android-offline",
+        "android-platform",
+        "android-uiautomator",
+        "run_android_platform_tests.ps1",
+        "android-phases.json",
+    ):
+        if marker not in android_ci_runner:
+            problems.append(f"Android CI runner 缺少阶段或报告聚合: {marker}")
     for marker in (
         "windows-validation:",
         "macos-validation:",
@@ -489,7 +502,7 @@ def failures() -> list[str]:
         "android-validation:",
         "ios-validation:",
         "experimental-web:",
-        "run_android_platform_tests.ps1",
+        "run_android_ci_validation.sh",
         "run_ios_platform_tests.ps1",
         "run_windows_platform_tests.ps1",
         "run_macos_platform_tests.ps1",

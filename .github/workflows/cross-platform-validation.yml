@@ -282,46 +282,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: |
-            mkdir -p lddc/build/integration_reports
-            phase_events='lddc/build/integration_reports/android-phases.jsonl'
-            : > "$phase_events"
-            run_phase() {
-              local name="$1"
-              local limit="$2"
-              shift 2
-              local started_at ended_at phase_exit
-              started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-              echo "::group::Android phase $name (timeout=$limit)"
-              set +e
-              timeout --signal=TERM --kill-after=30s "$limit" "$@"
-              phase_exit=$?
-              set -e
-              ended_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-              jq -cn \
-                --arg phase "$name" \
-                --arg startedAt "$started_at" \
-                --arg endedAt "$ended_at" \
-                --argjson exitCode "$phase_exit" \
-                '{phase: $phase, startedAt: $startedAt, endedAt: $endedAt, exitCode: $exitCode}' \
-                >> "$phase_events"
-              echo "Android phase $name exit=$phase_exit started=$started_at ended=$ended_at"
-              echo '::endgroup::'
-              return "$phase_exit"
-            }
-            status=0
-            run_phase android-jvm 25m bash -lc \
-              'cd lddc/android && chmod +x gradlew && ./gradlew :app:testDebugUnitTest' || status=1
-            run_phase android-offline 35m pwsh -NoProfile -File \
-              tool/test/run_real_integration.ps1 -Profile offline \
-              -Device emulator-5554 -Platform android || status=1
-            run_phase android-platform 35m pwsh -NoProfile -File \
-              tool/test/run_real_integration.ps1 -Profile platform \
-              -Device emulator-5554 -Platform android || status=1
-            run_phase android-uiautomator 30m pwsh -NoProfile -File \
-              tool/test/run_android_platform_tests.ps1 -Device emulator-5554 || status=1
-            jq -s '.' "$phase_events" > lddc/build/integration_reports/android-phases.json
-            exit $status
+          script: bash tool/test/run_android_ci_validation.sh
       - name: Upload failed Android diagnostics
         if: always()
         uses: actions/upload-artifact@v7
@@ -436,7 +397,7 @@ jobs:
         working-directory: lddc
         run: |
           mkdir -p build/web-observation
-          flutter test integration_test/web_capability_observation_test.dart -d chrome \
+          flutter test --platform chrome test/observation/web_capability_smoke_test.dart \
             --file-reporter=json:build/web-observation/tests.jsonl
           python ../tool/test/json_report_to_junit.py \
             --input build/web-observation/tests.jsonl \

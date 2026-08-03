@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lddc/src/core/library_link/library_link.dart';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc/src/features/library_link_manager/application/library_link_manager_usecase.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   group('LibraryLinkManagerUseCase', () {
@@ -96,36 +97,42 @@ void main() {
     });
 
     test('rewriteDirectory 使用仓储 rewriteItems 保持删除写入事务边界', () async {
+      final String oldRoot = p.join('library', 'old');
+      final String newRoot = p.join('library', 'new');
       final _FakeLibraryLinkRepository repository =
           _FakeLibraryLinkRepository(<LibraryLinkItem>[
             _buildItem(
               1,
-              songPath: r'D:\old\album\song.mp3',
-              lyricsPath: r'D:\old\lyrics\song.lrc',
+              songPath: p.join(oldRoot, 'album', 'song.mp3'),
+              lyricsPath: p.join(oldRoot, 'lyrics', 'song.lrc'),
             ),
             _buildItem(
               2,
-              songPath: r'D:\other\song.mp3',
-              lyricsPath: r'D:\other\song.lrc',
+              songPath: p.join('library', 'other', 'song.mp3'),
+              lyricsPath: p.join('library', 'other', 'song.lrc'),
             ),
           ]);
       final LibraryLinkManagerUseCase useCase = LibraryLinkManagerUseCase(
         repository: repository,
-        fileExists: (String path) async => path.startsWith(r'E:\new'),
+        fileExists: (String path) async =>
+            path == newRoot || p.isWithin(newRoot, path),
       );
 
       final LibraryLinkRewriteDirectoryResult result = await useCase
-          .rewriteDirectory(oldDir: r'D:\old', newDir: r'E:\new');
+          .rewriteDirectory(oldDir: oldRoot, newDir: newRoot);
 
       expect(result.originalIds, <int>{1});
       expect(repository.rewriteItemsCalls, 1);
       expect(repository.setSongsCalls, 0);
       expect(repository.deletedIds, isEmpty);
       expect(repository.items.map((LibraryLinkItem item) => item.song.path), [
-        r'D:\other\song.mp3',
-        r'E:\new\album\song.mp3',
+        p.join('library', 'other', 'song.mp3'),
+        p.join(newRoot, 'album', 'song.mp3'),
       ]);
-      expect(repository.items.last.lyricsPath, r'E:\new\lyrics\song.lrc');
+      expect(
+        repository.items.last.lyricsPath,
+        p.join(newRoot, 'lyrics', 'song.lrc'),
+      );
     });
 
     test('buildBackupJson 流式分页生成可恢复数组', () async {

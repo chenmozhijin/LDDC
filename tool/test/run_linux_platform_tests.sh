@@ -31,7 +31,10 @@ export XDG_CONFIG_HOME="$sandbox_root/config"
 export XDG_CACHE_HOME="$sandbox_root/cache"
 export XDG_DATA_HOME="$sandbox_root/data"
 export TMPDIR="$sandbox_root/tmp"
-export XDG_RUNTIME_DIR="$sandbox_root/runtime"
+# AT-SPI 会在 XDG_RUNTIME_DIR 下创建 Unix socket。仓库 sandbox 的完整路径在
+# hosted runner 上超过 sockaddr_un 限制，bridge 会静默失联；使用短且按 runId
+# 隔离的 /tmp 路径，并在退出时严格校验后清理。
+export XDG_RUNTIME_DIR="/tmp/lddc-atspi-$run_id"
 mkdir -p "$XDG_RUNTIME_DIR"
 chmod 700 "$XDG_RUNTIME_DIR"
 export LANG="C.UTF-8"
@@ -59,6 +62,14 @@ cleanup() {
       ;;
     *)
       echo "拒绝删除越界 Linux 测试 sandbox: $sandbox_root" >&2
+      ;;
+  esac
+  case "$XDG_RUNTIME_DIR" in
+    /tmp/lddc-atspi-platform-linux-*)
+      rm -rf -- "$XDG_RUNTIME_DIR"
+      ;;
+    *)
+      echo "拒绝删除越界 AT-SPI runtime: $XDG_RUNTIME_DIR" >&2
       ;;
   esac
 }

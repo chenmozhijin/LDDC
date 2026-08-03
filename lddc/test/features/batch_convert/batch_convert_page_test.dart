@@ -22,6 +22,7 @@ import 'package:lddc/src/features/batch_convert/application/batch_convert_page_s
 import 'package:lddc/src/features/batch_convert/presentation/batch_convert_page.dart';
 import 'package:lddc/src/platform/drag_drop/drag_drop_port.dart';
 import 'package:lddc/src/shared/ui/components/desktop_page_interaction_scope.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   group('BatchConvertDirectoryScannerImpl', () {
@@ -87,12 +88,14 @@ void main() {
 
   group('BatchConvertPageController', () {
     test('文件导入去重并随目标格式和保存目录重算输出路径', () async {
+      final String sourceRoot = p.join('batch_convert', 'lyrics');
+      final String saveRoot = p.join('batch_convert', 'exports');
       final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
-        files: const <PickedFileHandle>[
-          PickedFileHandle(name: 'a.lrc', path: r'D:\lyrics\a.lrc'),
-          PickedFileHandle(name: 'b.srt', path: r'D:\lyrics\b.srt'),
+        files: <PickedFileHandle>[
+          PickedFileHandle(name: 'a.lrc', path: p.join(sourceRoot, 'a.lrc')),
+          PickedFileHandle(name: 'b.srt', path: p.join(sourceRoot, 'b.srt')),
         ],
-        saveRootDirectory: r'D:\exports',
+        saveRootDirectory: saveRoot,
       );
       final ProviderContainer container = _createContainer(picker: picker);
       addTearDown(container.dispose);
@@ -109,8 +112,8 @@ void main() {
         batchConvertPageControllerProvider,
       );
       expect(state.queueItems, hasLength(2));
-      expect(state.queueItems.first.targetPath, r'D:\exports\a.ass');
-      expect(state.queueItems.last.targetPath, r'D:\exports\b.ass');
+      expect(state.queueItems.first.targetPath, p.join(saveRoot, 'a.ass'));
+      expect(state.queueItems.last.targetPath, p.join(saveRoot, 'b.ass'));
     });
 
     test('目录扫描按分片追加并更新扫描进度', () async {

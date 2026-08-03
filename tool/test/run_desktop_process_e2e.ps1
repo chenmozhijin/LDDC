@@ -195,6 +195,15 @@ try {
     }
   }
   if (Test-Path -LiteralPath $sandboxRoot -PathType Container) {
+    # 应用 bootstrap 日志位于隔离的 APPDATA/XDG/HOME 目录。必须在删除 sandbox
+    # 前复制到失败 artifact，否则服务端口超时只剩引擎 stderr，无法判断生产状态机。
+    foreach ($applicationLog in @(Get-ChildItem -LiteralPath $sandboxRoot -Recurse -File -Filter "*.log" -ErrorAction SilentlyContinue)) {
+      $relativeLogPath = [IO.Path]::GetRelativePath($sandboxRoot, $applicationLog.FullName)
+      $safeLogName = ($relativeLogPath -replace '[:/\\]+', '_')
+      Copy-Item -LiteralPath $applicationLog.FullName -Destination (Join-Path $diagnosticsDir $safeLogName) -Force
+    }
+  }
+  if (Test-Path -LiteralPath $sandboxRoot -PathType Container) {
     # 递归删除前重新校验绝对父目录，避免异常路径影响工作区其他文件。
     if (-not $sandboxRoot.StartsWith($sandboxParent + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
       throw "拒绝清理允许目录之外的桌面进程 E2E sandbox"

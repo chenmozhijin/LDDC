@@ -5,8 +5,8 @@ param(
   [ValidateSet(3, 20)]
   [int]$LoopCount = 3,
   [string]$ReportDir = "build/integration_reports/platform-media-resource",
-  [ValidateRange(90, 300)]
-  [int]$ScenarioTimeoutSeconds = 180
+  [ValidateRange(90, 900)]
+  [int]$ScenarioTimeoutSeconds = 600
 )
 
 $ErrorActionPreference = "Stop"
@@ -95,6 +95,21 @@ function Invoke-BoundedDartTest {
 try {
   $testExitCode = Invoke-BoundedDartTest
   if (-not (Test-Path -LiteralPath $rawPath -PathType Leaf)) {
+    # 首次 native-assets build hook 也受场景硬超时约束。即使它在测试开始前
+    # 超时，也必须生成可上传的失败 scenario/JUnit，不能只留下空 artifact。
+    & python (Join-Path $repoRoot "tool/test/normalize_integration_report.py") `
+      --scenario-report $scenarioPath `
+      --raw-report $rawPath `
+      --raw-report-type dart-jsonl `
+      --framework dart-native-assets `
+      --exit-code $testExitCode `
+      --evidence $evidencePath `
+      --matrix (Join-Path $repoRoot "tool/test/platform_capability_matrix.json") `
+      --run-id $runId `
+      --scenario platform_media_resource `
+      --profile platform `
+      --platform $Platform `
+      --failure-junit $junitPath
     throw "媒体资源测试没有生成 Dart JSONL"
   }
   if (-not (Test-Path -LiteralPath $evidencePath -PathType Leaf)) {
