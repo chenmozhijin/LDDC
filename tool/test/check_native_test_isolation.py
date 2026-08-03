@@ -478,7 +478,9 @@ def failures() -> list[str]:
     process_runner = (ROOT / "tool/test/run_desktop_process_e2e.ps1").read_text(
         encoding="utf-8"
     )
-    process_preflight = process_runner.find('if ($Platform -eq "windows")')
+    process_preflight = process_runner.find(
+        'if ($Platform -in @("windows", "macos"))'
+    )
     process_run_id = process_runner.find('$runId = "platform-$Platform-process')
     if process_preflight < 0 or process_run_id < 0 or process_preflight > process_run_id:
         problems.append("桌面进程 runner 必须在创建 runId 目录前检查全局单实例前置条件")
@@ -489,6 +491,10 @@ def failures() -> list[str]:
         "lddc/build/production_e2e/windows/lddc.exe",
         "lddc/build/production_e2e/macos/LDDC.app/Contents/MacOS/LDDC",
         "lddc/build/production_e2e/linux/lddc",
+        "Library/Containers/com.cmzj.lddc/Data",
+        "macos-container-backup-$($directory.Name)",
+        "$macosContainerState | Where-Object",
+        "Move-Item -LiteralPath $state.Backup",
     ):
         if marker not in process_runner:
             problems.append(f"桌面进程 runner 缺少有界执行或清理约束: {marker}")
@@ -530,6 +536,17 @@ def failures() -> list[str]:
     ):
         if marker not in workflow:
             problems.append(f"跨平台验证 workflow 缺少原生平台入口: {marker}")
+    integration_runner = (ROOT / "tool/test/run_real_integration.ps1").read_text(
+        encoding="utf-8"
+    )
+    for marker in (
+        "[int]$TargetTimeoutSeconds = 1200",
+        "$process.WaitForExit($TargetTimeoutSeconds * 1000)",
+        "$process.Kill($true)",
+        "return 124",
+    ):
+        if marker not in integration_runner:
+            problems.append(f"真实集成 runner 缺少 target 级硬超时或进程树清理: {marker}")
     performance_workflow = (
         ROOT / ".github/workflows/performance-regression.yml"
     ).read_text(encoding="utf-8")

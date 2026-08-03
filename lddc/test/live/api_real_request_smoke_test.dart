@@ -132,6 +132,10 @@ void main() {
     },
     skip: _runLiveApiSmoke ? false : '该用例只在 RUN_LIVE_API=1 的 live profile 运行。',
     tags: 'live',
+    // 四个来源会串行执行搜索、分页、列表和歌词协议检查。默认 30 秒测试
+    // 超时会在正常网络请求尚未完成时杀死整个用例，导致来源报告无法落盘。
+    // 单步骤仍有独立 20 秒边界，因此这里放宽总预算不会允许无限等待。
+    timeout: const Timeout(Duration(minutes: 15)),
   );
 }
 
@@ -601,7 +605,7 @@ Future<_StepRunResult<T>> _runStep<T>({
   const int maxAttempts = 3;
   for (int attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      final T value = await action();
+      final T value = await action().timeout(const Duration(seconds: 20));
       stopwatch.stop();
       steps.add(
         LiveApiStepResult(

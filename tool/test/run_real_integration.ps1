@@ -15,6 +15,8 @@ param(
   [ValidateRange(0, 1)]
   [int]$InfrastructureRetryCount = 1,
   [int]$StepTimeoutMs = 20000,
+  [ValidateRange(300, 1800)]
+  [int]$TargetTimeoutSeconds = 1200,
   [switch]$ValidateOnly
 )
 
@@ -154,6 +156,39 @@ function Copy-ContainerScenarioReport {
   [IO.File]::WriteAllText($Destination, $content, [Text.UTF8Encoding]::new($false))
 }
 
+function Invoke-BoundedFlutterTest {
+  param([Parameter(Mandatory = $true)][string[]]$Arguments)
+
+  $flutterCommand = (Get-Command flutter).Source
+  $startInfo = [Diagnostics.ProcessStartInfo]::new()
+  $startInfo.UseShellExecute = $false
+  $startInfo.WorkingDirectory = $appRoot
+  if ($IsWindows -and $flutterCommand.EndsWith(".bat")) {
+    $startInfo.FileName = "cmd.exe"
+    foreach ($argument in @("/d", "/c", $flutterCommand) + $Arguments) {
+      [void]$startInfo.ArgumentList.Add($argument)
+    }
+  } else {
+    $startInfo.FileName = $flutterCommand
+    foreach ($argument in $Arguments) {
+      [void]$startInfo.ArgumentList.Add($argument)
+    }
+  }
+  $process = [Diagnostics.Process]::Start($startInfo)
+  try {
+    if (-not $process.WaitForExit($TargetTimeoutSeconds * 1000)) {
+      # Flutter tool、设备桥或原生 runner 可能在测试框架产出事件前挂住。
+      # 必须终止完整进程树并返回明确超时码，后续 normalizer 才能生成失败 JUnit。
+      $process.Kill($true)
+      $process.WaitForExit()
+      return 124
+    }
+    return $process.ExitCode
+  } finally {
+    $process.Dispose()
+  }
+}
+
 # ValidateOnly 也解析每个目标的矩阵项，防止 workflow 通过语法检查却在真实设备上
 # 才发现 profile、平台或场景没有契约。该路径不创建目录、不启动 Flutter。
 foreach ($target in $Targets) {
@@ -231,8 +266,7 @@ try {
       if (Test-Path -LiteralPath $jsonPath) {
         Remove-Item -LiteralPath $jsonPath -Force
       }
-      & flutter @flutterArguments
-      $testExitCode = $LASTEXITCODE
+      $testExitCode = Invoke-BoundedFlutterTest -Arguments $flutterArguments
       if ($testExitCode -eq 0) {
         break
       }

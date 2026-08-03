@@ -246,6 +246,8 @@ void main() {
         expect(app.mediaGateway.writes.last.songPath, firstTagTarget.path);
       });
 
+      await search.dismissPreviewSheetIfOpen();
+
       await reporter.runStep('search_song_id', () async {
         await runStepWithTimeout(
           () async {

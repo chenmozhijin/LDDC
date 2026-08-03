@@ -156,6 +156,26 @@ class SearchDriver {
     await tapVisible(tester, target, reason: '等待搜索写入标签按钮可点击');
   }
 
+  Future<void> dismissPreviewSheetIfOpen() async {
+    final Finder sheet = find.ancestor(
+      of: find.byKey(const ValueKey<String>('search_preview_save_tag_button')),
+      matching: find.byType(BottomSheet),
+    );
+    if (sheet.evaluate().isEmpty) {
+      return;
+    }
+    // 窄桌面和移动布局会把预览放在模态底部弹层中。
+    // 下一次搜索前执行用户可见的返回动作，避免弹层遮住工具栏；
+    // 宽屏布局没有 BottomSheet，因此不会额外弹出页面路由。
+    await tester.pageBack();
+    await pumpUntilGone(
+      tester,
+      sheet,
+      timeout: const Duration(seconds: 5),
+      reason: '等待搜索预览底部弹层关闭',
+    );
+  }
+
   Future<void> tapBatchSave() async {
     final Finder target = find.byKey(
       const ValueKey<String>('search_result_batch_save_button'),

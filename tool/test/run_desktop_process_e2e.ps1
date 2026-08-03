@@ -34,12 +34,12 @@ if (-not [IO.Path]::IsPathRooted($ReportDir)) {
   $ReportDir = Join-Path $appRoot $ReportDir
 }
 
-if ($Platform -eq "windows") {
+if ($Platform -in @("windows", "macos")) {
   $processName = [IO.Path]::GetFileNameWithoutExtension($AppExe)
   if (Get-Process -Name $processName -ErrorAction SilentlyContinue) {
-    # 全局 mutex 无法按临时目录隔离；必须在创建任何 runId 目录前拒绝运行，
-    # 否则一次正常的前置条件失败也会留下误导性的测试 sandbox。
-    throw "Windows 全局单实例测试要求运行前没有同名 LDDC 进程"
+    # Windows 全局 mutex 与 macOS App Sandbox 数据容器都无法仅靠
+    # 临时 HOME 隔离。前置拒绝同名进程，避免干扰用户正在运行的 LDDC。
+    throw "$Platform 单实例测试要求运行前没有同名 LDDC 进程"
   }
 }
 
@@ -97,10 +97,40 @@ $env:LDDC_PROCESS_E2E_APP_EXE = (Resolve-Path -LiteralPath $AppExe).Path
 $env:LDDC_NATIVE_EVIDENCE_DIR = $evidenceDir
 $env:LDDC_NATIVE_LOG_DIR = $diagnosticsDir
 $env:LDDC_PROCESS_E2E_PID_FILE = Join-Path $runRoot "primary.pid"
+$macosApplicationDataRoot = $null
+$macosContainerState = @()
+if ($Platform -eq "macos") {
+  # App Sandbox 会忽略测试进程传入的 HOME，并把 Library 重定向到
+  # bundle id 对应的容器。将既有数据移入本次 sandbox 备份，测试后原样恢复，
+  # 既能读取真实 info.json，也不会把本地用户数据当成 fixture 或直接删除。
+  $macosContainerDataRoot = Join-Path ([Environment]::GetFolderPath("UserProfile")) `
+    "Library/Containers/com.cmzj.lddc/Data"
+  $macosContainerDirectories = @(
+    @{ Name = "config"; RelativePath = "Library/Preferences/LDDC" },
+    @{ Name = "data"; RelativePath = "Library/Application Support/LDDC" },
+    @{ Name = "cache"; RelativePath = "Library/Caches/LDDC" },
+    @{ Name = "logs"; RelativePath = "Library/Logs/LDDC" }
+  )
+  foreach ($directory in $macosContainerDirectories) {
+    $target = Join-Path $macosContainerDataRoot $directory.RelativePath
+    $backup = Join-Path $sandboxRoot "macos-container-backup-$($directory.Name)"
+    $existed = Test-Path -LiteralPath $target
+    if ($existed) {
+      Move-Item -LiteralPath $target -Destination $backup
+    }
+    $macosContainerState += @{
+      Name = $directory.Name
+      Target = $target
+      Backup = $backup
+      Existed = $existed
+    }
+  }
+  $macosApplicationDataRoot = ($macosContainerState | Where-Object { $_.Name -eq "data" }).Target
+}
 $env:LDDC_PROCESS_E2E_INFO_FILE = switch ($Platform) {
   "windows" { Join-Path $env:LDDC_PROCESS_E2E_LOCALAPPDATA "LDDC/info.json" }
   "linux" { Join-Path $env:LDDC_PROCESS_E2E_XDG_DATA_HOME "LDDC/info.json" }
-  "macos" { Join-Path $env:LDDC_PROCESS_E2E_HOME "Library/Application Support/LDDC/info.json" }
+  "macos" { Join-Path $macosApplicationDataRoot "info.json" }
 }
 $runStartedAt = Get-Date
 
@@ -206,10 +236,44 @@ try {
   if (Test-Path -LiteralPath $sandboxRoot -PathType Container) {
     # 应用 bootstrap 日志位于隔离的 APPDATA/XDG/HOME 目录。必须在删除 sandbox
     # 前复制到失败 artifact，否则服务端口超时只剩引擎 stderr，无法判断生产状态机。
-    foreach ($applicationLog in @(Get-ChildItem -LiteralPath $sandboxRoot -Recurse -File -Filter "*.log" -ErrorAction SilentlyContinue)) {
+    foreach ($applicationLog in @(
+        Get-ChildItem -LiteralPath $sandboxRoot -Recurse -File -Filter "*.log" -ErrorAction SilentlyContinue |
+          Where-Object {
+            $candidate = $_.FullName
+            -not ($macosContainerState | Where-Object {
+                $candidate.StartsWith(
+                  $_.Backup + [IO.Path]::DirectorySeparatorChar,
+                  [StringComparison]::OrdinalIgnoreCase
+                )
+              })
+          }
+      )) {
       $relativeLogPath = [IO.Path]::GetRelativePath($sandboxRoot, $applicationLog.FullName)
       $safeLogName = ($relativeLogPath -replace '[:/\\]+', '_')
       Copy-Item -LiteralPath $applicationLog.FullName -Destination (Join-Path $diagnosticsDir $safeLogName) -Force
+    }
+  }
+  if ($Platform -eq "macos") {
+    # 旧容器目录已在测试前移走，因此这里收集的只可能是本次
+    # 生产进程新生成的日志，不会把用户旧日志上传到失败 artifact。
+    foreach ($state in $macosContainerState) {
+      if ($state.Name -eq "logs" -and (Test-Path -LiteralPath $state.Target)) {
+        foreach ($applicationLog in @(Get-ChildItem -LiteralPath $state.Target -Recurse -File -Filter "*.log" -ErrorAction SilentlyContinue)) {
+          $safeLogName = "macos-container_" + ($applicationLog.Name -replace '[:/\\]+', '_')
+          Copy-Item -LiteralPath $applicationLog.FullName -Destination (Join-Path $diagnosticsDir $safeLogName) -Force
+        }
+      }
+    }
+    # 清理本次测试创建的四类数据，再逐项恢复测试前移出的目录。
+    # 备份路径在 ignored sandbox 中，也被上方日志收集显式排除。
+    foreach ($state in $macosContainerState) {
+      if (Test-Path -LiteralPath $state.Target) {
+        Remove-Item -LiteralPath $state.Target -Recurse -Force
+      }
+      if ($state.Existed -and (Test-Path -LiteralPath $state.Backup)) {
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $state.Target) | Out-Null
+        Move-Item -LiteralPath $state.Backup -Destination $state.Target
+      }
     }
   }
   if (Test-Path -LiteralPath $sandboxRoot -PathType Container) {

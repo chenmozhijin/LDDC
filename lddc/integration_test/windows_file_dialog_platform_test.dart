@@ -28,9 +28,9 @@ void main() {
   ) async {
     // FlaUI 需要 Flutter semantics 才能从 UIA 树定位控件。integration_test
     // 不会替 testWidgets 的 semanticsEnabled 参数稳定释放原生辅助功能连接，
-    // 因此在场景内显式持有并注册清理，避免业务步骤成功后因句柄泄漏假红。
+    // 因此在场景内显式持有，并在测试主体返回前同步释放，
+    // 避免业务步骤成功后因句柄泄漏假红。
     final SemanticsHandle semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
     expect(
       _dialogAction,
       anyOf('select', 'cancel'),
@@ -44,97 +44,107 @@ void main() {
     );
     addTearDown(reporter.writeSummary);
 
-    await reporter.runScenario(() async {
-      expect(Platform.isWindows, isTrue, reason: '该场景只能在 Windows 运行');
-      expect(runtime.profile, 'platform');
-      expect(_workspaceRoot, isNotEmpty, reason: 'runner 必须提供 D 盘测试 workspace');
-      expect(_nativeSyncRoot, isNotEmpty, reason: 'runner 必须提供原生动作同步目录');
-      runtime.verifyCurrentDevice();
+    try {
+      await reporter.runScenario(() async {
+        expect(Platform.isWindows, isTrue, reason: '该场景只能在 Windows 运行');
+        expect(runtime.profile, 'platform');
+        expect(
+          _workspaceRoot,
+          isNotEmpty,
+          reason: 'runner 必须提供 D 盘测试 workspace',
+        );
+        expect(_nativeSyncRoot, isNotEmpty, reason: 'runner 必须提供原生动作同步目录');
+        runtime.verifyCurrentDevice();
 
-      final IntegrationAppHandle app = await launchIntegrationApp(
-        tester,
-        scenarioName: scenarioName,
-        runtimeConfig: runtime,
-        reporter: reporter,
-        useRealFilePicker: true,
-        workspaceParent: Directory(_workspaceRoot),
-      );
-      addTearDown(app.dispose);
+        final IntegrationAppHandle app = await launchIntegrationApp(
+          tester,
+          scenarioName: scenarioName,
+          runtimeConfig: runtime,
+          reporter: reporter,
+          useRealFilePicker: true,
+          workspaceParent: Directory(_workspaceRoot),
+        );
+        addTearDown(app.dispose);
 
-      final AppShellDriver shell = AppShellDriver(tester);
-      final OpenLyricsDriver openLyrics = OpenLyricsDriver(tester);
-      await shell.openRoute(AppShellRoute.openLyrics);
-      final container = scopedProviderContainer(
-        tester,
-        find.byType(OpenLyricsPage),
-      );
-      reporter.recordCapabilityEvidence(
-        'desktopProcess',
-        'integration_test_real_windows_application',
-      );
+        final AppShellDriver shell = AppShellDriver(tester);
+        final OpenLyricsDriver openLyrics = OpenLyricsDriver(tester);
+        await shell.openRoute(AppShellRoute.openLyrics);
+        final container = scopedProviderContainer(
+          tester,
+          find.byType(OpenLyricsPage),
+        );
+        reporter.recordCapabilityEvidence(
+          'desktopProcess',
+          'integration_test_real_windows_application',
+        );
 
-      if (_dialogAction == 'select') {
-        await reporter.runStep('select_lyrics_file_round_trip', () async {
-          await openLyrics.openLyricsFile();
-          await pumpUntil(
-            tester,
-            () {
-              final OpenLyricsPageState state = container.read(
-                openLyricsPageControllerProvider,
-              );
-              return !state.isOpening &&
-                  state.inputType == OpenLyricsInputType.lyricsFile &&
-                  state.inputName == 'lyrics_sample.lrc' &&
-                  state.rawText.contains('Hello LDDC');
-            },
-            timeout: runtime.longStepTimeout,
-            reason: '等待真实 IFileDialog 选择结果返回 Flutter 页面',
+        if (_dialogAction == 'select') {
+          await reporter.runStep('select_lyrics_file_round_trip', () async {
+            await openLyrics.openLyricsFile();
+            await pumpUntil(
+              tester,
+              () {
+                final OpenLyricsPageState state = container.read(
+                  openLyricsPageControllerProvider,
+                );
+                return !state.isOpening &&
+                    state.inputType == OpenLyricsInputType.lyricsFile &&
+                    state.inputName == 'lyrics_sample.lrc' &&
+                    state.rawText.contains('Hello LDDC');
+              },
+              timeout: runtime.longStepTimeout,
+              reason: '等待真实 IFileDialog 选择结果返回 Flutter 页面',
+            );
+            final OpenLyricsPageState state = container.read(
+              openLyricsPageControllerProvider,
+            );
+            expect(state.notice, isNull, reason: state.notice?.detail);
+            expect(state.lyricsFileBytes, isNotNull);
+            expect(state.lyricsFileBytes, hasLength(165));
+          });
+          reporter.recordCapabilityEvidence(
+            'nativeChannels',
+            'file_selector_selection_returned_to_flutter',
           );
-          final OpenLyricsPageState state = container.read(
-            openLyricsPageControllerProvider,
-          );
-          expect(state.notice, isNull, reason: state.notice?.detail);
-          expect(state.lyricsFileBytes, isNotNull);
-          expect(state.lyricsFileBytes, hasLength(165));
+          return;
+        }
+
+        await reporter.runStep('cancel_and_reopen_round_trip', () async {
+          for (var attempt = 0; attempt < 2; attempt += 1) {
+            await openLyrics.openLyricsFile();
+            await pumpUntil(
+              tester,
+              () => !container.read(openLyricsPageControllerProvider).isOpening,
+              timeout: runtime.longStepTimeout,
+              reason: '等待第 ${attempt + 1} 次真实 IFileDialog 取消结果返回',
+            );
+            final OpenLyricsPageState state = container.read(
+              openLyricsPageControllerProvider,
+            );
+            expect(state.inputType, isNull);
+            expect(state.inputName, isEmpty);
+            expect(state.rawText, isEmpty);
+            expect(state.previewState, OpenLyricsPreviewState.idle);
+            expect(state.notice, isNull);
+            await pumpUntil(
+              tester,
+              () => File(
+                p.join(_nativeSyncRoot, 'dialog_${attempt + 1}_closed.ready'),
+              ).existsSync(),
+              timeout: runtime.defaultStepTimeout,
+              reason: '等待 FlaUI 确认第 ${attempt + 1} 次原生对话框已经消失',
+            );
+          }
         });
         reporter.recordCapabilityEvidence(
           'nativeChannels',
-          'file_selector_selection_returned_to_flutter',
+          'file_selector_cancel_and_reopen_returned_to_flutter',
         );
-        return;
-      }
-
-      await reporter.runStep('cancel_and_reopen_round_trip', () async {
-        for (var attempt = 0; attempt < 2; attempt += 1) {
-          await openLyrics.openLyricsFile();
-          await pumpUntil(
-            tester,
-            () => !container.read(openLyricsPageControllerProvider).isOpening,
-            timeout: runtime.longStepTimeout,
-            reason: '等待第 ${attempt + 1} 次真实 IFileDialog 取消结果返回',
-          );
-          final OpenLyricsPageState state = container.read(
-            openLyricsPageControllerProvider,
-          );
-          expect(state.inputType, isNull);
-          expect(state.inputName, isEmpty);
-          expect(state.rawText, isEmpty);
-          expect(state.previewState, OpenLyricsPreviewState.idle);
-          expect(state.notice, isNull);
-          await pumpUntil(
-            tester,
-            () => File(
-              p.join(_nativeSyncRoot, 'dialog_${attempt + 1}_closed.ready'),
-            ).existsSync(),
-            timeout: runtime.defaultStepTimeout,
-            reason: '等待 FlaUI 确认第 ${attempt + 1} 次原生对话框已经消失',
-          );
-        }
       });
-      reporter.recordCapabilityEvidence(
-        'nativeChannels',
-        'file_selector_cancel_and_reopen_returned_to_flutter',
-      );
-    });
+    } finally {
+      // addTearDown 晚于 WidgetTester 的句柄泄漏校验执行。必须在
+      // testWidgets 主体返回前同步释放，否则原生操作已成功仍会假红。
+      semantics.dispose();
+    }
   });
 }

@@ -129,6 +129,9 @@ final class RunnerUITests: XCTestCase {
        let sha256 = environment["LDDC_FIXTURE_SHA256"] {
       artifacts = [["name": "audio_sample.mp3", "size": size, "sha256": sha256]]
     }
+    // Swift 不能在 String 与 NSNull 之间自动推断 Optional.map 的合并类型。
+    // 先提升为 Any，既保留失败文本，也让成功场景稳定序列化为 JSON null。
+    let errorValue: Any = failure.map { String(describing: $0) } ?? NSNull()
     let payload: [String: Any] = [
       "runId": environment["LDDC_IT_RUN_ID"] ?? "missing-run-id",
       "scenario": scenario,
@@ -139,7 +142,7 @@ final class RunnerUITests: XCTestCase {
         "step": scenario,
         "success": failure == nil,
         // JSONSerialization 不能编码 Optional.none，失败为空时必须显式写入 JSON null。
-        "error": failure.map { String(describing: $0) } ?? NSNull(),
+        "error": errorValue,
       ]],
       "capabilityEvidence": actions,
       "resources": [
