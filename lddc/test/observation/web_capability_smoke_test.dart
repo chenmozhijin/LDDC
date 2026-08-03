@@ -12,5 +12,5 @@ void main() {
     expect(capability.androidSafTreeAccess, isFalse);
     expect(capability.webFileSystemAccess, isFalse);
     expect(capability.webTaglibWasmReady, isFalse);
-  });
+  }, tags: 'web-observation');
 }

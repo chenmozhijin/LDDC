@@ -57,11 +57,17 @@ class SearchDriver {
   final WidgetTester tester;
 
   Future<void> enterKeyword(String keyword) async {
+    final Finder searchBar = find.byKey(
+      const ValueKey<String>('search_toolbar_search_bar'),
+    );
     final Finder input = find.descendant(
-      of: find.byKey(const ValueKey<String>('search_toolbar_search_bar')),
+      of: searchBar,
       matching: find.byType(EditableText),
     );
-    await tapVisible(tester, input, reason: '等待搜索输入框可点击');
+    // SearchBar 的手势与焦点入口位于外层 Material，而 EditableText 可能被
+    // leading/trailing 的命中区域部分覆盖。点击真实 SearchBar 后再向唯一输入框
+    // 写入文本，既保持严格 hit test，也与用户点击搜索框的行为一致。
+    await tapVisible(tester, searchBar, reason: '等待搜索输入框可点击');
     await tester.enterText(input, keyword);
     await pumpForInteraction(tester);
   }
@@ -119,6 +125,7 @@ class SearchDriver {
       const ValueKey<String>('search_preview_save_directory_button'),
     );
     await _waitTransientOverlaysToSettle();
+    await _ensurePreviewActionsVisible(target);
     await tapVisible(tester, target, reason: '等待搜索保存目录按钮可点击');
   }
 
@@ -127,6 +134,7 @@ class SearchDriver {
       const ValueKey<String>('search_preview_translate_button'),
     );
     await _waitTransientOverlaysToSettle();
+    await _ensurePreviewActionsVisible(target);
     await tapVisible(tester, target, reason: '等待搜索翻译按钮可点击');
   }
 
@@ -135,6 +143,7 @@ class SearchDriver {
       const ValueKey<String>('search_preview_save_file_button'),
     );
     await _waitTransientOverlaysToSettle();
+    await _ensurePreviewActionsVisible(target);
     await tapVisible(tester, target, reason: '等待搜索保存文件按钮可点击');
   }
 
@@ -143,6 +152,7 @@ class SearchDriver {
       const ValueKey<String>('search_preview_save_tag_button'),
     );
     await _waitTransientOverlaysToSettle();
+    await _ensurePreviewActionsVisible(target);
     await tapVisible(tester, target, reason: '等待搜索写入标签按钮可点击');
   }
 
@@ -160,6 +170,22 @@ class SearchDriver {
       find.byType(SnackBar),
       timeout: const Duration(seconds: 5),
       reason: '等待搜索页 SnackBar 消失',
+    );
+  }
+
+  Future<void> _ensurePreviewActionsVisible(Finder target) async {
+    if (target.evaluate().length == 1) {
+      return;
+    }
+    final Finder openPreview = find.byKey(
+      const ValueKey<String>('search_result_open_preview_button'),
+    );
+    await tapVisible(tester, openPreview, reason: '等待紧凑布局歌词预览按钮可点击');
+    await pumpUntil(
+      tester,
+      () => target.evaluate().length == 1,
+      timeout: const Duration(seconds: 5),
+      reason: '等待紧凑布局歌词预览操作区打开',
     );
   }
 }
@@ -263,11 +289,24 @@ class LocalMatchDriver {
 
   Future<void> selectSaveToTagMode(LocalMatchSaveToTagMode mode) async {
     await _waitTransientOverlaysToSettle();
-    await tapVisible(
-      tester,
-      find.byKey(const ValueKey<String>('local_match_save_to_tag_mode')),
-      reason: '等待标签保存模式下拉框可点击',
+    final Finder target = find.byKey(
+      const ValueKey<String>('local_match_save_to_tag_mode'),
     );
+    if (target.evaluate().isEmpty) {
+      // 紧凑布局把规则卡默认折叠，先执行用户真实的展开动作；桌面布局
+      // 没有折叠入口，因此仅在该 key 存在时处理，不引入平台特判。
+      final Finder rulesCard = find.byKey(
+        const ValueKey<String>('local_match_rules_card'),
+      );
+      await tapVisible(tester, rulesCard, reason: '等待本地匹配规则卡可展开');
+      await pumpUntil(
+        tester,
+        () => target.evaluate().length == 1,
+        timeout: const Duration(seconds: 5),
+        reason: '等待本地匹配规则字段展开',
+      );
+    }
+    await tapVisible(tester, target, reason: '等待标签保存模式下拉框可点击');
     final Finder menuItem = find
         .byWidgetPredicate(
           (Widget widget) =>

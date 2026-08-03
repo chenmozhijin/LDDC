@@ -37,7 +37,8 @@ jobs:
         id: static_analysis
         continue-on-error: true
         run: |
-          dart format --output=none --set-exit-if-changed lddc packages examples tool
+          # 只检查候选源码，避免递归进入 ignored build/Gradle 缓存和平台长路径。
+          git ls-files -z '*.dart' | xargs -0 -r dart format --output=none --set-exit-if-changed
           dart analyze
           git diff --check
 
@@ -122,7 +123,9 @@ jobs:
         working-directory: lddc
         run: |
           mkdir -p reports coverage
-          flutter test test --exclude-tags live --branch-coverage \
+          # Web 观察用例必须由 Chrome 执行；普通 VM 覆盖率收集不能把它当作应用失败。
+          flutter test test --exclude-tags 'live || web-observation' \
+            --branch-coverage \
             --coverage-path=coverage/lcov.info \
             --file-reporter=json:reports/tests.jsonl
 

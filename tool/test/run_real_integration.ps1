@@ -117,8 +117,10 @@ function Copy-ContainerScenarioReport {
     $content = [IO.File]::ReadAllText($source)
   } elseif ($Platform -eq "macos") {
     # 开启 App Sandbox 的 macOS 测试应用不能写 runner 的仓库绝对路径。
-    # 应用把相对目录解析到 NSTemporaryDirectory，测试结束后再由宿主回收。
-    $source = [IO.Path]::GetTempPath()
+    # NSTemporaryDirectory 位于应用容器的 Data/tmp，而不是宿主进程的 /tmp；
+    # 直接使用 GetTempPath 会稳定漏掉已经生成的报告并制造假基础设施失败。
+    $source = Join-Path ([Environment]::GetFolderPath("UserProfile")) `
+      "Library/Containers/com.cmzj.lddc/Data/tmp"
     foreach ($segment in ($ContainerReportDir -split '[/\\]+')) {
       if (-not [string]::IsNullOrWhiteSpace($segment)) {
         $source = Join-Path $source $segment
@@ -126,7 +128,12 @@ function Copy-ContainerScenarioReport {
     }
     $source = Join-Path $source "$Scenario.json"
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
-      throw "macOS 应用临时目录没有生成 $Scenario.json"
+      [IO.File]::WriteAllText(
+        $DiagnosticPath,
+        "expected macOS sandbox report: $source",
+        [Text.UTF8Encoding]::new($false)
+      )
+      throw "macOS 应用容器没有生成 $Scenario.json"
     }
     $content = [IO.File]::ReadAllText($source)
   }

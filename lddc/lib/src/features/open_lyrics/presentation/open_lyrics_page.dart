@@ -24,7 +24,7 @@ class OpenLyricsPage extends ConsumerStatefulWidget {
 
 class _OpenLyricsPageState extends ConsumerState<OpenLyricsPage> {
   static const double _adaptiveWorkspaceWidth = 720;
-  static const double _adaptiveWorkspaceHeight = 400;
+  static const double _adaptiveWorkspaceHeight = 640;
   static const double _scrollingPreviewHeight = 320;
 
   @override
@@ -62,10 +62,10 @@ class _OpenLyricsPageState extends ConsumerState<OpenLyricsPage> {
     final Widget page = LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final bool compact = constraints.maxWidth < 720;
-        // 这里收到的是 AppShell 扣除标题栏、导航栏和系统缩放后的实际内容区。
-        // 若仍以外层窗口的 1024x640 作为阈值，Windows 默认 1280x720 窗口在
-        // 125%/150% 缩放下会错误回退到固定 320dp。当前下限只表达控制区和
-        // 预览框可以同时安全显示所需的空间，达到后即让预览消费全部剩余高度。
+        // 这里收到的是 AppShell 扣除标题栏、导航栏后的真实页面高度。控制卡在
+        // 转换后会增加格式、翻译和保存动作；仅凭初始态 400dp 会让预览被压到
+        // 不足 100dp 并产生 overflow。高度不足 640dp 时改用统一滚动布局，
+        // 控件仍完整保留且可访问，不通过裁剪或放大 CI viewport 掩盖问题。
         final bool fillsAvailableHeight =
             constraints.maxWidth >= _adaptiveWorkspaceWidth &&
             constraints.maxHeight >= _adaptiveWorkspaceHeight;

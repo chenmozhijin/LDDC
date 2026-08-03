@@ -156,7 +156,7 @@ Future<Map<String, Object?>> _runRebuildSmoke(
       floatingReadyMs.fold<int>(0, math.max),
       selectorReadyMs.fold<int>(0, math.max),
     ].fold<int>(0, math.max);
-    final int lastCycleGrowth = _lastCyclePrivateGrowth(cycleResources);
+    final int lastCycleGrowth = _tailMedianPrivateGrowth(cycleResources);
     final bool resourcesPass =
         finalResources.handleCount <= baseline.handleCount &&
         finalResources.gdiObjects <= baseline.gdiObjects &&
@@ -184,13 +184,13 @@ Future<Map<String, Object?>> _runRebuildSmoke(
         'privateBytesByCycle': cycleResources
             .map((_ProcessResources value) => value.privateBytes)
             .toList(growable: false),
-        'last20AveragePrivateGrowthPerCycle': lastCycleGrowth,
+        'last20MedianPrivateGrowthPerCycle': lastCycleGrowth,
         'limits': <String, Object?>{
           'handleDelta': 0,
           'gdiDelta': 0,
           'userDelta': 2,
           'privateBytesDelta': _kPrivateBytesSlack,
-          'last20AveragePrivateGrowthPerCycle': _kLastCycleGrowthLimit,
+          'last20MedianPrivateGrowthPerCycle': _kLastCycleGrowthLimit,
         },
       },
     };
@@ -514,23 +514,22 @@ Future<Map<String, Object?>> _runResidentSmoke(
     trace?.write('resident_settle_begin');
     await Future<void>.delayed(Duration(seconds: arguments.settleSeconds));
     trace?.write('resident_settle_complete');
-    final _ProcessResources finalResources = _readProcessResources();
+    final _ProcessResources settledResources = _readProcessResources();
     DesktopSelectorRuntimeDiagnostics? selectorDiagnostics;
     bool selectorDiagnosticsPass = true;
     if (arguments.windowMode.includesSelector) {
-      // 资源最终采样前读取子 engine 的工作流快照，确认 30 秒 settle 后没有
-      // active batch、底层请求、debounce timer、pending 请求或分页任务残留。
+      // 资源测试只验证真实窗口、engine 和 MethodChannel 生命周期，不能把真实
+      // 歌词服务当作负载。除了确认工作流空闲，还要把任何搜索或源请求视为失败，
+      // 避免 CI runner 的共享出口 IP 因高频请求触发服务端风控。
       selectorDiagnostics = await selectorHost.readSelectorRuntimeDiagnostics(
         instanceId: primaryInstanceId,
       );
       selectorDiagnosticsPass =
           selectorDiagnostics.isIdle &&
-          selectorDiagnostics.searchBatchStartedCount > 0 &&
-          selectorDiagnostics.searchBatchSettledCount ==
-              selectorDiagnostics.searchBatchStartedCount &&
-          selectorDiagnostics.sourceRequestStartedCount > 0 &&
-          selectorDiagnostics.sourceRequestSettledCount ==
-              selectorDiagnostics.sourceRequestStartedCount;
+          selectorDiagnostics.searchBatchStartedCount == 0 &&
+          selectorDiagnostics.searchBatchSettledCount == 0 &&
+          selectorDiagnostics.sourceRequestStartedCount == 0 &&
+          selectorDiagnostics.sourceRequestSettledCount == 0;
       trace?.write(
         'selector_diagnostics idle=${selectorDiagnostics.isIdle}'
         ' activeBatch=${selectorDiagnostics.hasActiveBatch}'
@@ -551,14 +550,7 @@ Future<Map<String, Object?>> _runResidentSmoke(
       floatingOperationMs.fold<int>(0, math.max),
       selectorOperationMs.fold<int>(0, math.max),
     ].fold<int>(0, math.max);
-    final int tailGrowth = _lastCyclePrivateGrowth(operationResources);
-    final bool resourcesPass =
-        finalResources.handleCount <= baseline.handleCount &&
-        finalResources.gdiObjects <= baseline.gdiObjects &&
-        finalResources.userObjects <= baseline.userObjects + 2 &&
-        finalResources.privateBytes <=
-            baseline.privateBytes + _kPrivateBytesSlack &&
-        tailGrowth <= _kLastCycleGrowthLimit;
+    final int tailGrowth = _tailMedianPrivateGrowth(operationResources);
     final bool timingPass =
         floatingP95 <= 3000 && selectorP95 <= 3000 && maxOperationMs <= 15000;
     final bool lifecyclePass =
@@ -589,6 +581,19 @@ Future<Map<String, Object?>> _runResidentSmoke(
       lifecycle: lifecycle,
       instanceId: primaryInstanceId,
     );
+    // settle 快照发生在窗口仍然存活时，只用于观察常驻阶段；真正的资源门禁必须
+    // 在窗口、scene 和生命周期注册全部释放后采样，否则会把待销毁资源误报成泄漏。
+    trace?.write('resident_cleanup_settle_begin');
+    await Future<void>.delayed(const Duration(seconds: 2));
+    final _ProcessResources finalResources = _readProcessResources();
+    trace?.write('resident_cleanup_settle_complete');
+    final bool resourcesPass =
+        finalResources.handleCount <= baseline.handleCount &&
+        finalResources.gdiObjects <= baseline.gdiObjects &&
+        finalResources.userObjects <= baseline.userObjects + 2 &&
+        finalResources.privateBytes <=
+            baseline.privateBytes + _kPrivateBytesSlack &&
+        tailGrowth <= _kLastCycleGrowthLimit;
 
     return <String, Object?>{
       'success':
@@ -641,6 +646,7 @@ Future<Map<String, Object?>> _runResidentSmoke(
       },
       'resources': <String, Object?>{
         'baseline': baseline.toJson(),
+        'settledBeforeCleanup': settledResources.toJson(),
         'final': finalResources.toJson(),
         'privateBytesByOperation': operationResources
             .map((_ProcessResources value) => value.privateBytes)
@@ -654,13 +660,13 @@ Future<Map<String, Object?>> _runResidentSmoke(
         'userObjectsByOperation': operationResources
             .map((_ProcessResources value) => value.userObjects)
             .toList(growable: false),
-        'last20AveragePrivateGrowthPerOperation': tailGrowth,
+        'last20MedianPrivateGrowthPerOperation': tailGrowth,
         'limits': <String, Object?>{
           'handleDelta': 0,
           'gdiDelta': 0,
           'userDelta': 2,
           'privateBytesDelta': _kPrivateBytesSlack,
-          'last20AveragePrivateGrowthPerOperation': _kLastCycleGrowthLimit,
+          'last20MedianPrivateGrowthPerOperation': _kLastCycleGrowthLimit,
         },
       },
     };
@@ -743,7 +749,9 @@ DesktopFloatingWindowSnapshot _residentFloatingSnapshot({
 
 DesktopSelectorWindowContext _residentSelectorContext({required int revision}) {
   return DesktopSelectorWindowContext(
-    keyword: 'Resident $revision',
+    // 非空关键词会让真实 selector engine 自动调用生产歌词源。资源压力场景只需
+    // 刷新上下文和窗口内容，因此使用空关键词并由诊断计数锁死零网络请求。
+    keyword: null,
     langs: const <String>['orig'],
     offsetMs: revision,
     refreshToken: revision,
@@ -888,7 +896,8 @@ Future<_CycleTiming> _runCycle({
     await selectorHost.showSelectorWindow(
       instanceId: instanceId,
       context: DesktopSelectorWindowContext(
-        keyword: 'Smoke $cycleIndex',
+        // rebuild 场景同样只测窗口重建和释放，不把公网响应时间混入性能结果。
+        keyword: null,
         langs: const <String>['orig'],
         offsetMs: 0,
         refreshToken: cycleIndex + 1,
@@ -938,18 +947,34 @@ int _percentile95(List<int> values) {
   return sorted[index];
 }
 
-int _lastCyclePrivateGrowth(List<_ProcessResources> resources) {
-  if (resources.length < 2) {
+int _tailMedianPrivateGrowth(List<_ProcessResources> resources) {
+  if (resources.length < 4) {
     return 0;
   }
   final int start = math.max(0, resources.length - 20);
   final List<_ProcessResources> tail = resources.sublist(start);
-  if (tail.length < 2) {
-    return 0;
+  final int split = tail.length ~/ 2;
+  final List<int> firstHalf = tail
+      .take(split)
+      .map((resource) => resource.privateBytes)
+      .toList(growable: false);
+  final List<int> secondHalf = tail
+      .skip(split)
+      .map((resource) => resource.privateBytes)
+      .toList(growable: false);
+  // Dart VM 与 Windows working set 会在 GC 前后形成明显锯齿。用尾段前后
+  // 两半的中位数趋势替代首尾单点差，避免一次 GC 时机制造假红；持续增长会
+  // 同时抬高后一半的整体分布，因此仍受每次 256 KiB 的硬门槛约束。
+  return ((_median(secondHalf) - _median(firstHalf)) / split).round();
+}
+
+double _median(List<int> values) {
+  final List<int> sorted = List<int>.from(values)..sort();
+  final int middle = sorted.length ~/ 2;
+  if (sorted.length.isOdd) {
+    return sorted[middle].toDouble();
   }
-  return ((tail.last.privateBytes - tail.first.privateBytes) /
-          (tail.length - 1))
-      .round();
+  return (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
 _ProcessResources _readProcessResources() {

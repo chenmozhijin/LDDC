@@ -49,7 +49,11 @@ void main() {
         find.byType(SearchPage),
       );
       expect(await _readExportedLyrics(app.workspace.exportsDir), isEmpty);
-      late Map<String, String> albumArtifacts;
+      // iOS 没有 Android SAF 目录树能力，生产界面也不会提供列表批量保存。
+      // 该平台仍覆盖专辑/歌单导航，但明确断言不出现不可用动作；桌面和
+      // Android 则继续验证真实批量产物，不能用 Fake 按钮补齐能力。
+      final bool supportsListBatchSave = !Platform.isIOS;
+      Map<String, String> albumArtifacts = <String, String>{};
       // 专辑和歌单步骤各自串行等待搜索结果、曲目列表与批量保存完成。
       // 外层总预算必须覆盖三个长等待，否则慢设备会先抛出笼统的组合步骤超时，
       // 掩盖内部已经准备好的具体失败原因。额外的默认步骤预算用于菜单动画、
@@ -113,33 +117,46 @@ void main() {
               timeout: runtime.longStepTimeout,
               reason: '等待专辑歌曲列表',
             );
-            await search.tapBatchSave();
-            await pumpUntil(
-              tester,
-              () => !searchContainer
-                  .read(searchWorkflowControllerProvider)
-                  .isBatchSaving,
-              timeout: runtime.longStepTimeout,
-              reason: '等待专辑批量保存完成',
-            );
+            if (supportsListBatchSave) {
+              await search.tapBatchSave();
+              await pumpUntil(
+                tester,
+                () => !searchContainer
+                    .read(searchWorkflowControllerProvider)
+                    .isBatchSaving,
+                timeout: runtime.longStepTimeout,
+                reason: '等待专辑批量保存完成',
+              );
+            } else {
+              expect(
+                find.byKey(
+                  const ValueKey<String>('search_result_batch_save_button'),
+                ),
+                findsNothing,
+              );
+            }
           },
           timeout: collectionStepTimeout,
           label: 'search_album_and_batch_save',
         );
         albumArtifacts = await _readExportedLyrics(app.workspace.exportsDir);
-        expect(albumArtifacts, isNotEmpty);
-        expect(
-          albumArtifacts.keys.every(
-            (String path) => p.extension(path) == '.lrc',
-          ),
-          isTrue,
-        );
-        expect(
-          albumArtifacts.values.every(
-            (String content) => content.contains('['),
-          ),
-          isTrue,
-        );
+        if (supportsListBatchSave) {
+          expect(albumArtifacts, isNotEmpty);
+          expect(
+            albumArtifacts.keys.every(
+              (String path) => p.extension(path) == '.lrc',
+            ),
+            isTrue,
+          );
+          expect(
+            albumArtifacts.values.every(
+              (String content) => content.contains('['),
+            ),
+            isTrue,
+          );
+        } else {
+          expect(albumArtifacts, isEmpty);
+        }
       });
       if (runtime.capabilities.network == 'real') {
         reporter.recordCapabilityEvidence(
@@ -204,15 +221,24 @@ void main() {
               timeout: runtime.longStepTimeout,
               reason: '等待歌单歌曲列表',
             );
-            await search.tapBatchSave();
-            await pumpUntil(
-              tester,
-              () => !searchContainer
-                  .read(searchWorkflowControllerProvider)
-                  .isBatchSaving,
-              timeout: runtime.longStepTimeout,
-              reason: '等待歌单批量保存完成',
-            );
+            if (supportsListBatchSave) {
+              await search.tapBatchSave();
+              await pumpUntil(
+                tester,
+                () => !searchContainer
+                    .read(searchWorkflowControllerProvider)
+                    .isBatchSaving,
+                timeout: runtime.longStepTimeout,
+                reason: '等待歌单批量保存完成',
+              );
+            } else {
+              expect(
+                find.byKey(
+                  const ValueKey<String>('search_result_batch_save_button'),
+                ),
+                findsNothing,
+              );
+            }
           },
           timeout: collectionStepTimeout,
           label: 'search_songlist_and_batch_save',
@@ -223,10 +249,14 @@ void main() {
         final Set<String> playlistFiles = allArtifacts.keys.toSet().difference(
           albumArtifacts.keys.toSet(),
         );
-        expect(playlistFiles, isNotEmpty, reason: '歌单保存必须生成专辑保存步骤之外的新文件');
-        for (final String fileName in playlistFiles) {
-          expect(p.extension(fileName), '.lrc');
-          expect(allArtifacts[fileName], contains('['));
+        if (supportsListBatchSave) {
+          expect(playlistFiles, isNotEmpty, reason: '歌单保存必须生成专辑保存步骤之外的新文件');
+          for (final String fileName in playlistFiles) {
+            expect(p.extension(fileName), '.lrc');
+            expect(allArtifacts[fileName], contains('['));
+          }
+        } else {
+          expect(playlistFiles, isEmpty);
         }
       });
 

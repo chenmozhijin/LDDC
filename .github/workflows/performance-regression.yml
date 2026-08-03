@@ -48,19 +48,19 @@ jobs:
       - name: Build resource-boundary runner
         working-directory: lddc
         run: >-
-          flutter build windows --debug
+          flutter build windows --release
           -t integration_test/standalone/windows_multi_window_smoke_main.dart
       - name: Enforce resident window resource thresholds
         working-directory: lddc
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force build/windows_multi_window_smoke | Out-Null
-          ./build/windows/x64/runner/Debug/lddc.exe `
-            --scenario=resident `
-            --cycles=100 `
-            --settle-seconds=10 `
-            --report=build/windows_multi_window_smoke/report.json `
-            --trace=build/windows_multi_window_smoke/trace.log
+          ./tool/run_windows_multi_window_smoke.ps1 `
+            -SkipBuild `
+            -Configuration Release `
+            -Scenario resident `
+            -Cycles 100 `
+            -SettleSeconds 10 `
+            -ReportPath build/windows_multi_window_smoke/report.json
       - name: Upload resource report
         if: always()
         uses: actions/upload-artifact@v7

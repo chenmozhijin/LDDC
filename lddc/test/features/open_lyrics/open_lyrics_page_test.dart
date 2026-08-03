@@ -462,6 +462,15 @@ void main() {
       );
       expect(tester.takeException(), isNull);
 
+      tester.view.physicalSize = const Size(1008, 567);
+      await tester.pump();
+      expect(find.byType(ListView), findsWidgets);
+      expect(
+        find.byKey(const ValueKey<String>('open_lyrics_action_bar')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+
       tester.view.physicalSize = const Size(844, 390);
       await tester.pump();
       expect(find.byType(ListView), findsWidgets);
@@ -469,7 +478,9 @@ void main() {
     });
 
     testWidgets('Windows 默认窗口在系统缩放后初始预览仍随可用高度伸展', (WidgetTester tester) async {
-      _setTestViewport(tester, const Size(1280, 720), devicePixelRatio: 1.25);
+      // physicalSize 会先除以 DPR 才得到 Flutter 内容区。旧测试直接传入
+      // 1280×720 后再设置 1.25，实际只覆盖了 1024×576，却误称为默认窗口。
+      _setTestViewport(tester, const Size(1600, 900), devicePixelRatio: 1.25);
       final ProviderContainer container = _createContainer(
         picker: _FakeOpenLyricsInputPicker(),
         lyricsApi: _FakeLyricsApi(lyrics: _buildLyrics()),
@@ -491,7 +502,7 @@ void main() {
       );
       final double initialHeight = tester.getSize(previewCard).height;
 
-      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.physicalSize = const Size(1600, 1125);
       await tester.pump();
       expect(
         tester.getSize(previewCard).height,

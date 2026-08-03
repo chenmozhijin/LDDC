@@ -26,11 +26,12 @@ final class RunnerTests: XCTestCase {
     let data = try Data(contentsOf: entitlementsURL)
     let plist = try PropertyListSerialization.propertyList(from: data) as? [String: Bool]
 
-    // Release 只保留真实运行需要的沙盒、联网和用户选择文件读写权限，调试专用权限放在 DebugProfile。
+    // 桌面歌词插件通过 loopback 连接 LDDC，因此 Release 必须同时允许客户端连接和服务端监听。
+    // JIT 仍只属于 DebugProfile，不能因为原生测试而进入正式构建。
     XCTAssertEqual(plist?["com.apple.security.app-sandbox"], true)
     XCTAssertEqual(plist?["com.apple.security.network.client"], true)
+    XCTAssertEqual(plist?["com.apple.security.network.server"], true)
     XCTAssertEqual(plist?["com.apple.security.files.user-selected.read-write"], true)
-    XCTAssertNil(plist?["com.apple.security.network.server"])
     XCTAssertNil(plist?["com.apple.security.cs.allow-jit"])
   }
 

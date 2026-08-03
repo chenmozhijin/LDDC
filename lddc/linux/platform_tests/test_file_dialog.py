@@ -124,22 +124,31 @@ def _count_process_group(process_group_id: int) -> int:
 
 
 def _wait_for_accessible_application(process: subprocess.Popen[bytes]) -> object:
-    """等待 Flutter 注册到 AT-SPI；启动竞态必须有界失败。"""
+    """等待包含 LDDC 语义标识的 AT-SPI 应用；不依赖桌面环境改写的应用名。"""
     deadline = time.monotonic() + 30
     last_error: BaseException | None = None
+    observed_applications: set[str] = set()
     while time.monotonic() < deadline:
         if process.poll() is not None:
             raise RuntimeError(
                 f"LDDC 进程在 AT-SPI 注册前退出，退出码={process.returncode}"
             )
-        try:
-            return tree.root.application(
-                os.environ.get("LDDC_LINUX_ACCESSIBLE_APP_NAME", "lddc")
+        for application in tree.root.children:
+            observed_applications.add(
+                f"{getattr(application, 'name', '')!r}/"
+                f"{getattr(application, 'roleName', '')!r}"
             )
-        except BaseException as error:
-            last_error = error
-            time.sleep(0.25)
-    raise TimeoutError(f"等待 LDDC AT-SPI 应用节点超时: {last_error}")
+            try:
+                application.find_child(GenericPredicate(identifier=NAV_OPEN_LYRICS))
+                return application
+            except BaseException as error:
+                last_error = error
+        time.sleep(0.25)
+    observed = ", ".join(sorted(observed_applications)) or "<none>"
+    raise TimeoutError(
+        f"等待包含 {NAV_OPEN_LYRICS} 的 AT-SPI 应用节点超时: "
+        f"applications={observed}; lastError={last_error}"
+    )
 
 
 def _run_reported(

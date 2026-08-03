@@ -305,6 +305,13 @@ def failures() -> list[str]:
             problems.append("macOS UI tests 必须禁用并行执行")
     except ET.ParseError as error:
         problems.append(f"macOS UI scheme XML 无效: {error}")
+    macos_release_entitlements = (
+        ROOT / "lddc/macos/Runner/Release.entitlements"
+    ).read_text(encoding="utf-8")
+    if "com.apple.security.network.server" not in macos_release_entitlements:
+        problems.append("macOS Release 缺少桌面歌词 loopback 服务监听权限")
+    if "com.apple.security.cs.allow-jit" in macos_release_entitlements:
+        problems.append("macOS Release 禁止携带 Debug JIT 权限")
 
     windows_project = (
         ROOT / "lddc/windows/RunnerPlatformTests/RunnerPlatformTests.csproj"
@@ -479,6 +486,9 @@ def failures() -> list[str]:
         "StartsWith($sandboxParent",
         "Remove-Item -LiteralPath $sandboxRoot -Recurse -Force",
         "$process.Kill($true)",
+        "lddc/build/production_e2e/windows/lddc.exe",
+        "lddc/build/production_e2e/macos/LDDC.app/Contents/MacOS/LDDC",
+        "lddc/build/production_e2e/linux/lddc",
     ):
         if marker not in process_runner:
             problems.append(f"桌面进程 runner 缺少有界执行或清理约束: {marker}")
@@ -508,6 +518,12 @@ def failures() -> list[str]:
         "run_macos_platform_tests.ps1",
         "run_linux_platform_tests.sh",
         "run_desktop_process_e2e.ps1",
+        "Snapshot Windows production application",
+        "Snapshot macOS production application",
+        "Snapshot Linux production application",
+        "-AppExe lddc/build/production_e2e/windows/lddc.exe",
+        "-AppExe lddc/build/production_e2e/macos/LDDC.app/Contents/MacOS/LDDC",
+        "-AppExe lddc/build/production_e2e/linux/lddc",
         "run_platform_media_resource.ps1",
         "Run iOS native unit tests",
         "-scheme Runner",

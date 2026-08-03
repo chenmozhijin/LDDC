@@ -45,15 +45,17 @@ void main() {
       });
 
       await reporter.runStep('change_language_through_settings', () async {
-        await tester.tap(
-          find.byKey(const ValueKey<String>('settings_anchor_app')),
+        await _openSettingsSection(
+          tester,
+          sectionName: 'app',
+          target: find.byKey(
+            const ValueKey<String>('settings_app_language_dropdown'),
+          ),
         );
-        await pumpForInteraction(tester);
         final Finder languageDropdown = find.byKey(
           const ValueKey<String>('settings_app_language_dropdown'),
         );
-        await tester.ensureVisible(languageDropdown);
-        await tester.tap(languageDropdown);
+        await tapVisible(tester, languageDropdown, reason: '等待应用语言下拉框可点击');
         await pumpForMenuOrRoute(tester);
         final Finder languageMenuItem = find
             .byWidgetPredicate(
@@ -87,10 +89,13 @@ void main() {
       await reporter.runStep(
         'open_association_manager_from_settings',
         () async {
-          await tester.tap(
-            find.byKey(const ValueKey<String>('settings_anchor_tools')),
+          await _openSettingsSection(
+            tester,
+            sectionName: 'tools',
+            target: find.byKey(
+              const ValueKey<String>('settings_tools_open_association_manager'),
+            ),
           );
-          await pumpForInteraction(tester);
           final Finder associationManagerEntry = find.byKey(
             const ValueKey<String>('settings_tools_open_association_manager'),
           );
@@ -175,4 +180,34 @@ void main() {
       );
     });
   });
+}
+
+Future<void> _openSettingsSection(
+  WidgetTester tester, {
+  required String sectionName,
+  required Finder target,
+}) async {
+  final Finder anchor = find.byKey(
+    ValueKey<String>('settings_anchor_$sectionName'),
+  );
+  final Finder compactEntry = find.byKey(
+    ValueKey<String>('settings_compact_entry_$sectionName'),
+  );
+  if (anchor.evaluate().isEmpty && compactEntry.evaluate().isEmpty) {
+    final Finder compactBack = find.byKey(
+      const ValueKey<String>('settings_compact_back'),
+    );
+    await tapVisible(tester, compactBack, reason: '等待返回紧凑设置分区列表');
+  }
+  if (anchor.evaluate().length == 1) {
+    await tapVisible(tester, anchor, reason: '等待设置分区 $sectionName 锚点可点击');
+  } else {
+    await tapVisible(tester, compactEntry, reason: '等待紧凑设置分区 $sectionName 可点击');
+  }
+  await pumpUntil(
+    tester,
+    () => target.evaluate().length == 1,
+    timeout: const Duration(seconds: 5),
+    reason: '等待设置分区 $sectionName 内容出现',
+  );
 }

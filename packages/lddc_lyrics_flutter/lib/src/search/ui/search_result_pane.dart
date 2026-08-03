@@ -593,6 +593,7 @@ class _SearchResultActionStrip extends StatelessWidget {
         ),
       if (!isExpanded)
         IconButton.filledTonal(
+          key: const ValueKey<String>('search_result_open_preview_button'),
           onPressed:
               state.currentLyrics != null ||
                   state.previewPhase == SearchPreviewPhase.loading

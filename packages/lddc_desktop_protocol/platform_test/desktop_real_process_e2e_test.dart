@@ -11,31 +11,42 @@ void main() {
     final _ProcessE2eEnvironment environment =
         _ProcessE2eEnvironment.fromPlatform();
     final _ProcessEvidence evidence = _ProcessEvidence(environment);
-    Process? primary;
-    Future<void>? primaryStdout;
-    Future<void>? primaryStderr;
+    final List<Process> primaryProcesses = <Process>[];
+    final List<Future<void>> logDrains = <Future<void>>[];
     Socket? socket;
     _SocketFrameReader? reader;
     Object? failure;
     StackTrace? failureStack;
+    int finalChildProcessCount = 0;
     try {
-      primary = await Process.start(
+      final Process hiddenPrimary = await Process.start(
         environment.executable,
         const <String>['--not-show'],
         workingDirectory: environment.workingDirectory,
         environment: environment.appEnvironment,
         runInShell: false,
       );
-      await environment.pidFile.writeAsString('${primary.pid}');
-      primaryStdout = _drainBounded(
-        primary.stdout,
-        environment.logDirectory.file('primary-stdout.log'),
-      );
-      primaryStderr = _drainBounded(
-        primary.stderr,
-        environment.logDirectory.file('primary-stderr.log'),
-      );
+      primaryProcesses.add(hiddenPrimary);
+      await environment.pidFile.writeAsString('${hiddenPrimary.pid}');
+      logDrains
+        ..add(
+          _drainBounded(
+            hiddenPrimary.stdout,
+            environment.logDirectory.file('hidden-primary-stdout.log'),
+          ),
+        )
+        ..add(
+          _drainBounded(
+            hiddenPrimary.stderr,
+            environment.logDirectory.file('hidden-primary-stderr.log'),
+          ),
+        );
       evidence.add('desktopProcess', 'hidden_production_process_started');
+
+      // info.json 在 claim mutex/Unix socket 之前写入。先等待生产 bootstrap
+      // 到达该明确里程碑，再留出一个短轮询周期完成 claim；若直接启动端口 CLI，
+      // CLI 会把“首进程尚未 claim”误判为无服务并额外拉起后台主进程。
+      await _waitForPrimaryBootstrap(hiddenPrimary, environment.infoFile);
 
       final _ProcessResult portResult = await _runBoundedProcess(
         environment.executable,
@@ -48,16 +59,6 @@ void main() {
       final int port = _parseServicePort(portResult);
       expect(port, inInclusiveRange(1, 65535));
       evidence.add('desktopProcess', 'service_port_cli_resolved_primary');
-
-      final _ProcessResult secondaryResult = await _runBoundedProcess(
-        environment.executable,
-        const <String>['--not-show'],
-        workingDirectory: environment.workingDirectory,
-        environment: environment.appEnvironment,
-        timeout: const Duration(seconds: 10),
-      );
-      expect(secondaryResult.exitCode, 0, reason: secondaryResult.stderr);
-      evidence.add('desktopProcess', 'second_instance_forwarded_and_exited');
 
       socket = await Socket.connect(
         InternetAddress.loopbackIPv4,
@@ -126,49 +127,100 @@ void main() {
       reader = null;
       socket = null;
 
-      final int primaryExitCode = await primary.exitCode.timeout(
+      final int hiddenPrimaryExitCode = await hiddenPrimary.exitCode.timeout(
         const Duration(seconds: 15),
       );
-      expect(primaryExitCode, 0);
-      await Future.wait(<Future<void>>[primaryStdout, primaryStderr]);
+      expect(hiddenPrimaryExitCode, 0);
       evidence.add('nativeChannels', 'instance_deleted');
       evidence.add(
         'desktopProcess',
         'hidden_service_exited_after_last_instance',
       );
-      evidence.add('resourceCleanup', 'process_socket_and_instance_released');
+
+      // 普通第二实例会把隐藏主窗口显示出来，因此不能再期待它在删除歌词实例后
+      // 自动退出。使用新的隐藏主进程单独验证 show 转发，避免把互相冲突的窗口
+      // 所有权和隐藏服务退出语义塞进同一个生命周期。
+      if (await environment.infoFile.exists()) {
+        await environment.infoFile.delete();
+      }
+      final Process forwardingPrimary = await Process.start(
+        environment.executable,
+        const <String>['--not-show'],
+        workingDirectory: environment.workingDirectory,
+        environment: environment.appEnvironment,
+        runInShell: false,
+      );
+      primaryProcesses.add(forwardingPrimary);
+      await environment.pidFile.writeAsString('${forwardingPrimary.pid}');
+      logDrains
+        ..add(
+          _drainBounded(
+            forwardingPrimary.stdout,
+            environment.logDirectory.file('forwarding-primary-stdout.log'),
+          ),
+        )
+        ..add(
+          _drainBounded(
+            forwardingPrimary.stderr,
+            environment.logDirectory.file('forwarding-primary-stderr.log'),
+          ),
+        );
+      await _waitForPrimaryBootstrap(forwardingPrimary, environment.infoFile);
+
+      final _ProcessResult secondaryResult = await _runBoundedProcess(
+        environment.executable,
+        const <String>[],
+        workingDirectory: environment.workingDirectory,
+        environment: environment.appEnvironment,
+        timeout: const Duration(seconds: 10),
+      );
+      expect(secondaryResult.exitCode, 0, reason: secondaryResult.stderr);
+      expect(
+        await _isProcessAlive(forwardingPrimary),
+        isTrue,
+        reason: '普通第二实例转发 show 后，持有可见主窗口的生产进程应继续运行',
+      );
+      evidence.add('desktopProcess', 'second_instance_forwarded_and_exited');
     } on Object catch (error, stackTrace) {
       failure = error;
       failureStack = stackTrace;
     } finally {
       await reader?.dispose();
       socket?.destroy();
-      if (primary != null && await _isProcessAlive(primary)) {
-        primary.kill();
-        await primary.exitCode.timeout(
-          const Duration(seconds: 5),
-          onTimeout: () => -1,
-        );
+      for (final Process process in primaryProcesses) {
+        if (await _isProcessAlive(process)) {
+          process.kill();
+          await process.exitCode.timeout(const Duration(seconds: 5));
+        }
       }
       try {
-        await Future.wait(<Future<void>>[
-          ?primaryStdout,
-          ?primaryStderr,
-        ]).timeout(const Duration(seconds: 5));
+        await Future.wait(logDrains).timeout(const Duration(seconds: 5));
       } on Object catch (error, stackTrace) {
         // 日志管道异常也必须进入同一份失败 evidence，不能阻断后续 PID 文件清理。
         failure ??= error;
         failureStack ??= stackTrace;
       }
+      finalChildProcessCount = 0;
+      for (final Process process in primaryProcesses) {
+        if (await _isProcessAlive(process)) {
+          finalChildProcessCount += 1;
+        }
+      }
+      if (finalChildProcessCount == 0) {
+        evidence.add('resourceCleanup', 'process_socket_and_instance_released');
+      } else {
+        failure ??= StateError('桌面进程 E2E 清理后仍有子进程存活');
+        failureStack ??= StackTrace.current;
+      }
       if (environment.pidFile.existsSync()) {
         environment.pidFile.deleteSync();
       }
-      await evidence.write(failure);
+      await evidence.write(failure, finalChildProcessCount);
     }
     if (failure != null) {
       Error.throwWithStackTrace(failure, failureStack ?? StackTrace.current);
     }
-  }, timeout: const Timeout(Duration(seconds: 60)));
+  }, timeout: const Timeout(Duration(seconds: 80)));
 }
 
 final class _ProcessE2eEnvironment {
@@ -178,6 +230,7 @@ final class _ProcessE2eEnvironment {
     required this.runId,
     required this.platform,
     required this.evidenceFile,
+    required this.infoFile,
     required this.pidFile,
     required this.logDirectory,
     required this.appEnvironment,
@@ -188,6 +241,7 @@ final class _ProcessE2eEnvironment {
   final String runId;
   final String platform;
   final File evidenceFile;
+  final File infoFile;
   final File pidFile;
   final Directory logDirectory;
   final Map<String, String> appEnvironment;
@@ -212,6 +266,7 @@ final class _ProcessE2eEnvironment {
       evidenceFile: File(
         '${evidenceDirectory.path}${Platform.pathSeparator}desktop_real_process.json',
       ),
+      infoFile: File(_requiredEnvironment('LDDC_PROCESS_E2E_INFO_FILE')),
       pidFile: File(_requiredEnvironment('LDDC_PROCESS_E2E_PID_FILE')),
       logDirectory: logDirectory,
       appEnvironment: <String, String>{
@@ -245,8 +300,7 @@ final class _ProcessEvidence {
     );
   }
 
-  Future<void> write(Object? failure) async {
-    final bool cleaned = _actions['resourceCleanup']?.isNotEmpty ?? false;
+  Future<void> write(Object? failure, int finalChildProcessCount) async {
     final Map<String, Object?> payload = <String, Object?>{
       'runId': environment.runId,
       'scenario': 'desktop_real_process',
@@ -263,7 +317,7 @@ final class _ProcessEvidence {
       'capabilityEvidence': _actions,
       'resources': <String, Object?>{
         'baseline': <String, Object?>{'childProcessCount': 0},
-        'final': <String, Object?>{'childProcessCount': cleaned ? 0 : 1},
+        'final': <String, Object?>{'childProcessCount': finalChildProcessCount},
         'thresholds': <String, Object?>{'childProcessCount': 0},
       },
       'artifacts': <Object?>[],
@@ -400,6 +454,21 @@ Future<bool> _isProcessAlive(Process process) async {
   } on TimeoutException {
     return true;
   }
+}
+
+Future<void> _waitForPrimaryBootstrap(Process process, File infoFile) async {
+  final DateTime deadline = DateTime.now().add(const Duration(seconds: 15));
+  while (DateTime.now().isBefore(deadline)) {
+    if (!await _isProcessAlive(process)) {
+      throw StateError('隐藏主进程在服务 bootstrap 完成前退出');
+    }
+    if (await infoFile.exists()) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+  throw TimeoutException('等待隐藏主进程生成 info.json 超时');
 }
 
 String _boundedText(String value) {

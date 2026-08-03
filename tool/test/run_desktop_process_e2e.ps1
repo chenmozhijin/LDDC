@@ -15,9 +15,12 @@ $appRoot = Join-Path $repoRoot "lddc"
 $testRoot = Join-Path $repoRoot "packages/lddc_desktop_protocol"
 if ([string]::IsNullOrWhiteSpace($AppExe)) {
   $AppExe = switch ($Platform) {
-    "windows" { "lddc/build/windows/x64/runner/Debug/lddc.exe" }
-    "macos" { "lddc/build/macos/Build/Products/Debug/LDDC.app/Contents/MacOS/LDDC" }
-    "linux" { "lddc/build/linux/x64/debug/bundle/lddc" }
+    # Flutter 会在不同 target 之间复用桌面构建目录，Debug 和 Release 都可能
+    # 被测试入口覆盖。真实进程 E2E 只接受 Release 构建后立即保存的生产快照，
+    # 避免把 resident/performance 测试程序误判为正式应用。
+    "windows" { "lddc/build/production_e2e/windows/lddc.exe" }
+    "macos" { "lddc/build/production_e2e/macos/LDDC.app/Contents/MacOS/LDDC" }
+    "linux" { "lddc/build/production_e2e/linux/lddc" }
   }
 }
 if (-not [IO.Path]::IsPathRooted($AppExe)) {
@@ -62,6 +65,7 @@ $environmentNames = @(
   "LDDC_IT_RUN_ID", "LDDC_IT_PLATFORM",
   "LDDC_PROCESS_E2E_APP_EXE", "LDDC_NATIVE_EVIDENCE_DIR",
   "LDDC_NATIVE_LOG_DIR", "LDDC_PROCESS_E2E_PID_FILE",
+  "LDDC_PROCESS_E2E_INFO_FILE",
   "LDDC_PROCESS_E2E_APPDATA", "LDDC_PROCESS_E2E_LOCALAPPDATA",
   "LDDC_PROCESS_E2E_HOME", "LDDC_PROCESS_E2E_XDG_CONFIG_HOME",
   "LDDC_PROCESS_E2E_XDG_CACHE_HOME", "LDDC_PROCESS_E2E_XDG_DATA_HOME",
@@ -93,6 +97,11 @@ $env:LDDC_PROCESS_E2E_APP_EXE = (Resolve-Path -LiteralPath $AppExe).Path
 $env:LDDC_NATIVE_EVIDENCE_DIR = $evidenceDir
 $env:LDDC_NATIVE_LOG_DIR = $diagnosticsDir
 $env:LDDC_PROCESS_E2E_PID_FILE = Join-Path $runRoot "primary.pid"
+$env:LDDC_PROCESS_E2E_INFO_FILE = switch ($Platform) {
+  "windows" { Join-Path $env:LDDC_PROCESS_E2E_LOCALAPPDATA "LDDC/info.json" }
+  "linux" { Join-Path $env:LDDC_PROCESS_E2E_XDG_DATA_HOME "LDDC/info.json" }
+  "macos" { Join-Path $env:LDDC_PROCESS_E2E_HOME "Library/Application Support/LDDC/info.json" }
+}
 $runStartedAt = Get-Date
 
 $rawPath = Join-Path $rawDir "desktop_real_process.jsonl"

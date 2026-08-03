@@ -32,6 +32,21 @@ jobs:
         continue-on-error: true
         working-directory: lddc
         run: flutter build windows --release
+      - name: Snapshot Windows production application
+        id: production_e2e_artifact
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $source = 'lddc/build/windows/x64/runner/Release'
+          $destination = 'lddc/build/production_e2e/windows'
+          if (Test-Path -LiteralPath $destination) {
+            Remove-Item -LiteralPath $destination -Recurse -Force
+          }
+          Copy-Item -LiteralPath $source -Destination $destination -Recurse
+          if (-not (Test-Path -LiteralPath "$destination/lddc.exe" -PathType Leaf)) {
+            throw 'Windows production snapshot is incomplete'
+          }
       - name: Build Windows debug application for native automation
         id: debug_build
         continue-on-error: true
@@ -55,10 +70,12 @@ jobs:
         run: ./tool/test/run_windows_platform_tests.ps1
       - name: Run real desktop process and service tests
         id: desktop_process
-        if: always() && steps.debug_build.outcome == 'success'
+        if: always() && steps.production_e2e_artifact.outcome == 'success'
         continue-on-error: true
         shell: pwsh
-        run: ./tool/test/run_desktop_process_e2e.ps1 -Platform windows
+        run: >-
+          ./tool/test/run_desktop_process_e2e.ps1 -Platform windows
+          -AppExe lddc/build/production_e2e/windows/lddc.exe
       - name: Run production media resource checks
         id: media_resource
         continue-on-error: true
@@ -78,6 +95,7 @@ jobs:
         run: |
           $outcomes = @(
             '${{ steps.release_build.outcome }}',
+            '${{ steps.production_e2e_artifact.outcome }}',
             '${{ steps.debug_build.outcome }}',
             '${{ steps.offline.outcome }}',
             '${{ steps.native_channel.outcome }}',
@@ -107,6 +125,16 @@ jobs:
         continue-on-error: true
         working-directory: lddc
         run: flutter build macos --release
+      - name: Snapshot macOS production application
+        id: production_e2e_artifact
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          destination='lddc/build/production_e2e/macos'
+          rm -rf "$destination"
+          mkdir -p "$destination"
+          cp -R 'lddc/build/macos/Build/Products/Release/LDDC.app' "$destination/LDDC.app"
+          test -x "$destination/LDDC.app/Contents/MacOS/LDDC"
       - name: Build macOS debug application for native automation
         id: debug_build
         continue-on-error: true
@@ -130,10 +158,12 @@ jobs:
         run: ./tool/test/run_macos_platform_tests.ps1
       - name: Run real desktop process and service tests
         id: desktop_process
-        if: always() && steps.debug_build.outcome == 'success'
+        if: always() && steps.production_e2e_artifact.outcome == 'success'
         continue-on-error: true
         shell: pwsh
-        run: ./tool/test/run_desktop_process_e2e.ps1 -Platform macos
+        run: >-
+          ./tool/test/run_desktop_process_e2e.ps1 -Platform macos
+          -AppExe lddc/build/production_e2e/macos/LDDC.app/Contents/MacOS/LDDC
       - name: Run production media resource checks
         id: media_resource
         continue-on-error: true
@@ -152,6 +182,7 @@ jobs:
         run: |
           outcomes=(
             '${{ steps.release_build.outcome }}'
+            '${{ steps.production_e2e_artifact.outcome }}'
             '${{ steps.debug_build.outcome }}'
             '${{ steps.offline.outcome }}'
             '${{ steps.native_channel.outcome }}'
@@ -189,6 +220,15 @@ jobs:
         continue-on-error: true
         working-directory: lddc
         run: flutter build linux --release
+      - name: Snapshot Linux production application
+        id: production_e2e_artifact
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          destination='lddc/build/production_e2e/linux'
+          rm -rf "$destination"
+          cp -a 'lddc/build/linux/x64/release/bundle' "$destination"
+          test -x "$destination/lddc"
       - name: Build Linux debug application for native automation
         id: debug_build
         continue-on-error: true
@@ -218,11 +258,12 @@ jobs:
           bash tool/test/run_linux_platform_tests.sh
       - name: Run real desktop process and service tests
         id: desktop_process
-        if: always() && steps.debug_build.outcome == 'success'
+        if: always() && steps.production_e2e_artifact.outcome == 'success'
         continue-on-error: true
         run: >-
           dbus-run-session -- xvfb-run -a --server-args="-screen 0 1600x1000x24"
           pwsh -NoProfile -File tool/test/run_desktop_process_e2e.ps1 -Platform linux
+          -AppExe lddc/build/production_e2e/linux/lddc
       - name: Run production media resource checks
         id: media_resource
         continue-on-error: true
@@ -241,6 +282,7 @@ jobs:
         run: |
           outcomes=(
             '${{ steps.release_build.outcome }}'
+            '${{ steps.production_e2e_artifact.outcome }}'
             '${{ steps.debug_build.outcome }}'
             '${{ steps.offline.outcome }}'
             '${{ steps.native_channel.outcome }}'
@@ -273,6 +315,10 @@ jobs:
         run: |
           flutter build apk --release
           flutter build appbundle --release
+      - name: Enable KVM access for the Android emulator
+        run: |
+          test -e /dev/kvm
+          sudo chmod 0666 /dev/kvm
       - name: Run Android application, channel, and DocumentsUI validation
         id: platform_validation
         continue-on-error: true
