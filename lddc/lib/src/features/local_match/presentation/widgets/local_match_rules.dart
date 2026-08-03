@@ -760,42 +760,27 @@ class LocalMatchThresholdField extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
                   const SizedBox(height: 8),
-                  InkWell(
+                  CheckboxListTile(
                     key: const ValueKey<String>(
                       'local_match_skip_existing_checkbox',
                     ),
-                    borderRadius: BorderRadius.circular(8),
-                    onTap: state.isBusy || skipConfigBlocked
+                    value: state.skipExistingLyrics,
+                    onChanged: state.isBusy || skipConfigBlocked
                         ? null
-                        : () => controller.updateSkipExistingLyrics(
-                            !state.skipExistingLyrics,
+                        : (bool? value) => controller.updateSkipExistingLyrics(
+                            value ?? false,
                           ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 4,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Checkbox(
-                            value: state.skipExistingLyrics,
-                            onChanged: state.isBusy || skipConfigBlocked
-                                ? null
-                                : (bool? value) => controller
-                                      .updateSkipExistingLyrics(value ?? false),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              state.skipExistingLyrics
-                                  ? context.l10n.commonEnabled
-                                  : context.l10n.commonDisabledByDefault,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ),
-                        ],
-                      ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                    dense: true,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    title: Text(
+                      state.skipExistingLyrics
+                          ? context.l10n.commonEnabled
+                          : context.l10n.commonDisabledByDefault,
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
                 ],

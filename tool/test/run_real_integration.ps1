@@ -83,26 +83,25 @@ function Copy-MobileScenarioReport {
   param(
     [Parameter(Mandatory = $true)][string]$Scenario,
     [Parameter(Mandatory = $true)][string]$ContainerReportDir,
-    [Parameter(Mandatory = $true)][string]$Destination
+    [Parameter(Mandatory = $true)][string]$Destination,
+    [Parameter(Mandatory = $true)][string]$DiagnosticPath
   )
 
   if ($Platform -eq "android") {
     $relativePath = "cache/$ContainerReportDir/$Scenario.json" -replace '\\', '/'
-    $jsonLines = & adb -s $Device exec-out run-as com.cmzj.lddc cat $relativePath
-    if ($LASTEXITCODE -ne 0) {
-      throw "无法从 Android 应用沙箱拉回 $Scenario.json"
+    $jsonLines = & adb -s $Device exec-out run-as com.cmzj.lddc cat $relativePath 2>&1
+    $pullExitCode = $LASTEXITCODE
+    $content = ($jsonLines -join [Environment]::NewLine).Trim()
+    if ($pullExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($content)) {
+      [IO.File]::WriteAllText($DiagnosticPath, $content, [Text.UTF8Encoding]::new($false))
+      throw "无法从 Android 应用沙箱拉回 $Scenario.json，adb exit=$pullExitCode"
     }
-    [IO.File]::WriteAllText(
-      $Destination,
-      ($jsonLines -join [Environment]::NewLine),
-      [Text.UTF8Encoding]::new($false)
-    )
-    return
-  }
-
-  if ($Platform -eq "ios") {
-    $container = ((& xcrun simctl get_app_container $Device com.cmzj.lddc data) -join "").Trim()
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($container)) {
+  } elseif ($Platform -eq "ios") {
+    $containerOutput = & xcrun simctl get_app_container $Device com.cmzj.lddc data 2>&1
+    $containerExitCode = $LASTEXITCODE
+    $container = (($containerOutput) -join "").Trim()
+    if ($containerExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($container)) {
+      [IO.File]::WriteAllText($DiagnosticPath, ($containerOutput -join [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
       throw "无法解析 iOS Simulator 应用数据容器"
     }
     $source = Join-Path $container "tmp"
@@ -115,8 +114,23 @@ function Copy-MobileScenarioReport {
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
       throw "iOS 应用沙箱没有生成 $Scenario.json"
     }
-    Copy-Item -LiteralPath $source -Destination $Destination -Force
+    $content = [IO.File]::ReadAllText($source)
   }
+
+  try {
+    $payload = $content | ConvertFrom-Json -AsHashtable
+  } catch {
+    [IO.File]::WriteAllText($DiagnosticPath, $content, [Text.UTF8Encoding]::new($false))
+    throw "移动端 $Scenario 场景报告不是有效 JSON"
+  }
+  if ($payload.schemaVersion -ne 2 -or
+      $payload.runId -ne $runId -or
+      $payload.scenario -ne $Scenario -or
+      $payload.platform -ne $Platform) {
+    [IO.File]::WriteAllText($DiagnosticPath, $content, [Text.UTF8Encoding]::new($false))
+    throw "移动端 $Scenario 场景报告身份或 schema 不匹配"
+  }
+  [IO.File]::WriteAllText($Destination, $content, [Text.UTF8Encoding]::new($false))
 }
 
 # ValidateOnly 也解析每个目标的矩阵项，防止 workflow 通过语法检查却在真实设备上
@@ -152,6 +166,7 @@ Write-Host "Integration run id: $runId"
 Write-Host "Integration report directory: $runRoot"
 Write-Host "Integration targets: $($Targets -join ', ')"
 
+$overallExitCode = 0
 Push-Location $appRoot
 try {
   foreach ($target in $Targets) {
@@ -161,6 +176,7 @@ try {
     $jsonPath = Join-Path $eventReportDir "$scenarioName.jsonl"
     $junitPath = Join-Path $junitReportDir "$scenarioName.xml"
     $scenarioPath = Join-Path $scenarioReportDir "$scenarioName.json"
+    $diagnosticPath = Join-Path $scenarioReportDir "$scenarioName.report-pull.txt"
     $processReportDir = if ($Platform -in @("android", "ios")) {
       $containerReportDir
     } else {
@@ -182,6 +198,11 @@ try {
       "--dart-define=LDDC_IT_REQUEST_RETRY_COUNT=$RequestRetryCount",
       "--dart-define=LDDC_IT_STEP_TIMEOUT_MS=$StepTimeoutMs"
     )
+    if ($Platform -in @("android", "ios")) {
+      # Flutter 默认在测试结束时卸载移动端应用；报告位于应用沙箱，必须先回收
+      # 并完成校验，再由本 runner 的 finally 显式卸载。
+      $flutterArguments += "--no-uninstall"
+    }
 
     Write-Host "Running '$target' with profile '$Profile' on device '$Device' ($Platform)"
     $infrastructureAttempt = 0
@@ -204,14 +225,18 @@ try {
       Write-Warning "Target '$target' 在 testStart 前失败，执行唯一一次基础设施重试"
     } while ($true)
 
+    $collectionExitCode = 0
     if ($Platform -in @("android", "ios")) {
-      Copy-MobileScenarioReport `
-        -Scenario $scenarioName `
-        -ContainerReportDir $containerReportDir `
-        -Destination $scenarioPath
-    }
-    if (-not (Test-Path -LiteralPath $scenarioPath -PathType Leaf)) {
-      throw "Target '$target' 没有生成场景 JSON 报告"
+      try {
+        Copy-MobileScenarioReport `
+          -Scenario $scenarioName `
+          -ContainerReportDir $containerReportDir `
+          -Destination $scenarioPath `
+          -DiagnosticPath $diagnosticPath
+      } catch {
+        $collectionExitCode = 1
+        Write-Error -ErrorAction Continue $_
+      }
     }
 
     & python $normalizer `
@@ -219,18 +244,22 @@ try {
       --raw-report $jsonPath `
       --raw-report-type flutter-jsonl `
       --framework integration_test `
-      --exit-code $testExitCode
+      --exit-code $(if ($collectionExitCode -ne 0 -and $testExitCode -eq 0) { 1 } else { $testExitCode }) `
+      --run-id $runId `
+      --scenario $scenarioName `
+      --profile $Profile `
+      --platform $Platform `
+      --failure-junit $junitPath
     $normalizeExitCode = $LASTEXITCODE
-    & python $converter --input $jsonPath --output $junitPath
-    $convertExitCode = $LASTEXITCODE
-    if ($normalizeExitCode -ne 0) {
-      exit $normalizeExitCode
+    $convertExitCode = 0
+    if ($normalizeExitCode -eq 0) {
+      & python $converter --input $jsonPath --output $junitPath
+      $convertExitCode = $LASTEXITCODE
     }
-    if ($convertExitCode -ne 0) {
-      exit $convertExitCode
-    }
-    if ($testExitCode -ne 0) {
-      exit $testExitCode
+    if ($testExitCode -ne 0 -or $collectionExitCode -ne 0 -or
+        $normalizeExitCode -ne 0 -or $convertExitCode -ne 0) {
+      $overallExitCode = 1
+      Write-Warning "Target '$target' 失败；继续执行其余独立场景以收集完整证据"
     }
   }
 
@@ -242,10 +271,16 @@ try {
     --run-id $runId `
     --matrix $matrix
   if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
+    $overallExitCode = 1
   }
 } finally {
   Pop-Location
+  if ($Platform -eq "android") {
+    & adb -s $Device uninstall com.cmzj.lddc 2>&1 | Write-Host
+  } elseif ($Platform -eq "ios") {
+    & xcrun simctl uninstall $Device com.cmzj.lddc 2>&1 | Write-Host
+  }
 }
 
 Write-Host "Integration reports: $runRoot"
+exit $overallExitCode

@@ -17,6 +17,8 @@ namespace {
 
 constexpr int kPreferredMainWindowContentWidth = 1280;
 constexpr int kPreferredMainWindowContentHeight = 720;
+constexpr int kMinimumMainWindowContentWidth = 960;
+constexpr int kMinimumMainWindowContentHeight = 540;
 
 struct DesktopContentSize {
   int width;
@@ -32,9 +34,9 @@ DesktopContentSize FitDesktopContentToWorkArea(int available_width,
        static_cast<double>(std::max(available_height, 1)) /
            kPreferredMainWindowContentHeight});
   return DesktopContentSize{
-      std::max(1, static_cast<int>(
+      std::max(kMinimumMainWindowContentWidth, static_cast<int>(
                       std::floor(kPreferredMainWindowContentWidth * scale))),
-      std::max(1, static_cast<int>(std::floor(
+      std::max(kMinimumMainWindowContentHeight, static_cast<int>(std::floor(
                       kPreferredMainWindowContentHeight * scale)))};
 }
 
@@ -190,6 +192,14 @@ static void my_application_activate(GApplication* application) {
   // 显式加上其自然高度，避免 GNOME 下的 Flutter 内容区比 X11 少一条标题栏。
   gtk_window_set_default_size(window, initial_content.width,
                               initial_content.height + header_bar_height);
+  GdkGeometry minimum_geometry = {};
+  minimum_geometry.min_width = kMinimumMainWindowContentWidth;
+  minimum_geometry.min_height =
+      kMinimumMainWindowContentHeight + header_bar_height;
+  // 首帧后只解除 Flutter view 的启动 size request；GtkWindow 的最小尺寸提示
+  // 必须持续生效，否则窗口管理器仍可把内容区压到页面不支持的尺寸。
+  gtk_window_set_geometry_hints(window, nullptr, &minimum_geometry,
+                                GDK_HINT_MIN_SIZE);
 #ifdef GDK_WINDOWING_X11
   if (GDK_IS_X11_DISPLAY(gdk_display_get_default())) {
     gtk_window_set_position(window, GTK_WIN_POS_CENTER);

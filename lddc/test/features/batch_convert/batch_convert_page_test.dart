@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -560,6 +561,85 @@ void main() {
       _expectBatchEmptyStateCentered(tester);
     });
 
+    testWidgets('紧凑布局在支持尺寸和文本缩放下可滚动访问全部控件', (WidgetTester tester) async {
+      const List<Size> viewports = <Size>[
+        Size(360, 800),
+        Size(411, 914),
+        Size(844, 390),
+        Size(960, 540),
+        Size(1008, 567),
+        Size(1280, 720),
+      ];
+      const List<double> textScales = <double>[1, 1.5, 2];
+
+      for (final Size viewport in viewports) {
+        for (final double textScale in textScales) {
+          await _setViewport(tester, viewport);
+          final _FakeBatchConvertInputPicker picker =
+              _FakeBatchConvertInputPicker(
+                files: const <PickedFileHandle>[
+                  PickedFileHandle(name: 'one.lrc', path: r'D:\lyrics\one.lrc'),
+                  PickedFileHandle(name: 'two.srt', path: r'D:\lyrics\two.srt'),
+                ],
+                saveRootDirectory: r'D:\exports',
+              );
+          final ProviderContainer container = _createContainer(picker: picker);
+          await container
+              .read(batchConvertPageControllerProvider.notifier)
+              .addFiles();
+          await container
+              .read(batchConvertPageControllerProvider.notifier)
+              .selectSaveRootDirectory();
+
+          await tester.pumpWidget(
+            _buildTestApp(container, textScaleFactor: textScale),
+          );
+          await tester.pump(const Duration(milliseconds: 200));
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: 'viewport=$viewport textScale=$textScale 折叠态发生布局异常',
+          );
+
+          if (viewport.width < 1080) {
+            final Finder controlsToggle = find.byKey(
+              const ValueKey<String>('batch_convert_compact_controls_toggle'),
+            );
+            await _scrollUntilHitTestable(tester, target: controlsToggle);
+            expect(_targetReceivesHit(tester, controlsToggle), isTrue);
+            await tester.tapAt(tester.getCenter(controlsToggle));
+            await tester.pump(const Duration(milliseconds: 300));
+            final Object? expandedException = tester.takeException();
+            expect(
+              expandedException,
+              isNull,
+              reason: 'viewport=$viewport textScale=$textScale 展开态发生布局异常',
+            );
+            final Finder saveRoot = find.byKey(
+              const ValueKey<String>('batch_convert_select_save_root'),
+            );
+            await Scrollable.ensureVisible(
+              tester.element(saveRoot),
+              alignment: 0.5,
+              duration: Duration.zero,
+            );
+            await _scrollUntilHitTestable(tester, target: saveRoot);
+            expect(
+              _targetReceivesHit(tester, saveRoot),
+              isTrue,
+              reason: 'viewport=$viewport textScale=$textScale 保存目录按钮不可点击',
+            );
+            await tester.tapAt(tester.getCenter(saveRoot));
+            await tester.pump(const Duration(milliseconds: 120));
+            expect(picker.saveRootPickCount, 2);
+          }
+
+          container.dispose();
+          await tester.pumpWidget(const SizedBox.shrink());
+        }
+      }
+    });
+
     testWidgets('输出路径摘要使用最小化中间省略并保留完整 Tooltip', (WidgetTester tester) async {
       await _setViewport(tester, const Size(1366, 1024));
       final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
@@ -750,6 +830,7 @@ ProviderContainer _createContainer({
 Widget _buildTestApp(
   ProviderContainer container, {
   Locale locale = const Locale('zh'),
+  double textScaleFactor = 1,
 }) {
   return UncontrolledProviderScope(
     container: container,
@@ -757,6 +838,12 @@ Widget _buildTestApp(
       locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (BuildContext context, Widget? child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScaleFactor)),
+        child: child!,
+      ),
       home: const Scaffold(body: BatchConvertPage()),
     ),
   );
@@ -781,6 +868,86 @@ void _expectBatchEmptyStateCentered(WidgetTester tester) {
 Future<void> _setViewport(WidgetTester tester, Size size) async {
   addTearDown(() => tester.binding.setSurfaceSize(null));
   await tester.binding.setSurfaceSize(size);
+}
+
+Future<void> _scrollUntilHitTestable(
+  WidgetTester tester, {
+  required Finder target,
+}) async {
+  final Element targetElement = tester.element(target);
+  Element? scrollableElement;
+  targetElement.visitAncestorElements((Element ancestor) {
+    if (ancestor.widget is Scrollable) {
+      scrollableElement = ancestor;
+      return false;
+    }
+    return true;
+  });
+  final Element? resolvedScrollable = scrollableElement;
+  if (resolvedScrollable == null) {
+    return;
+  }
+  final Finder scrollable = find.byElementPredicate(
+    (Element element) => identical(element, resolvedScrollable),
+  );
+  for (int attempt = 0; attempt < 20; attempt += 1) {
+    if (_targetReceivesHit(tester, target)) {
+      return;
+    }
+    final Rect targetRect = tester.getRect(target);
+    final Rect viewportRect = tester.getRect(scrollable);
+    final ScrollPosition position = tester
+        .state<ScrollableState>(scrollable)
+        .position;
+    final double nextOffset =
+        (position.pixels + targetRect.center.dy - viewportRect.center.dy).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        );
+    if ((nextOffset - position.pixels).abs() < 0.5) {
+      return;
+    }
+    position.jumpTo(nextOffset);
+    await tester.pump(const Duration(milliseconds: 120));
+  }
+}
+
+bool _targetReceivesHit(WidgetTester tester, Finder target) {
+  if (target.evaluate().length != 1) {
+    return false;
+  }
+  final Set<RenderObject> targetRenderObjects = <RenderObject>{};
+  void collectRenderObjects(Element element) {
+    final RenderObject? renderObject = element.renderObject;
+    if (renderObject != null) {
+      targetRenderObjects.add(renderObject);
+    }
+    element.visitChildElements(collectRenderObjects);
+  }
+
+  collectRenderObjects(tester.element(target));
+  final HitTestResult result = tester.hitTestOnBinding(
+    tester.getCenter(target),
+  );
+  for (final HitTestEntry entry in result.path) {
+    final Object hitTarget = entry.target;
+    if (hitTarget is! RenderObject) {
+      continue;
+    }
+    if (targetRenderObjects.contains(hitTarget)) {
+      return true;
+    }
+    for (final RenderObject targetRenderObject in targetRenderObjects) {
+      RenderObject? current = targetRenderObject.parent;
+      while (current != null) {
+        if (identical(current, hitTarget)) {
+          return true;
+        }
+        current = current.parent;
+      }
+    }
+  }
+  return false;
 }
 
 AppCapability _desktopCapability() {
@@ -837,6 +1004,7 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
   final String? saveRootDirectory;
   int filePickCount = 0;
   int directoryPickCount = 0;
+  int saveRootPickCount = 0;
 
   @override
   Future<List<PickedFileHandle>> pickLyricsFiles({
@@ -854,6 +1022,7 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
 
   @override
   Future<String?> pickSaveRootDirectory({String? initialDirectory}) async {
+    saveRootPickCount += 1;
     return saveRootDirectory;
   }
 }

@@ -86,6 +86,7 @@ class AppActionSemantics extends StatelessWidget {
     required this.label,
     required this.onTap,
     required this.child,
+    this.actionKey,
     super.key,
   });
 
@@ -93,10 +94,14 @@ class AppActionSemantics extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final Widget child;
+  final Key? actionKey;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      // 交互测试和业务代码应定位真正参与 hit test 的语义节点，不能把 key
+      // 放在被 excludeSemantics 包裹的子按钮上，否则 Flutter 会正确报告漏点。
+      key: actionKey,
       identifier: identifier,
       label: label,
       button: true,

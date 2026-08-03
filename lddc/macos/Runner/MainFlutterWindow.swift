@@ -14,6 +14,7 @@ enum DesktopDragDropPayloadBuilder {
 
 enum DesktopWindowGeometry {
   static let preferredContentSize = NSSize(width: 1280, height: 720)
+  static let minimumContentSize = NSSize(width: 960, height: 540)
 
   static func fittedContentSize(
     preferred: NSSize,
@@ -30,13 +31,16 @@ enum DesktopWindowGeometry {
       )
     )
     return NSSize(
-      width: max(1, floor(preferred.width * scale)),
-      height: max(1, floor(preferred.height * scale))
+      width: max(minimumContentSize.width, floor(preferred.width * scale)),
+      height: max(minimumContentSize.height, floor(preferred.height * scale))
     )
   }
 
   static func applyInitialBounds(to window: NSWindow) {
     let preferred = preferredContentSize
+    // contentMinSize 使用内容区语义，不包含标题栏。必须在 Flutter controller
+    // 创建前设置，避免用户缩小时先生成无效 surface 再被系统拉回。
+    window.contentMinSize = minimumContentSize
     guard let screen = window.screen ?? NSScreen.main else {
       window.setContentSize(preferred)
       return
@@ -83,17 +87,17 @@ class MainFlutterWindow: NSWindow {
     super.awakeFromNib()
   }
 
-  override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+  @objc func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
     sendDesktopDragEvent(method: "dragEnter", sender: sender, includeFiles: false)
     return .copy
   }
 
-  override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+  @objc func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
     sendDesktopDragEvent(method: "dragUpdate", sender: sender, includeFiles: false)
     return .copy
   }
 
-  override func draggingExited(_ sender: NSDraggingInfo?) {
+  @objc func draggingExited(_ sender: NSDraggingInfo?) {
     if let sender {
       sendDesktopDragEvent(method: "dragLeave", sender: sender, includeFiles: false)
     } else {
@@ -109,7 +113,7 @@ class MainFlutterWindow: NSWindow {
     }
   }
 
-  override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+  @objc func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
     sendDesktopDragEvent(method: "performDrop", sender: sender, includeFiles: true)
     return true
   }

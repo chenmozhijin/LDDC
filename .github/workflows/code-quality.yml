@@ -34,12 +34,16 @@ jobs:
         run: flutter pub get
 
       - name: Check formatting and static analysis
+        id: static_analysis
+        continue-on-error: true
         run: |
           dart format --output=none --set-exit-if-changed lddc packages examples tool
           dart analyze
           git diff --check
 
       - name: Check architecture, localization, docs, and repository hygiene
+        id: repository_quality
+        continue-on-error: true
         run: |
           dart run tool/check_modular_architecture.dart
           python lddc/tool/check_l10n_arb.py
@@ -52,6 +56,8 @@ jobs:
           python -m unittest tool.test.test_quality_tools
 
       - name: Regenerate localization and reject generated drift
+        id: localization_drift
+        continue-on-error: true
         run: |
           cd lddc
           flutter gen-l10n
@@ -59,16 +65,24 @@ jobs:
           git diff --exit-code -- lddc/lib/src/core/i18n/l10n
 
       - name: Test architecture tooling
+        id: architecture_tests
+        continue-on-error: true
         run: dart test tool/test/check_modular_architecture_test.dart
 
       - name: Test desktop IPC protocol package
+        id: desktop_protocol_tests
+        continue-on-error: true
         working-directory: packages/lddc_desktop_protocol
         run: dart test test
 
       - name: Prove replacement tests reject controlled faults
+        id: sensitivity_tests
+        continue-on-error: true
         run: python tool/verify_test_sensitivity.py --output build/test_sensitivity.json
 
       - name: Test lddc_lyrics_core with branch coverage
+        id: core_tests
+        continue-on-error: true
         working-directory: packages/lddc_lyrics_core
         run: |
           mkdir -p reports coverage
@@ -76,24 +90,35 @@ jobs:
             --file-reporter=json:reports/tests.jsonl
 
       - name: Test lddc_lyrics_runtime with branch coverage
+        id: runtime_tests
+        continue-on-error: true
         working-directory: packages/lddc_lyrics_runtime
         run: |
           mkdir -p reports coverage
           dart test --branch-coverage --coverage-path=coverage/lcov.info \
             --file-reporter=json:reports/tests.jsonl
 
-      - name: Test Flutter packages with branch coverage
+      - name: Test lyrics Flutter package with branch coverage
+        id: lyrics_flutter_tests
+        continue-on-error: true
+        working-directory: packages/lddc_lyrics_flutter
         run: |
-          cd packages/lddc_lyrics_flutter
           mkdir -p reports coverage
           flutter test test --branch-coverage --coverage-path=coverage/lcov.info \
             --file-reporter=json:reports/tests.jsonl
-          cd ../lddc_desktop_lyrics
+
+      - name: Test desktop lyrics package with branch coverage
+        id: desktop_lyrics_tests
+        continue-on-error: true
+        working-directory: packages/lddc_desktop_lyrics
+        run: |
           mkdir -p reports coverage
           flutter test test --branch-coverage --coverage-path=coverage/lcov.info \
             --file-reporter=json:reports/tests.jsonl
 
       - name: Test application with branch coverage
+        id: application_tests
+        continue-on-error: true
         working-directory: lddc
         run: |
           mkdir -p reports coverage
@@ -102,6 +127,9 @@ jobs:
             --file-reporter=json:reports/tests.jsonl
 
       - name: Convert test event streams to JUnit
+        id: junit_reports
+        if: always()
+        continue-on-error: true
         run: |
           python tool/test/json_report_to_junit.py \
             --input packages/lddc_lyrics_core/reports/tests.jsonl \
@@ -120,6 +148,9 @@ jobs:
             --output lddc/reports/tests.xml
 
       - name: Enforce package coverage thresholds
+        id: coverage_thresholds
+        if: always()
+        continue-on-error: true
         run: |
           # 当前实测值作为只升不降的首个基线；目标值记录在 tool/coverage_thresholds.json。
           python tool/check_coverage.py \
@@ -145,6 +176,9 @@ jobs:
             --threshold-config tool/coverage_thresholds.json --scope application
 
       - name: Build changed-lines diff
+        id: changed_diff
+        if: always()
+        continue-on-error: true
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
           PUSH_BASE: ${{ github.event.before }}
@@ -164,6 +198,9 @@ jobs:
           fi
 
       - name: Enforce changed-lines coverage
+        id: changed_coverage
+        if: always()
+        continue-on-error: true
         run: |
           python tool/check_coverage.py \
             --input packages/lddc_lyrics_core/coverage/lcov.info=packages/lddc_lyrics_core \
@@ -175,7 +212,7 @@ jobs:
             --threshold-config tool/coverage_thresholds.json
 
       - name: Upload failed quality diagnostics
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: code-quality-diagnostics
@@ -186,3 +223,26 @@ jobs:
             build/test_sensitivity.json
           if-no-files-found: ignore
           retention-days: 7
+      - name: Enforce required quality outcomes
+        if: always()
+        run: |
+          outcomes=(
+            '${{ steps.static_analysis.outcome }}'
+            '${{ steps.repository_quality.outcome }}'
+            '${{ steps.localization_drift.outcome }}'
+            '${{ steps.architecture_tests.outcome }}'
+            '${{ steps.desktop_protocol_tests.outcome }}'
+            '${{ steps.sensitivity_tests.outcome }}'
+            '${{ steps.core_tests.outcome }}'
+            '${{ steps.runtime_tests.outcome }}'
+            '${{ steps.lyrics_flutter_tests.outcome }}'
+            '${{ steps.desktop_lyrics_tests.outcome }}'
+            '${{ steps.application_tests.outcome }}'
+            '${{ steps.junit_reports.outcome }}'
+            '${{ steps.coverage_thresholds.outcome }}'
+            '${{ steps.changed_diff.outcome }}'
+            '${{ steps.changed_coverage.outcome }}'
+          )
+          for outcome in "${outcomes[@]}"; do
+            [[ "$outcome" == success ]] || exit 1
+          done

@@ -25,6 +25,9 @@ import 'integration_workspace.dart';
 
 void ensureIntegrationBinding() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  // 集成测试必须把“调用了 tap 但用户实际点不到”视为失败。业务断言可能稍后
+  // 因其他状态变化而偶然通过，若只打印 warning 会形成假绿。
+  WidgetController.hitTestWarningShouldBeFatal = true;
 }
 
 class IntegrationAppHandle {
@@ -307,6 +310,70 @@ Future<void> pumpForInteraction(WidgetTester tester) {
 
 Future<void> pumpForMenuOrRoute(WidgetTester tester) {
   return tester.pump(kIntegrationMenuPump);
+}
+
+Future<void> tapVisible(
+  WidgetTester tester,
+  Finder target, {
+  Duration timeout = const Duration(seconds: 5),
+  String? reason,
+}) async {
+  final String description = reason ?? '等待目标可点击';
+  await pumpUntil(
+    tester,
+    () => target.evaluate().length == 1,
+    timeout: timeout,
+    reason: '$description：目标不存在或不唯一',
+  );
+  await Scrollable.ensureVisible(
+    tester.element(target),
+    alignment: 0.5,
+    duration: Duration.zero,
+  );
+  await pumpForInteraction(tester);
+  if (target.hitTestable().evaluate().length != 1) {
+    final Element targetElement = tester.element(target);
+    Element? scrollableElement;
+    targetElement.visitAncestorElements((Element ancestor) {
+      if (ancestor.widget is Scrollable) {
+        scrollableElement = ancestor;
+        return false;
+      }
+      return true;
+    });
+    final Element? resolvedScrollable = scrollableElement;
+    if (resolvedScrollable != null) {
+      final Finder scrollable = find.byElementPredicate(
+        (Element element) => identical(element, resolvedScrollable),
+      );
+      for (int attempt = 0; attempt < 20; attempt += 1) {
+        if (target.hitTestable().evaluate().length == 1) {
+          break;
+        }
+        final Rect targetRect = tester.getRect(target);
+        final Rect viewportRect = tester.getRect(scrollable);
+        final ScrollPosition position = tester
+            .state<ScrollableState>(scrollable)
+            .position;
+        final double nextOffset =
+            (position.pixels + targetRect.center.dy - viewportRect.center.dy)
+                .clamp(position.minScrollExtent, position.maxScrollExtent);
+        if ((nextOffset - position.pixels).abs() < 0.5) {
+          break;
+        }
+        position.jumpTo(nextOffset);
+        await pumpForInteraction(tester);
+      }
+    }
+  }
+  await pumpUntil(
+    tester,
+    () => target.hitTestable().evaluate().length == 1,
+    timeout: timeout,
+    reason: '$description：目标未进入可命中区域',
+  );
+  await tester.tap(target);
+  await pumpForInteraction(tester);
 }
 
 Future<void> pumpUntil(

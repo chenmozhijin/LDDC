@@ -55,6 +55,8 @@ final class RunnerTests: XCTestCase {
 
     XCTAssertEqual(preferred.width, 1280)
     XCTAssertEqual(preferred.height, 720)
+    XCTAssertEqual(DesktopWindowGeometry.minimumContentSize.width, 960)
+    XCTAssertEqual(DesktopWindowGeometry.minimumContentSize.height, 540)
     XCTAssertEqual(fitted, preferred)
   }
 
@@ -67,5 +69,14 @@ final class RunnerTests: XCTestCase {
     XCTAssertEqual(fitted.width, 1000)
     XCTAssertEqual(fitted.height, 562)
     XCTAssertEqual(fitted.width / fitted.height, 16.0 / 9.0, accuracy: 0.02)
+  }
+
+  func testDesktopWindowGeometryDoesNotShrinkBelowSupportedContentSize() {
+    let fitted = DesktopWindowGeometry.fittedContentSize(
+      preferred: DesktopWindowGeometry.preferredContentSize,
+      available: NSSize(width: 800, height: 450)
+    )
+
+    XCTAssertEqual(fitted, DesktopWindowGeometry.minimumContentSize)
   }
 }

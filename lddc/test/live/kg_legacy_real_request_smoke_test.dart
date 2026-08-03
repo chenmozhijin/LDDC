@@ -19,7 +19,7 @@ final bool _runKgLegacyLiveSmoke =
 
 void main() {
   test(
-    'KG 旧接口真实请求冒烟（手动触发）',
+    'KG 旧接口真实请求协议兼容性',
     () async {
       final _LegacyLiveConfig config = _LegacyLiveConfig.fromEnvironment();
 

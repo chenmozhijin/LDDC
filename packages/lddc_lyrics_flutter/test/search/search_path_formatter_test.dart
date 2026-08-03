@@ -5,7 +5,7 @@ import 'package:path/path.dart' as p;
 
 void main() {
   group('SearchPathFormatter', () {
-    test('占位符替换与非法字符转义对齐Python版', () {
+    test('占位符替换与非法字符转义生成当前平台完整保存路径', () {
       final SongInfo info = SongInfo(
         source: Source.qm,
         id: '12:3',
@@ -13,8 +13,9 @@ void main() {
         artist: SongArtist(<String>['Ar/tist', 'Second']),
       );
 
+      final String folder = p.join('root', 'Save', '%<artist>');
       final String savePath = SearchPathFormatter.buildSavePath(
-        folder: r'C:\Save\%<artist>',
+        folder: folder,
         fileNameFormat: '%<artist> - %<title> (%<id>) [%<langs>].lrc',
         songInfo: info,
         lyricLangs: const <String>['orig', 'ts'],
@@ -23,9 +24,24 @@ void main() {
       expect(
         savePath,
         p.normalize(
-          r'C:\Save\Ar／tist／Second\Ar／tist／Second - Ti／tle：01 (12：3) [orig-ts].lrc',
+          p.join(
+            'root',
+            'Save',
+            'Ar／tist／Second',
+            'Ar／tist／Second - Ti／tle：01 (12：3) [orig-ts].lrc',
+          ),
         ),
       );
+    });
+
+    test('Windows 路径语义使用显式 Context，不依赖 CI 宿主平台', () {
+      final p.Context windows = p.Context(style: p.Style.windows);
+
+      expect(
+        windows.join(r'C:\Save', 'Artist', 'Song.lrc'),
+        r'C:\Save\Artist\Song.lrc',
+      );
+      expect(windows.basename(r'C:\Save\Artist\Song.lrc'), 'Song.lrc');
     });
 
     test('缺失 id 时会移除 (%<id>) 占位块', () {

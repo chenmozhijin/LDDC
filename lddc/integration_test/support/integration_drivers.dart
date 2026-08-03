@@ -242,7 +242,8 @@ class OpenLyricsDriver {
     await pumpForInteraction(tester);
     await tester.tap(target);
     await pumpForMenuOrRoute(tester);
-    await tester.tap(
+    await tapVisible(
+      tester,
       find
           .byWidgetPredicate(
             (Widget widget) =>
@@ -250,9 +251,7 @@ class OpenLyricsDriver {
                 widget.value == format,
           )
           .last,
-      // DropdownMenuItem 的语义节点外层由菜单路由接收点击，Flutter 的命中诊断
-      // 会把这种正常代理命中报告为 warning；调用方继续通过业务状态确认选择结果。
-      warnIfMissed: false,
+      reason: '等待歌词格式菜单项可点击',
     );
     await pumpForInteraction(tester);
   }
@@ -284,24 +283,32 @@ class LocalMatchDriver {
       find.byKey(const ValueKey<String>('local_match_save_to_tag_mode')),
     );
     await pumpForMenuOrRoute(tester);
-    await tester.tap(
-      find
-          .byWidgetPredicate(
-            (Widget widget) =>
-                widget is DropdownMenuItem<LocalMatchSaveToTagMode> &&
-                widget.value == mode,
-          )
-          .last,
-      warnIfMissed: false,
+    final Finder menuItem = find
+        .byWidgetPredicate(
+          (Widget widget) =>
+              widget is DropdownMenuItem<LocalMatchSaveToTagMode> &&
+              widget.value == mode,
+        )
+        .last;
+    final DropdownMenuItem<LocalMatchSaveToTagMode> itemWidget = tester
+        .widget<DropdownMenuItem<LocalMatchSaveToTagMode>>(menuItem);
+    // DropdownMenuItem 只是菜单内容节点，实际手势层由弹出的菜单路由包裹。
+    // 使用其可见子内容作为命中目标，避免为下拉菜单放宽全局点击校验。
+    await tapVisible(
+      tester,
+      find.byWidget(itemWidget.child).last,
+      reason: '等待本地匹配标签保存模式可点击',
     );
     await pumpForMenuOrRoute(tester);
   }
 
   Future<void> toggleSkipExisting() async {
-    await tester.tap(
+    await _waitTransientOverlaysToSettle();
+    await tapVisible(
+      tester,
       find.byKey(const ValueKey<String>('local_match_skip_existing_checkbox')),
+      reason: '等待“跳过已有歌词”复选框可点击',
     );
-    await pumpForInteraction(tester);
   }
 
   Future<void> tapStartOrCancel() async {

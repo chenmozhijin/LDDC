@@ -213,15 +213,17 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(
+    final SegmentedButton<String> languageSegments = tester.widget(
       find.descendant(
         of: find.byKey(
           const ValueKey<String>('search_preview_language_segments'),
         ),
-        matching: find.byIcon(Icons.check),
+        matching: find.byType(SegmentedButton<String>),
       ),
-      findsNWidgets(2),
     );
+    // 每个分段都包含透明勾图标以稳定宽度，图标数量不能代表选中状态。
+    // 直接断言组件的业务选择集，避免布局占位实现变化产生假红。
+    expect(languageSegments.selected, <String>{'orig', 'ts'});
     expect(find.byType(Checkbox), findsNothing);
     expect(find.text('保存路径'), findsOneWidget);
     expect(find.text('选择保存路径'), findsOneWidget);

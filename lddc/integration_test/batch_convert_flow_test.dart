@@ -61,7 +61,12 @@ void main() {
       });
 
       await reporter.runStep('pick_files', () async {
-        await tester.tap(_batchActionFinder('pick_files'));
+        await tapVisible(
+          tester,
+          _batchActionFinder('pick_files'),
+          timeout: runtime.defaultStepTimeout,
+          reason: '等待批量转换导入按钮可点击',
+        );
         await pumpUntil(
           tester,
           () => find.textContaining('demo.srt').evaluate().isNotEmpty,
@@ -72,14 +77,21 @@ void main() {
 
       await reporter.runStep('select_save_root', () async {
         final Finder compactControls = find.byKey(
-          const ValueKey<String>('batch_convert_compact_controls'),
+          const ValueKey<String>('batch_convert_compact_controls_toggle'),
         );
         if (compactControls.evaluate().isNotEmpty) {
-          await tester.tap(compactControls);
-          await pumpForInteraction(tester);
+          await tapVisible(
+            tester,
+            compactControls,
+            timeout: runtime.defaultStepTimeout,
+            reason: '等待批量转换控制区可展开',
+          );
         }
-        await tester.tap(
+        await tapVisible(
+          tester,
           find.byKey(const ValueKey<String>('batch_convert_select_save_root')),
+          timeout: runtime.defaultStepTimeout,
+          reason: '等待保存目录按钮可点击',
         );
         await pumpUntil(
           tester,
@@ -91,7 +103,12 @@ void main() {
       });
 
       await reporter.runStep('start_convert', () async {
-        await tester.tap(_batchActionFinder('start_or_cancel'));
+        await tapVisible(
+          tester,
+          _batchActionFinder('start_or_cancel'),
+          timeout: runtime.defaultStepTimeout,
+          reason: '等待批量转换主操作按钮可点击',
+        );
         await tester.pump();
         await pumpUntil(
           tester,

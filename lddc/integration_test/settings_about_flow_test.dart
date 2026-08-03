@@ -55,15 +55,20 @@ void main() {
         await tester.ensureVisible(languageDropdown);
         await tester.tap(languageDropdown);
         await pumpForMenuOrRoute(tester);
-        await tester.tap(
-          find
-              .byWidgetPredicate(
-                (Widget widget) =>
-                    widget is DropdownMenuItem<AppLanguage> &&
-                    widget.value == AppLanguage.en,
-              )
-              .last,
-          warnIfMissed: false,
+        final Finder languageMenuItem = find
+            .byWidgetPredicate(
+              (Widget widget) =>
+                  widget is DropdownMenuItem<AppLanguage> &&
+                  widget.value == AppLanguage.en,
+            )
+            .last;
+        final DropdownMenuItem<AppLanguage> languageItemWidget = tester
+            .widget<DropdownMenuItem<AppLanguage>>(languageMenuItem);
+        await tapVisible(
+          tester,
+          find.byWidget(languageItemWidget.child).last,
+          timeout: runtime.defaultStepTimeout,
+          reason: '等待语言菜单项可点击',
         );
         await pumpUntil(
           tester,
@@ -93,15 +98,12 @@ void main() {
           // 可滚动详情区的当前 viewport 之外。先让 Scrollable 把真实目标
           // 带入可点击区，再等待 hit test 成功；这样既覆盖用户需要的滚动，
           // 也不会用 warnIfMissed=false 把未命中伪装成正常点击。
-          await tester.ensureVisible(associationManagerEntry);
-          await pumpForInteraction(tester);
-          await pumpUntil(
+          await tapVisible(
             tester,
-            () => associationManagerEntry.hitTestable().evaluate().isNotEmpty,
+            associationManagerEntry,
             timeout: runtime.defaultStepTimeout,
             reason: '等待关联管理器入口滚动到可点击位置',
           );
-          await tester.tap(associationManagerEntry.hitTestable());
           await pumpUntil(
             tester,
             () => find

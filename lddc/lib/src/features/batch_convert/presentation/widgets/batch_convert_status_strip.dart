@@ -10,11 +10,13 @@ class BatchConvertStatusStrip extends StatelessWidget {
   const BatchConvertStatusStrip({
     required this.view,
     required this.controller,
+    this.compact = false,
     super.key,
   });
 
   final BatchConvertStatusView view;
   final BatchConvertPageController controller;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +24,40 @@ class BatchConvertStatusStrip extends StatelessWidget {
     final double? progress = view.progressTotal > 0
         ? view.progressCurrent / view.progressTotal
         : (view.isBusy ? null : 0);
+    if (compact) {
+      // 横屏手机和窄桌面的高度比宽度更紧张。紧凑状态条保留阶段、进度
+      // 与详细文本，但不重复展示队列已经提供的四组徽章，避免固定状态区
+      // 把中间工作区压缩到无法操作。
+      return Card(
+        key: const ValueKey<String>('batch_convert_status_strip'),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  '${batchConvertPhaseLabel(context, view.taskPhase)} · '
+                  '${view.progressCurrent} / ${view.progressTotal} · '
+                  '${view.progressMessage.isEmpty ? batchConvertPhaseHint(context, view) : batchConvertProgressMessageText(context, view.progressMessage)}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 72,
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return TaskProgressStatusCard(
       cardKey: const ValueKey<String>('batch_convert_status_strip'),
       title: batchConvertPhaseLabel(context, view.taskPhase),

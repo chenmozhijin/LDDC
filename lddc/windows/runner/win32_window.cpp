@@ -5,6 +5,7 @@
 #include <dwmapi.h>
 #include <flutter_windows.h>
 
+#include "desktop_window_contract.h"
 #include "resource.h"
 
 namespace {
@@ -180,16 +181,23 @@ bool Win32Window::CreateWithClientArea(const std::wstring& title,
   const int available_client_height =
       std::max(work_height - frame_extra_height, 1);
 
-  // 小屏或 CI 桌面的工作区可能容不下首选尺寸。这里只缩小首次
-  // 窗口且保持 16:9，不设置最小尺寸，用户后续仍可自由调整窗口。
+  // 首次窗口在工作区内保持 16:9 缩放，但不突破产品声明的最小内容区。
+  // 工作区本身不足时窗口可能超出可用区域，这比创建一个页面无法正确布局的
+  // 未支持 viewport 更可预测，用户仍可通过系统移动窗口访问其余区域。
   const double fit_scale = std::min(
       {1.0,
        static_cast<double>(available_client_width) / preferred_width,
        static_cast<double>(available_client_height) / preferred_height});
-  const int client_width =
-      std::max(1, static_cast<int>(std::floor(preferred_width * fit_scale)));
-  const int client_height =
-      std::max(1, static_cast<int>(std::floor(preferred_height * fit_scale)));
+  const int minimum_width = MulDiv(
+      static_cast<int>(lddc::kMinimumMainWindowContentWidth), dpi, 96);
+  const int minimum_height = MulDiv(
+      static_cast<int>(lddc::kMinimumMainWindowContentHeight), dpi, 96);
+  const int client_width = std::max(
+      minimum_width,
+      static_cast<int>(std::floor(preferred_width * fit_scale)));
+  const int client_height = std::max(
+      minimum_height,
+      static_cast<int>(std::floor(preferred_height * fit_scale)));
   RECT fitted_frame = {0, 0, client_width, client_height};
   if (!AdjustWindowRectExForDpi(&fitted_frame, style, FALSE, ex_style, dpi)) {
     return false;
@@ -255,6 +263,24 @@ Win32Window::MessageHandler(HWND hwnd,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
   switch (message) {
+    case WM_GETMINMAXINFO: {
+      auto min_max_info = reinterpret_cast<MINMAXINFO*>(lparam);
+      const UINT dpi = GetDpiForWindow(hwnd);
+      const int minimum_width = MulDiv(
+          static_cast<int>(lddc::kMinimumMainWindowContentWidth), dpi, 96);
+      const int minimum_height = MulDiv(
+          static_cast<int>(lddc::kMinimumMainWindowContentHeight), dpi, 96);
+      RECT minimum_frame = {0, 0, minimum_width, minimum_height};
+      if (AdjustWindowRectExForDpi(&minimum_frame, GetWindowStyle(), FALSE,
+                                   GetWindowExStyle(), dpi)) {
+        min_max_info->ptMinTrackSize.x =
+            minimum_frame.right - minimum_frame.left;
+        min_max_info->ptMinTrackSize.y =
+            minimum_frame.bottom - minimum_frame.top;
+        return 0;
+      }
+      break;
+    }
     case WM_DESTROY:
       if (!destroyed_) {
         destroyed_ = true;

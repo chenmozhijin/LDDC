@@ -12,15 +12,57 @@ import '../support/internal_runtime_test_api.dart';
 
 import 'live_api_cases.dart';
 
-// 真实云源冒烟测试只用于手动/full profile 验证：
+// 真实云源协议测试使用独立 live profile：
 // - 默认测试链必须保持离线，不访问外部 API，避免网络波动影响开发回归；
-// - 需要验证线上协议时设置 RUN_LIVE_API=1，可用 LIVE_API_SOURCES 选择来源；
-// - 结果报告默认写入 build 目录，不作为 Windows release 构建阻塞项。
+// - 设置 RUN_LIVE_API=1，可用 LIVE_API_SOURCES 选择来源；
+// - 结果报告默认写入 build 目录，由独立 workflow 作为服务兼容性门禁。
 final bool _runLiveApiSmoke = Platform.environment['RUN_LIVE_API'] == '1';
 
 void main() {
+  test('live 步骤只对瞬时故障执行有界重试', () async {
+    int attempts = 0;
+    final List<LiveApiStepResult> steps = <LiveApiStepResult>[];
+
+    final _StepRunResult<int> result = await _runStep<int>(
+      steps: steps,
+      step: 'transient_retry',
+      action: () async {
+        attempts += 1;
+        if (attempts < 3) {
+          throw TimeoutException('synthetic timeout');
+        }
+        return 7;
+      },
+    );
+
+    expect(attempts, 3);
+    expect(result.value, 7);
+    expect(steps, hasLength(1));
+    expect(steps.single.success, isTrue);
+  });
+
+  test('live 步骤不重试确定性业务错误', () async {
+    int attempts = 0;
+    final List<LiveApiStepResult> steps = <LiveApiStepResult>[];
+
+    final _StepRunResult<int> result = await _runStep<int>(
+      steps: steps,
+      step: 'deterministic_failure',
+      action: () async {
+        attempts += 1;
+        throw const FormatException('synthetic parse failure');
+      },
+    );
+
+    expect(attempts, 1);
+    expect(result.value, isNull);
+    expect(steps, hasLength(1));
+    expect(steps.single.success, isFalse);
+    expect(steps.single.errorMessage, contains('attempts=1'));
+  });
+
   test(
-    '云源真实请求冒烟（手动触发）',
+    '云源真实请求协议兼容性',
     () async {
       final _LiveRuntimeConfig config = _LiveRuntimeConfig.fromEnvironment();
 
@@ -88,7 +130,7 @@ void main() {
         fail('真实请求冒烟失败，来源: $failedSources；详见 ${config.reportPath}');
       }
     },
-    skip: _runLiveApiSmoke ? false : '设置 RUN_LIVE_API=1 后手动运行真实云源冒烟测试。',
+    skip: _runLiveApiSmoke ? false : '该用例只在 RUN_LIVE_API=1 的 live profile 运行。',
     tags: 'live',
   );
 }
@@ -413,13 +455,12 @@ Future<void> _verifyNeCoverCdn(String coverUrl) async {
     );
     final String dartUaContentType =
         _headerValue(dartUaResponse.headers, 'content-type') ?? '';
-    if (dartUaResponse.statusCode != 403 ||
-        !dartUaContentType.toLowerCase().startsWith('text/html')) {
-      throw StateError(
-        'p1 默认 Dart UA 对照不符合预期: '
-        '${dartUaResponse.statusCode} $dartUaContentType',
-      );
-    }
+    // 默认 Dart UA 的 CDN 行为属于服务端可变观察项，曾从 403 text/html
+    // 变为 200 image/jpg，不能作为生产策略正确性的反向门禁。
+    debugPrint(
+      'NE cover default-UA observation: '
+      '${dartUaResponse.statusCode} $dartUaContentType bytes=${dartUaResponse.body.length}',
+    );
 
     final List<Uri> candidates = NeCoverRequestPolicy.requestCandidates(
       url: sourceUri.toString(),
@@ -557,30 +598,42 @@ Future<_StepRunResult<T>> _runStep<T>({
   required Future<T> Function() action,
 }) async {
   final Stopwatch stopwatch = Stopwatch()..start();
-  try {
-    final T value = await action();
-    stopwatch.stop();
-    steps.add(
-      LiveApiStepResult(
-        step: step,
-        success: true,
-        elapsedMs: stopwatch.elapsedMilliseconds,
-      ),
-    );
-    return _StepRunResult<T>(value: value);
-  } catch (error) {
-    stopwatch.stop();
-    steps.add(
-      LiveApiStepResult(
-        step: step,
-        success: false,
-        elapsedMs: stopwatch.elapsedMilliseconds,
-        errorCategory: _classifyError(error),
-        errorMessage: error.toString(),
-      ),
-    );
-    return _StepRunResult<T>(value: null);
+  const int maxAttempts = 3;
+  for (int attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      final T value = await action();
+      stopwatch.stop();
+      steps.add(
+        LiveApiStepResult(
+          step: step,
+          success: true,
+          elapsedMs: stopwatch.elapsedMilliseconds,
+        ),
+      );
+      return _StepRunResult<T>(value: value);
+    } catch (error) {
+      final bool retry =
+          attempt < maxAttempts && _isTransientLiveFailure(error);
+      if (retry) {
+        // 只重试超时、连接故障、限流和常见网关错误。参数或解析错误再次
+        // 请求不会变好，立即保留原始失败可避免掩盖确定性协议回归。
+        await Future<void>.delayed(Duration(milliseconds: attempt * 500));
+        continue;
+      }
+      stopwatch.stop();
+      steps.add(
+        LiveApiStepResult(
+          step: step,
+          success: false,
+          elapsedMs: stopwatch.elapsedMilliseconds,
+          errorCategory: _classifyError(error),
+          errorMessage: '${error.toString()} (attempts=$attempt)',
+        ),
+      );
+      return _StepRunResult<T>(value: null);
+    }
   }
+  throw StateError('live step retry loop exited unexpectedly');
 }
 
 void _appendSkipped({
@@ -756,6 +809,19 @@ String _classifyError(Object error) {
     return 'data';
   }
   return 'business';
+}
+
+bool _isTransientLiveFailure(Object error) {
+  if (error is TimeoutException ||
+      error is SocketException ||
+      error is HandshakeException ||
+      error is HttpException) {
+    return true;
+  }
+  if (error is LddcApiRequestException) {
+    return RegExp(r'(^|\D)(429|502|503|504)(\D|$)').hasMatch(error.message);
+  }
+  return false;
 }
 
 Future<void> _writeReport({

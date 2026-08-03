@@ -83,21 +83,71 @@ class BatchConvertCompactControlsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Card(
-      child: ExpansionTile(
-        key: const ValueKey<String>('batch_convert_compact_controls'),
-        initiallyExpanded: expanded,
-        onExpansionChanged: onExpandedChanged,
-        title: Text(l10n.batchConvertCompactControlsTitle),
-        subtitle: Text(
-          l10n.batchConvertCompactControlsSubtitle(
-            l10n.lyricsFormatLabel(view.targetFormat),
-          ),
-        ),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      key: const ValueKey<String>('batch_convert_compact_controls'),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _ImportActions(view: view, controller: controller, compact: true),
-          const SizedBox(height: 16),
-          _OutputSettings(view: view, controller: controller),
+          Semantics(
+            button: true,
+            expanded: expanded,
+            label: l10n.batchConvertCompactControlsTitle,
+            child: InkWell(
+              key: const ValueKey<String>(
+                'batch_convert_compact_controls_toggle',
+              ),
+              onTap: () => onExpandedChanged(!expanded),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            l10n.batchConvertCompactControlsTitle,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.batchConvertCompactControlsSubtitle(
+                              l10n.lyricsFormatLabel(view.targetFormat),
+                            ),
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(
+                      expanded
+                          ? Icons.expand_less_outlined
+                          : Icons.expand_more_outlined,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          if (expanded) ...<Widget>[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _ImportActions(
+                    view: view,
+                    controller: controller,
+                    compact: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _OutputSettings(view: view, controller: controller),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -188,6 +238,9 @@ class _OutputSettings extends StatelessWidget {
         DropdownButtonFormField<LyricsFormat>(
           key: const ValueKey<String>('batch_convert_target_format'),
           initialValue: view.targetFormat,
+          // InputDecorator 在窄屏仍要为下拉箭头和边距预留空间；展开内容宽度
+          // 后，较长的格式名称会在剩余区域布局，不再把内部 Row 挤出右边界。
+          isExpanded: true,
           decoration: InputDecoration(
             labelText: l10n.batchConvertTargetFormat,
             border: OutlineInputBorder(),
@@ -234,15 +287,15 @@ class _OutputSettings extends StatelessWidget {
                 runSpacing: 8,
                 children: <Widget>[
                   AppActionSemantics(
+                    actionKey: const ValueKey<String>(
+                      'batch_convert_select_save_root',
+                    ),
                     identifier: AppSemanticsIdentifiers.batchSaveRoot,
                     label: l10n.batchConvertSelectSaveDirectory,
                     onTap: view.isBusy
                         ? null
                         : controller.selectSaveRootDirectory,
                     child: OutlinedButton.icon(
-                      key: const ValueKey<String>(
-                        'batch_convert_select_save_root',
-                      ),
                       onPressed: view.isBusy
                           ? null
                           : controller.selectSaveRootDirectory,
@@ -294,15 +347,15 @@ class BatchConvertBottomActionBar extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: AppActionSemantics(
+              actionKey: const ValueKey<String>(
+                'batch_convert_compact_start_or_cancel',
+              ),
               identifier: AppSemanticsIdentifiers.batchStart,
               label: view.isRunning
                   ? l10n.batchConvertCancel
                   : l10n.batchConvertStart,
               onTap: _startAction(view, controller),
               child: FilledButton.icon(
-                key: const ValueKey<String>(
-                  'batch_convert_compact_start_or_cancel',
-                ),
                 onPressed: _startAction(view, controller),
                 icon: Icon(
                   view.isRunning
@@ -318,15 +371,21 @@ class BatchConvertBottomActionBar extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          AppActionSemantics(
-            identifier: AppSemanticsIdentifiers.batchPickFiles,
-            label: l10n.commonAddFiles,
-            onTap: view.isBusy ? null : controller.addFiles,
-            child: OutlinedButton.icon(
-              key: const ValueKey<String>('batch_convert_compact_pick_files'),
-              onPressed: view.isBusy ? null : controller.addFiles,
-              icon: const Icon(Icons.library_music_outlined),
-              label: Text(l10n.commonAddFiles),
+          Expanded(
+            child: AppActionSemantics(
+              identifier: AppSemanticsIdentifiers.batchPickFiles,
+              label: l10n.commonAddFiles,
+              onTap: view.isBusy ? null : controller.addFiles,
+              child: OutlinedButton.icon(
+                key: const ValueKey<String>('batch_convert_compact_pick_files'),
+                onPressed: view.isBusy ? null : controller.addFiles,
+                icon: const Icon(Icons.library_music_outlined),
+                label: Text(
+                  l10n.commonAddFiles,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
           ),
         ],

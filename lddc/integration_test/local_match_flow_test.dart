@@ -213,6 +213,14 @@ void main() {
         await runStepWithTimeout(
           () async {
             await localMatch.toggleSkipExisting();
+            await pumpUntil(
+              tester,
+              () => localMatchContainer
+                  .read(localMatchPageControllerProvider)
+                  .skipExistingLyrics,
+              timeout: runtime.defaultStepTimeout,
+              reason: '等待跳过已有歌词设置生效',
+            );
             await localMatch.tapStartOrCancel();
             await pumpUntil(
               tester,

@@ -846,6 +846,22 @@ void main() {
         container.read(localMatchPageControllerProvider).skipExistingLyrics,
         isFalse,
       );
+      final Finder skipExisting = find.byKey(
+        const ValueKey<String>('local_match_skip_existing_checkbox'),
+      );
+      await tester.tap(skipExisting);
+      await tester.pump();
+      expect(
+        container.read(localMatchPageControllerProvider).skipExistingLyrics,
+        isTrue,
+        reason: '整行复选控件一次点击只能切换一次，不能被嵌套手势再次反转',
+      );
+      await tester.tap(skipExisting);
+      await tester.pump();
+      expect(
+        container.read(localMatchPageControllerProvider).skipExistingLyrics,
+        isFalse,
+      );
       expect(
         find.byKey(const ValueKey<String>('local_match_sidebar')),
         findsOneWidget,

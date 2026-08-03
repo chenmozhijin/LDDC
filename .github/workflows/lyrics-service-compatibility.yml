@@ -26,7 +26,7 @@ jobs:
           channel: beta
           cache: true
       - run: flutter pub get
-      - name: Run all cloud-source protocol probes
+      - name: Run cloud-source protocol compatibility checks
         working-directory: lddc
         env:
           RUN_LIVE_API: '1'
@@ -35,11 +35,18 @@ jobs:
           LIVE_API_REPORT_PATH: build/live-api-sources.json
         run: |
           mkdir -p build/live-network
+          set +e
           flutter test test/live/api_real_request_smoke_test.dart \
             --file-reporter=json:build/live-network/tests.jsonl
+          test_exit=$?
           python ../tool/test/json_report_to_junit.py \
             --input build/live-network/tests.jsonl \
             --output build/live-network/tests.xml
+          report_exit=$?
+          set -e
+          if [[ $test_exit -ne 0 || $report_exit -ne 0 ]]; then
+            exit 1
+          fi
       - name: Upload redacted live reports
         if: always()
         uses: actions/upload-artifact@v7

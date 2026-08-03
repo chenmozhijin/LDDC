@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
@@ -101,6 +102,55 @@ def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
         encoding="utf-8",
     )
     os.replace(temporary, path)
+
+
+def _write_failure_junit(path: Path, scenario: str, message: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    suite = ET.Element(
+        "testsuite", name=scenario, tests="1", failures="1", errors="0"
+    )
+    case = ET.SubElement(suite, "testcase", classname="integration.infrastructure", name=scenario)
+    failure = ET.SubElement(case, "failure", message=message)
+    failure.text = message
+    ET.ElementTree(suite).write(path, encoding="utf-8", xml_declaration=True)
+
+
+def _write_infrastructure_failure(args: argparse.Namespace, error: Exception) -> None:
+    if not all((args.run_id, args.scenario, args.profile, args.platform)):
+        return
+    message = f"集成报告规范化失败: {error}"
+    payload = {
+        "schemaVersion": 2,
+        "runId": args.run_id,
+        "scenario": args.scenario,
+        "profile": args.profile,
+        "platform": args.platform,
+        "framework": args.framework,
+        "capabilities": {},
+        "resources": {"baseline": {}, "final": {}, "thresholds": {}},
+        "runner": {
+            "exitCode": args.exit_code,
+            "originalReportType": args.raw_report_type,
+            "testStarted": _flutter_jsonl_started(args.raw_report),
+            "nativeActionCount": 0,
+        },
+        "artifacts": [],
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "steps": [
+            {
+                "name": "collect_and_normalize_report",
+                "success": False,
+                "error": message,
+            }
+        ],
+        "status": "failed",
+        "coverageStatus": "notExercised",
+        "success": False,
+        "extra": {"infrastructureFailure": message},
+    }
+    _write_atomic(args.scenario_report, payload)
+    if args.failure_junit is not None:
+        _write_failure_junit(args.failure_junit, args.scenario, message)
 
 
 def _merge_external_evidence(
@@ -298,12 +348,26 @@ def main() -> int:
     parser.add_argument("--exit-code", required=True, type=int)
     parser.add_argument("--evidence", type=Path)
     parser.add_argument("--matrix", type=Path, default=MATRIX_PATH)
+    parser.add_argument("--run-id")
+    parser.add_argument("--scenario")
+    parser.add_argument("--profile")
+    parser.add_argument("--platform")
+    parser.add_argument("--failure-junit", type=Path)
     args = parser.parse_args()
 
-    if args.raw_report_type == "flutter-jsonl":
-        _normalize_flutter(args)
-    else:
-        _normalize_native(args)
+    try:
+        if args.raw_report_type == "flutter-jsonl":
+            _normalize_flutter(args)
+        else:
+            _normalize_native(args)
+    except SystemExit as error:
+        _write_infrastructure_failure(args, error)
+        print(f"ERROR: 集成报告规范化失败: {error}", file=sys.stderr)
+        return 1
+    except (OSError, ValueError, json.JSONDecodeError, ET.ParseError) as error:
+        _write_infrastructure_failure(args, error)
+        print(f"ERROR: 集成报告规范化失败: {error}", file=sys.stderr)
+        return 1
     return 0
 
 

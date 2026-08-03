@@ -778,6 +778,56 @@ class QualityToolTests(unittest.TestCase):
             self.assertNotEqual(rejected_resources.returncode, 0)
             self.assertIn("超过阈值", rejected_resources.stderr)
 
+    def test_flutter_normalizer_writes_failure_reports_for_invalid_mobile_json(self) -> None:
+        normalizer = ROOT / "tool/test/normalize_integration_report.py"
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            scenario = root / "batch_convert_flow.json"
+            raw = root / "batch_convert_flow.jsonl"
+            junit = root / "batch_convert_flow.xml"
+            scenario.write_text(
+                "run-as: unknown package: com.cmzj.lddc\n", encoding="utf-8"
+            )
+            raw.write_text("", encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(normalizer),
+                    "--scenario-report",
+                    str(scenario),
+                    "--raw-report",
+                    str(raw),
+                    "--raw-report-type",
+                    "flutter-jsonl",
+                    "--framework",
+                    "integration_test",
+                    "--exit-code",
+                    "1",
+                    "--run-id",
+                    "offline-android-test",
+                    "--scenario",
+                    "batch_convert_flow",
+                    "--profile",
+                    "offline",
+                    "--platform",
+                    "android",
+                    "--failure-junit",
+                    str(junit),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            report = json.loads(scenario.read_text(encoding="utf-8"))
+            self.assertFalse(report["success"])
+            self.assertEqual(report["status"], "failed")
+            self.assertIn("规范化失败", report["extra"]["infrastructureFailure"])
+            suite = ET.parse(junit).getroot()
+            self.assertEqual(suite.get("failures"), "1")
+
     def test_flutter_normalizer_merges_flaui_evidence_and_rejects_mismatch(self) -> None:
         normalizer = ROOT / "tool/test/normalize_integration_report.py"
         framework = "integration_test+flaui-uia3"

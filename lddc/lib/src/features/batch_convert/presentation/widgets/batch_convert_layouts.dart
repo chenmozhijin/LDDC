@@ -115,32 +115,58 @@ class BatchConvertCompactLayout extends StatelessWidget {
             return BatchConvertStatusStrip(
               view: statusView,
               controller: controller,
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        Consumer(
-          builder: (BuildContext context, WidgetRef ref, Widget? child) {
-            final BatchConvertControlsView controlsView = ref.watch(
-              batchConvertPageControllerProvider.select(
-                batchConvertControlsViewOf,
-              ),
-            );
-            return BatchConvertCompactControlsCard(
-              view: controlsView,
-              controller: controller,
-              expanded: controlsExpanded,
-              onExpandedChanged: onControlsExpanded,
+              compact: true,
             );
           },
         ),
         const SizedBox(height: 12),
         Expanded(
-          child: BatchConvertQueueCard(
-            controller: controller,
-            compact: true,
-            selectedItemId: selectedItemId,
-            onSelectItem: onSelectItem,
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              // 窄桌面和横屏手机的剩余高度可能不足以同时容纳展开设置与队列。
+              // 两者放入同一个外层滚动区，队列再获得稳定的紧约束，避免内部
+              // Expanded 落入无界高度，同时保证保存目录等控件可滚动到可点击位置。
+              final double queueHeight = constraints.maxHeight < 320
+                  ? 320
+                  : constraints.maxHeight;
+              return SingleChildScrollView(
+                key: const ValueKey<String>(
+                  'batch_convert_compact_workspace_scroll',
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Consumer(
+                      builder:
+                          (BuildContext context, WidgetRef ref, Widget? child) {
+                            final BatchConvertControlsView controlsView = ref
+                                .watch(
+                                  batchConvertPageControllerProvider.select(
+                                    batchConvertControlsViewOf,
+                                  ),
+                                );
+                            return BatchConvertCompactControlsCard(
+                              view: controlsView,
+                              controller: controller,
+                              expanded: controlsExpanded,
+                              onExpandedChanged: onControlsExpanded,
+                            );
+                          },
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: queueHeight,
+                      child: BatchConvertQueueCard(
+                        controller: controller,
+                        compact: true,
+                        selectedItemId: selectedItemId,
+                        onSelectItem: onSelectItem,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ),
         const SizedBox(height: 12),
