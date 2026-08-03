@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -6,10 +7,34 @@ import 'package:lddc_desktop_lyrics/lddc_desktop_lyrics.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  const MethodChannel windowManagerChannel = MethodChannel('window_manager');
   final DesktopEmbeddedPanelRuntime runtime =
       DesktopEmbeddedPanelRuntime.instance;
+  final List<MethodCall> windowManagerCalls = <MethodCall>[];
+
+  setUp(() {
+    windowManagerCalls.clear();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(windowManagerChannel, (
+          MethodCall call,
+        ) async {
+          windowManagerCalls.add(call);
+          if (call.method == 'getBounds') {
+            return <String, double>{
+              'x': 20,
+              'y': 30,
+              'width': 1200,
+              'height': 150,
+            };
+          }
+          return null;
+        });
+  });
 
   tearDown(() async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(windowManagerChannel, null);
+    debugDefaultTargetPlatformOverride = null;
     await runtime.dispose();
   });
 
@@ -44,6 +69,75 @@ void main() {
     expect(find.byType(SizedBox), findsOneWidget);
     expect(find.byType(DesktopPanelWindowShellPage), findsNothing);
   });
+
+  testWidgets('Linux 浮窗配置不会调用未实现的窗口阴影通道', (WidgetTester tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    try {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: DesktopFloatingWindowShellPage(
+            launch: DesktopWindowLaunchArguments(
+              role: DesktopWindowRole.floating,
+              instanceId: 1,
+              initialWindowRect: WindowRect(
+                left: 20,
+                top: 30,
+                width: 1200,
+                height: 150,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final Iterable<String> methods = windowManagerCalls.map(
+        (MethodCall call) => call.method,
+      );
+      expect(methods, contains('setAsFrameless'));
+      expect(methods, isNot(contains('setHasShadow')));
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  for (final TargetPlatform platform in <TargetPlatform>[
+    TargetPlatform.windows,
+    TargetPlatform.macOS,
+  ]) {
+    testWidgets('${platform.name} 浮窗配置保留窗口阴影通道', (WidgetTester tester) async {
+      debugDefaultTargetPlatformOverride = platform;
+      try {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: DesktopFloatingWindowShellPage(
+              launch: DesktopWindowLaunchArguments(
+                role: DesktopWindowRole.floating,
+                instanceId: 1,
+                initialWindowRect: WindowRect(
+                  left: 20,
+                  top: 30,
+                  width: 1200,
+                  height: 150,
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final Iterable<String> methods = windowManagerCalls.map(
+          (MethodCall call) => call.method,
+        );
+        expect(methods, contains('setAsFrameless'));
+        expect(methods, contains('setHasShadow'));
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        debugDefaultTargetPlatformOverride = null;
+      }
+    });
+  }
 
   test('Panel runtime 原子发布内容并丢弃旧 revision', () async {
     final _FakeEmbeddedPanelChannel channel = _FakeEmbeddedPanelChannel();

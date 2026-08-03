@@ -107,7 +107,11 @@ jobs:
           }
 
   macos-validation:
-    runs-on: macos-latest
+    # Xcode 26 系列 hosted 镜像会在 XCUIApplication.launch() 阶段等待
+    # accessibility 60 秒后失败，测试尚未获得任何应用节点。固定 macOS 15
+    # 使用稳定的 XCUITest accessibility 链，避免把系统框架故障误报为 LDDC
+    # 文件面板失败；仍保留零原生动作即失败的门禁，不用重试伪装覆盖。
+    runs-on: macos-15
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v7

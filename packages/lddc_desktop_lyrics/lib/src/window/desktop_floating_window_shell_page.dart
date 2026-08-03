@@ -394,10 +394,21 @@ class DesktopFloatingWindowShellPageState
     }
     if (flags.frameless) {
       await windowManager.setAsFrameless();
-      await windowManager.setHasShadow(false);
+      if (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        // window_manager 0.5.2 只在 Windows 和 macOS 实现窗口阴影接口。
+        // Linux 调用该方法会抛出 MissingPluginException，导致浮窗配置失败，
+        // 最终使隐藏服务无法在最后一个实例删除后正常退出。
+        await windowManager.setHasShadow(false);
+      }
     } else {
       await windowManager.setTitleBarStyle(TitleBarStyle.normal);
-      await windowManager.setHasShadow(true);
+      if (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        // 有边框样式同样只能在插件明确支持阴影的桌面平台恢复阴影；
+        // Linux 保留窗口管理器自身的装饰策略，不调用不存在的原生通道。
+        await windowManager.setHasShadow(true);
+      }
     }
     await windowManager.setAlwaysOnTop(flags.alwaysOnTop);
     await windowManager.setIgnoreMouseEvents(flags.clickThrough);

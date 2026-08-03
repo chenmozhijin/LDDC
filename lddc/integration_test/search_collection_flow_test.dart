@@ -274,7 +274,10 @@ void main() {
               reason: '等待空关键词提示出现',
             );
           },
-          timeout: runtime.defaultStepTimeout,
+          // 内部可见性等待会在 defaultStepTimeout 给出具体失败原因；外层预算
+          // 必须略大，避免两个相同计时器同时触发后遗留仍在 pump 的 Future，
+          // 进而让失败截图和 teardown 与它发生 guarded function conflict。
+          timeout: runtime.defaultStepTimeout + const Duration(seconds: 2),
           label: 'empty_keyword_notice',
         );
         expect(

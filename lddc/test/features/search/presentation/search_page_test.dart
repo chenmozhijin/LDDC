@@ -925,6 +925,76 @@ void main() {
     expect(find.text('保存专辑/歌单的歌词'), findsOneWidget);
   });
 
+  testWidgets('Android 真实比例视口进入歌单后清空关键词会显示即时提示', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final _FakeLyricsApi api = _FakeLyricsApi();
+    final SongListInfo playlist = SongListInfo(
+      source: Source.qm,
+      type: SongListType.songlist,
+      id: 'android-empty-keyword-playlist',
+      title: 'Android Playlist',
+      imgUrl: '',
+      songCount: 1,
+      publishTimeS: 1700000000,
+      author: 'Author',
+    );
+    api.setSearchResult(
+      source: Source.qm,
+      keyword: 'android-playlist',
+      searchType: SearchType.songlist,
+      page: 1,
+      result: _searchResult(
+        items: <SourceAware>[playlist],
+        source: Source.qm,
+        keyword: 'android-playlist',
+        searchType: SearchType.songlist,
+        page: 1,
+        start: 0,
+        total: 1,
+      ),
+    );
+    api.songlistById[playlist.id] = APIResultList<SongInfo>(
+      <SongInfo>[_song(id: 'android-playlist-track', title: 'Playlist Track')],
+      info: playlist,
+      ranges: <Source, SourceRange>{
+        Source.qm: const SourceRange(start: 0, end: 0, total: 1),
+      },
+    );
+
+    final ProviderContainer container = _createContainer(
+      lyricsApi: api,
+      capability: _androidCapability(),
+    );
+    addTearDown(container.dispose);
+    await _pumpSearchPage(tester, container);
+    final SearchWorkflowController controller = container.read(
+      searchWorkflowControllerInstanceProvider,
+    );
+    controller.updateSearchType(SearchType.songlist);
+    controller.setKeyword('android-playlist');
+    await controller.search();
+    await controller.openResult(0);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(EditableText).first, '');
+    await tester.tap(
+      find.byKey(const ValueKey<String>('search_toolbar_search_button')),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('search_notice_emptyKeyword')),
+      findsOneWidget,
+    );
+    expect(controller.state.isSearching, isFalse);
+  });
+
   testWidgets('iOS 单击结果后自动弹出预览底部抽屉，并同时显示文件与标签保存入口', (
     WidgetTester tester,
   ) async {

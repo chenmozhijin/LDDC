@@ -136,9 +136,5 @@ void main() {
         );
       });
     },
-    // UIA 在 hosted runner 中可能在测试期间再次激活辅助功能。
-    // 交给 testWidgets 持有唯一 semantics 句柄，框架会在泄漏校验前释放；
-    // 手动 ensureSemantics/addTearDown 会在 UIA 时序下产生句柄竞态。
-    semanticsEnabled: true,
   );
 }
