@@ -1,0 +1,23 @@
+name: lyrics_consumer
+description: 仅通过公开 API 接入 LDDC 歌词处理、来源与 Flutter 组件的独立消费者。
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.47.0-0.2.pre"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  lddc_lyrics_core: ^0.1.0-dev.1
+  lddc_lyrics_flutter: ^0.1.0-dev.1
+  lddc_lyrics_runtime: ^0.1.0-dev.1
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

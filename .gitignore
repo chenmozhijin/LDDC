@@ -1,0 +1,61 @@
+# Dart/Flutter 生成目录
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub/
+**/coverage/
+**/.ruff_cache/
+**/__pycache__/
+**/*.pyc
+
+# 本地测试、诊断和性能产物
+**/test-results/
+**/reports/
+**/screenshots/
+**/*.log
+**/*.pid
+**/tmp/
+**/.tmp/
+**/.internal_docs/
+
+# 平台构建缓存和临时目录
+android/.gradle/
+android/local.properties
+ios/Pods/
+macos/Pods/
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+**/bin/
+**/obj/
+
+# 本地 IDE 和操作系统文件
+.idea/
+*.iml
+.vs/
+*.suo
+*.user
+.DS_Store
+Thumbs.db
+
+# 本地环境、签名和密钥
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+key.properties
+
+# 运行时用户数据，不包含测试 fixture
+**/local_song_lyrics.db
+**/local_song_lyrics.db-wal
+**/local_song_lyrics.db-shm
+**/local_song_lyrics.db-journal
+**/cache.sqlite3
+**/cache.sqlite3-wal
+**/cache.sqlite3-shm
+**/cache.sqlite3-journal

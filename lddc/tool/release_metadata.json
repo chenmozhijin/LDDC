@@ -1,0 +1,8 @@
+{
+  "appId": "com.cmzj.lddc",
+  "displayName": "LDDC",
+  "shortName": "LDDC",
+  "publisher": "沉默の金",
+  "copyright": "Copyright © 2026 沉默の金. All rights reserved.",
+  "description": "LDDC 是一个用于搜索、转换、本地匹配和桌面显示精准歌词的 Flutter 客户端。"
+}

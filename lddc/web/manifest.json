@@ -1,0 +1,35 @@
+{
+    "name": "LDDC",
+    "short_name": "LDDC",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#101418",
+    "theme_color": "#006B5F",
+    "description": "LDDC 是一个用于搜索、转换、本地匹配和桌面显示精准歌词的 Flutter 客户端。",
+    "orientation": "any",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

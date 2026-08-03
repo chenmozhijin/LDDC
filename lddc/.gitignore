@@ -1,0 +1,51 @@
+# Miscellaneous
+*.class
+*.log
+__pycache__/
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# 桌面歌词完整 parity 大向量是本地可选资源，保留本地文件用于深度验证，
+# 但默认不提交 30MB 级生成产物，避免普通 checkout 和 CI 成本膨胀。
+test/resources/desktop_lyrics/python_progress_trace_vectors.json
+test/resources/desktop_lyrics/python_timing_vectors.json
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release

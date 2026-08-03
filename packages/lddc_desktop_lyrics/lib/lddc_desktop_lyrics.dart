@@ -1,0 +1,35 @@
+/// LDDC 的桌面歌词公共 API。
+library;
+
+export 'src/logging/desktop_lyrics_logger.dart';
+export 'src/models/desktop_style_models.dart';
+export 'src/projection/desktop_lyrics_scene.dart';
+export 'src/projection/desktop_lyrics_projection_runtime.dart';
+export 'src/projection/desktop_lyrics_timing_math.dart';
+export 'src/projection/desktop_projection_snapshot_mapper.dart';
+export 'src/render/desktop_render.dart';
+export 'src/window/desktop_floating_window_geometry_coordinator.dart';
+export 'src/window/desktop_floating_window_host.dart';
+export 'src/window/desktop_floating_window_shell_page.dart';
+export 'src/window/desktop_host_window_common.dart';
+export 'src/window/desktop_host_intent_router.dart';
+export 'src/window/desktop_embedded_panel_runtime.dart';
+export 'src/window/desktop_multi_window_port.dart';
+export 'src/window/desktop_panel_host.dart';
+export 'src/window/desktop_panel_window_shell_page.dart';
+export 'src/window/desktop_playback_ticker_coordinator.dart';
+export 'src/window/desktop_selector_window_host.dart';
+export 'src/window/desktop_selector_window_shell_page.dart';
+export 'src/window/desktop_sub_window_runtime.dart';
+export 'src/window/desktop_window_backend.dart';
+export 'src/window/desktop_window_interaction.dart';
+export 'src/window/desktop_window_launch.dart';
+export 'src/window/desktop_window_lifecycle.dart';
+export 'src/window/desktop_window_method_names.dart';
+export 'src/window/desktop_window_payload_codec.dart';
+export 'src/window/desktop_window_refresh.dart';
+export 'src/window/desktop_window_shell_shared.dart';
+export 'src/window/desktop_window_shell_page.dart';
+export 'src/window/desktop_window_style_channel.dart';
+export 'src/window/desktop_window_strings.dart';
+export 'src/window/desktop_window_view_binding_coordinator.dart';

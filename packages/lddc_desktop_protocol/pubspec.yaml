@@ -1,0 +1,11 @@
+name: lddc_desktop_protocol
+description: LDDC 桌面服务的长度帧与 IPC 消息协议。
+version: 0.1.0-dev.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+
+dev_dependencies:
+  test: ^1.31.1

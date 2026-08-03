@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "mutations": [
+    {
+      "id": "algorithm-instrumental-conflict",
+      "packages": ["lddc_lyrics_core"],
+      "source": "packages/lddc_lyrics_core/lib/src/algorithm/title_scorer.dart",
+      "search": "if (!local.isInstrumental && remote.isInstrumental) {\n      return SongVariantRelation.conflict;\n    }",
+      "replacement": "if (!local.isInstrumental && remote.isInstrumental) {\n      return SongVariantRelation.compatible;\n    }",
+      "testPackage": "lddc_lyrics_core",
+      "testTarget": "test/algorithm/algorithm_test.dart",
+      "failureNeedle": "普通版与纯音乐版关系使用参数化规则判断"
+    },
+    {
+      "id": "qm-custom-des-round-count",
+      "packages": ["lddc_lyrics_core"],
+      "source": "packages/lddc_lyrics_core/lib/src/cryptography/tripledes.dart",
+      "search": "for (int idx = 0; idx < 15; idx++) {",
+      "replacement": "for (int idx = 0; idx < 14; idx++) {",
+      "testPackage": "lddc_lyrics_core",
+      "testTarget": "test/cryptography/cryptography_known_answer_test.dart",
+      "failureNeedle": "自定义轮密钥、S-box 与分组顺序保持协议结果"
+    },
+    {
+      "id": "converter-ass-control-escaping",
+      "packages": ["lddc_lyrics_core"],
+      "source": "packages/lddc_lyrics_core/lib/src/converter/ass_converter.dart",
+      "search": ".replaceAll('{', r'\\{')",
+      "replacement": ".replaceAll('{', '{')",
+      "testPackage": "lddc_lyrics_core",
+      "testTarget": "test/converter/converter_test.dart",
+      "failureNeedle": "ASS 转义标题换行和歌词控制语法"
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "originClass": "anonymousSynthetic",
+  "singleFileLimit": 65536,
+  "totalFileLimit": 524288,
+  "fixtures": [
+    {
+      "id": "audio_mp3",
+      "file": "audio_sample.mp3",
+      "size": 3080,
+      "sha256": "2dd45e0116c3d7a83234dea79e8823af346d96edf6e0e04c8cc41f62ddcef34e",
+      "durationMs": 504,
+      "title": "Synthetic Fixture",
+      "artist": "LDDC Test",
+      "album": "Platform Automation",
+      "track": "1",
+      "embeddedLyrics": "[00:00.00]Hello LDDC"
+    },
+    {
+      "id": "audio_flac",
+      "file": "audio_sample.flac",
+      "size": 5496,
+      "sha256": "33d9a8b43ac2bacf32e0a2824ebe6fabe1eeb8e9fde16031441116da18c5f4f4",
+      "durationMs": 300,
+      "title": "Synthetic Fixture",
+      "artist": "LDDC Test",
+      "album": "Platform Automation",
+      "track": "1",
+      "embeddedLyrics": "[00:00.00]Hello LDDC"
+    },
+    {
+      "id": "audio_wav",
+      "file": "audio_sample.wav",
+      "size": 4960,
+      "sha256": "2d527815dc00491f50523ef7290fa9622a5c876f34eff5b176a39d562e96f642",
+      "durationMs": 300,
+      "title": "Synthetic Fixture",
+      "artist": "LDDC Test",
+      "album": "Platform Automation",
+      "track": "1",
+      "embeddedLyrics": null
+    },
+    {
+      "id": "lyrics_lrc",
+      "file": "lyrics_sample.lrc",
+      "size": 165,
+      "sha256": "6e3d5f0b0a23934aa3ca08de596e2da4ad86fc4d3f2bbddefbab0e0a1621a2bb",
+      "durationMs": null,
+      "title": "Synthetic Fixture",
+      "artist": "LDDC Test",
+      "album": "Platform Automation",
+      "track": null,
+      "embeddedLyrics": null
+    }
+  ]
+}

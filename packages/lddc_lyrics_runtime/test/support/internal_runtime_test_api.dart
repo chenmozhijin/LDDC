@@ -1,0 +1,37 @@
+// 仅供 lddc_lyrics_runtime 包内白盒测试访问实现细节。
+// 消费者测试必须继续通过正式 barrel，防止测试便利重新扩大生产 API。
+export 'package:lddc_lyrics_runtime/src/api/json_api_reader.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/http_content_decoder.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/kg_http_transport.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/kg_provider.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/kg_request_executor.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/local_provider.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/lrclib_http_transport.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/lrclib_provider.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/lrclib_request_executor.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/ne_http_transport.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/ne_provider.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/ne_request_executor.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/qm_device_identity_repository.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/qm_http_transport.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/qm_provider.dart';
+export 'package:lddc_lyrics_runtime/src/api/lyrics_sources/qm_request_executor.dart';
+export 'package:lddc_lyrics_runtime/src/api/translate/bing_request_executor.dart';
+export 'package:lddc_lyrics_runtime/src/api/translate/bing_translate_provider.dart';
+export 'package:lddc_lyrics_runtime/src/api/translate/google_request_executor.dart';
+export 'package:lddc_lyrics_runtime/src/api/translate/google_translate_provider.dart';
+export 'package:lddc_lyrics_runtime/src/api/translate/openai_request_executor.dart';
+export 'package:lddc_lyrics_runtime/src/api/translate/openai_translate_provider.dart';
+export 'package:lddc_lyrics_runtime/src/api/translate/translate_http_client.dart';
+export 'package:lddc_lyrics_runtime/src/api/translate/translate_runtime_cache.dart';
+export 'package:lddc_lyrics_runtime/src/audio_tag_impl/android_saf_audio_metadata_reader.dart';
+export 'package:lddc_lyrics_runtime/src/audio_tag_impl/audio_tag_background_executor.dart';
+export 'package:lddc_lyrics_runtime/src/audio_tag_impl/dart_taglib_audio_tag_port.dart';
+export 'package:lddc_lyrics_runtime/src/audio_tag_impl/dart_taglib_backend.dart';
+export 'package:lddc_lyrics_runtime/src/audio_tag_impl/local_match_media_gateway.dart';
+export 'package:lddc_lyrics_runtime/src/cache/lru_memory_cache.dart';
+export 'package:lddc_lyrics_runtime/src/cache/persistent_cache_store.dart';
+export 'package:lddc_lyrics_runtime/src/lyrics_source/lyrics_api.dart';
+export 'package:lddc_lyrics_runtime/src/translate/translate_api.dart';
+export 'package:lddc_lyrics_runtime/src/translate/translate_provider.dart';
+export 'package:lddc_lyrics_runtime/src/translate/translate_registry.dart';

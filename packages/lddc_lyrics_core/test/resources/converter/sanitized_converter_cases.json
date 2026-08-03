@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "originClass": "sanitized-auto-save-v0-null-start",
+      "expectedLangs": ["orig"],
+      "expectedTypes": {"orig": "PLAINTEXT"},
+      "document": {
+        "version": 0,
+        "info": {"source": "QM"},
+        "tags": {},
+        "lyrics": {
+          "orig": [
+            [null, null, [[null, null, "Untimed alpha"]]],
+            [null, null, [[null, null, "Untimed beta"]]]
+          ]
+        }
+      }
+    },
+    {
+      "originClass": "sanitized-auto-save-v1-three-langs",
+      "expectedLangs": ["orig", "ts", "roma"],
+      "expectedTypes": {"orig": "VERBATIM", "ts": "LINEBYLINE", "roma": "LINEBYLINE"},
+      "document": {
+        "version": 1,
+        "info": {
+          "source": "QM",
+          "songinfo": {
+            "source": "QM",
+            "title": "Synthetic Signal",
+            "artist": ["Unit Alpha", "Unit Beta"],
+            "album": "Fixture Collection",
+            "duration": 4000,
+            "from_cue": false
+          }
+        },
+        "tags": {"ti": "Synthetic Signal", "ar": "Unit Alpha / Unit Beta", "offset": "0"},
+        "lyrics": {
+          "orig": [
+            [1000, 2200, [[1000, 1500, "al"], [1500, 2200, "pha"]]],
+            [2500, 3600, [[2500, 3000, "be"], [3000, 3600, "ta"]]]
+          ],
+          "ts": [
+            [1000, 2200, [[1000, 2200, "translated alpha"]]],
+            [2500, 3600, [[2500, 3600, "translated beta"]]]
+          ],
+          "roma": [
+            [1000, 2200, [[1000, 2200, "a l p h a"]]],
+            [2500, 3600, [[2500, 3600, "b e t a"]]]
+          ]
+        }
+      }
+    },
+    {
+      "originClass": "sanitized-auto-save-v0-orig-lrc",
+      "expectedLangs": ["orig", "ts", "orig_lrc"],
+      "expectedTypes": {"orig": "VERBATIM", "ts": "LINEBYLINE", "orig_lrc": "LINEBYLINE"},
+      "document": {
+        "version": 0,
+        "info": {"source": "NE"},
+        "tags": {"ti": "Synthetic Alignment"},
+        "lyrics": {
+          "orig": [[800, 1800, [[800, 1200, "timed"], [1200, 1800, " line"]]]],
+          "ts": [[800, 1800, [[800, 1800, "translated line"]]]],
+          "orig_lrc": [[800, 1800, [[800, 1800, "reference line"]]]]
+        }
+      }
+    },
+    {
+      "originClass": "sanitized-auto-save-v1-lddc-ts-empty-lang",
+      "expectedLangs": ["orig", "LDDC_ts", "roma"],
+      "expectedTypes": {"orig": "LINEBYLINE", "LDDC_ts": "LINEBYLINE", "roma": "PLAINTEXT"},
+      "document": {
+        "version": 1,
+        "info": {"source": "KG"},
+        "tags": {},
+        "lyrics": {
+          "orig": [[500, 1500, [[500, 1500, "source line"]]]],
+          "LDDC_ts": [[500, 1500, [[500, 1500, "local translation"]]]],
+          "roma": []
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,4199 @@
+{
+  "meta": {
+    "source": "LDDC/LDDC/core/ruby/*"
+  },
+  "vectors": {
+    "generate_ruby": [
+      {
+        "name": "基础汉字和假名",
+        "origText": "私が見る世界",
+        "romaText": "watashi ga miru sekai",
+        "expected": [
+          [
+            0,
+            1,
+            "わたし"
+          ],
+          [
+            2,
+            3,
+            "み"
+          ],
+          [
+            4,
+            6,
+            "せかい"
+          ]
+        ]
+      },
+      {
+        "name": "分句处理",
+        "origText": "思い出が 何もかもが 消え去り",
+        "romaText": "o mo i de ga   na ni mo ka mo ga   ki e sa ri",
+        "expected": [
+          [
+            0,
+            1,
+            "おも"
+          ],
+          [
+            2,
+            3,
+            "で"
+          ],
+          [
+            5,
+            6,
+            "なに"
+          ],
+          [
+            11,
+            12,
+            "き"
+          ],
+          [
+            13,
+            14,
+            "さ"
+          ]
+        ]
+      },
+      {
+        "name": "混合英文 1 (边界问题)",
+        "origText": "Don't-生-War Lie-兵士-War-World",
+        "romaText": "Don't- sei -War Lie- hei shi -War-World",
+        "expected": [
+          [
+            6,
+            7,
+            "せい"
+          ],
+          [
+            16,
+            18,
+            "へいし"
+          ]
+        ]
+      },
+      {
+        "name": "混合英文 2",
+        "origText": "愛してる Game世界のDay",
+        "romaText": "a i shi te ru   Game se ka i no Day",
+        "expected": [
+          [
+            0,
+            1,
+            "あい"
+          ],
+          [
+            9,
+            11,
+            "せかい"
+          ]
+        ]
+      },
+      {
+        "name": "片假名与汉字混合",
+        "origText": "新たなレベルへ",
+        "romaText": "arata na reberu e",
+        "expected": [
+          [
+            0,
+            1,
+            "あら"
+          ]
+        ]
+      },
+      {
+        "name": "行末汉字",
+        "origText": "明日を夢見て",
+        "romaText": "ashita wo yumemite",
+        "expected": [
+          [
+            0,
+            2,
+            "あした"
+          ],
+          [
+            3,
+            4,
+            "ゆめ"
+          ],
+          [
+            4,
+            5,
+            "み"
+          ]
+        ]
+      },
+      {
+        "name": "复杂音节 (促音等)",
+        "origText": "ずっと一緒だって信じてた",
+        "romaText": "zutto issho datte shinjiteta",
+        "expected": [
+          [
+            3,
+            5,
+            "いっしょ"
+          ],
+          [
+            8,
+            9,
+            "しん"
+          ]
+        ]
+      },
+      {
+        "name": "叠字符号",
+        "origText": "堂々さらした罪の群れと",
+        "romaText": "do u do u sa ra shi ta tsu mi no mu re to",
+        "expected": [
+          [
+            0,
+            2,
+            "どうどう"
+          ],
+          [
+            6,
+            7,
+            "つみ"
+          ],
+          [
+            8,
+            9,
+            "む"
+          ]
+        ]
+      },
+      {
+        "name": "指针同步",
+        "origText": "こぼれた温もりさえ拾い続け",
+        "romaText": "ko bo re ta nu ku mo ri sa e hi ro i tsu du ke",
+        "expected": [
+          [
+            4,
+            5,
+            "ぬく"
+          ],
+          [
+            9,
+            10,
+            "ひろ"
+          ],
+          [
+            11,
+            12,
+            "つづ"
+          ]
+        ]
+      },
+      {
+        "name": "罗马音转换",
+        "origText": "無邪気に綴る 毎日は幸せで",
+        "romaText": "mu ja ki ni tsu du ru   ma i ni chi ha shi a wa se de",
+        "expected": [
+          [
+            0,
+            3,
+            "むじゃき"
+          ],
+          [
+            4,
+            5,
+            "つづ"
+          ],
+          [
+            7,
+            9,
+            "まいにち"
+          ],
+          [
+            10,
+            11,
+            "しあわ"
+          ]
+        ]
+      },
+      {
+        "name": "特殊符号",
+        "origText": "そっとココロ放って",
+        "romaText": "so 't to ko ko ro ha na 't te",
+        "expected": [
+          [
+            6,
+            7,
+            "はな"
+          ]
+        ]
+      },
+      {
+        "name": "非标准罗马音1",
+        "origText": "僅かにちらつく灯り消し",
+        "romaText": "wazu ka ni qi la cu ku aka li ke xi",
+        "expected": [
+          [
+            0,
+            1,
+            "わず"
+          ],
+          [
+            7,
+            8,
+            "あか"
+          ],
+          [
+            9,
+            10,
+            "け"
+          ]
+        ]
+      },
+      {
+        "name": "非标准罗马音2",
+        "origText": "ゆっくりと進んで行く",
+        "romaText": "yu  ku li to susu n de yu ku",
+        "expected": [
+          [
+            5,
+            6,
+            "すす"
+          ],
+          [
+            8,
+            9,
+            "ゆ"
+          ]
+        ]
+      },
+      {
+        "name": "模糊匹配1",
+        "origText": "二人手をぎゅっとぎゅっと重ねて",
+        "romaText": "uta li te wo gi yu  to gi yu  to kasa ne te ",
+        "expected": [
+          [
+            0,
+            2,
+            "ふたり"
+          ],
+          [
+            2,
+            3,
+            "て"
+          ],
+          [
+            12,
+            13,
+            "かさ"
+          ]
+        ]
+      },
+      {
+        "name": "非标准罗马音4",
+        "origText": "君はただ立ちつくす",
+        "romaText": "kimi wa ta da ta qi cu ku su ",
+        "expected": [
+          [
+            0,
+            1,
+            "きみ"
+          ],
+          [
+            4,
+            5,
+            "た"
+          ]
+        ]
+      },
+      {
+        "name": "非标准罗马音5",
+        "origText": "多分このままじゃダメ",
+        "romaText": "ta bun ko no ma ma jya da me",
+        "expected": [
+          [
+            0,
+            2,
+            "たぶん"
+          ]
+        ]
+      },
+      {
+        "name": "模糊匹配2",
+        "origText": "星はきっときっと瞬く",
+        "romaText": "hoxi wa ki  to ki  to matata ku ",
+        "expected": [
+          [
+            0,
+            1,
+            "ほし"
+          ],
+          [
+            8,
+            9,
+            "またた"
+          ]
+        ]
+      },
+      {
+        "name": "づ/ず 不匹配问题",
+        "origText": "心近づく",
+        "romaText": "ko ko ro chi ka zu ku",
+        "expected": [
+          [
+            0,
+            1,
+            "こころ"
+          ],
+          [
+            1,
+            2,
+            "ちか"
+          ]
+        ]
+      },
+      {
+        "name": "C失败回退",
+        "origText": "痺れる感覚 愛 高鳴るぬくもり",
+        "romaText": "shi bi re ru ka n ka ku    ta ka na ru nu ku mo ri ",
+        "expected": [
+          [
+            0,
+            1,
+            "しび"
+          ],
+          [
+            3,
+            10,
+            "かんかくたかな"
+          ]
+        ]
+      },
+      {
+        "name": "片假名长音省略",
+        "origText": "アイム最強ガール ah ah",
+        "romaText": "a i mu sa i kyo u ga ru  ah ah",
+        "expected": [
+          [
+            3,
+            5,
+            "さいきょう"
+          ]
+        ]
+      },
+      {
+        "name": "n后面的撇号作为分隔符",
+        "origText": "信一",
+        "romaText": "shin'ichi",
+        "expected": [
+          [
+            0,
+            2,
+            "しんいち"
+          ]
+        ]
+      },
+      {
+        "name": "组合模糊匹配 (拗音+促音)",
+        "origText": "正義っちゃ正義",
+        "romaText": "seigi cha seigi",
+        "expected": [
+          [
+            0,
+            2,
+            "せいぎ"
+          ],
+          [
+            5,
+            7,
+            "せいぎ"
+          ]
+        ]
+      },
+      {
+        "name": "ぴょんぴょん拗音 1",
+        "origText": "こころぴょんぴょん待ち?",
+        "romaText": "ko ko ro pyo n pyo n ma chi ? ",
+        "expected": [
+          [
+            9,
+            10,
+            "ま"
+          ]
+        ]
+      },
+      {
+        "name": "ぴょんぴょん拗音 2",
+        "origText": "いたずら笑顔でぴょんぴょん",
+        "romaText": "i ta zu ra e ga o de pyo n pyo n ",
+        "expected": [
+          [
+            4,
+            6,
+            "えがお"
+          ]
+        ]
+      },
+      {
+        "name": "ぴょんぴょん拗音 3",
+        "origText": "いつもぴょんぴょん可能",
+        "romaText": "i tsu mo pyo n pyo n ka no u ",
+        "expected": [
+          [
+            9,
+            11,
+            "かのう"
+          ]
+        ]
+      },
+      {
+        "name": "汉字与片假名长音",
+        "origText": "東京タワー",
+        "romaText": "toukyou tawa-",
+        "expected": [
+          [
+            0,
+            2,
+            "とうきょう"
+          ]
+        ]
+      },
+      {
+        "name": "引号与汉字",
+        "origText": "「最高」と言った",
+        "romaText": "saikou to itta",
+        "expected": [
+          [
+            1,
+            3,
+            "さいこう"
+          ],
+          [
+            5,
+            6,
+            "い"
+          ]
+        ]
+      },
+      {
+        "name": "纯假名行",
+        "origText": "こんにちは",
+        "romaText": "konnichiwa",
+        "expected": []
+      },
+      {
+        "name": "纯英文行",
+        "origText": "Hello World",
+        "romaText": "Hello World",
+        "expected": []
+      },
+      {
+        "name": "罗马音m/n转换",
+        "origText": "先輩の新聞",
+        "romaText": "sempai no shimbun",
+        "expected": [
+          [
+            0,
+            2,
+            "せんぱい"
+          ],
+          [
+            3,
+            5,
+            "しんぶん"
+          ]
+        ]
+      },
+      {
+        "name": "全角空格处理",
+        "origText": "ハミダシてた　恋と",
+        "romaText": "ha mi da shi te ta  ko i to",
+        "expected": [
+          [
+            7,
+            8,
+            "こい"
+          ]
+        ]
+      },
+      {
+        "name": "数字处理",
+        "origText": "一緒に過ごす１つ１つが愛しくて",
+        "romaText": "i ssho ni su go su hi to tsu hi to tsu ga i to shi ku te",
+        "expected": [
+          [
+            0,
+            2,
+            "いっしょ"
+          ],
+          [
+            3,
+            4,
+            "す"
+          ],
+          [
+            6,
+            7,
+            "ひと"
+          ],
+          [
+            8,
+            9,
+            "ひと"
+          ],
+          [
+            11,
+            12,
+            "いと"
+          ]
+        ]
+      },
+      {
+        "name": "数字与汉字处理",
+        "origText": "２人は変わらずにいれるかな",
+        "romaText": "fu ta ri wa ka wa ra zu ni i re ru ka na",
+        "expected": [
+          [
+            0,
+            2,
+            "ふたり"
+          ],
+          [
+            3,
+            4,
+            "か"
+          ]
+        ]
+      },
+      {
+        "name": "贪婪匹配",
+        "origText": "輝く星の下 私は今息をする",
+        "romaText": "ka ga ya ku ho shi no shi ta   wa ta shi ha i ma i ki wo su ru ",
+        "expected": [
+          [
+            0,
+            1,
+            "かがや"
+          ],
+          [
+            2,
+            3,
+            "ほし"
+          ],
+          [
+            4,
+            5,
+            "した"
+          ],
+          [
+            6,
+            7,
+            "わたし"
+          ],
+          [
+            8,
+            9,
+            "いま"
+          ],
+          [
+            9,
+            10,
+            "いき"
+          ]
+        ]
+      },
+      {
+        "name": "空注音",
+        "origText": "夏の面影を振り返るよ",
+        "romaText": "na tsu no o mo ka ge wo fu ri ka e ru yo ",
+        "expected": [
+          [
+            0,
+            1,
+            "なつ"
+          ],
+          [
+            2,
+            4,
+            "おもかげ"
+          ],
+          [
+            5,
+            6,
+            "ふ"
+          ],
+          [
+            7,
+            8,
+            "かえ"
+          ]
+        ]
+      },
+      {
+        "name": "助词ha匹配",
+        "origText": "橋は曲線形状をして",
+        "romaText": "ha shi ha kyo ku se n ke i jo u wo shi te ",
+        "expected": [
+          [
+            0,
+            1,
+            "はし"
+          ],
+          [
+            2,
+            6,
+            "きょくせんけいじょう"
+          ]
+        ]
+      },
+      {
+        "name": "多重ha匹配",
+        "origText": "幾億も灰は降って",
+        "romaText": "i ku o ku mo ha i ha fu 't te ",
+        "expected": [
+          [
+            0,
+            2,
+            "いくおく"
+          ],
+          [
+            3,
+            4,
+            "はい"
+          ],
+          [
+            5,
+            6,
+            "ふ"
+          ]
+        ]
+      },
+      {
+        "name": "促音与平假名つ不匹配",
+        "origText": "ぎゅっと抱きしめたら",
+        "romaText": "gyu tsu to da ki shi me ta ra",
+        "expected": [
+          [
+            4,
+            5,
+            "だ"
+          ]
+        ]
+      },
+      {
+        "name": "百分号和引号",
+        "origText": "1000%「スキ」で満たしていきたいから",
+        "romaText": "se n %「 su ki 」 de mi ta shi te i ki ta i ka ra",
+        "expected": [
+          [
+            0,
+            5,
+            "せん"
+          ],
+          [
+            10,
+            11,
+            "み"
+          ]
+        ]
+      },
+      {
+        "name": "括号内英文",
+        "origText": "(simple as that) 忘れない",
+        "romaText": "wa su re na i",
+        "expected": [
+          [
+            17,
+            18,
+            "わす"
+          ]
+        ]
+      },
+      {
+        "name": "复杂匹配 1",
+        "origText": "だって似た者同士の僕ら",
+        "romaText": "da tte ni ta mo no do u shi no bo ku ra",
+        "expected": [
+          [
+            3,
+            4,
+            "に"
+          ],
+          [
+            5,
+            8,
+            "ものどうし"
+          ],
+          [
+            9,
+            10,
+            "ぼく"
+          ]
+        ]
+      },
+      {
+        "name": "复杂匹配 2",
+        "origText": "恋一滴 想い纺いでく",
+        "romaText": "ko i i chi te ki o mo i tsu mu i de ku",
+        "expected": [
+          [
+            0,
+            1,
+            "こい"
+          ],
+          [
+            1,
+            2,
+            "いち"
+          ],
+          [
+            2,
+            5,
+            "てきおも"
+          ],
+          [
+            6,
+            7,
+            "つむ"
+          ]
+        ]
+      },
+      {
+        "name": "复杂匹配 3",
+        "origText": "早すぎる合図 二人笑い出してるいつまでも",
+        "romaText": "ha ya su gi ru a i zu fu ta ri wa ra i da shi te ru i tsu ma de mo",
+        "expected": [
+          [
+            0,
+            1,
+            "はや"
+          ],
+          [
+            4,
+            6,
+            "あいず"
+          ],
+          [
+            7,
+            9,
+            "ふたり"
+          ],
+          [
+            9,
+            10,
+            "わら"
+          ],
+          [
+            11,
+            12,
+            "だ"
+          ]
+        ]
+      },
+      {
+        "name": "复杂匹配 4",
+        "origText": "芽生えた炎 胸の奥に灯して",
+        "romaText": "me ba e ta honoo mune no oku ni tomo shi te",
+        "expected": [
+          [
+            0,
+            2,
+            "めば"
+          ],
+          [
+            4,
+            5,
+            "ほのお"
+          ],
+          [
+            6,
+            7,
+            "むね"
+          ],
+          [
+            8,
+            9,
+            "おく"
+          ],
+          [
+            10,
+            11,
+            "とも"
+          ]
+        ]
+      },
+      {
+        "name": "复杂匹配 5",
+        "origText": "可能性の限界まで",
+        "romaText": "ka no u se i no ge n ka i ma de",
+        "expected": [
+          [
+            0,
+            2,
+            "かのう"
+          ],
+          [
+            2,
+            3,
+            "せい"
+          ],
+          [
+            4,
+            6,
+            "げんかい"
+          ]
+        ]
+      },
+      {
+        "name": "复杂匹配 6",
+        "origText": "そんな台詞繰り返すことに溺れて",
+        "romaText": "so n na se ri fu ku ri ka e su ko to ni o bo re te",
+        "expected": [
+          [
+            3,
+            6,
+            "せりふく"
+          ],
+          [
+            7,
+            8,
+            "かえ"
+          ],
+          [
+            12,
+            13,
+            "おぼ"
+          ]
+        ]
+      },
+      {
+        "name": "复杂匹配 7",
+        "origText": " 遮二無二足掻き喰らい再三嗤い",
+        "romaText": "sha ni mu ni a ga ki ku ra i sa i sa n wa ra i",
+        "expected": [
+          [
+            1,
+            7,
+            "しゃにむにあが"
+          ],
+          [
+            8,
+            9,
+            "く"
+          ],
+          [
+            11,
+            14,
+            "さいさんわら"
+          ]
+        ]
+      },
+      {
+        "name": "复杂匹配 8",
+        "origText": "似顔絵が消されるように",
+        "romaText": "ni ga o e ga ke sa re ru yo u ni",
+        "expected": [
+          [
+            0,
+            3,
+            "にがおえ"
+          ],
+          [
+            4,
+            5,
+            "け"
+          ]
+        ]
+      },
+      {
+        "name": "行末英文不应被注音 1",
+        "origText": " 風見鶏のポーズ (ピヨピヨ! Just Do It!)",
+        "romaText": "ka za mi do ri no poo zu",
+        "expected": [
+          [
+            1,
+            4,
+            "かざみどり"
+          ]
+        ]
+      },
+      {
+        "name": "行末英文不应被注音 2",
+        "origText": " 頭を揺らすポーズ (ピヨピヨ! Just Do It!)",
+        "romaText": "a ta ma wo yu ra su poo zu",
+        "expected": [
+          [
+            1,
+            2,
+            "あたま"
+          ],
+          [
+            3,
+            4,
+            "ゆ"
+          ]
+        ]
+      },
+      {
+        "name": "带括号的预设注音",
+        "origText": "現れる陽 紅(くれ)る世界",
+        "romaText": "a ra wa re ru hi ku re na i ru se ka i",
+        "expected": [
+          [
+            0,
+            1,
+            "あらわ"
+          ],
+          [
+            3,
+            4,
+            "ひ"
+          ],
+          [
+            5,
+            6,
+            "くれ"
+          ],
+          [
+            11,
+            13,
+            "せかい"
+          ]
+        ]
+      },
+      {
+        "name": "片假名长音符1",
+        "origText": "ハートのリズム高鳴って",
+        "romaText": "ha a to no ri zu mu ta ka na 't te ",
+        "expected": [
+          [
+            7,
+            9,
+            "たかな"
+          ]
+        ]
+      },
+      {
+        "name": "片假名长音符2",
+        "origText": "ハートのリズムを掴んで",
+        "romaText": "ha a to no ri zu mu wo tsu ka n de ",
+        "expected": [
+          [
+            8,
+            9,
+            "つか"
+          ]
+        ]
+      },
+      {
+        "name": "外来语 fi 和促音 't",
+        "origText": "フィナーレまで舞って歌ってる",
+        "romaText": "fi na a re ma de ma 't te u ta 't te ru",
+        "expected": [
+          [
+            7,
+            8,
+            "ま"
+          ],
+          [
+            10,
+            11,
+            "うた"
+          ]
+        ]
+      },
+      {
+        "name": "助词 'を' 导致汉字读音被截断",
+        "origText": "炎を掲げて",
+        "romaText": "ho no o wo ka ka ge te",
+        "expected": [
+          [
+            0,
+            1,
+            "ほのお"
+          ],
+          [
+            2,
+            3,
+            "かか"
+          ]
+        ]
+      },
+      {
+        "name": "评分系统",
+        "origText": "歌え彼方を 歌え永劫",
+        "romaText": "u ta e ka na ta wo   u ta e e i go u ",
+        "expected": [
+          [
+            0,
+            1,
+            "うた"
+          ],
+          [
+            2,
+            4,
+            "かなた"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            8,
+            10,
+            "えいごう"
+          ]
+        ]
+      },
+      {
+        "name": "字典送假名处理",
+        "origText": "闇に溶けて 巡る世界",
+        "romaText": "ya mi ni to ke te   me gu ru se ka i ",
+        "expected": [
+          [
+            0,
+            1,
+            "やみ"
+          ],
+          [
+            2,
+            3,
+            "と"
+          ],
+          [
+            6,
+            7,
+            "めぐ"
+          ],
+          [
+            8,
+            10,
+            "せかい"
+          ]
+        ]
+      },
+      {
+        "name": "词典匹配-含假名",
+        "origText": "有り難う",
+        "romaText": "a ri ga to u",
+        "expected": [
+          [
+            0,
+            1,
+            "あ"
+          ],
+          [
+            2,
+            3,
+            "がと"
+          ]
+        ]
+      },
+      {
+        "name": "模糊匹配 - 长音等价",
+        "origText": "ゆこう 思い出を重ねて",
+        "romaText": "yukoo omoidewo kasanete",
+        "expected": [
+          [
+            4,
+            5,
+            "おも"
+          ],
+          [
+            6,
+            7,
+            "で"
+          ],
+          [
+            8,
+            9,
+            "かさ"
+          ]
+        ]
+      },
+      {
+        "name": "模糊匹配 - 长音等价2",
+        "origText": "ゆこう　シナリオは続くよ",
+        "romaText": "yukoo shinariowa tsudukuyo",
+        "expected": [
+          [
+            9,
+            10,
+            "つづ"
+          ]
+        ]
+      },
+      {
+        "name": "NFKC 归一化 - 省略号",
+        "origText": "う…ちょっと緊張してきたかも",
+        "romaText": "u...chotto kinchou shitekitakamo",
+        "expected": [
+          [
+            6,
+            8,
+            "きんちょう"
+          ]
+        ]
+      },
+      {
+        "name": "训读1",
+        "origText": "理があるなら",
+        "romaText": "kotowali ga a lu na la",
+        "expected": [
+          [
+            0,
+            1,
+            "ことわり"
+          ]
+        ]
+      },
+      {
+        "name": "训读2",
+        "origText": "映る僕たちは幻",
+        "romaText": "wucu lu boku ta qi wa maboloxi",
+        "expected": [
+          [
+            0,
+            1,
+            "うつ"
+          ],
+          [
+            2,
+            3,
+            "ぼく"
+          ],
+          [
+            6,
+            7,
+            "まぼろし"
+          ]
+        ]
+      },
+      {
+        "name": "义训",
+        "origText": "踏破目指す深淵の扉（アビスゲート）",
+        "romaText": "to u ha me za su a bi su ge e to",
+        "expected": [
+          [
+            0,
+            4,
+            "とうはめざ"
+          ],
+          [
+            5,
+            9,
+            "あびすげえと"
+          ]
+        ]
+      },
+      {
+        "name": "罗马音与原文不完全对应",
+        "origText": "強くなれるそう君は",
+        "romaText": "cuyo ku na lei lu so u kimi wa",
+        "expected": [
+          [
+            0,
+            1,
+            "つよ"
+          ],
+          [
+            7,
+            8,
+            "きみ"
+          ]
+        ]
+      },
+      {
+        "name": "时间戳罗马音",
+        "origText": "天壌を翔る者たち - Love Planet Five",
+        "romaText": "[0,22850]",
+        "expected": []
+      },
+      {
+        "name": "罗马音与原文严重不匹配",
+        "origText": "ドキドキと急ぐ",
+        "romaText": "ka la fu lu ni xi qi a e ",
+        "expected": []
+      },
+      {
+        "name": "中间部分失败但后续同步成功",
+        "origText": "朝食を抜いて、夜は来る",
+        "romaText": "choushoku o, yoru wa kuru",
+        "expected": [
+          [
+            0,
+            2,
+            "ちょうしょく"
+          ],
+          [
+            7,
+            8,
+            "よる"
+          ],
+          [
+            9,
+            10,
+            "く"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 0",
+        "origText": "Tin Toy Melody - 和气杏未 (和氣あず未)/楠木灯 (楠木ともり)/富田美憂 (とみた みゆ)/中島由貴 (なかしま ゆき)/鬼頭明里 (きとう あかり)",
+        "romaText": "",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 4",
+        "origText": "ブリキは軋み 音を奏でた",
+        "romaText": "bu ri ki ha ki shi mi   o to wo ka na de ta ",
+        "expected": [
+          [
+            4,
+            5,
+            "きし"
+          ],
+          [
+            7,
+            8,
+            "おと"
+          ],
+          [
+            9,
+            10,
+            "かな"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 5",
+        "origText": "花びらの舞う季節へと向かう",
+        "romaText": "ha na bi ra no ma u ki se tsu he to mu ka u ",
+        "expected": [
+          [
+            0,
+            1,
+            "はな"
+          ],
+          [
+            4,
+            5,
+            "ま"
+          ],
+          [
+            6,
+            8,
+            "きせつ"
+          ],
+          [
+            10,
+            11,
+            "む"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 6",
+        "origText": "輪廻する 万華鏡",
+        "romaText": "ri n ne su ru   ma n ge kyo u ",
+        "expected": [
+          [
+            0,
+            2,
+            "りんね"
+          ],
+          [
+            5,
+            8,
+            "まんげきょう"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 7",
+        "origText": "ずっと回った",
+        "romaText": "zu 't to ma wa 't ta ",
+        "expected": [
+          [
+            3,
+            4,
+            "まわ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 8",
+        "origText": "キラキラと輝いてた",
+        "romaText": "ki ra ki ra to ka ga ya i te ta ",
+        "expected": [
+          [
+            5,
+            6,
+            "かがや"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 9",
+        "origText": "それは素晴らしい日々で",
+        "romaText": "so re ha su ba ra shi i hi bi de ",
+        "expected": [
+          [
+            3,
+            5,
+            "すば"
+          ],
+          [
+            8,
+            10,
+            "ひび"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 10",
+        "origText": "眩しすぎるほど光る",
+        "romaText": "ma bu shi su gi ru ho do hi ka ru ",
+        "expected": [
+          [
+            0,
+            1,
+            "まぶ"
+          ],
+          [
+            7,
+            8,
+            "ひか"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 11",
+        "origText": "思い出が 何もかもが 消え去り",
+        "romaText": "o mo i de ga   na ni mo ka mo ga   ki e sa ri ",
+        "expected": [
+          [
+            0,
+            1,
+            "おも"
+          ],
+          [
+            2,
+            3,
+            "で"
+          ],
+          [
+            5,
+            6,
+            "なに"
+          ],
+          [
+            11,
+            12,
+            "き"
+          ],
+          [
+            13,
+            14,
+            "さ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 12",
+        "origText": "残された 土に芽吹く",
+        "romaText": "no ko sa re ta   tsu chi ni me bu ku ",
+        "expected": [
+          [
+            0,
+            1,
+            "のこ"
+          ],
+          [
+            5,
+            6,
+            "つち"
+          ],
+          [
+            7,
+            9,
+            "めぶ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 13",
+        "origText": "希望の命と なるよう 捧げる",
+        "romaText": "ki bo u no i no chi to   na ru yo u   sa sa ge ru ",
+        "expected": [
+          [
+            0,
+            2,
+            "きぼう"
+          ],
+          [
+            3,
+            4,
+            "いのち"
+          ],
+          [
+            11,
+            12,
+            "ささ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 14",
+        "origText": "古いラジオに 合わせ歌った",
+        "romaText": "fu ru i ra ji o ni   a wa se u ta 't ta ",
+        "expected": [
+          [
+            0,
+            1,
+            "ふる"
+          ],
+          [
+            7,
+            8,
+            "あ"
+          ],
+          [
+            10,
+            11,
+            "うた"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 15",
+        "origText": "それを切り裂く雷鳴の音が",
+        "romaText": "so re wo ki ri sa ku ra i me i no o to ga ",
+        "expected": [
+          [
+            3,
+            4,
+            "き"
+          ],
+          [
+            5,
+            6,
+            "さ"
+          ],
+          [
+            7,
+            9,
+            "らいめい"
+          ],
+          [
+            10,
+            11,
+            "おと"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 16",
+        "origText": "ずっと眠ってた 幾千年も",
+        "romaText": "zu 't to ne mu 't te ta   i ku se n ne n mo ",
+        "expected": [
+          [
+            3,
+            4,
+            "ねむ"
+          ],
+          [
+            8,
+            11,
+            "いくせんねん"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 17",
+        "origText": "木々のざわめきで 目を覚ます",
+        "romaText": "ki gi no za wa me ki de   me wo sa ma su ",
+        "expected": [
+          [
+            0,
+            2,
+            "きぎ"
+          ],
+          [
+            9,
+            10,
+            "め"
+          ],
+          [
+            11,
+            12,
+            "さ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 18",
+        "origText": "エンジンが 火を吹いた",
+        "romaText": "e n ji n ga   hi wo fu i ta ",
+        "expected": [
+          [
+            6,
+            7,
+            "ひ"
+          ],
+          [
+            8,
+            9,
+            "ふ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 19",
+        "origText": "ずっと踊った",
+        "romaText": "zu 't to o do 't ta ",
+        "expected": [
+          [
+            3,
+            4,
+            "おど"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 20",
+        "origText": "キラキラと煌めいてた",
+        "romaText": "ki ra ki ra to ki ra me i te ta ",
+        "expected": [
+          [
+            5,
+            6,
+            "きら"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 21",
+        "origText": "時には雨に打たれて",
+        "romaText": "to ki ni ha a me ni u ta re te ",
+        "expected": [
+          [
+            0,
+            1,
+            "とき"
+          ],
+          [
+            3,
+            4,
+            "あめ"
+          ],
+          [
+            5,
+            6,
+            "う"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 22",
+        "origText": "時には涙をこぼし",
+        "romaText": "to ki ni ha na mi da wo ko bo shi ",
+        "expected": [
+          [
+            0,
+            1,
+            "とき"
+          ],
+          [
+            3,
+            4,
+            "なみだ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 23",
+        "origText": "弱音を吐くような日も",
+        "romaText": "yo wa ne wo ha ku yo u na hi mo ",
+        "expected": [
+          [
+            0,
+            2,
+            "よわね"
+          ],
+          [
+            3,
+            4,
+            "は"
+          ],
+          [
+            8,
+            9,
+            "ひ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 24",
+        "origText": "ありがとうってたたえあおう",
+        "romaText": "a ri ga to u 't te ta ta e a o u ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 25",
+        "origText": "僕らは",
+        "romaText": "bo ku ra ha ",
+        "expected": [
+          [
+            0,
+            1,
+            "ぼく"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 26",
+        "origText": "かけがえのない出会いに満ちてる",
+        "romaText": "ka ke ga e no na i de a i ni mi chi te ru ",
+        "expected": [
+          [
+            7,
+            9,
+            "であ"
+          ],
+          [
+            11,
+            12,
+            "み"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 27",
+        "origText": "だから今日も",
+        "romaText": "da ka ra kyo u mo ",
+        "expected": [
+          [
+            3,
+            5,
+            "きょう"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 28",
+        "origText": "フィナーレまで舞って歌ってる",
+        "romaText": "fi na a re ma de ma 't te u ta 't te ru ",
+        "expected": [
+          [
+            7,
+            8,
+            "ま"
+          ],
+          [
+            10,
+            11,
+            "うた"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 29",
+        "origText": "朽ちゆく 時まで",
+        "romaText": "ku chi yu ku   to ki ma de ",
+        "expected": [
+          [
+            0,
+            1,
+            "く"
+          ],
+          [
+            5,
+            6,
+            "とき"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 30",
+        "origText": "ブリキは軋み 音を奏でた",
+        "romaText": "bu ri ki ha ki shi mi   o to wo ka na de ta ",
+        "expected": [
+          [
+            4,
+            5,
+            "きし"
+          ],
+          [
+            7,
+            8,
+            "おと"
+          ],
+          [
+            9,
+            10,
+            "かな"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 31",
+        "origText": "それが仮初と知りながらも",
+        "romaText": "so re ga ka ri so me to shi ri na ga ra mo ",
+        "expected": [
+          [
+            3,
+            5,
+            "かりそめ"
+          ],
+          [
+            6,
+            7,
+            "し"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 32",
+        "origText": "ブリキは軋み 命を燃やす",
+        "romaText": "bu ri ki ha ki shi mi   i no chi wo mo ya su ",
+        "expected": [
+          [
+            4,
+            5,
+            "きし"
+          ],
+          [
+            7,
+            8,
+            "いのち"
+          ],
+          [
+            9,
+            10,
+            "も"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - Tin Toy Melody: 33",
+        "origText": "花びらの舞う季節へと向かう",
+        "romaText": "ha na bi ra no ma u ki se tsu he to mu ka u ",
+        "expected": [
+          [
+            0,
+            1,
+            "はな"
+          ],
+          [
+            4,
+            5,
+            "ま"
+          ],
+          [
+            6,
+            8,
+            "きせつ"
+          ],
+          [
+            10,
+            11,
+            "む"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 3",
+        "origText": "胸は万感に震えて",
+        "romaText": "mu ne ha ba n ka n ni fu ru e te ",
+        "expected": [
+          [
+            0,
+            1,
+            "むね"
+          ],
+          [
+            2,
+            4,
+            "ばんかん"
+          ],
+          [
+            5,
+            6,
+            "ふる"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 4",
+        "origText": "袖を壮大に揺らして",
+        "romaText": "so de wo so u da i ni yu ra shi te ",
+        "expected": [
+          [
+            0,
+            1,
+            "そで"
+          ],
+          [
+            2,
+            4,
+            "そうだい"
+          ],
+          [
+            5,
+            6,
+            "ゆ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 5",
+        "origText": "橋は曲線形状をして",
+        "romaText": "ha shi ha kyo ku se n ke i jo u wo shi te ",
+        "expected": [
+          [
+            0,
+            1,
+            "はし"
+          ],
+          [
+            2,
+            6,
+            "きょくせんけいじょう"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 6",
+        "origText": "桜は伝承を告げた",
+        "romaText": "sa ku ra ha de n sho u wo tsu ge ta ",
+        "expected": [
+          [
+            0,
+            1,
+            "さくら"
+          ],
+          [
+            2,
+            4,
+            "でんしょう"
+          ],
+          [
+            5,
+            6,
+            "つ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 7",
+        "origText": "鐘は褒章を讃えて",
+        "romaText": "ka ne ha ho u sho u wo ta ta e te ",
+        "expected": [
+          [
+            0,
+            1,
+            "かね"
+          ],
+          [
+            2,
+            4,
+            "ほうしょう"
+          ],
+          [
+            5,
+            6,
+            "たた"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 8",
+        "origText": "天を銅銭が交差して",
+        "romaText": "te n wo do u se n ga ko u sa shi te ",
+        "expected": [
+          [
+            0,
+            1,
+            "てん"
+          ],
+          [
+            2,
+            4,
+            "どうせん"
+          ],
+          [
+            5,
+            7,
+            "こうさ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 9",
+        "origText": "床は天鵞絨を模して",
+        "romaText": "to ko ha bi ro o do wo mo shi te ",
+        "expected": [
+          [
+            0,
+            1,
+            "とこ"
+          ],
+          [
+            2,
+            5,
+            "びろおど"
+          ],
+          [
+            6,
+            7,
+            "も"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 10",
+        "origText": "燦然と幕は開けた",
+        "romaText": "sa n ze n to ma ku ha a ke ta ",
+        "expected": [
+          [
+            0,
+            2,
+            "さんぜん"
+          ],
+          [
+            3,
+            4,
+            "まく"
+          ],
+          [
+            5,
+            6,
+            "あ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 11",
+        "origText": "歌え肥沃の 歌え悲願の",
+        "romaText": "u ta e hi yo ku no   u ta e hi ga n no ",
+        "expected": [
+          [
+            0,
+            1,
+            "うた"
+          ],
+          [
+            2,
+            4,
+            "ひよく"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            8,
+            10,
+            "ひがん"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 12",
+        "origText": "歌え彼方を 歌え永劫",
+        "romaText": "u ta e ka na ta wo   u ta e e i go u ",
+        "expected": [
+          [
+            0,
+            1,
+            "うた"
+          ],
+          [
+            2,
+            4,
+            "かなた"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            8,
+            10,
+            "えいごう"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 13",
+        "origText": "歌え記憶の 歌えきみと 往来を",
+        "romaText": "u ta e ki o ku no   u ta e ki mi to   o u ra i wo ",
+        "expected": [
+          [
+            0,
+            1,
+            "うた"
+          ],
+          [
+            2,
+            4,
+            "きおく"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            12,
+            14,
+            "おうらい"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 14",
+        "origText": "ああ",
+        "romaText": "a a ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 15",
+        "origText": "命を通し鼓動を打ち大気を揺らせ",
+        "romaText": "i no chi wo to o shi ko do u wo u chi ta i ki wo yu ra se ",
+        "expected": [
+          [
+            0,
+            1,
+            "いのち"
+          ],
+          [
+            2,
+            3,
+            "とお"
+          ],
+          [
+            4,
+            6,
+            "こどう"
+          ],
+          [
+            7,
+            8,
+            "う"
+          ],
+          [
+            9,
+            11,
+            "たいき"
+          ],
+          [
+            12,
+            13,
+            "ゆ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 16",
+        "origText": "炎を掲げて",
+        "romaText": "ho no o wo ka ka ge te ",
+        "expected": [
+          [
+            0,
+            1,
+            "ほのお"
+          ],
+          [
+            2,
+            3,
+            "かか"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 17",
+        "origText": "歯車が激しく回り煙りを上げて",
+        "romaText": "ha gu ru ma ga ha ge shi ku ma wa ri ke mu ri wo a ge te ",
+        "expected": [
+          [
+            0,
+            2,
+            "はぐるま"
+          ],
+          [
+            3,
+            4,
+            "はげ"
+          ],
+          [
+            6,
+            7,
+            "まわ"
+          ],
+          [
+            8,
+            9,
+            "けむ"
+          ],
+          [
+            11,
+            12,
+            "あ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 18",
+        "origText": "きみまで",
+        "romaText": "ki mi ma de ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 19",
+        "origText": "ああ",
+        "romaText": "a a ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 20",
+        "origText": "知らない日の遠い闇に灯りを点せ",
+        "romaText": "shi ra na i hi no to o i ya mi ni a ka ri wo to mo se ",
+        "expected": [
+          [
+            0,
+            1,
+            "し"
+          ],
+          [
+            4,
+            5,
+            "ひ"
+          ],
+          [
+            6,
+            7,
+            "とお"
+          ],
+          [
+            8,
+            9,
+            "やみ"
+          ],
+          [
+            10,
+            11,
+            "あか"
+          ],
+          [
+            13,
+            14,
+            "とも"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 21",
+        "origText": "見知らぬ朝まで",
+        "romaText": "mi shi ra nu a sa ma de ",
+        "expected": [
+          [
+            0,
+            2,
+            "みし"
+          ],
+          [
+            4,
+            5,
+            "あさ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 22",
+        "origText": "ばらばらになり",
+        "romaText": "ba ra ba ra ni na ri ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 23",
+        "origText": "鉄くずに変わるまで",
+        "romaText": "te tsu ku zu ni ka wa ru ma de ",
+        "expected": [
+          [
+            0,
+            1,
+            "てつ"
+          ],
+          [
+            4,
+            5,
+            "か"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 24",
+        "origText": "光を打て 音を紡げ",
+        "romaText": "hi ka ri wo u te   o to wo tsu mu ge ",
+        "expected": [
+          [
+            0,
+            1,
+            "ひかり"
+          ],
+          [
+            2,
+            3,
+            "う"
+          ],
+          [
+            5,
+            6,
+            "おと"
+          ],
+          [
+            7,
+            8,
+            "つむ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 25",
+        "origText": "舞台は瀟洒に収め",
+        "romaText": "bu ta i ha sho u sha ni o sa me ",
+        "expected": [
+          [
+            0,
+            2,
+            "ぶたい"
+          ],
+          [
+            3,
+            5,
+            "しょうしゃ"
+          ],
+          [
+            6,
+            7,
+            "おさ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 26",
+        "origText": "光は勝者を讃え",
+        "romaText": "hi ka ri ha sho u sha wo ta ta e ",
+        "expected": [
+          [
+            0,
+            1,
+            "ひかり"
+          ],
+          [
+            2,
+            4,
+            "しょうしゃ"
+          ],
+          [
+            5,
+            6,
+            "たた"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 27",
+        "origText": "幾億も灰は降って",
+        "romaText": "i ku o ku mo ha i ha fu 't te ",
+        "expected": [
+          [
+            0,
+            2,
+            "いくおく"
+          ],
+          [
+            3,
+            4,
+            "はい"
+          ],
+          [
+            5,
+            6,
+            "ふ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 28",
+        "origText": "幾ばくかは輝く",
+        "romaText": "i ku ba ku ka ha ka ga ya ku ",
+        "expected": [
+          [
+            0,
+            1,
+            "いく"
+          ],
+          [
+            5,
+            6,
+            "かがや"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 29",
+        "origText": "歌え戦火の 歌え時には",
+        "romaText": "u ta e se n ka no   u ta e to ki ni ha ",
+        "expected": [
+          [
+            0,
+            1,
+            "うた"
+          ],
+          [
+            2,
+            4,
+            "せんか"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            8,
+            9,
+            "とき"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 30",
+        "origText": "歌え無慈悲を 歌え尊く",
+        "romaText": "u ta e mu ji hi wo   u ta e to u to ku ",
+        "expected": [
+          [
+            0,
+            1,
+            "うた"
+          ],
+          [
+            2,
+            5,
+            "むじひ"
+          ],
+          [
+            7,
+            8,
+            "うた"
+          ],
+          [
+            9,
+            10,
+            "とうと"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 31",
+        "origText": "歌え季節の 歌えきみと 豊穣を",
+        "romaText": "u ta e ki se tsu no   u ta e ki mi to   ho u jo u wo ",
+        "expected": [
+          [
+            0,
+            1,
+            "うた"
+          ],
+          [
+            2,
+            4,
+            "きせつ"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            12,
+            14,
+            "ほうじょう"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 32",
+        "origText": "ああ",
+        "romaText": "a a ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 33",
+        "origText": "生きるために息を切らせ",
+        "romaText": "i ki ru ta me ni i ki wo ki ra se ",
+        "expected": [
+          [
+            0,
+            1,
+            "い"
+          ],
+          [
+            6,
+            7,
+            "いき"
+          ],
+          [
+            8,
+            9,
+            "き"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 34",
+        "origText": "どこまでも行け",
+        "romaText": "do ko ma de mo i ke ",
+        "expected": [
+          [
+            5,
+            6,
+            "い"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 35",
+        "origText": "時に休んでも",
+        "romaText": "to ki ni ya su n de mo ",
+        "expected": [
+          [
+            0,
+            1,
+            "とき"
+          ],
+          [
+            2,
+            3,
+            "やす"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 36",
+        "origText": "心なんて頼りなくて時に寂しい",
+        "romaText": "ko ko ro na n te ta yo ri na ku te to ki ni sa bi shi i ",
+        "expected": [
+          [
+            0,
+            1,
+            "こころ"
+          ],
+          [
+            4,
+            5,
+            "たよ"
+          ],
+          [
+            9,
+            10,
+            "とき"
+          ],
+          [
+            11,
+            12,
+            "さび"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 37",
+        "origText": "きみすら",
+        "romaText": "ki mi su ra ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 38",
+        "origText": "ああ",
+        "romaText": "a a ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 39",
+        "origText": "知らないほうがいいことも",
+        "romaText": "shi ra na i ho u ga i i ko to mo ",
+        "expected": [
+          [
+            0,
+            1,
+            "し"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 40",
+        "origText": "たくさんあって",
+        "romaText": "ta ku sa n a 't te ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 41",
+        "origText": "それでも綺麗だ",
+        "romaText": "so re de mo ki re i da ",
+        "expected": [
+          [
+            4,
+            6,
+            "きれい"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 42",
+        "origText": "くるくると回る万華鏡のように",
+        "romaText": "ku ru ku ru to ma wa ru ma n ge kyo u no yo u ni ",
+        "expected": [
+          [
+            5,
+            6,
+            "まわ"
+          ],
+          [
+            7,
+            10,
+            "まんげきょう"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 43",
+        "origText": "闇に溶けて 巡る世界",
+        "romaText": "ya mi ni to ke te   me gu ru se ka i ",
+        "expected": [
+          [
+            0,
+            1,
+            "やみ"
+          ],
+          [
+            2,
+            3,
+            "と"
+          ],
+          [
+            6,
+            7,
+            "めぐ"
+          ],
+          [
+            8,
+            10,
+            "せかい"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 44",
+        "origText": "ああ",
+        "romaText": "a a ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 45",
+        "origText": "ああ針が落とされる",
+        "romaText": "a a ha ri ga o to sa re ru ",
+        "expected": [
+          [
+            2,
+            3,
+            "はり"
+          ],
+          [
+            4,
+            5,
+            "お"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 46",
+        "origText": "ああ始まる旋律",
+        "romaText": "a a ha ji ma ru se n ri tsu ",
+        "expected": [
+          [
+            2,
+            3,
+            "はじ"
+          ],
+          [
+            5,
+            7,
+            "せんりつ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 47",
+        "origText": "ああまるで忘れてた",
+        "romaText": "a a ma ru de wa su re te ta ",
+        "expected": [
+          [
+            5,
+            6,
+            "わす"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 48",
+        "origText": "ああ力が漲る",
+        "romaText": "a a chi ka ra ga mi na gi ru ",
+        "expected": [
+          [
+            2,
+            3,
+            "ちから"
+          ],
+          [
+            4,
+            5,
+            "みなぎ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 49",
+        "origText": "ああ心も震える",
+        "romaText": "a a ko ko ro mo fu ru e ru ",
+        "expected": [
+          [
+            2,
+            3,
+            "こころ"
+          ],
+          [
+            4,
+            5,
+            "ふる"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 50",
+        "origText": "ああ眩い光も",
+        "romaText": "a a ma ba yu i hi ka ri mo ",
+        "expected": [
+          [
+            2,
+            3,
+            "まばゆ"
+          ],
+          [
+            4,
+            5,
+            "ひかり"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 51",
+        "origText": "ああそれしかないから",
+        "romaText": "a a so re shi ka na i ka ra ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 52",
+        "origText": "ああ存在する意味なんて",
+        "romaText": "a a so n za i su ru i mi na n te ",
+        "expected": [
+          [
+            2,
+            4,
+            "そんざい"
+          ],
+          [
+            6,
+            8,
+            "いみ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 53",
+        "origText": "ああ",
+        "romaText": "a a ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 54",
+        "origText": "命を通し鼓動を打ち大気を揺らせ",
+        "romaText": "i no chi wo to o shi ko do u wo u chi ta i ki wo yu ra se ",
+        "expected": [
+          [
+            0,
+            1,
+            "いのち"
+          ],
+          [
+            2,
+            3,
+            "とお"
+          ],
+          [
+            4,
+            6,
+            "こどう"
+          ],
+          [
+            7,
+            8,
+            "う"
+          ],
+          [
+            9,
+            11,
+            "たいき"
+          ],
+          [
+            12,
+            13,
+            "ゆ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 55",
+        "origText": "炎を掲げて",
+        "romaText": "ho no o wo ka ka ge te ",
+        "expected": [
+          [
+            0,
+            1,
+            "ほのお"
+          ],
+          [
+            2,
+            3,
+            "かか"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 56",
+        "origText": "歯車が激しく回り煙りを上げて",
+        "romaText": "ha gu ru ma ga ha ge shi ku ma wa ri ke mu ri wo a ge te ",
+        "expected": [
+          [
+            0,
+            2,
+            "はぐるま"
+          ],
+          [
+            3,
+            4,
+            "はげ"
+          ],
+          [
+            6,
+            7,
+            "まわ"
+          ],
+          [
+            8,
+            9,
+            "けむ"
+          ],
+          [
+            11,
+            12,
+            "あ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 57",
+        "origText": "きみまで",
+        "romaText": "ki mi ma de ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 58",
+        "origText": "ああ",
+        "romaText": "a a ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 59",
+        "origText": "知らない日の遠い朝に奇跡を点せ",
+        "romaText": "shi ra na i hi no to o i a sa ni ki se ki wo to mo se ",
+        "expected": [
+          [
+            0,
+            1,
+            "し"
+          ],
+          [
+            4,
+            5,
+            "ひ"
+          ],
+          [
+            6,
+            7,
+            "とお"
+          ],
+          [
+            8,
+            9,
+            "あさ"
+          ],
+          [
+            10,
+            12,
+            "きせき"
+          ],
+          [
+            13,
+            14,
+            "とも"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 60",
+        "origText": "見知らぬあなたへ",
+        "romaText": "mi shi ra nu a na ta he ",
+        "expected": [
+          [
+            0,
+            2,
+            "みし"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 61",
+        "origText": "ばらばらになり",
+        "romaText": "ba ra ba ra ni na ri ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 62",
+        "origText": "鉄くずに変わるまで",
+        "romaText": "te tsu ku zu ni ka wa ru ma de ",
+        "expected": [
+          [
+            0,
+            1,
+            "てつ"
+          ],
+          [
+            4,
+            5,
+            "か"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 63",
+        "origText": "光を打て 音を紡げ",
+        "romaText": "hi ka ri wo u te   o to wo tsu mu ge ",
+        "expected": [
+          [
+            0,
+            1,
+            "ひかり"
+          ],
+          [
+            2,
+            3,
+            "う"
+          ],
+          [
+            5,
+            6,
+            "おと"
+          ],
+          [
+            7,
+            8,
+            "つむ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール - 機械仕掛けの賛歌: 64",
+        "origText": "機械仕掛けの",
+        "romaText": "ki ka i ji ka ke no ",
+        "expected": [
+          [
+            0,
+            4,
+            "きかいじか"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 0",
+        "origText": "想歌灯 - シャノワール",
+        "romaText": " ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 3",
+        "origText": "紡いだ絆が灯り 小さな鼓動奏でた",
+        "romaText": "tsu mu i da ki zu na ga to mo ri   chi i sa na ko do u ka na de ta ",
+        "expected": [
+          [
+            0,
+            1,
+            "つむ"
+          ],
+          [
+            3,
+            4,
+            "きずな"
+          ],
+          [
+            5,
+            6,
+            "とも"
+          ],
+          [
+            8,
+            9,
+            "ちい"
+          ],
+          [
+            11,
+            13,
+            "こどう"
+          ],
+          [
+            13,
+            14,
+            "かな"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 4",
+        "origText": "届ける言葉を歌に変えて",
+        "romaText": "to do ke ru ko to ba wo u ta ni ka e te ",
+        "expected": [
+          [
+            0,
+            1,
+            "とど"
+          ],
+          [
+            3,
+            5,
+            "ことば"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            8,
+            9,
+            "か"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 5",
+        "origText": "違う景色の中 歩き続けていた",
+        "romaText": "chi ga u ke shi ki no na ka   a ru ki tsu du ke te i ta ",
+        "expected": [
+          [
+            0,
+            1,
+            "ちが"
+          ],
+          [
+            2,
+            4,
+            "けしき"
+          ],
+          [
+            5,
+            6,
+            "なか"
+          ],
+          [
+            7,
+            8,
+            "ある"
+          ],
+          [
+            9,
+            10,
+            "つづ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 6",
+        "origText": "目を閉じるほど見える",
+        "romaText": "me wo to ji ru ho do mi e ru ",
+        "expected": [
+          [
+            0,
+            1,
+            "め"
+          ],
+          [
+            2,
+            3,
+            "と"
+          ],
+          [
+            7,
+            8,
+            "み"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 7",
+        "origText": "いくつもの煌めきが",
+        "romaText": "i ku tsu mo no ki ra me ki ga ",
+        "expected": [
+          [
+            5,
+            6,
+            "きら"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 8",
+        "origText": "握り続けた夢 その手に",
+        "romaText": "ni gi ri tsu du ke ta yu me   so no te ni ",
+        "expected": [
+          [
+            0,
+            1,
+            "にぎ"
+          ],
+          [
+            2,
+            3,
+            "つづ"
+          ],
+          [
+            5,
+            6,
+            "ゆめ"
+          ],
+          [
+            9,
+            10,
+            "て"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 9",
+        "origText": "刻み続けた声 その背に",
+        "romaText": "ki za mi tsu du ke ta ko e   so no se ni ",
+        "expected": [
+          [
+            0,
+            1,
+            "きざ"
+          ],
+          [
+            2,
+            3,
+            "つづ"
+          ],
+          [
+            5,
+            6,
+            "こえ"
+          ],
+          [
+            9,
+            10,
+            "せ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 10",
+        "origText": "傷だらけの道で 足並みを揃えた",
+        "romaText": "ki zu da ra ke no mi chi de   a shi na mi wo so ro e ta ",
+        "expected": [
+          [
+            0,
+            1,
+            "きず"
+          ],
+          [
+            5,
+            6,
+            "みち"
+          ],
+          [
+            8,
+            9,
+            "あし"
+          ],
+          [
+            9,
+            10,
+            "な"
+          ],
+          [
+            12,
+            13,
+            "そろ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 11",
+        "origText": "もしまだ寂しさに迷うのなら",
+        "romaText": "mo shi ma da sa mi shi sa ni ma yo u no na ra ",
+        "expected": [
+          [
+            4,
+            5,
+            "さみ"
+          ],
+          [
+            8,
+            9,
+            "まよ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 12",
+        "origText": "僕たちは",
+        "romaText": "bo ku ta chi ha ",
+        "expected": [
+          [
+            0,
+            1,
+            "ぼく"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 13",
+        "origText": "壊れた歯車さえ回し続け",
+        "romaText": "ko wa re ta ha gu ru ma sa e ma wa shi tsu du ke ",
+        "expected": [
+          [
+            0,
+            1,
+            "こわ"
+          ],
+          [
+            3,
+            5,
+            "はぐるま"
+          ],
+          [
+            7,
+            8,
+            "まわ"
+          ],
+          [
+            9,
+            10,
+            "つづ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 14",
+        "origText": "誰よりも早く",
+        "romaText": "da re yo ri mo ha ya ku ",
+        "expected": [
+          [
+            0,
+            1,
+            "だれ"
+          ],
+          [
+            4,
+            5,
+            "はや"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 15",
+        "origText": "抱き締めるから いつまでも",
+        "romaText": "da ki shi me ru ka ra   i tsu ma de mo ",
+        "expected": [
+          [
+            0,
+            1,
+            "だ"
+          ],
+          [
+            2,
+            3,
+            "し"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 16",
+        "origText": "紡いだ絆が灯り",
+        "romaText": "tsu mu i da ki zu na ga to mo ri ",
+        "expected": [
+          [
+            0,
+            1,
+            "つむ"
+          ],
+          [
+            3,
+            4,
+            "きずな"
+          ],
+          [
+            5,
+            6,
+            "とも"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 17",
+        "origText": "小さな鼓動を奏でた 高鳴り",
+        "romaText": "chi i sa na ko do u wo ka na de ta   ta ka na ri ",
+        "expected": [
+          [
+            0,
+            1,
+            "ちい"
+          ],
+          [
+            3,
+            5,
+            "こどう"
+          ],
+          [
+            6,
+            7,
+            "かな"
+          ],
+          [
+            10,
+            12,
+            "たかな"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 18",
+        "origText": "いつかは散る運命も",
+        "romaText": "i tsu ka ha chi ru u n me i mo ",
+        "expected": [
+          [
+            4,
+            5,
+            "ち"
+          ],
+          [
+            6,
+            8,
+            "うんめい"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 19",
+        "origText": "今は強さだから だけど",
+        "romaText": "i ma ha tsu yo sa da ka ra   da ke do ",
+        "expected": [
+          [
+            0,
+            1,
+            "いま"
+          ],
+          [
+            2,
+            3,
+            "つよ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 20",
+        "origText": "あの日の約束だけを",
+        "romaText": "a no hi no ya ku so ku da ke wo ",
+        "expected": [
+          [
+            2,
+            3,
+            "ひ"
+          ],
+          [
+            4,
+            6,
+            "やくそく"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 21",
+        "origText": "頼りにここで待つから 明日を",
+        "romaText": "ta yo ri ni ko ko de ma tsu ka ra   a shi ta wo ",
+        "expected": [
+          [
+            0,
+            1,
+            "たよ"
+          ],
+          [
+            6,
+            7,
+            "ま"
+          ],
+          [
+            11,
+            13,
+            "あした"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 22",
+        "origText": "君が残した笑顔に 涙に",
+        "romaText": "ki mi ga no ko shi ta e ga o ni   na mi da ni ",
+        "expected": [
+          [
+            0,
+            1,
+            "きみ"
+          ],
+          [
+            2,
+            3,
+            "のこ"
+          ],
+          [
+            5,
+            7,
+            "えがお"
+          ],
+          [
+            9,
+            10,
+            "なみだ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 23",
+        "origText": "届ける言葉を歌に変えて",
+        "romaText": "to do ke ru ko to ba wo u ta ni ka e te ",
+        "expected": [
+          [
+            0,
+            1,
+            "とど"
+          ],
+          [
+            3,
+            5,
+            "ことば"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            8,
+            9,
+            "か"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 24",
+        "origText": "祈り続ける",
+        "romaText": "i no ri tsu du ke ru ",
+        "expected": [
+          [
+            0,
+            1,
+            "いの"
+          ],
+          [
+            2,
+            3,
+            "つづ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 25",
+        "origText": "同じ空を見上げ この目に",
+        "romaText": "o na ji so ra wo mi a ge   ko no me ni ",
+        "expected": [
+          [
+            0,
+            1,
+            "おな"
+          ],
+          [
+            2,
+            3,
+            "そら"
+          ],
+          [
+            4,
+            6,
+            "みあ"
+          ],
+          [
+            10,
+            11,
+            "め"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 26",
+        "origText": "同じ星を見つけ 写して",
+        "romaText": "o na ji ho shi wo mi tsu ke   u tsu shi te ",
+        "expected": [
+          [
+            0,
+            1,
+            "おな"
+          ],
+          [
+            2,
+            3,
+            "ほし"
+          ],
+          [
+            4,
+            5,
+            "み"
+          ],
+          [
+            8,
+            9,
+            "うつ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 27",
+        "origText": "幾星霜の中 肩を並べていた",
+        "romaText": "i ku se i so u no na ka   ka ta wo na ra be te i ta ",
+        "expected": [
+          [
+            0,
+            3,
+            "いくせいそう"
+          ],
+          [
+            4,
+            5,
+            "なか"
+          ],
+          [
+            6,
+            7,
+            "かた"
+          ],
+          [
+            8,
+            9,
+            "なら"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 28",
+        "origText": "もしまだ寂しいと言うのならば",
+        "romaText": "mo shi ma da sa mi shi i to i u no na ra ba ",
+        "expected": [
+          [
+            4,
+            5,
+            "さみ"
+          ],
+          [
+            8,
+            9,
+            "い"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 29",
+        "origText": "僕たちが",
+        "romaText": "bo ku ta chi ga ",
+        "expected": [
+          [
+            0,
+            1,
+            "ぼく"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 30",
+        "origText": "こぼれた温もりさえ拾い続け",
+        "romaText": "ko bo re ta nu ku mo ri sa e hi ro i tsu du ke ",
+        "expected": [
+          [
+            4,
+            5,
+            "ぬく"
+          ],
+          [
+            9,
+            10,
+            "ひろ"
+          ],
+          [
+            11,
+            12,
+            "つづ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 31",
+        "origText": "何度でも君の 心を満たす",
+        "romaText": "na n do de mo ki mi no   ko ko ro wo mi ta su ",
+        "expected": [
+          [
+            0,
+            1,
+            "なん"
+          ],
+          [
+            1,
+            2,
+            "ど"
+          ],
+          [
+            4,
+            5,
+            "きみ"
+          ],
+          [
+            7,
+            8,
+            "こころ"
+          ],
+          [
+            9,
+            10,
+            "み"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 32",
+        "origText": "どこまでも",
+        "romaText": "do ko ma de mo ",
+        "expected": []
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 33",
+        "origText": "繋いだ絆が灯り",
+        "romaText": "tsu na i da ki zu na ga to mo ri ",
+        "expected": [
+          [
+            0,
+            1,
+            "つな"
+          ],
+          [
+            3,
+            4,
+            "きずな"
+          ],
+          [
+            5,
+            6,
+            "とも"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 34",
+        "origText": "小さな鼓動奏でた 遙かな",
+        "romaText": "chi i sa na ko do u ka na de ta   ha ru ka na ",
+        "expected": [
+          [
+            0,
+            1,
+            "ちい"
+          ],
+          [
+            3,
+            5,
+            "こどう"
+          ],
+          [
+            5,
+            6,
+            "かな"
+          ],
+          [
+            9,
+            10,
+            "はる"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 35",
+        "origText": "共に目指した世界は",
+        "romaText": "to mo ni me za shi ta se ka i ha ",
+        "expected": [
+          [
+            0,
+            1,
+            "とも"
+          ],
+          [
+            2,
+            3,
+            "め"
+          ],
+          [
+            3,
+            4,
+            "ざ"
+          ],
+          [
+            6,
+            8,
+            "せかい"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 36",
+        "origText": "少しだけ遠くて だけど",
+        "romaText": "su ko shi da ke to o ku te   da ke do ",
+        "expected": [
+          [
+            0,
+            1,
+            "すこ"
+          ],
+          [
+            4,
+            5,
+            "とお"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 37",
+        "origText": "扉に触れる手が増え",
+        "romaText": "to bi ra ni fu re ru te ga fu e ",
+        "expected": [
+          [
+            0,
+            1,
+            "とびら"
+          ],
+          [
+            2,
+            3,
+            "ふ"
+          ],
+          [
+            5,
+            6,
+            "て"
+          ],
+          [
+            7,
+            8,
+            "ふ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 38",
+        "origText": "光があふれ始める 眩しく",
+        "romaText": "hi ka ri ga a fu re ha ji me ru   ma bu shi ku ",
+        "expected": [
+          [
+            0,
+            1,
+            "ひかり"
+          ],
+          [
+            5,
+            6,
+            "はじ"
+          ],
+          [
+            9,
+            10,
+            "まぶ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 39",
+        "origText": "君と守った笑顔に 涙に",
+        "romaText": "ki mi to ma mo 't ta e ga o ni   na mi da ni ",
+        "expected": [
+          [
+            0,
+            1,
+            "きみ"
+          ],
+          [
+            2,
+            3,
+            "まも"
+          ],
+          [
+            5,
+            7,
+            "えがお"
+          ],
+          [
+            9,
+            10,
+            "なみだ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 40",
+        "origText": "届ける想いを歌に乗せて",
+        "romaText": "to do ke ru o mo i wo u ta ni no se te ",
+        "expected": [
+          [
+            0,
+            1,
+            "とど"
+          ],
+          [
+            3,
+            4,
+            "おも"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            8,
+            9,
+            "の"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 41",
+        "origText": "いくつもの出会いに 笑って 怒って",
+        "romaText": "i ku tsu mo no de a i ni   wa ra 't te   o ko 't te ",
+        "expected": [
+          [
+            5,
+            7,
+            "であ"
+          ],
+          [
+            10,
+            11,
+            "わら"
+          ],
+          [
+            14,
+            15,
+            "おこ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 42",
+        "origText": "喜んで 泣いて また笑ったね",
+        "romaText": "yo ro ko n de   na i te   ma ta wa ra 't ta ne ",
+        "expected": [
+          [
+            0,
+            1,
+            "よろこ"
+          ],
+          [
+            4,
+            5,
+            "な"
+          ],
+          [
+            10,
+            11,
+            "わら"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 43",
+        "origText": "無邪気に綴る 毎日は幸せで",
+        "romaText": "mu ja ki ni tsu du ru   ma i ni chi ha shi a wa se de ",
+        "expected": [
+          [
+            0,
+            3,
+            "むじゃき"
+          ],
+          [
+            4,
+            5,
+            "つづ"
+          ],
+          [
+            7,
+            9,
+            "まいにち"
+          ],
+          [
+            10,
+            11,
+            "しあわ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 44",
+        "origText": "全て忘れても 消えない 消せない",
+        "romaText": "su be te wa su re te mo   ki e na i   ke se na i ",
+        "expected": [
+          [
+            0,
+            1,
+            "すべ"
+          ],
+          [
+            2,
+            3,
+            "わす"
+          ],
+          [
+            7,
+            8,
+            "き"
+          ],
+          [
+            12,
+            13,
+            "け"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 45",
+        "origText": "僕たちの歌声",
+        "romaText": "bo ku ta chi no u ta go e ",
+        "expected": [
+          [
+            0,
+            1,
+            "ぼく"
+          ],
+          [
+            4,
+            5,
+            "うた"
+          ],
+          [
+            5,
+            6,
+            "ごえ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 46",
+        "origText": "伝えた絆が灯り",
+        "romaText": "tsu ta e ta ki zu na ga to mo ri ",
+        "expected": [
+          [
+            0,
+            1,
+            "つた"
+          ],
+          [
+            3,
+            4,
+            "きずな"
+          ],
+          [
+            5,
+            6,
+            "とも"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 47",
+        "origText": "小さな奇跡叶えた 結んだ",
+        "romaText": "chi i sa na ki se ki ka na e ta   mu su n da ",
+        "expected": [
+          [
+            0,
+            1,
+            "ちい"
+          ],
+          [
+            3,
+            5,
+            "きせき"
+          ],
+          [
+            5,
+            6,
+            "かな"
+          ],
+          [
+            9,
+            10,
+            "むす"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 48",
+        "origText": "かつてを知る運命も",
+        "romaText": "ka tsu te wo shi ru u n me i mo ",
+        "expected": [
+          [
+            4,
+            5,
+            "し"
+          ],
+          [
+            6,
+            8,
+            "うんめい"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 49",
+        "origText": "今は強さだから そして",
+        "romaText": "i ma ha tsu yo sa da ka ra   so shi te ",
+        "expected": [
+          [
+            0,
+            1,
+            "いま"
+          ],
+          [
+            2,
+            3,
+            "つよ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 50",
+        "origText": "紡いだ絆と世界が",
+        "romaText": "tsu mu i da ki zu na to se ka i ga ",
+        "expected": [
+          [
+            0,
+            1,
+            "つむ"
+          ],
+          [
+            3,
+            4,
+            "きずな"
+          ],
+          [
+            5,
+            7,
+            "せかい"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 51",
+        "origText": "小さな鼓動奏でた 再び",
+        "romaText": "chi i sa na ko do u ka na de ta   fu ta ta bi ",
+        "expected": [
+          [
+            0,
+            1,
+            "ちい"
+          ],
+          [
+            3,
+            5,
+            "こどう"
+          ],
+          [
+            5,
+            6,
+            "かな"
+          ],
+          [
+            9,
+            10,
+            "ふたた"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 52",
+        "origText": "君が残した笑顔に 涙に",
+        "romaText": "ki mi ga no ko shi ta e ga o ni   na mi da ni ",
+        "expected": [
+          [
+            0,
+            1,
+            "きみ"
+          ],
+          [
+            2,
+            3,
+            "のこ"
+          ],
+          [
+            5,
+            7,
+            "えがお"
+          ],
+          [
+            9,
+            10,
+            "なみだ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 53",
+        "origText": "届ける言葉を歌と 出会う",
+        "romaText": "to do ke ru ko to ba wo u ta to   de a u ",
+        "expected": [
+          [
+            0,
+            1,
+            "とど"
+          ],
+          [
+            3,
+            5,
+            "ことば"
+          ],
+          [
+            6,
+            7,
+            "うた"
+          ],
+          [
+            9,
+            11,
+            "であ"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 54",
+        "origText": "僕らの笑顔に変えて",
+        "romaText": "bo ku ra no e ga o ni ka e te ",
+        "expected": [
+          [
+            0,
+            1,
+            "ぼく"
+          ],
+          [
+            3,
+            5,
+            "えがお"
+          ],
+          [
+            6,
+            7,
+            "か"
+          ]
+        ]
+      },
+      {
+        "name": "シャノワール(灰桜(和氣あず未)、鴉羽(楠木ともり)、月下(富田美憂)、箒星(中島由貴)、レーツェル(鬼頭明里)) - 想歌灯: 55",
+        "origText": "色あせない君へ",
+        "romaText": "i ro a se na i ki mi he ",
+        "expected": [
+          [
+            0,
+            1,
+            "いろ"
+          ],
+          [
+            5,
+            6,
+            "きみ"
+          ]
+        ]
+      }
+    ],
+    "roma_to_hiragana": [
+      {
+        "input": "watashi",
+        "expected": "わたし"
+      },
+      {
+        "input": "shin'ichi",
+        "expected": "しんいち"
+      },
+      {
+        "input": "ko-hi-",
+        "expected": "こおひい"
+      },
+      {
+        "input": "seigi cha seigi",
+        "expected": "せいぎ ちゃ せいぎ"
+      },
+      {
+        "input": "fi na a re",
+        "expected": "ふぃ な あ れ"
+      },
+      {
+        "input": "zutto",
+        "expected": "ずっと"
+      },
+      {
+        "input": "sempai no shimbun",
+        "expected": "せんぱい の しんぶん"
+      },
+      {
+        "input": "yukoo",
+        "expected": "ゆこお"
+      },
+      {
+        "input": "a i shi te ru",
+        "expected": "あ い し て る"
+      },
+      {
+        "input": "maboroshi",
+        "expected": "まぼろし"
+      }
+    ]
+  }
+}

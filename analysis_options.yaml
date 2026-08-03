@@ -1,0 +1,15 @@
+include: package:flutter_lints/flutter.yaml
+
+plugins:
+  riverpod_lint: 3.1.4
+
+analyzer:
+  exclude:
+    - tool/test/fixtures/**
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**

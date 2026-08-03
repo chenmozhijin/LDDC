@@ -1,0 +1,64 @@
+name: lddc
+description: "LDDC Flutter 客户端，用于搜索、转换、本地匹配和桌面显示精准歌词。"
+publish_to: 'none'
+version: 0.10.0+1
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.47.0-0.2.pre"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  lddc_lyrics_core: ^0.1.0-dev.1
+  lddc_lyrics_runtime: ^0.1.0-dev.1
+  lddc_lyrics_flutter: ^0.1.0-dev.1
+  lddc_desktop_lyrics: ^0.1.0-dev.1
+  lddc_desktop_protocol: ^0.1.0-dev.1
+  cupertino_icons: ^1.0.9
+  flutter_riverpod: ^3.4.2
+  riverpod_annotation: ^4.0.6
+  characters: ^1.4.1
+  collection: ^1.19.1
+  file_selector: ^1.1.0
+  crypto: ^3.0.7
+  pointycastle: ^4.0.0
+  pub_semver: ^2.2.0
+  unorm_dart: ^0.3.2
+  drift: ^2.34.3
+  path: ^1.9.1
+  path_provider: ^2.1.6
+  ffi: ^2.2.0
+  sqlite3: ^3.5.0
+  brotli: ^0.6.0
+  archive: ^4.0.9
+  desktop_multi_window: ^0.3.0
+  window_manager: ^0.5.2
+  tray_manager: ^0.5.3
+  win32: ^6.3.0
+  web: ^1.1.1
+  dart_taglib: ^0.1.0
+  charset_normalizer_dart: ^0.1.0
+  charset_codec: ^0.1.1
+
+  intl: any
+  url_launcher: ^6.3.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  screen_retriever: ^0.2.0
+  flutter_lints: ^6.0.0
+  build_runner: ^2.15.3
+  riverpod_generator: ^4.0.8
+  riverpod_lint: ^3.1.8
+
+flutter:
+  generate: true
+  uses-material-design: true
+  assets:
+    - assets/tray_icon.png

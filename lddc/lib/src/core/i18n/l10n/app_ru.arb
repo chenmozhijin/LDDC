@@ -1,0 +1,1389 @@
+{
+  "@@locale": "ru",
+  "@commonLyricsLanguageTypeSummary": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonTranslationProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@commonOpenAiTranslationProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@commonDropFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonSelectSaveDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonOpenSaveDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonTranslationFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonLyricsSaveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchPendingLyricsFileNameAt": {
+    "placeholders": {
+      "root": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeImportFilesFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeImportDirectoriesFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeDroppedSongResolveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeSelectTreeFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeSelectedRootSkippedSongs": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeSetRootFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeOpenSongDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeOpenLyricsFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeScanFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeTreeScanFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeMatchCompleted": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "@localMatchNoticeMatchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeAndroidMatchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchQueueDesktopHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@localMatchQueueMobileHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@localMatchSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@localMatchSaveRootPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchValidationMoreIssues": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeImportFilesCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeConversionCancelledCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeConversionCompletedWithFailures": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeConversionCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeConversionFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertNoticeOpenSourceDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertNoticeOpenOutputFileFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertNoticeScanImportedFromDirectory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertCompactControlsSubtitle": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertQueueSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertHintCancelled": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertHintCompleted": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertDropFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertProgressConvertingFile": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertProgressConversionCompleted": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertProgressConversionFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertProgressScanningDirectory": {
+    "placeholders": {
+      "directoryName": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertProgressScannedLyricsFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchBatchSaveProgressFetchingLyrics": {
+    "placeholders": {
+      "songName": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchTableSongCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchTableStatusSearchFailedWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchTableStatusAutoFetchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchTableStatusSongListFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsCurrentTemplate": {
+    "placeholders": {
+      "template": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsRestoreSectionContent": {
+    "placeholders": {
+      "sectionTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsRestoreSectionTooltip": {
+    "placeholders": {
+      "sectionTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsDigitsValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "@aboutCopyrightNoticeBody": {
+    "placeholders": {
+      "years": {
+        "type": "String"
+      },
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "@aboutLicenseNoticeBody": {
+    "placeholders": {
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "@aboutCheckUpdateAvailable": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "@aboutActionOpenedLink": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "@aboutActionOpenLinkFailed": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerDeleteSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerSummary": {
+    "placeholders": {
+      "totalCount": {
+        "type": "int"
+      },
+      "selectedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerSearchSummary": {
+    "placeholders": {
+      "totalCount": {
+        "type": "int"
+      },
+      "selectedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerClearInvalidSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerChangeDirectorySuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerBackupSuccess": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerExportSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerTrackLabel": {
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerTrackTooltip": {
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerOffsetLabel": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerOffsetTooltip": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerLanguagesLabel": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerLanguagesTooltip": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerOtherConfig": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@openLyricsNoticeOpenFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsNoticeConvertFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsNoticeSaveFileSucceeded": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsNoticeSaveFileFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsPreviewLanguages": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsExportFormatCanWriteTag": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsExportFormatFileOnly": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchLyricsSelectorOpenLocalFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeAutoFetchSucceeded": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeAutoFetchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeOpenSongFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeDroppedSongResolveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeLyricsSaveSucceededWithPath": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeFilePickerFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeBatchSaveCancelled": {
+    "placeholders": {
+      "saved": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchNoticeBatchSaveCompleted": {
+    "placeholders": {
+      "saved": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchNoticeBatchSaveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeGetLyricsFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeDirectoryPickFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "appTitle": "НРСД",
+  "commonWarning": "Предупреждение",
+  "commonError": "Ошибка",
+  "commonSuccess": "Успех",
+  "commonFailed": "Неуспешный",
+  "commonSkipped": "Пропущено",
+  "commonTotal": "Общий",
+  "commonDelete": "Удалить",
+  "commonConfirm": "Подтверждать",
+  "commonRestoreDefault": "Восстановить настройки по умолчанию",
+  "commonEnabled": "Включено",
+  "commonDisabledByDefault": "Отключено по умолчанию",
+  "commonFormat": "Формат",
+  "commonOffset": "Компенсировать",
+  "commonSaving": "Сохранение...",
+  "commonAddFiles": "Добавить файлы",
+  "commonClearQueue": "Очистить очередь",
+  "commonUnsupportedOperation": "Эта операция не поддерживается на этой платформе.",
+  "commonLyricsFileUnavailable": "У этой записи пока нет файла с текстами песен, который можно было бы открыть.",
+  "commonAudioTagRequiresLrc": "Тексты песен должны быть в формате LRC.",
+  "commonLyricsLanguageTypeSummary": "{language} ({type})",
+  "commonTranslationCancelled": "Перевод удален",
+  "commonCancelTranslation": "Удалить перевод",
+  "commonTranslating": "Перевод...",
+  "commonTranslationProgress": "Перевод {completed}/{total}",
+  "commonOpenAiTranslationProgress": "Потоковая трансляция OpenAI: {completed} / {total} строк",
+  "commonTranslationCompleted": "Перевод завершен",
+  "commonLyricsSaved": "Текст сохранен.",
+  "commonDropFailed": "Не удалось удалить: {detail}",
+  "commonSelectSaveDirectoryFailed": "Не удалось выбрать каталог для сохранения: {detail}.",
+  "commonOpenSaveDirectoryFailed": "Не удалось открыть каталог сохранения: {detail}.",
+  "commonTranslationFailed": "Не удалось выполнить перевод: {detail}.",
+  "commonLyricsSaveFailed": "Не удалось сохранить текст: {detail}.",
+  "appErrorUnknown": "Произошла неизвестная ошибка.",
+  "appErrorOperationTimeout": "Время операции истекло. Пожалуйста, повторите попытку позже.",
+  "appErrorNetworkUnavailable": "Сеть недоступна. Пожалуйста, проверьте ваше соединение.",
+  "appErrorInvalidPayload": "Неверный формат данных.",
+  "appErrorUnsupportedOperation": "Эта операция не поддерживается.",
+  "appErrorPermissionDenied": "У вас нет разрешения на выполнение этой операции.",
+  "appErrorIoFailure": "Ошибка чтения или записи файла.",
+  "appErrorLyricsRequestFailed": "Не удалось запросить текст песни.",
+  "appErrorLyricsNotFound": "Тексты песен не найдены.",
+  "appErrorLyricsProcessing": "Не удалось обработать текст.",
+  "appErrorLyricsDecrypt": "Не удалось расшифровать текст.",
+  "appErrorLyricsFormatUnsupported": "Неподдерживаемый формат текста.",
+  "appErrorDecoding": "Декодирование не удалось.",
+  "appErrorSongInfoRead": "Не удалось прочитать информацию о песне.",
+  "appErrorUnsupportedFileType": "Неподдерживаемый формат файла.",
+  "appErrorDragDropInvalid": "Неверные данные перетаскивания.",
+  "appErrorTranslateFailed": "Перевод не удался.",
+  "appErrorApiParamsInvalid": "Параметры запроса недействительны.",
+  "appErrorApiRequestFailed": "Запрос API не выполнен.",
+  "appErrorAutoFetchUnknown": "Автоматическое сопоставление не удалось из-за неизвестной ошибки.",
+  "appErrorNotEnoughInfo": "Недостаточно информации для поиска.",
+  "appErrorIpcInvalidLength": "Длина сообщения IPC недействительна.",
+  "appErrorIpcUnsupportedTask": "Задача IPC не поддерживается.",
+  "appErrorIpcInstanceNotFound": "Экземпляр IPC не существует.",
+  "appErrorIpcPanelNotFound": "Панель IPC не существует.",
+  "appErrorIpcInvalidWindowId": "Дескриптор окна недействителен.",
+  "appErrorIpcEmbedUnsupported": "Встроенный режим не поддерживается на этой платформе.",
+  "appErrorActionRetryNetwork": "Пожалуйста, проверьте сеть и повторите попытку.",
+  "appErrorActionCheckPayload": "Пожалуйста, проверьте формат входных данных.",
+  "appErrorActionChangeFormat": "Пожалуйста, используйте поддерживаемый файл или формат.",
+  "appErrorActionDetachedMode": "Пожалуйста, вернитесь в режим отсоединения.",
+  "actionRetry": "Повторить попытку",
+  "actionViewDetails": "Посмотреть детали",
+  "actionCancel": "Отмена",
+  "sourceAggregate": "Совокупный",
+  "sourceQQMusic": "QQ Музыка",
+  "sourceKugou": "Куго Музыка",
+  "sourceNetease": "Нетиз Музыка",
+  "sourceLrclib": "Лрклиб",
+  "sourceLocal": "Местный",
+  "lyricOriginal": "Оригинал",
+  "lyricTranslation": "Перевод",
+  "lyricRomanized": "романизированный",
+  "lyricsFormatVerbatimLrc": "Синхронизированный LRC",
+  "lyricsFormatLineByLineLrc": "LRC с линейной синхронизацией",
+  "lyricsFormatEnhancedLrc": "Улучшенный LRC (ESLyric)",
+  "lyricsFormatSrt": "СТО",
+  "lyricsFormatAss": "ЖОПА",
+  "lyricsTypeVerbatim": "по времени",
+  "lyricsTypeLineByLine": "по времени",
+  "lyricsTypePlainText": "Обычный текст",
+  "searchSong": "Песня",
+  "searchAlbum": "Альбом",
+  "searchSongList": "Плейлист",
+  "searchArtist": "Художник",
+  "searchLyrics": "Тексты песен",
+  "searchSongId": "Идентификатор песни",
+  "localMatchIteratingFiles": "Сканирование файлов...",
+  "localMatchProgressImportCompleted": "Импорт завершен",
+  "localMatchProgressScanCompleted": "Сканирование завершено",
+  "localMatchProgressScanFailed": "Сканирование не удалось",
+  "localMatchProgressMatchCompleted": "Матч завершен",
+  "localMatchProgressMatchFailed": "Матч не удался",
+  "localMatchProgressPreparingMatch": "Готовимся к матчу...",
+  "localMatchPreviewTagOnly": "Пишите только теги",
+  "localMatchPreviewWriteTag": "Пишите в теги",
+  "localMatchPreviewNoOutput": "Выход не настроен",
+  "localMatchPreviewSongTagOnly": "Только теги песен",
+  "localMatchPendingLyricsFileName": "Ожидание совпадающей информации о тексте песни, чтобы определить имя файла",
+  "localMatchPendingLyricsFileNameAt": "{root} / ожидание совпадающей информации о тексте песни для определения имени файла",
+  "localMatchCalcSavePathFailed": "Не удалось рассчитать путь сохранения.",
+  "localMatchNoticeBusyImportFiles": "Задача запущена, поэтому импорт файлов сейчас невозможен.",
+  "localMatchNoticeSelectedFilesUnavailable": "Выбранные файлы недоступны",
+  "localMatchNoticeImportFilesFailed": "Не удалось импортировать файлы: {detail}.",
+  "localMatchNoticeBusyImportDirectories": "Задача выполняется, поэтому импорт каталогов сейчас невозможен.",
+  "localMatchNoticeImportDirectoriesFailed": "Не удалось импортировать каталоги: {detail}.",
+  "localMatchNoticeDroppedNoAccessibleFiles": "Перенесенные данные не содержат доступных файлов.",
+  "localMatchNoticeDroppedSongResolveFailed": "Не удалось разрешить удаленную песню: {detail}.",
+  "localMatchNoticeImportCompletedWithErrors": "Импорт завершен, но некоторые записи не удалось проанализировать.",
+  "localMatchNoticeSafTreeUnsupported": "Доступ к дереву каталогов не поддерживается на этой платформе.",
+  "localMatchNoticeBusySwitchTree": "Задача запущена, поэтому изменить дерево каталогов сейчас невозможно.",
+  "localMatchNoticeSelectTreeFailed": "Не удалось выбрать дерево каталогов: {detail}.",
+  "localMatchNoticeBusyClearQueue": "Задача выполняется, поэтому очистить очередь сейчас невозможно.",
+  "localMatchNoticeSelectItemsToDelete": "Выберите записи, которые нужно удалить в первую очередь",
+  "localMatchNoticeSelectItemsToSetRoot": "Выберите записи перед установкой корневого каталога",
+  "localMatchNoticeSelectedRootSkippedSongs": "Эти песни находятся за пределами выбранного корня и были пропущены: {detail}",
+  "localMatchNoticeSetRootFailed": "Не удалось установить корневой каталог: {detail}.",
+  "localMatchNoticeSelectItemsToRestore": "Выберите записи для восстановления в первую очередь",
+  "localMatchNoticeCancelling": "Отмена текущей задачи...",
+  "localMatchNoticeValidationFailed": "Сначала решите локальные требования к совпадению",
+  "localMatchNoticeSongDirectoryUnavailable": "Эта запись не может открыть каталог песен.",
+  "localMatchNoticeOpenSongDirectoryFailed": "Не удалось открыть каталог песен: {detail}.",
+  "localMatchNoticeSaveDirectoryUnavailable": "У этой записи пока нет каталога для сохранения, который можно было бы открыть.",
+  "localMatchNoticeOpenLyricsFailed": "Не удалось открыть текст песни: {detail}.",
+  "localMatchNoticeScanCancelled": "Сканирование отменено",
+  "localMatchNoticeScanCompletedWithErrors": "Сканирование завершено, но некоторые файлы не удалось проанализировать",
+  "localMatchNoticeScanFailed": "Сканирование не удалось: {detail}",
+  "localMatchNoticeTreeScanFailed": "Ошибка сканирования дерева каталогов: {detail}",
+  "localMatchNoticeMatchCancelled": "Матч отменен",
+  "localMatchNoticeMatchCompleted": "Всего песен {total}, {success} соответствует, {failed} не удалось, {skipped} пропущено.",
+  "localMatchNoticeMatchFailed": "Не удалось локальное сопоставление: {detail}.",
+  "localMatchNoticeAndroidMatchCancelledResume": "Матч отменен. Начните снова, чтобы возобновить работу с контрольной точки.",
+  "localMatchNoticeAndroidMatchFailed": "Не удалось локальное сопоставление Android SAF: {detail}",
+  "localMatchValidationEmptyLangs": "Выберите языки текстов песен для соответствия",
+  "localMatchValidationEmptySources": "Выберите хотя бы один источник",
+  "localMatchValidationEmptyQueue": "Импортируйте песни, чтобы они соответствовали первым",
+  "localMatchValidationSkipExistingFileNameConflict": "При пропуске существующих текстов песен при одновременном сохранении файлов режим имени файла не может использовать соответствующую информацию о текстах песен.",
+  "localMatchValidationMissingAndroidTree": "Сначала выберите дерево каталогов",
+  "localMatchValidationNeedsSaveRoot": "Укажите путь сохранения.",
+  "localMatchValidationNeedsSongRoot": "Требуется корневой каталог песни.",
+  "localMatchValidationUnknownSavePath": "Неизвестная ошибка пути сохранения",
+  "localMatchIntro": "Импортируйте локальные песни или папки, просмотрите результат, а затем запустите пакетное сопоставление.",
+  "localMatchDropUnsupportedItem": "Локальное совпадение принимает файлы песен, папки или анализируемые элементы проигрывателя.",
+  "localMatchReadyToStart": "Готовы начать локальное сопоставление",
+  "localMatchQueueTitle": "Очередь задач",
+  "localMatchQueueEmptyHint": "Импортируйте файлы или папки для создания очереди задач.",
+  "localMatchQueueDesktopHint": "{count} задач. Щелкните строку правой кнопкой мыши, чтобы увидеть дополнительные действия.",
+  "localMatchQueueMobileHint": "{count} задач. Нажмите и удерживайте кнопку «Еще», чтобы открыть действия.",
+  "localMatchImportAndRunTitle": "Импортируйте и запускайте",
+  "localMatchActionStart": "Начать сопоставление",
+  "localMatchActionAddFolders": "Добавить папки",
+  "localMatchActionSelectSaveRoot": "Выберите «Сохранить корень».",
+  "localMatchActionSelectTree": "Выберите дерево",
+  "localMatchActionReselectTree": "Повторно выбрать дерево",
+  "localMatchActionBulkSelect": "Массовый выбор",
+  "localMatchActionExitSelection": "Выйти из массового выбора",
+  "localMatchActionSelectAll": "Выбрать все",
+  "localMatchActionDeselectAll": "Отменить выбор всех",
+  "localMatchActionSetRoot": "Установить корень",
+  "localMatchSelectedCount": "{count} выбрано",
+  "localMatchBulkActionHint": "Массовые действия применяются непосредственно к выбранным задачам.",
+  "localMatchPhaseIdle": "Ожидающий",
+  "localMatchPhaseScanning": "Сканирование",
+  "localMatchPhaseMatching": "Соответствие",
+  "localMatchPhaseWriting": "Письмо",
+  "localMatchPhaseCompleted": "Завершенный",
+  "localMatchPhaseHintIdle": "Импортируйте песни, чтобы начать сопоставление",
+  "localMatchPhaseHintScanning": "Построение очереди задач и оценка результатов",
+  "localMatchPhaseHintMatching": "Запрос источников и вычисление наилучшего соответствия",
+  "localMatchPhaseHintWriting": "Написание файлов с текстами песен или тегов песен",
+  "localMatchPhaseHintCompleted": "Этот пробег завершен. Отрегулируйте и запустите снова, если необходимо.",
+  "localMatchPipelineIdle": "Сканировать -> Сопоставить -> Записать",
+  "localMatchPipelineScanning": "Текущий этап: сканирование",
+  "localMatchPipelineMatching": "Текущий этап: матч",
+  "localMatchPipelineWriting": "Текущий этап: написать",
+  "localMatchPipelineCompleted": "Сканирование, сопоставление и запись завершены",
+  "localMatchUnknownSong": "Неизвестная песня",
+  "localMatchUnknownDuration": "Неизвестная продолжительность",
+  "localMatchStatusNotStarted": "Не запущено",
+  "localMatchSongPathLabel": "Путь песни",
+  "localMatchLyricsPathLabel": "Тексты песен Сохранить путь",
+  "localMatchExpandDetails": "Развернуть детали",
+  "localMatchCollapseDetails": "Свернуть детали",
+  "localMatchRowActionOpenInSearch": "Открыть в поиске",
+  "localMatchRowActionEnterSelection": "Введите массовый выбор",
+  "localMatchRowActionOpenSongDirectory": "Открыть папку с песнями",
+  "localMatchRowActionOpenSaveDirectory": "Открыть папку сохранения",
+  "localMatchRowActionOpenLyrics": "Открыть тексты песен",
+  "localMatchFieldLyricsType": "Тип текста",
+  "localMatchFieldOutputStrategy": "Стратегия вывода",
+  "localMatchFieldSaveMode": "Режим сохранения",
+  "localMatchFieldFileNameMode": "Режим имени файла",
+  "localMatchFieldLyricsFormat": "Формат текста",
+  "localMatchFieldThreshold": "Порог совпадения",
+  "localMatchFieldSaveRoot": "Сохранить корень",
+  "localMatchMoreSettings": "Дополнительные настройки",
+  "localMatchRulesTitle": "Правила матча",
+  "localMatchRulesSubtitle": "Источники, языки, стратегия вывода и пороговое значение.",
+  "localMatchMinScore": "Минимальный балл",
+  "localMatchSkipExisting": "Пропустить существующие тексты песен",
+  "localMatchSkipExistingConflictHint": "Текущая стратегия вывода и режим имени файла не могут пропускать существующие тексты песен. Если файлы все еще необходимо сохранить, избегайте присвоения им названий по совпадающей информации о тексте песни.",
+  "localMatchSaveToSongDirectoryHint": "Для сохранения в папке песни не требуется дополнительный корень сохранения.",
+  "localMatchAndroidTreeSaveHint": "Сохранения дерева каталогов Android записываются непосредственно в авторизованное дерево.",
+  "localMatchFileNameTemplateHint": "В шаблоне имени файла используется текст_файла_имя_fmt из настроек.",
+  "localMatchSaveRootPath": "Сохранить корень: {path}",
+  "localMatchSaveRootRequired": "Для этого режима сохранения требуется корень сохранения. Сначала выберите один.",
+  "localMatchTreeNotSelected": "Дерево каталогов не выбрано",
+  "localMatchSaveModeSong": "Сохранить в папку песни",
+  "localMatchSaveModeMirror": "Зеркальные папки",
+  "localMatchSaveModeSpecify": "Конкретная папка",
+  "localMatchFileNameModeSong": "Использовать имя файла песни",
+  "localMatchFileNameModeFormatBySong": "Название по информации о песне",
+  "localMatchFileNameModeFormatByLyrics": "Название По словам Информация",
+  "localMatchFileNameHintSong": "Повторно используйте имя аудиофайла и замените только расширение текста.",
+  "localMatchFileNameHintFormatBySong": "Создайте имя файла на основе метаданных песни, таких как название, исполнитель и альбом.",
+  "localMatchFileNameHintFormatByLyrics": "Создайте имя файла на основе информации о совпадающей песне с текстом; он может быть неизвестен до сопоставления.",
+  "localMatchSaveToTagOnlyFile": "Только файл",
+  "localMatchSaveToTagOnlyTag": "Только тег",
+  "localMatchSaveToTagBoth": "Файл + Тег",
+  "localMatchValidationTitle": "Проблемы, которые нужно исправить перед запуском",
+  "localMatchValidationMoreIssues": "{count} необходимо исправить еще несколько проблем",
+  "batchConvertNoticeSelectedFilesUnavailable": "Выбранные файлы не доступны напрямую",
+  "batchConvertNoticeImportFilesCompleted": "Импортированы файлы с текстами песен {count}.",
+  "batchConvertNoticeDroppedNoAccessibleFiles": "Перенесенные данные не содержат доступных файлов с текстами песен.",
+  "batchConvertNoticeEmptyQueue": "Добавьте файлы с текстами песен для конвертации в первую очередь",
+  "batchConvertNoticeOverwriteCancelled": "Пакетное преобразование отменено.",
+  "batchConvertNoticeConversionCancelledCompleted": "Пакетное преобразование отменено, {count} элементов выполнено",
+  "batchConvertNoticeConversionCompletedWithFailures": "Пакетное преобразование завершено: {success} выполнено успешно, {failure} не выполнено.",
+  "batchConvertNoticeConversionCompleted": "Пакетное преобразование завершено: {count} элементов.",
+  "batchConvertNoticeConversionFailed": "Не удалось выполнить пакетное преобразование: {detail}.",
+  "batchConvertNoticeOpenSourceDirectoryFailed": "Не удалось открыть каталог с исходным кодом: {detail}.",
+  "batchConvertNoticeOpenOutputFileFailed": "Не удалось открыть файл с текстом песни: {detail}.",
+  "batchConvertNoticeScanNoSupportedFiles": "В выбранной папке не найдены поддерживаемые файлы с текстами песен.",
+  "batchConvertNoticeScanImportedFromDirectory": "Импортированы файлы с текстами песен {count} из папки.",
+  "batchConvertNoticeDuplicateItems": "Все выбранные записи уже в очереди",
+  "batchConvertControlsTitle": "Импорт и настройки",
+  "batchConvertCompactControlsTitle": "Настройки импорта и вывода",
+  "batchConvertCompactControlsSubtitle": "Формат: {format}",
+  "batchConvertImportTitle": "Импорт",
+  "batchConvertAddFolders": "Добавить папку",
+  "batchConvertOutputSettingsTitle": "Настройки вывода",
+  "batchConvertTargetFormat": "Целевой формат",
+  "batchConvertSaveDirectoryTitle": "Сохранить папку",
+  "batchConvertSaveDirectoryDefault": "Если этот параметр не установлен, вывод идет рядом с исходным файлом текста песни.",
+  "batchConvertSelectSaveDirectory": "Выберите папку сохранения.",
+  "batchConvertRestoreOriginalDirectory": "Использовать исходную папку",
+  "batchConvertRecursiveTitle": "Сканировать подпапки",
+  "batchConvertRecursiveSubtitle": "При импорте папки продолжайте сканирование файлов с текстами песен в подпапках.",
+  "batchConvertStart": "Начать преобразование",
+  "batchConvertCancel": "Отменить преобразование",
+  "batchConvertQueueTitle": "Очередь конверсий",
+  "batchConvertQueueSubtitle": "{count} элементов, формат вывода {format}",
+  "batchConvertPageErrorFallback": "На странице пакетного преобразования произошла ошибка",
+  "batchConvertRetryImport": "Импортировать снова",
+  "batchConvertEmptyQueue": "Добавьте файлы или папки с текстами песен, и здесь появится очередь пакетного преобразования.",
+  "batchConvertOutputPathLabel": "Выходной путь",
+  "batchConvertQueueStatusWaiting": "Ожидающий",
+  "batchConvertQueueStatusRunning": "Преобразование",
+  "batchConvertQueueStatusSuccess": "Преобразовано",
+  "batchConvertQueueStatusFailure": "Неуспешный",
+  "batchConvertMoreActions": "Дополнительные действия",
+  "batchConvertActionOpenSourceDirectory": "Папка с открытым исходным кодом",
+  "batchConvertActionOpenSaveDirectory": "Открыть папку сохранения",
+  "batchConvertActionOpenOutputFile": "Открыть файл с текстами песен",
+  "batchConvertActionOpenInOpenLyrics": "Открыть в открытом тексте",
+  "batchConvertPhaseIdle": "Ожидающий",
+  "batchConvertPhaseScanning": "Сканирование",
+  "batchConvertPhaseRunning": "Преобразование",
+  "batchConvertPhaseCompleted": "Завершенный",
+  "batchConvertPipelineIdle": "Импорт -> Сканировать -> Конвертировать -> Готово.",
+  "batchConvertPipelineScanning": "Сканировать папки -> Построить очередь",
+  "batchConvertPipelineRunning": "Конвертировать каждый элемент -> Обновить статус",
+  "batchConvertPipelineCompleted": "Измените формат или импортируйте еще раз.",
+  "batchConvertHintCancelled": "Отменено, {success} успешно, {failure} не удалось",
+  "batchConvertHintCompleted": "{success} выполнено успешно, {failure} не выполнено",
+  "batchConvertHintNoQueue": "Добавьте файлы или папки, чтобы начать конвертацию",
+  "batchConvertHintReady": "Очередь готова",
+  "batchConvertMetricWaiting": "Ожидающий",
+  "batchConvertDropUnsupported": "Страница пакетного преобразования принимает только файлы или папки с текстами песен.",
+  "batchConvertDropFailed": "Не удалось обработать удаление: {detail}.",
+  "batchConvertProgressConvertingFile": "Преобразование {fileName}",
+  "batchConvertProgressItemSuccess": "Преобразовано",
+  "batchConvertProgressItemFailure": "Неуспешный",
+  "batchConvertProgressPreparingConversion": "Подготовка преобразования...",
+  "batchConvertProgressCancellingConversion": "Отмена преобразования...",
+  "batchConvertProgressConversionCancelled": "Конверсия отменена",
+  "batchConvertProgressConversionCompleted": "Преобразование завершено: {success} успешно, {failure} не удалось.",
+  "batchConvertProgressConversionFailed": "Не удалось преобразовать: {detail}.",
+  "batchConvertProgressScanningFolders": "Сканирование папок...",
+  "batchConvertProgressScanningDirectory": "Сканирование {directoryName}",
+  "batchConvertProgressScannedLyricsFiles": "Найдено {count} файлов с текстами песен.",
+  "batchConvertProgressScanCancelled": "Сканирование отменено",
+  "batchConvertProgressScanNoSupportedFiles": "Не найдено поддерживаемых файлов с текстами песен.",
+  "batchConvertProgressScanCompleted": "Сканирование завершено",
+  "navSearch": "Поиск",
+  "navLocalMatch": "Локальное совпадение",
+  "navOpenLyrics": "Открыть тексты песен",
+  "navBatchConvert": "Пакетное преобразование",
+  "navSettings": "Настройки",
+  "navAbout": "О",
+  "commonSearch": "Поиск",
+  "commonSource": "Источник",
+  "searchKeywordHint": "Введите ключевое слово",
+  "uiLoading": "Загрузка...",
+  "uiLoadingStepFetching": "Получение списка и предварительный просмотр...",
+  "uiEmpty": "Нет данных",
+  "uiNoMoreResult": "Больше нет результатов",
+  "searchInitialResultTitle": "Введите ключевые слова, чтобы начать поиск",
+  "searchInitialResultDescription": "Выберите источник выше и запустите поиск",
+  "searchResultTitle": "Результаты поиска",
+  "searchResultReturn": "Назад",
+  "searchPreviewTitle": "Предварительный просмотр текста",
+  "searchPreviewLangsLabel": "Языки",
+  "searchPreviewSongIdLabel": "Идентификатор песни",
+  "searchPreviewPlaceholder": "Сначала выберите песню или текст песни",
+  "searchPreviewNoLanguage": "Выберите хотя бы один язык текстов",
+  "searchPreviewNoContent": "Контент для предварительного просмотра недоступен.",
+  "searchPreviewLoading": "Загрузка текста...",
+  "searchFormatLabel": "Формат текста",
+  "searchTranslateLyrics": "Перевести текст",
+  "searchResizeWorkspacePanes": "Изменение размера результатов поиска и предварительного просмотра текстов песен",
+  "searchSavePreviewToDirectory": "Сохранить в папку",
+  "searchSavePreviewToFile": "Сохранить в файл",
+  "searchSavePreviewToTag": "Сохранить превью в тег",
+  "searchSaveListLyrics": "Сохранить альбом/плейлист с текстами песен",
+  "searchSaveListLyricsCancel": "Отменить пакетное сохранение",
+  "searchSelectSavePath": "Выберите папку сохранения.",
+  "searchBatchSaveProgressTitle": "Пакетное сохранение прогресса",
+  "searchBatchSaveProgressPreparing": "Подготовка пакетного сохранения...",
+  "searchBatchSaveProgressFetchingLyrics": "Получение текста песни {songName}...",
+  "searchTableSongCountValue": "{count} песен",
+  "searchTableStatusAutoFetching": "Автоматическое получение...",
+  "searchTableStatusSearching": "Идет поиск...",
+  "searchTableStatusFetchingSongList": "Получение списка песен...",
+  "searchTableStatusNoResults": "Соответствующих результатов не найдено",
+  "searchTableStatusEmptyList": "Список пуст",
+  "searchTableStatusUnsupportedSearchType": "Выбранный источник не поддерживает этот тип поиска.",
+  "searchTableStatusSearchFailed": "Поиск не удался",
+  "searchTableStatusSearchFailedWithDetail": "Поиск не удался: {detail}",
+  "searchTableStatusAutoFetchFailed": "Не удалось выполнить автоматическое получение: {detail}.",
+  "searchTableStatusSongListFailed": "Не удалось получить список песен: {detail}.",
+  "searchTableStatusPartialSourceUnavailable": "Некоторые источники недоступны. Показаны доступные результаты",
+  "searchTableStatusLoadMoreFailed": "Некоторым источникам не удалось загрузить больше результатов.",
+  "searchSourceFailureDetailsTitle": "Поиск сведений об ошибке",
+  "searchSourceFailureRequest": "Запрос не выполнен",
+  "searchSourceFailureTimeout": "Время запроса истекло",
+  "searchSourceFailureParameters": "Неверные параметры",
+  "searchSourceFailureUnsupported": "Неподдерживаемая операция",
+  "searchSourceFailureUnknown": "Неизвестная ошибка",
+  "searchResultLoadingMore": "Загрузка дополнительных результатов...",
+  "searchResultLoadMoreFailed": "Автозагрузка не удалась. Повторите попытку, чтобы продолжить загрузку оставшихся результатов.",
+  "searchResultScrollForMore": "Прокрутите вниз, чтобы автоматически загрузить дополнительные результаты.",
+  "tableSavePath": "Сохранить путь",
+  "settingsSectionSave": "Сохранять",
+  "settingsSectionLyrics": "Тексты песен",
+  "settingsSectionDesktopLyrics": "Рабочий стол",
+  "settingsSectionTranslate": "Переводить",
+  "settingsSectionSearch": "Поиск",
+  "settingsSectionApp": "Приложение",
+  "settingsSectionTools": "Инструменты и данные",
+  "settingsSectionSaveSummary": "Пути сохранения, шаблон имени файла и версия ID3.",
+  "settingsSectionSearchSummary": "Выберите источники текстов по умолчанию для совокупного поиска и локального сопоставления.",
+  "settingsSectionDesktopLyricsSummary": "Тексты песен на рабочем столе автоматически выбираются, языки отображения, внешний вид и частота обновления.",
+  "settingsSectionLyricsSummary": "Локальное соответствие и формат экспорта файлов текстов песен.",
+  "settingsSectionTranslateSummary": "Источник перевода, целевой язык и условные поля",
+  "settingsSectionAppSummary": "Язык, тема, журналы и политика обновлений",
+  "settingsSectionToolsSummary": "Инструменты рабочего стола, папка журнала и очистка кеша",
+  "settingsTranslateSourceBing": "Бинг-переводчик",
+  "settingsTranslateSourceGoogle": "Гугл переводчик",
+  "settingsTranslateSourceOpenAi": "OpenAI-совместимый API",
+  "settingsLangSimplifiedChinese": "Упрощенный китайский",
+  "settingsLangTraditionalChinese": "Традиционный китайский",
+  "settingsLangEnglish": "Английский",
+  "settingsLangJapanese": "японский",
+  "settingsLangKorean": "корейский",
+  "settingsLangSpanish": "испанский",
+  "settingsLangFrench": "Французский",
+  "settingsLangPortuguese": "португальский",
+  "settingsLangGerman": "немецкий",
+  "settingsLangRussian": "Русский",
+  "settingsAppLanguageAuto": "Авто",
+  "settingsColorSchemeAuto": "Следовать за системой",
+  "settingsColorSchemeLight": "Свет",
+  "settingsColorSchemeDark": "Темный",
+  "settingsDesktopGradientColors": "Градиентные цвета",
+  "settingsDesktopPlayedColors": "Играемые цвета",
+  "settingsDesktopUnplayedColors": "Неигранные цвета",
+  "settingsAddColor": "Добавить цвет",
+  "settingsEditColor": "Редактировать цвет",
+  "settingsDeleteColor": "Удалить цвет",
+  "settingsBackToSections": "Вернуться к разделам настроек",
+  "settingsAvailablePlaceholders": "Доступные заполнители",
+  "settingsPlaceholderTitleArtist": "Название: %<title> Исполнитель: %<artist>",
+  "settingsPlaceholderAlbumId": "Альбом: %<album> Идентификатор песни/текста: %<id>",
+  "settingsPlaceholderLangs": "Типы языков: %<langs>",
+  "settingsCurrentTemplate": "Текущий шаблон: {template}",
+  "settingsTranslateSourceLabel": "Источник перевода",
+  "settingsTranslateTargetLabel": "Целевой язык",
+  "settingsOpenAiProfileLabel": "Предустановка",
+  "settingsOpenAiProfileHelper": "Встроенные поставщики автоматически заполняют базовый URL-адрес. Вам все равно необходимо настроить ключ API и модель.",
+  "settingsAppLanguageLabel": "Язык интерфейса",
+  "settingsColorSchemeLabel": "Тематический режим",
+  "settingsLogLevelLabel": "Уровень журнала",
+  "settingsLogLevelHelper": "Сохраните ИНФОРМАЦИЮ для обычного использования. TRACE и DEBUG записывают больше деталей и создают более крупные журналы.",
+  "settingsAutoCheckUpdateLabel": "Автоматическая проверка обновлений",
+  "settingsRestoreDefaultsWarning": "Восстановление настроек по умолчанию немедленно записывает конфигурацию. Пожалуйста, подтвердите, прежде чем продолжить.",
+  "settingsRestoreAllTitle": "Восстановить настройки по умолчанию",
+  "settingsRestoreAllContent": "Это восстанавливает все настройки и сразу записывает их в конфиг.",
+  "settingsRestoreAllAction": "Восстановить настройки по умолчанию",
+  "settingsOpenAssociationManager": "Менеджер ассоциации Open Lyrics",
+  "settingsOpenAssociationManagerSubtitle": "Откройте следующую страницу настроек, чтобы управлять ассоциациями песен и текстов.",
+  "settingsOpenLogDirectory": "Открыть каталог журналов",
+  "settingsOpenLogDirectorySubtitle": "Просмотр журналов выполнения и файлов устранения неполадок.",
+  "settingsClearCache": "Очистить кэш",
+  "settingsClearCacheSubtitle": "Очистите кеш поиска и перевода без изменения файлов конфигурации.",
+  "settingsClearCacheContent": "После очистки кэша последующие поиски и переводы могут снова запросить данные.",
+  "settingsRestoreSectionTitle": "Восстановить этот раздел",
+  "settingsRestoreSectionContent": "Будут восстановлены только настройки в разделе «{sectionTitle}». Остальные разделы не изменятся.",
+  "settingsRestoreSectionTooltip": "Восстановить настройки по умолчанию для {sectionTitle}",
+  "settingsDefaultSavePathHelper": "Оставьте пустым, чтобы использовать музыкальный каталог платформы по умолчанию.",
+  "settingsChooseFolder": "Выберите папку",
+  "settingsLyricsFileNameFormat": "Шаблон имени файла с текстами песен",
+  "settingsLyricsFileNameFormatHelper": "Используйте заполнители ниже, чтобы составить имена сохраненных файлов.",
+  "settingsId3Version": "Версия ID3",
+  "settingsId3VersionHelper": "Влияет только на тексты песен, записанные в аудиотеги. Если вы не уверены, сохраните версию 2.3.",
+  "settingsSearchSourcesTitle": "Совокупные источники поиска",
+  "settingsSearchSourcesDescription": "Проверенные источники запрашиваются, когда поиск использует агрегат. Источники, расположенные выше в списке, занимают первое место по группировке результатов и автоматическому сопоставлению. Local Match использует этот список по умолчанию.",
+  "settingsReorderPriorityHint": "Перетащите, чтобы изменить приоритет",
+  "settingsReorderOrderHint": "Перетащите, чтобы изменить порядок",
+  "settingsDefaultLanguage": "Языки отображения по умолчанию",
+  "settingsDefaultLanguageDescription": "Выберите языки, отображаемые по умолчанию в текстах песен на рабочем столе, затем перетащите их, чтобы изменить порядок их отображения.",
+  "settingsDesktopAutoFetchSources": "Автозагрузка источников",
+  "settingsDesktopAutoFetchSourcesDescription": "Если в текстах песен на рабочем столе нет связанных текстов, источники проверяются сверху вниз.",
+  "settingsFont": "Шрифт",
+  "settingsFollowSystemFont": "Следовать системному шрифту",
+  "settingsFontSizeByResize": "Измените размер окна текстов песен на рабочем столе, чтобы настроить размер основного шрифта.",
+  "settingsPanelFontSize": "Размер шрифта панели «Тексты»",
+  "settingsAdaptiveRefreshRate": "Адаптивная частота обновления",
+  "settingsAdaptiveRefreshRateSubtitle": "Автоматически выбирать частоту обновления в зависимости от состояния анимации текста песни.",
+  "settingsFixedRefreshRate": "Фиксированная частота обновления",
+  "settingsShowFurigana": "Показать Фуригану",
+  "settingsLyricsMatchBehavior": "Соответствующее поведение",
+  "settingsLyricsMatchBehaviorDescription": "Установите обработку по умолчанию для локальных совпадений и кандидатов на тексты Kugou.",
+  "settingsLyricsExport": "ЛРК Экспорт",
+  "settingsLyricsExportDescription": "Установите порядок языков и формат временных меток LRC, используемый при сохранении файлов с текстами песен.",
+  "settingsDisplayOrder": "Экспортировать порядок языков",
+  "settingsDisplayOrderDescription": "Перетащите, чтобы упорядочить оригинальные, переведенные и латинизированные тексты песен в экспортированных файлах.",
+  "settingsSkipInstrumental": "Пропустить инструментальные треки",
+  "settingsSkipInstrumentalSubtitle": "Не сохраняйте тексты песен, если Local Match идентифицирует инструментальный трек.",
+  "settingsAutoSelectKugou": "Автоматический выбор кандидата Куго",
+  "settingsAutoSelectKugouSubtitle": "Автоматически выбирать лучшего кандидата на текст при открытии песни Kugou в Поиске.",
+  "settingsAddLrcEndTimestamp": "Добавить временную метку окончания при экспорте LRC",
+  "settingsAddLrcEndTimestampSubtitle": "Влияет только на построчный LRC и записывает временные метки конца строки, когда это необходимо.",
+  "settingsMillisecondsDigits": "Миллисекундные цифры",
+  "settingsMillisecondsDigitsHelper": "Используйте две цифры для сантисекунд или три цифры для полных миллисекунд.",
+  "settingsDigitsValue": "{value} цифр",
+  "settingsLastRefStyle": "Временная метка последней языковой строки",
+  "settingsLastRefStyleHelper": "Для построчного LRC на нескольких языках используйте текущее время строки или одну миллисекунду перед следующей строкой для последней языковой строки.",
+  "settingsLastRefCurrentLine": "Использовать текущее время линии",
+  "settingsLastRefNextLine": "Используйте одну миллисекунду перед следующей строкой",
+  "settingsTagInfoSource": "Источник информации о тегах",
+  "settingsTagInfoLyricsSource": "Источник текста",
+  "settingsTagInfoSongInfo": "Информация о песне",
+  "settingsNoticeDefaultSavePathUpdated": "Путь сохранения по умолчанию обновлен.",
+  "settingsNoticeDefaultSavePathRestored": "Путь сохранения по умолчанию восстановлен.",
+  "settingsNoticeLyricsFileNameFormatUpdated": "Обновлен шаблон имени файла с текстами песен.",
+  "settingsNoticeId3VersionUpdated": "Версия ID3 обновлена",
+  "settingsNoticeLyricsLangOrderEmpty": "Порядок языка текста не может быть пустым.",
+  "settingsNoticeLyricsLangOrderUpdated": "Порядок языков текста изменен.",
+  "settingsNoticeSkipInstUpdated": "Обновлена ​​политика инструментального пропуска.",
+  "settingsNoticeAutoSelectUpdated": "Политика автоматического выбора обновлена.",
+  "settingsNoticeAddEndTimestampUpdated": "Политика в отношении отметки времени окончания обновлена.",
+  "settingsNoticeMsDigitsUpdated": "Обновлены цифры миллисекунд.",
+  "settingsNoticeLastRefStyleUpdated": "Обновлен стиль времени последней строки.",
+  "settingsNoticeTagInfoSourceUpdated": "Источник информации о теге обновлен.",
+  "settingsNoticeDesktopSourcesEmpty": "Исходные тексты песен на рабочем столе не могут быть пустыми.",
+  "settingsNoticeDesktopSourcesUpdated": "Обновлены исходные тексты песен для рабочего стола",
+  "settingsNoticeDesktopDefaultLangsEmpty": "Языки рабочего стола по умолчанию не могут быть пустыми.",
+  "settingsNoticeDesktopLangsUpdated": "Обновлены языковые настройки текстов песен на рабочем столе.",
+  "settingsNoticeDesktopFontFamilyUpdated": "Обновлен шрифт текстов песен на рабочем столе.",
+  "settingsNoticeDesktopRefreshRateUpdated": "Частота обновления обновлена",
+  "settingsNoticeDesktopPlayedColorsUpdated": "Воспроизводимые цвета обновлены.",
+  "settingsNoticeDesktopUnplayedColorsUpdated": "Обновлены невоспроизводимые цвета",
+  "settingsNoticeDesktopFontSizeUpdated": "Обновлен размер шрифта текстов песен на рабочем столе.",
+  "settingsNoticeDesktopPanelFontSizeUpdated": "Обновлен размер шрифта панели рабочего стола.",
+  "settingsNoticeDesktopShowFuriganaUpdated": "Обновлена ​​политика отображения Фуриганы",
+  "settingsNoticeTranslateSourceUpdated": "Источник перевода обновлен.",
+  "settingsNoticeTranslateTargetLangUpdated": "Целевой язык перевода обновлен.",
+  "settingsNoticeOpenAiProfileUpdated": "Обновлен пресет OpenAI.",
+  "settingsNoticeOpenAiBaseUrlUpdated": "URL-адрес базы OpenAI обновлен.",
+  "settingsNoticeOpenAiApiKeyUpdated": "Ключ API OpenAI обновлен.",
+  "settingsNoticeOpenAiModelUpdated": "Обновлена ​​модель OpenAI",
+  "settingsNoticeSearchSourcesEmpty": "Совокупные источники поиска не могут быть пустыми.",
+  "settingsNoticeSearchSourcesUpdated": "Совокупные источники поиска обновлены.",
+  "settingsNoticeAppLanguageUpdated": "Обновлен язык интерфейса",
+  "settingsNoticeAppColorSchemeUpdated": "Режим темы обновлен.",
+  "settingsNoticeAppLogLevelUpdated": "Уровень журнала обновлен.",
+  "settingsNoticeAutoCheckUpdateUpdated": "Обновлена ​​настройка автоматической проверки обновлений.",
+  "settingsNoticeSectionNoRestorableConfig": "В этом разделе нет восстанавливаемых элементов конфигурации.",
+  "settingsNoticeSectionDefaultsRestored": "Настройки текущего раздела по умолчанию восстановлены",
+  "settingsNoticeAllDefaultsRestored": "Настройки приложения восстановлены до значений по умолчанию",
+  "settingsNoticeAssociationManagerOpened": "Открыт менеджер ассоциации текстов песен",
+  "settingsNoticeLogDirectoryOpened": "Каталог журналов открыт",
+  "settingsNoticeLogDirectoryOpenFailed": "Не удалось открыть каталог журналов",
+  "settingsNoticeCacheCleared": "Кэш очищен",
+  "settingsNoticeCacheClearFailed": "Не удалось очистить кэш",
+  "settingsNoticeConfigWriteFailed": "Не удалось записать настройки",
+  "settingsCurrentSavePathLabel": "Путь сохранения по умолчанию",
+  "aboutLoadFailed": "Не удалось загрузить метаданные.",
+  "aboutActionOpenRepository": "Репозиторий GitHub",
+  "aboutActionCheckUpdate": "Проверить обновление",
+  "aboutHeroHeadline": "Создан для точных текстов",
+  "aboutHeroDescription": "LDDC объединяет поиск, преобразование, тексты песен на рабочем столе и пакетные рабочие процессы в одну эффективную поверхность, поэтому поиск, организация и использование текстов остается быстрым и целенаправленным.",
+  "aboutLinksSectionTitle": "Быстрые ссылки",
+  "aboutLinksSectionDescription": "Используйте эти ссылки, если вам нужны каналы обратной связи, примечания к выпуску или сведения о лицензии.",
+  "aboutCopyrightNoticeBody": "Авторские права (C) {years} {author}",
+  "aboutLicenseNoticeBody": "Лицензия {license}.",
+  "aboutLinkRepositoryTitle": "Репозиторий GitHub",
+  "aboutLinkIssueTrackerTitle": "Трекер проблем",
+  "aboutLinkIssueTrackerDescription": "Сообщайте об ошибках, пробелах в UX и запросах функций.",
+  "aboutLinkLicenseTitle": "Лицензия",
+  "aboutLinkLicenseDescription": "Ознакомьтесь с текущей лицензией открытого исходного кода:",
+  "aboutLinkChangelogTitle": "Примечания к выпуску",
+  "aboutLinkChangelogDescription": "См. опубликованные версии и сводку их изменений.",
+  "aboutExternalLinksUnavailable": "Открытие внешних ссылок на этой платформе не поддерживается.",
+  "aboutCheckUpdateUnavailable": "Проверка обновлений не поддерживается на этой платформе.",
+  "aboutCheckUpdateOpenedReleaseNotes": "Открыл страницу примечаний к выпуску.",
+  "aboutCheckUpdateUpToDate": "У вас уже установлена ​​последняя версия.",
+  "aboutCheckUpdateAvailable": "Обнаружена новая версия: {version}. Откройте страницу примечаний к выпуску для получения подробной информации.",
+  "aboutCheckUpdateFailed": "Не удалось проверить наличие обновлений. Пожалуйста, повторите попытку позже.",
+  "aboutActionOpenedLink": "Открыт {title}",
+  "aboutActionOpenLinkFailed": "Не удалось открыть {title}.",
+  "actionConfirm": "Подтверждать",
+  "libraryLinkManagerTitle": "Менеджер Ассоциации лирики",
+  "libraryLinkManagerReturnToSettings": "Вернуться к настройкам",
+  "libraryLinkManagerRefresh": "Обновить",
+  "libraryLinkManagerDeleteSelected": "Удалить выбранное ({count})",
+  "libraryLinkManagerDeleteAll": "Удалить все",
+  "libraryLinkManagerClearInvalid": "Очистить неверные данные",
+  "libraryLinkManagerChangeDirectory": "Каталог пакетного изменения",
+  "libraryLinkManagerBackupToJson": "Резервное копирование в JSON",
+  "libraryLinkManagerRestoreFromJson": "Восстановить из JSON",
+  "libraryLinkManagerRestoreAction": "Восстановить",
+  "libraryLinkManagerExportLyrics": "Экспортировать тексты песен",
+  "libraryLinkManagerSummary": "{totalCount} записи · {selectedCount} выбрано",
+  "libraryLinkManagerSearchHint": "Поиск песен, исполнителей, альбомов или дорожек",
+  "libraryLinkManagerClearSearch": "Очистить поиск",
+  "libraryLinkManagerSearchSummary": "{totalCount} соответствует · {selectedCount} выбран",
+  "libraryLinkManagerEmpty": "Нет записей с ссылками на тексты песен",
+  "libraryLinkManagerLoadFailed": "Не удалось загрузить записи ссылок на тексты песен: {error}.",
+  "libraryLinkManagerDeleteSelectedSuccess": "Удалены выбранные ссылки на тексты песен",
+  "libraryLinkManagerDeleteAllConfirm": "Вы уверены, что хотите удалить все записи ссылок на тексты песен?",
+  "libraryLinkManagerDeleteAllSuccess": "Удалены все записи ссылок на тексты песен.",
+  "libraryLinkManagerClearInvalidSuccess": "Удалены {count} неверные записи.",
+  "libraryLinkManagerChangeDirectorySuccess": "Обновлены записи {count} после перезаписи каталога.",
+  "libraryLinkManagerBackupSuccess": "Данные ссылки на тексты песен сохранены в {path}.",
+  "libraryLinkManagerRestoreConfirm": "При восстановлении будут перезаписаны все текущие записи ссылок на тексты песен. Продолжать?",
+  "libraryLinkManagerRestoreSuccess": "Данные ссылки на тексты песен восстановлены.",
+  "libraryLinkManagerInvalidBackupFormat": "Неверный формат файла резервной копии",
+  "libraryLinkManagerExportSuccess": "Экспортированы файлы с текстами песен {count}.",
+  "libraryLinkManagerOperationFailed": "Операция не удалась: {error}",
+  "libraryLinkManagerUnnamedSong": "Песня без названия",
+  "libraryLinkManagerUnknownArtist": "Неизвестный исполнитель",
+  "libraryLinkManagerUnknownAlbum": "Неизвестный альбом",
+  "libraryLinkManagerSongPathLabel": "Путь песни",
+  "libraryLinkManagerSongPathEmpty": "Путь к песне не записан",
+  "libraryLinkManagerLyricsPathLabel": "Тексты песен Путь",
+  "libraryLinkManagerLyricsPathEmpty": "Тексты песен не связаны",
+  "libraryLinkManagerTrackLabel": "Трек {track}",
+  "libraryLinkManagerTrackTooltip": "Номер трека: {track}",
+  "libraryLinkManagerTrackEmpty": "Никто",
+  "libraryLinkManagerOffsetLabel": "Смещение {offset}",
+  "libraryLinkManagerOffsetTooltip": "Лирическое смещение: {offset}",
+  "libraryLinkManagerLanguagesLabel": "Языки {langs}",
+  "libraryLinkManagerLanguagesTooltip": "Языки текста: {langs}",
+  "libraryLinkManagerInstrumental": "Инструментальный",
+  "libraryLinkManagerInstrumentalTooltip": "Эта песня отмечена как инструментальная",
+  "libraryLinkManagerDisableAutoSearch": "Отключить автоматический поиск",
+  "libraryLinkManagerDisableAutoSearchTooltip": "Для этой песни отключен автоматический поиск",
+  "libraryLinkManagerOtherConfig": "Другая конфигурация {count}",
+  "libraryLinkManagerDefaultConfig": "Конфигурация по умолчанию",
+  "libraryLinkManagerDefaultConfigTooltip": "Для этой записи не сохранена конфигурация переопределения на уровне песни.",
+  "openLyricsNoticeOpenFailed": "Не удалось открыть: {detail}",
+  "openLyricsNoticeLyricsFileUnavailable": "Файл с текстом песни недоступен.",
+  "openLyricsNoticeSongFileUnavailable": "Файл песни недоступен.",
+  "openLyricsNoticeNoEmbeddedLyrics": "В этой песне не найдено читаемых встроенных текстов.",
+  "openLyricsNoticeAlreadyConverted": "Эти тексты песен уже конвертированы",
+  "openLyricsNoticeEmptyLyrics": "Содержание текста не может быть пустым.",
+  "openLyricsNoticeConvertFailed": "Не удалось преобразовать: {detail}.",
+  "openLyricsNoticeConvertFirst": "Сначала конвертируйте тексты песен",
+  "openLyricsNoticeNoLyricsToSave": "Нет текстов для сохранения",
+  "openLyricsNoticeSaveFileSucceeded": "Текст сохранен: {detail}",
+  "openLyricsNoticeSaveFileFailed": "Не удалось сохранить: {detail}",
+  "openLyricsNoticeOpenSongFirst": "Сначала откройте файл песни",
+  "openLyricsNoticeAudioTagUnsupported": "Эта платформа не может писать теги песен",
+  "openLyricsDropUnsupportedItem": "Open Lyrics принимает файлы с текстами песен или аудиофайлы.",
+  "openLyricsPreviewTitle": "Предварительный просмотр",
+  "openLyricsPreviewRawText": "Необработанный текст",
+  "openLyricsPreviewLanguages": "Языки текста · {langs}",
+  "openLyricsPreviewStateIdle": "Не загружено",
+  "openLyricsPreviewStateRawLoaded": "Готов к конвертации",
+  "openLyricsPreviewStateConverted": "Преобразовано",
+  "openLyricsPreviewEmptyNoInput": "Сначала откройте файл текста или песню.",
+  "openLyricsActionOpening": "Открытие...",
+  "openLyricsActionOpenLyricsFile": "Открыть файл с текстами песен",
+  "openLyricsActionOpenSongFile": "Открыть файл песни",
+  "openLyricsActionConvertFormat": "Преобразование формата",
+  "openLyricsActionSaveLyrics": "Сохранить текст",
+  "openLyricsActionSaveToTag": "Сохранить в тег песни",
+  "openLyricsActionTranslate": "Перевести текст",
+  "openLyricsExportFormatCanWriteTag": "Текущий формат экспорта: {format} · можно записывать теги.",
+  "openLyricsExportFormatFileOnly": "Текущий формат экспорта: {format} · только экспорт файлов",
+  "searchLyricsSelectorTitle": "Выберите текст",
+  "searchLyricsSelectorOpenLocal": "Открыть локальные тексты песен",
+  "searchLyricsSelectorSelect": "Выберите текст",
+  "searchLyricsSelectorDescription": "Выберите онлайн-или локальные тексты песен для настольных компьютеров.",
+  "searchLyricsSelectorOpenLocalFailed": "Не удалось открыть локальный текст песни: {detail}.",
+  "searchLyricsSelectorSelectLyricsFirst": "Сначала выберите текст",
+  "searchLyricsSelectorSelectFailed": "Не удалось выбрать текст. Повторите попытку позже",
+  "searchDropUnsupportedItem": "Поиск принимает анализируемые элементы песен или аудиофайлы.",
+  "searchNoticePartialSourcesFailed": "Некоторые источники потерпели неудачу. Показаны результаты из других источников",
+  "searchNoticeAllSourcesFailed": "Все источники поиска не удались",
+  "searchNoticeLoadMoreFailed": "Некоторым источникам не удалось загрузить больше результатов.",
+  "searchNoticeDirectoryPickerUnsupported": "Выбор каталога не поддерживается на этой платформе.",
+  "searchNoticeAutoFetchSucceeded": "Получен текст песни {detail}.",
+  "searchNoticeAutoFetchFailed": "Не удалось выполнить автоматическое получение: {detail}.",
+  "searchNoticeSelectedSongUnavailable": "Доступный файл песни не выбран.",
+  "searchNoticeFilePickerUnsupported": "Выбор файла песни не поддерживается на этой платформе.",
+  "searchNoticeOpenSongFailed": "Не удалось открыть песню: {detail}.",
+  "searchNoticeDroppedSongUnavailable": "Переброшенный файл песни недоступен.",
+  "searchNoticeDroppedSongResolveFailed": "Не удалось разрешить удаленную песню: {detail}.",
+  "searchNoticeEmptyKeyword": "Введите ключевое слово для поиска",
+  "searchNoticeGetLyricsFirst": "Сначала получите тексты песен",
+  "searchNoticeLyricsSaveSucceededWithPath": "Текст сохранен: {detail}",
+  "searchNoticeSaveFileUnsupported": "Сохранение файлов не поддерживается на этой платформе.",
+  "searchNoticeFilePickerForTagUnsupported": "Выбор файла тега песни не поддерживается на этой платформе.",
+  "searchNoticeFilePickerFailed": "Не удалось выбрать файл: {detail}.",
+  "searchNoticeBatchCancelling": "Отмена пакетного сохранения...",
+  "searchNoticeSelectAlbumOrPlaylistFirst": "Сначала выберите альбом или плейлист",
+  "searchNoticeSelectAtLeastOneLyricsLanguage": "Выберите хотя бы один язык текстов песен",
+  "searchNoticeNoSongsToSave": "Нет песен для сохранения",
+  "searchNoticeBatchSaveCancelled": "Пакетное сохранение отменено: {saved} сохранен, {failed} не выполнен, {skipped} пропущен",
+  "searchNoticeBatchSaveCompleted": "Пакетное сохранение завершено: {saved} сохранен, {failed} не выполнен, {skipped} пропущен",
+  "searchNoticeBatchSaveFailed": "Не удалось выполнить пакетное сохранение: {detail}.",
+  "searchNoticeMultipleLyricsCandidates": "Было найдено несколько лирических кандидатов. Выберите один, чтобы продолжить",
+  "searchNoticeGetLyricsFailed": "Не удалось получить текст песни: {detail}.",
+  "searchNoticeSelectSavePathFirst": "Сначала выберите путь сохранения",
+  "searchNoticeDirectoryPickFailed": "Не удалось выбрать каталог: {detail}.",
+  "searchNoticePreviewLoading": "Тексты еще загружаются",
+  "searchNoticePreviewNoLanguage": "Выберите хотя бы один язык текстов песен",
+  "searchNoticePreviewNoContent": "Текущие тексты песен не имеют содержания, доступного для предварительного просмотра.",
+  "searchNoticePreviewNoSelection": "Сначала скачайте и просмотрите тексты песен",
+  "desktopWindowActionSelectLyrics": "Выберите текст",
+  "desktopWindowActionMarkInstrumental": "Отметить как инструментальную",
+  "desktopWindowActionDisableAutoSearch": "Отключить автоматический поиск этой песни",
+  "desktopWindowActionUnlinkLyrics": "Отсоединить тексты песен",
+  "desktopWindowActionAssociationManager": "Менеджер ассоциации лирики",
+  "desktopWindowActionToggleFloating": "Показать или скрыть тексты песен на рабочем столе",
+  "desktopWindowActionShowMainWindow": "Показать главное окно",
+  "desktopWindowActionClickThrough": "Переход по кликам",
+  "desktopWindowActionPrevious": "Предыдущий",
+  "desktopWindowActionPlay": "Играть",
+  "desktopWindowActionPause": "Пауза",
+  "desktopWindowActionNext": "Следующий",
+  "desktopWindowActionHide": "Скрывать",
+  "desktopTrayCurrentTarget": "Текущая цель:",
+  "desktopTrayNoSelection": "Никто",
+  "desktopTrayTargetInstance": "Целевой экземпляр",
+  "desktopTrayInstance": "Пример",
+  "desktopTrayExit": "Выход",
+  "desktopWindowInfoInstrumental": "Инструментальный",
+  "desktopWindowControlConnectionLost": "Соединение с плеером потеряно. Действие не было выполнено.",
+  "desktopWindowClientDisconnected": "Соединение с плеером потеряно. Тексты песен на рабочем столе были закрыты."
+}

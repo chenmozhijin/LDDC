@@ -1,0 +1,4 @@
+// macOS 发布身份由 tool/release_metadata.json 统一约束；这里保留 Xcode 必需的 xcconfig 入口。
+PRODUCT_NAME = LDDC
+PRODUCT_BUNDLE_IDENTIFIER = com.cmzj.lddc
+PRODUCT_COPYRIGHT = Copyright © 2026 沉默の金. All rights reserved.

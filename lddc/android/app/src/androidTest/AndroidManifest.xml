@@ -1,0 +1,19 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- 两个组件只存在于 androidTest APK，生产构建不会包含测试文件或入口。 -->
+        <provider
+            android:name="com.cmzj.lddc.PlatformFixtureDocumentsProvider"
+            android:authorities="com.cmzj.lddc.test.platform.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+        <provider
+            android:name="com.cmzj.lddc.PlatformFixtureSeedProvider"
+            android:authorities="com.cmzj.lddc.test.platform.seed"
+            android:exported="true" />
+    </application>
+</manifest>

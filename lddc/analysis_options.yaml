@@ -1,0 +1,22 @@
+# Dart analyzer 是本工程的静态门禁入口，负责在提交前发现类型错误、潜在误用和风格退化。
+# Flutter/Dart 命令会读取该文件；调整规则时应同步考虑全仓测试和生成代码的影响。
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  # 这些规则优先保护性能、状态安全和可维护性；局部例外应使用 ignore 注明原因。
+  rules:
+    avoid_slow_async_io: true
+    prefer_final_fields: true
+    # 普通形参与初始化形参在运行时等价；关闭纯风格诊断，让静态门禁聚焦类型、
+    # 生命周期和异步上下文等会影响正确性的规则。
+    prefer_initializing_formals: false
+    use_build_context_synchronously: true

@@ -1,0 +1,74 @@
+{
+  "lyrics_file_name_fmt": "%<artist> - %<title> (%<id>)",
+  "default_save_path": "",
+  "ID3_version": "v2.3",
+  "multi_search_sources": [
+    "QM",
+    "KG",
+    "NE"
+  ],
+  "langs_order": [
+    "roma",
+    "orig",
+    "ts"
+  ],
+  "skip_inst_lyrics": true,
+  "auto_select": true,
+  "add_end_timestamp_line": false,
+  "lrc_ms_digit_count": 3,
+  "last_ref_line_time_sty": 0,
+  "lrc_tag_info_src": 0,
+  "translate_source": "BING",
+  "translate_target_lang": "SIMPLIFIED_CHINESE",
+  "openai_base_url": "",
+  "openai_api_key": "",
+  "openai_model": "",
+  "desktop_lyrics_played_colors": [
+    [
+      0,
+      255,
+      255
+    ],
+    [
+      0,
+      128,
+      255
+    ]
+  ],
+  "desktop_lyrics_unplayed_colors": [
+    [
+      255,
+      0,
+      0
+    ],
+    [
+      255,
+      128,
+      128
+    ]
+  ],
+  "desktop_lyrics_default_langs": [
+    "orig",
+    "ts"
+  ],
+  "desktop_lyrics_langs_order": [
+    "roma",
+    "orig",
+    "ts"
+  ],
+  "desktop_lyrics_sources": [
+    "QM",
+    "KG",
+    "NE"
+  ],
+  "desktop_lyrics_font_family": "",
+  "desktop_lyrics_refresh_rate": -1,
+  "desktop_lyrics_rect": [],
+  "desktop_lyrics_font_size": 30.0,
+  "desktop_lyrics_show_furigana": true,
+  "lyrics_panel_font_size": 12.0,
+  "language": "auto",
+  "color_scheme": "auto",
+  "log_level": "INFO",
+  "auto_check_update": true
+}

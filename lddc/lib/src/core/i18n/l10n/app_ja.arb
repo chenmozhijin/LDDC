@@ -1,0 +1,1389 @@
+{
+  "@@locale": "ja",
+  "@commonLyricsLanguageTypeSummary": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonTranslationProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@commonOpenAiTranslationProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@commonDropFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonSelectSaveDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonOpenSaveDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonTranslationFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@commonLyricsSaveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchPendingLyricsFileNameAt": {
+    "placeholders": {
+      "root": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeImportFilesFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeImportDirectoriesFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeDroppedSongResolveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeSelectTreeFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeSelectedRootSkippedSongs": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeSetRootFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeOpenSongDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeOpenLyricsFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeScanFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeTreeScanFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeMatchCompleted": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "@localMatchNoticeMatchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchNoticeAndroidMatchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchQueueDesktopHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@localMatchQueueMobileHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@localMatchSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@localMatchSaveRootPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@localMatchValidationMoreIssues": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeImportFilesCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeConversionCancelledCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeConversionCompletedWithFailures": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeConversionCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertNoticeConversionFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertNoticeOpenSourceDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertNoticeOpenOutputFileFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertNoticeScanImportedFromDirectory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertCompactControlsSubtitle": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertQueueSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertHintCancelled": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertHintCompleted": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertDropFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertProgressConvertingFile": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertProgressConversionCompleted": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertProgressConversionFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertProgressScanningDirectory": {
+    "placeholders": {
+      "directoryName": {
+        "type": "String"
+      }
+    }
+  },
+  "@batchConvertProgressScannedLyricsFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchBatchSaveProgressFetchingLyrics": {
+    "placeholders": {
+      "songName": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchTableSongCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchTableStatusSearchFailedWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchTableStatusAutoFetchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchTableStatusSongListFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsCurrentTemplate": {
+    "placeholders": {
+      "template": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsRestoreSectionContent": {
+    "placeholders": {
+      "sectionTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsRestoreSectionTooltip": {
+    "placeholders": {
+      "sectionTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "@settingsDigitsValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "@aboutCopyrightNoticeBody": {
+    "placeholders": {
+      "years": {
+        "type": "String"
+      },
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "@aboutLicenseNoticeBody": {
+    "placeholders": {
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "@aboutCheckUpdateAvailable": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "@aboutActionOpenedLink": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "@aboutActionOpenLinkFailed": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerDeleteSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerSummary": {
+    "placeholders": {
+      "totalCount": {
+        "type": "int"
+      },
+      "selectedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerSearchSummary": {
+    "placeholders": {
+      "totalCount": {
+        "type": "int"
+      },
+      "selectedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerClearInvalidSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerChangeDirectorySuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerBackupSuccess": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerExportSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@libraryLinkManagerOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerTrackLabel": {
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerTrackTooltip": {
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerOffsetLabel": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerOffsetTooltip": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerLanguagesLabel": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerLanguagesTooltip": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "@libraryLinkManagerOtherConfig": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@openLyricsNoticeOpenFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsNoticeConvertFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsNoticeSaveFileSucceeded": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsNoticeSaveFileFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsPreviewLanguages": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsExportFormatCanWriteTag": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "@openLyricsExportFormatFileOnly": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchLyricsSelectorOpenLocalFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeAutoFetchSucceeded": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeAutoFetchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeOpenSongFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeDroppedSongResolveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeLyricsSaveSucceededWithPath": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeFilePickerFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeBatchSaveCancelled": {
+    "placeholders": {
+      "saved": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchNoticeBatchSaveCompleted": {
+    "placeholders": {
+      "saved": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "@searchNoticeBatchSaveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeGetLyricsFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "@searchNoticeDirectoryPickFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "appTitle": "LDDC",
+  "commonWarning": "警告",
+  "commonError": "エラー",
+  "commonSuccess": "成功",
+  "commonFailed": "失敗した",
+  "commonSkipped": "スキップされました",
+  "commonTotal": "合計",
+  "commonDelete": "消去",
+  "commonConfirm": "確認する",
+  "commonRestoreDefault": "デフォルトに戻す",
+  "commonEnabled": "有効",
+  "commonDisabledByDefault": "デフォルトでは無効になっています",
+  "commonFormat": "形式",
+  "commonOffset": "オフセット",
+  "commonSaving": "保存中...",
+  "commonAddFiles": "ファイルの追加",
+  "commonClearQueue": "キューをクリアする",
+  "commonUnsupportedOperation": "この操作はこのプラットフォームではサポートされていません",
+  "commonLyricsFileUnavailable": "このエントリには開く歌詞ファイルがまだありません",
+  "commonAudioTagRequiresLrc": "ソングタグの歌詞には LRC 形式を使用する必要があります",
+  "commonLyricsLanguageTypeSummary": "{language} ({type})",
+  "commonTranslationCancelled": "翻訳が削除されました",
+  "commonCancelTranslation": "翻訳の削除",
+  "commonTranslating": "翻訳中...",
+  "commonTranslationProgress": "{completed}/{total} を翻訳しています",
+  "commonOpenAiTranslationProgress": "OpenAI ストリーミング変換: {completed} / {total} 行",
+  "commonTranslationCompleted": "翻訳完了",
+  "commonLyricsSaved": "歌詞が保存されました",
+  "commonDropFailed": "ドロップに失敗しました: {detail}",
+  "commonSelectSaveDirectoryFailed": "保存ディレクトリの選択に失敗しました: {detail}",
+  "commonOpenSaveDirectoryFailed": "保存ディレクトリを開けませんでした: {detail}",
+  "commonTranslationFailed": "変換に失敗しました: {detail}",
+  "commonLyricsSaveFailed": "歌詞の保存に失敗しました: {detail}",
+  "appErrorUnknown": "不明なエラーが発生しました。",
+  "appErrorOperationTimeout": "操作がタイムアウトになりました。後でもう一度試してください。",
+  "appErrorNetworkUnavailable": "ネットワークが利用できません。接続を確認してください。",
+  "appErrorInvalidPayload": "データ形式が無効です。",
+  "appErrorUnsupportedOperation": "この操作はサポートされていません。",
+  "appErrorPermissionDenied": "この操作を実行する権限がありません。",
+  "appErrorIoFailure": "ファイルの読み取りまたは書き込みに失敗しました。",
+  "appErrorLyricsRequestFailed": "歌詞のリクエストに失敗しました。",
+  "appErrorLyricsNotFound": "歌詞が見つかりませんでした。",
+  "appErrorLyricsProcessing": "歌詞の処理に失敗しました。",
+  "appErrorLyricsDecrypt": "歌詞の解読に失敗しました。",
+  "appErrorLyricsFormatUnsupported": "サポートされていない歌詞形式です。",
+  "appErrorDecoding": "デコードに失敗しました。",
+  "appErrorSongInfoRead": "曲情報の読み込みに失敗しました。",
+  "appErrorUnsupportedFileType": "サポートされていないファイル形式です。",
+  "appErrorDragDropInvalid": "ドラッグ アンド ドロップ データが無効です。",
+  "appErrorTranslateFailed": "翻訳に失敗しました。",
+  "appErrorApiParamsInvalid": "リクエストパラメータが無効です。",
+  "appErrorApiRequestFailed": "API リクエストが失敗しました。",
+  "appErrorAutoFetchUnknown": "自動マッチングが不明なエラーにより失敗しました。",
+  "appErrorNotEnoughInfo": "検索するほどの情報がありません。",
+  "appErrorIpcInvalidLength": "IPC メッセージの長さが無効です。",
+  "appErrorIpcUnsupportedTask": "IPC タスクはサポートされていません。",
+  "appErrorIpcInstanceNotFound": "IPC インスタンスが存在しません。",
+  "appErrorIpcPanelNotFound": "IPCパネルが存在しません。",
+  "appErrorIpcInvalidWindowId": "ウィンドウハンドルが無効です。",
+  "appErrorIpcEmbedUnsupported": "このプラットフォームでは埋め込みモードはサポートされていません。",
+  "appErrorActionRetryNetwork": "ネットワークを確認して再試行してください。",
+  "appErrorActionCheckPayload": "入力データ形式を確認してください。",
+  "appErrorActionChangeFormat": "サポートされているファイルまたは形式を使用してください。",
+  "appErrorActionDetachedMode": "分離モードに戻ってください。",
+  "actionRetry": "リトライ",
+  "actionViewDetails": "詳細を見る",
+  "actionCancel": "キャンセル",
+  "sourceAggregate": "集計",
+  "sourceQQMusic": "QQミュージック",
+  "sourceKugou": "クゴウミュージック",
+  "sourceNetease": "ネットイーズミュージック",
+  "sourceLrclib": "Lrclib",
+  "sourceLocal": "地元",
+  "lyricOriginal": "オリジナル",
+  "lyricTranslation": "翻訳",
+  "lyricRomanized": "ローマ字表記",
+  "lyricsFormatVerbatimLrc": "ワードタイムLRC",
+  "lyricsFormatLineByLineLrc": "ラインタイミング LRC",
+  "lyricsFormatEnhancedLrc": "拡張 LRC (ESLyric)",
+  "lyricsFormatSrt": "SRT",
+  "lyricsFormatAss": "お尻",
+  "lyricsTypeVerbatim": "ワードタイム",
+  "lyricsTypeLineByLine": "ラインタイミング",
+  "lyricsTypePlainText": "プレーンテキスト",
+  "searchSong": "歌",
+  "searchAlbum": "アルバム",
+  "searchSongList": "プレイリスト",
+  "searchArtist": "アーティスト",
+  "searchLyrics": "歌詞",
+  "searchSongId": "ソングID",
+  "localMatchIteratingFiles": "ファイルをスキャン中...",
+  "localMatchProgressImportCompleted": "インポートが完了しました",
+  "localMatchProgressScanCompleted": "スキャンが完了しました",
+  "localMatchProgressScanFailed": "スキャンに失敗しました",
+  "localMatchProgressMatchCompleted": "試合終了",
+  "localMatchProgressMatchFailed": "試合に失敗しました",
+  "localMatchProgressPreparingMatch": "マッチングの準備をしています...",
+  "localMatchPreviewTagOnly": "タグのみを書き込みます",
+  "localMatchPreviewWriteTag": "タグに書き込む",
+  "localMatchPreviewNoOutput": "出力が設定されていません",
+  "localMatchPreviewSongTagOnly": "ソングタグのみ",
+  "localMatchPendingLyricsFileName": "ファイル名を決定するために一致する歌詞情報を待機しています",
+  "localMatchPendingLyricsFileNameAt": "{root} / ファイル名を決定するために一致する歌詞情報を待機しています",
+  "localMatchCalcSavePathFailed": "保存パスの計算に失敗しました",
+  "localMatchNoticeBusyImportFiles": "タスクが実行中であるため、現在ファイルをインポートできません",
+  "localMatchNoticeSelectedFilesUnavailable": "選択したファイルは使用できません",
+  "localMatchNoticeImportFilesFailed": "ファイルのインポートに失敗しました: {detail}",
+  "localMatchNoticeBusyImportDirectories": "タスクが実行中であるため、現在ディレクトリをインポートできません",
+  "localMatchNoticeImportDirectoriesFailed": "ディレクトリのインポートに失敗しました: {detail}",
+  "localMatchNoticeDroppedNoAccessibleFiles": "ドロップされたデータにはアクセス可能なファイルが含まれていません",
+  "localMatchNoticeDroppedSongResolveFailed": "ドロップされた曲を解決できませんでした: {detail}",
+  "localMatchNoticeImportCompletedWithErrors": "インポートは完了しましたが、一部のエントリを解析できませんでした",
+  "localMatchNoticeSafTreeUnsupported": "このプラットフォームではディレクトリ ツリー アクセスはサポートされていません",
+  "localMatchNoticeBusySwitchTree": "タスクが実行中であるため、現在ディレクトリ ツリーを変更できません",
+  "localMatchNoticeSelectTreeFailed": "ディレクトリ ツリーの選択に失敗しました: {detail}",
+  "localMatchNoticeBusyClearQueue": "タスクが実行中であるため、現在キューをクリアできません",
+  "localMatchNoticeSelectItemsToDelete": "最初に削除するエントリを選択してください",
+  "localMatchNoticeSelectItemsToSetRoot": "ルートディレクトリを設定する前にエントリを選択してください",
+  "localMatchNoticeSelectedRootSkippedSongs": "これらの曲は選択されたルートの外にあるためスキップされました: {detail}",
+  "localMatchNoticeSetRootFailed": "ルート ディレクトリの設定に失敗しました: {detail}",
+  "localMatchNoticeSelectItemsToRestore": "最初に復元するエントリを選択してください",
+  "localMatchNoticeCancelling": "現在のタスクをキャンセルしています...",
+  "localMatchNoticeValidationFailed": "最初にローカル一致要件を解決します",
+  "localMatchNoticeSongDirectoryUnavailable": "このエントリでは曲ディレクトリを開けません",
+  "localMatchNoticeOpenSongDirectoryFailed": "曲ディレクトリを開けませんでした: {detail}",
+  "localMatchNoticeSaveDirectoryUnavailable": "このエントリには開く保存ディレクトリがまだありません",
+  "localMatchNoticeOpenLyricsFailed": "歌詞を開けませんでした: {detail}",
+  "localMatchNoticeScanCancelled": "スキャンがキャンセルされました",
+  "localMatchNoticeScanCompletedWithErrors": "スキャンは完了しましたが、一部のファイルを解析できませんでした",
+  "localMatchNoticeScanFailed": "スキャンが失敗しました: {detail}",
+  "localMatchNoticeTreeScanFailed": "ディレクトリ ツリーのスキャンに失敗しました: {detail}",
+  "localMatchNoticeMatchCancelled": "試合中止",
+  "localMatchNoticeMatchCompleted": "合計 {total} 曲、{success} が一致、{failed} は失敗、{skipped} はスキップされました。",
+  "localMatchNoticeMatchFailed": "ローカル一致が失敗しました: {detail}",
+  "localMatchNoticeAndroidMatchCancelledResume": "試合はキャンセルされました。チェックポイントから再開するには再起動してください",
+  "localMatchNoticeAndroidMatchFailed": "Android SAF ローカル一致が失敗しました: {detail}",
+  "localMatchValidationEmptyLangs": "一致する歌詞の言語を選択してください",
+  "localMatchValidationEmptySources": "少なくとも 1 つのソースを選択してください",
+  "localMatchValidationEmptyQueue": "最初に一致する曲をインポートします",
+  "localMatchValidationSkipExistingFileNameConflict": "ファイルを保存しながら既存の歌詞をスキップする場合、ファイル名モードでは一致する歌詞情報を使用できません",
+  "localMatchValidationMissingAndroidTree": "最初にディレクトリ ツリーを選択します",
+  "localMatchValidationNeedsSaveRoot": "保存パスが必要です",
+  "localMatchValidationNeedsSongRoot": "曲のルートディレクトリが必要です",
+  "localMatchValidationUnknownSavePath": "不明な保存パスエラー",
+  "localMatchIntro": "ローカルの曲またはフォルダーをインポートし、出力をプレビューしてから、バッチ マッチングを実行します。",
+  "localMatchDropUnsupportedItem": "ローカル マッチでは、曲ファイル、フォルダー、または解析可能なプレーヤー アイテムを受け入れます",
+  "localMatchReadyToStart": "ローカルマッチングを開始する準備ができました",
+  "localMatchQueueTitle": "タスクキュー",
+  "localMatchQueueEmptyHint": "ファイルまたはフォルダーをインポートしてタスクキューを構築する",
+  "localMatchQueueDesktopHint": "{count} タスク。さらにアクションを実行するには、行を右クリックします",
+  "localMatchQueueMobileHint": "{count} タスク。長押しまたはさらにタップしてアクションを開きます",
+  "localMatchImportAndRunTitle": "インポートして実行",
+  "localMatchActionStart": "マッチングを開始する",
+  "localMatchActionAddFolders": "フォルダーの追加",
+  "localMatchActionSelectSaveRoot": "「ルートの保存」を選択します",
+  "localMatchActionSelectTree": "ツリーの選択",
+  "localMatchActionReselectTree": "ツリーを再選択",
+  "localMatchActionBulkSelect": "一括選択",
+  "localMatchActionExitSelection": "一括選択を終了する",
+  "localMatchActionSelectAll": "すべて選択",
+  "localMatchActionDeselectAll": "すべての選択を解除",
+  "localMatchActionSetRoot": "ルートの設定",
+  "localMatchSelectedCount": "{count} が選択されました",
+  "localMatchBulkActionHint": "一括アクションは選択したタスクに直接適用されます",
+  "localMatchPhaseIdle": "待っている",
+  "localMatchPhaseScanning": "走査",
+  "localMatchPhaseMatching": "マッチング",
+  "localMatchPhaseWriting": "書き込み",
+  "localMatchPhaseCompleted": "完了",
+  "localMatchPhaseHintIdle": "曲をインポートしてマッチングを開始する",
+  "localMatchPhaseHintScanning": "タスクキューの構築と出力の見積もり",
+  "localMatchPhaseHintMatching": "ソースを照会し、最適な一致を計算する",
+  "localMatchPhaseHintWriting": "歌詞ファイルまたは曲タグの書き込み",
+  "localMatchPhaseHintCompleted": "この実行は完了です。必要に応じて調整して再度実行します",
+  "localMatchPipelineIdle": "スキャン -> 照合 -> 書き込み",
+  "localMatchPipelineScanning": "現在の段階: スキャン",
+  "localMatchPipelineMatching": "現在のステージ: 試合",
+  "localMatchPipelineWriting": "現在の段階: 書き込み",
+  "localMatchPipelineCompleted": "スキャン、照合、書き込みが完了しました",
+  "localMatchUnknownSong": "未知の曲",
+  "localMatchUnknownDuration": "不明な期間",
+  "localMatchStatusNotStarted": "未開始",
+  "localMatchSongPathLabel": "歌の道",
+  "localMatchLyricsPathLabel": "歌詞の保存パス",
+  "localMatchExpandDetails": "詳細を展開する",
+  "localMatchCollapseDetails": "詳細を折りたたむ",
+  "localMatchRowActionOpenInSearch": "検索で開く",
+  "localMatchRowActionEnterSelection": "一括選択を入力してください",
+  "localMatchRowActionOpenSongDirectory": "ソングフォルダーを開く",
+  "localMatchRowActionOpenSaveDirectory": "保存フォルダーを開く",
+  "localMatchRowActionOpenLyrics": "歌詞を開く",
+  "localMatchFieldLyricsType": "歌詞の種類",
+  "localMatchFieldOutputStrategy": "アウトプット戦略",
+  "localMatchFieldSaveMode": "セーブモード",
+  "localMatchFieldFileNameMode": "ファイル名モード",
+  "localMatchFieldLyricsFormat": "歌詞の形式",
+  "localMatchFieldThreshold": "一致しきい値",
+  "localMatchFieldSaveRoot": "ルートの保存",
+  "localMatchMoreSettings": "その他の設定",
+  "localMatchRulesTitle": "試合ルール",
+  "localMatchRulesSubtitle": "ソース、言語、出力戦略、およびしきい値",
+  "localMatchMinScore": "最低スコア",
+  "localMatchSkipExisting": "既存の歌詞をスキップする",
+  "localMatchSkipExistingConflictHint": "現在の出力戦略とファイル名モードでは、既存の歌詞をスキップできません。ファイルを保存する必要がある場合は、一致する歌詞情報に基づいて名前を付けることは避けてください。",
+  "localMatchSaveToSongDirectoryHint": "ソングフォルダーへの保存には、追加の保存ルートは必要ありません。",
+  "localMatchAndroidTreeSaveHint": "Android ディレクトリ ツリーの保存は、承認されたツリーに直接書き込まれます。",
+  "localMatchFileNameTemplateHint": "ファイル名のテンプレートは、設定の Lyrics_file_name_fmt を使用します。",
+  "localMatchSaveRootPath": "ルートを保存: {path}",
+  "localMatchSaveRootRequired": "この保存モードには保存ルートが必要です。まず 1 つ選択してください。",
+  "localMatchTreeNotSelected": "ディレクトリツリーが選択されていません",
+  "localMatchSaveModeSong": "ソングフォルダーに保存",
+  "localMatchSaveModeMirror": "ミラーフォルダー",
+  "localMatchSaveModeSpecify": "特定のフォルダー",
+  "localMatchFileNameModeSong": "ソングファイル名を使用する",
+  "localMatchFileNameModeFormatBySong": "曲情報による名前",
+  "localMatchFileNameModeFormatByLyrics": "歌詞情報による名前",
+  "localMatchFileNameHintSong": "オーディオ ファイル名を再利用し、歌詞の拡張子のみを置き換えます。",
+  "localMatchFileNameHintFormatBySong": "タイトル、アーティスト、アルバムなどの曲のメタデータからファイル名を生成します。",
+  "localMatchFileNameHintFormatByLyrics": "一致した歌詞曲情報からファイル名を生成します。マッチングする前には分からない可能性があります。",
+  "localMatchSaveToTagOnlyFile": "ファイルのみ",
+  "localMatchSaveToTagOnlyTag": "タグのみ",
+  "localMatchSaveToTagBoth": "ファイル + タグ",
+  "localMatchValidationTitle": "始める前に修正すべき問題",
+  "localMatchValidationMoreIssues": "{count} さらに多くの問題を修正する必要があります",
+  "batchConvertNoticeSelectedFilesUnavailable": "選択したファイルには直接アクセスできません",
+  "batchConvertNoticeImportFilesCompleted": "{count} 歌詞ファイルをインポートしました",
+  "batchConvertNoticeDroppedNoAccessibleFiles": "ドロップされたデータにはアクセス可能な歌詞ファイルが含まれていません",
+  "batchConvertNoticeEmptyQueue": "最初に変換する歌詞ファイルを追加します",
+  "batchConvertNoticeOverwriteCancelled": "バッチ変換がキャンセルされました",
+  "batchConvertNoticeConversionCancelledCompleted": "バッチ変換がキャンセルされ、{count} アイテムが完了しました",
+  "batchConvertNoticeConversionCompletedWithFailures": "バッチ変換が完了しました: {success} は成功しました、{failure} は失敗しました",
+  "batchConvertNoticeConversionCompleted": "バッチ変換が完了しました: {count} アイテム",
+  "batchConvertNoticeConversionFailed": "バッチ変換が失敗しました: {detail}",
+  "batchConvertNoticeOpenSourceDirectoryFailed": "ソース ディレクトリを開けませんでした: {detail}",
+  "batchConvertNoticeOpenOutputFileFailed": "歌詞ファイルを開けませんでした: {detail}",
+  "batchConvertNoticeScanNoSupportedFiles": "選択したフォルダー内にサポートされている歌詞ファイルが見つかりませんでした",
+  "batchConvertNoticeScanImportedFromDirectory": "{count} 歌詞ファイルをフォルダーからインポートしました",
+  "batchConvertNoticeDuplicateItems": "選択されたすべてのエントリはすでにキュー内にあります",
+  "batchConvertControlsTitle": "インポートと設定",
+  "batchConvertCompactControlsTitle": "インポートと出力の設定",
+  "batchConvertCompactControlsSubtitle": "形式: {format}",
+  "batchConvertImportTitle": "輸入",
+  "batchConvertAddFolders": "フォルダーの追加",
+  "batchConvertOutputSettingsTitle": "出力設定",
+  "batchConvertTargetFormat": "ターゲットフォーマット",
+  "batchConvertSaveDirectoryTitle": "保存フォルダー",
+  "batchConvertSaveDirectoryDefault": "設定を解除すると、出力はソース歌詞ファイルの次に出力されます。",
+  "batchConvertSelectSaveDirectory": "保存フォルダーを選択してください",
+  "batchConvertRestoreOriginalDirectory": "ソースフォルダーを使用する",
+  "batchConvertRecursiveTitle": "サブフォルダーをスキャンする",
+  "batchConvertRecursiveSubtitle": "フォルダーをインポートするときに、サブフォルダー内の歌詞ファイルのスキャンを続けます",
+  "batchConvertStart": "変換の開始",
+  "batchConvertCancel": "変換のキャンセル",
+  "batchConvertQueueTitle": "変換キュー",
+  "batchConvertQueueSubtitle": "{count} 項目、出力形式 {format}",
+  "batchConvertPageErrorFallback": "バッチ変換ページでエラーが発生しました",
+  "batchConvertRetryImport": "再インポート",
+  "batchConvertEmptyQueue": "歌詞ファイルまたはフォルダーを追加すると、バッチ変換キューがここに表示されます。",
+  "batchConvertOutputPathLabel": "出力パス",
+  "batchConvertQueueStatusWaiting": "待っている",
+  "batchConvertQueueStatusRunning": "変換中",
+  "batchConvertQueueStatusSuccess": "変換された",
+  "batchConvertQueueStatusFailure": "失敗した",
+  "batchConvertMoreActions": "さらなるアクション",
+  "batchConvertActionOpenSourceDirectory": "オープンソースフォルダー",
+  "batchConvertActionOpenSaveDirectory": "保存フォルダーを開く",
+  "batchConvertActionOpenOutputFile": "歌詞ファイルを開く",
+  "batchConvertActionOpenInOpenLyrics": "オープン・イン・オープン 歌詞",
+  "batchConvertPhaseIdle": "待っている",
+  "batchConvertPhaseScanning": "走査",
+  "batchConvertPhaseRunning": "変換中",
+  "batchConvertPhaseCompleted": "完了",
+  "batchConvertPipelineIdle": "インポート -> スキャン -> 変換 -> 完了",
+  "batchConvertPipelineScanning": "フォルダーのスキャン -> キューの構築",
+  "batchConvertPipelineRunning": "各項目を変換→ステータスを更新",
+  "batchConvertPipelineCompleted": "フォーマットを調整するか、再度インポートしてください",
+  "batchConvertHintCancelled": "キャンセルされました、{success} は成功しました、{failure} は失敗しました",
+  "batchConvertHintCompleted": "{success} は成功しました、{failure} は失敗しました",
+  "batchConvertHintNoQueue": "ファイルまたはフォルダーを追加して変換を開始します",
+  "batchConvertHintReady": "行列の準備ができました",
+  "batchConvertMetricWaiting": "待っている",
+  "batchConvertDropUnsupported": "バッチ変換ページは歌詞ファイルまたはフォルダーのみを受け入れます",
+  "batchConvertDropFailed": "ドロップの処理に失敗しました: {detail}",
+  "batchConvertProgressConvertingFile": "{fileName} を変換しています",
+  "batchConvertProgressItemSuccess": "変換された",
+  "batchConvertProgressItemFailure": "失敗した",
+  "batchConvertProgressPreparingConversion": "変換を準備しています...",
+  "batchConvertProgressCancellingConversion": "変換をキャンセルしています...",
+  "batchConvertProgressConversionCancelled": "変換がキャンセルされました",
+  "batchConvertProgressConversionCompleted": "変換が完了しました: {success} は成功しました、{failure} は失敗しました",
+  "batchConvertProgressConversionFailed": "変換に失敗しました: {detail}",
+  "batchConvertProgressScanningFolders": "フォルダーをスキャン中...",
+  "batchConvertProgressScanningDirectory": "{directoryName} をスキャンしています",
+  "batchConvertProgressScannedLyricsFiles": "{count} 歌詞ファイルが見つかりました",
+  "batchConvertProgressScanCancelled": "スキャンがキャンセルされました",
+  "batchConvertProgressScanNoSupportedFiles": "サポートされている歌詞ファイルが見つかりません",
+  "batchConvertProgressScanCompleted": "スキャンが完了しました",
+  "navSearch": "検索",
+  "navLocalMatch": "ローカルマッチ",
+  "navOpenLyrics": "歌詞を開く",
+  "navBatchConvert": "バッチ変換",
+  "navSettings": "設定",
+  "navAbout": "について",
+  "commonSearch": "検索",
+  "commonSource": "ソース",
+  "searchKeywordHint": "キーワードを入力してください",
+  "uiLoading": "読み込み中...",
+  "uiLoadingStepFetching": "リストとプレビューを取得しています...",
+  "uiEmpty": "データなし",
+  "uiNoMoreResult": "これ以上の結果はありません",
+  "searchInitialResultTitle": "キーワードを入力して検索を開始します",
+  "searchInitialResultDescription": "上のソースを選択して検索を実行してください",
+  "searchResultTitle": "検索結果",
+  "searchResultReturn": "戻る",
+  "searchPreviewTitle": "歌詞プレビュー",
+  "searchPreviewLangsLabel": "言語",
+  "searchPreviewSongIdLabel": "ソングID",
+  "searchPreviewPlaceholder": "最初に曲または歌詞項目を選択してください",
+  "searchPreviewNoLanguage": "少なくとも 1 つの歌詞言語を選択してください",
+  "searchPreviewNoContent": "プレビュー可能なコンテンツはありません",
+  "searchPreviewLoading": "歌詞を読み込んでいます...",
+  "searchFormatLabel": "歌詞の形式",
+  "searchTranslateLyrics": "歌詞を翻訳する",
+  "searchResizeWorkspacePanes": "検索結果のサイズ変更と歌詞プレビュー",
+  "searchSavePreviewToDirectory": "フォルダーに保存",
+  "searchSavePreviewToFile": "ファイルに保存",
+  "searchSavePreviewToTag": "プレビューをタグに保存",
+  "searchSaveListLyrics": "アルバム/プレイリストの歌詞を保存",
+  "searchSaveListLyricsCancel": "一括保存をキャンセルする",
+  "searchSelectSavePath": "保存フォルダーを選択してください",
+  "searchBatchSaveProgressTitle": "バッチ保存の進行状況",
+  "searchBatchSaveProgressPreparing": "バッチ保存を準備しています...",
+  "searchBatchSaveProgressFetchingLyrics": "{songName} の歌詞を取得しています...",
+  "searchTableSongCountValue": "{count} 曲",
+  "searchTableStatusAutoFetching": "自動取得中...",
+  "searchTableStatusSearching": "検索中...",
+  "searchTableStatusFetchingSongList": "曲リストを取得中...",
+  "searchTableStatusNoResults": "一致する結果が見つかりませんでした",
+  "searchTableStatusEmptyList": "リストは空です",
+  "searchTableStatusUnsupportedSearchType": "選択したソースはこの検索タイプをサポートしていません",
+  "searchTableStatusSearchFailed": "検索に失敗しました",
+  "searchTableStatusSearchFailedWithDetail": "検索に失敗しました: {detail}",
+  "searchTableStatusAutoFetchFailed": "自動フェッチに失敗しました: {detail}",
+  "searchTableStatusSongListFailed": "曲リストの取得に失敗しました: {detail}",
+  "searchTableStatusPartialSourceUnavailable": "一部のソースは利用できません。利用可能な結果を​​表示中",
+  "searchTableStatusLoadMoreFailed": "一部のソースがさらに結果をロードできませんでした",
+  "searchSourceFailureDetailsTitle": "検索エラーの詳細",
+  "searchSourceFailureRequest": "リクエストが失敗しました",
+  "searchSourceFailureTimeout": "リクエストがタイムアウトしました",
+  "searchSourceFailureParameters": "無効なパラメータ",
+  "searchSourceFailureUnsupported": "サポートされていない操作",
+  "searchSourceFailureUnknown": "不明なエラー",
+  "searchResultLoadingMore": "さらに結果を読み込んでいます...",
+  "searchResultLoadMoreFailed": "自動ロードに失敗しました。残りの結果のロードを続行するには再試行してください",
+  "searchResultScrollForMore": "下にスクロールすると、さらに結果が自動的に読み込まれます",
+  "tableSavePath": "パスの保存",
+  "settingsSectionSave": "保存",
+  "settingsSectionLyrics": "歌詞",
+  "settingsSectionDesktopLyrics": "デスクトップの歌詞",
+  "settingsSectionTranslate": "翻訳する",
+  "settingsSectionSearch": "検索",
+  "settingsSectionApp": "アプリ",
+  "settingsSectionTools": "ツールとデータ",
+  "settingsSectionSaveSummary": "保存パス、ファイル名テンプレート、ID3 バージョン",
+  "settingsSectionSearchSummary": "集約検索とローカルマッチング用のデフォルトの歌詞ソースを選択します。",
+  "settingsSectionDesktopLyricsSummary": "デスクトップの歌詞の自動取得、表示言語、外観、リフレッシュ レート。",
+  "settingsSectionLyricsSummary": "ローカルマッチング動作と歌詞ファイルのエクスポート形式。",
+  "settingsSectionTranslateSummary": "翻訳元、訳文言語、条件フィールド",
+  "settingsSectionAppSummary": "言語、テーマ、ログ、および更新ポリシー",
+  "settingsSectionToolsSummary": "デスクトップ ツール、ログ フォルダー、およびキャッシュのクリーンアップ",
+  "settingsTranslateSourceBing": "Bing 翻訳",
+  "settingsTranslateSourceGoogle": "Google翻訳",
+  "settingsTranslateSourceOpenAi": "OpenAI互換API",
+  "settingsLangSimplifiedChinese": "簡体字中国語",
+  "settingsLangTraditionalChinese": "繁体字中国語",
+  "settingsLangEnglish": "英語",
+  "settingsLangJapanese": "日本語",
+  "settingsLangKorean": "韓国語",
+  "settingsLangSpanish": "スペイン語",
+  "settingsLangFrench": "フランス語",
+  "settingsLangPortuguese": "ポルトガル語",
+  "settingsLangGerman": "ドイツ語",
+  "settingsLangRussian": "ロシア",
+  "settingsAppLanguageAuto": "自動",
+  "settingsColorSchemeAuto": "フォローシステム",
+  "settingsColorSchemeLight": "ライト",
+  "settingsColorSchemeDark": "暗い",
+  "settingsDesktopGradientColors": "グラデーションカラー",
+  "settingsDesktopPlayedColors": "遊んだ色",
+  "settingsDesktopUnplayedColors": "未再生の色",
+  "settingsAddColor": "色を追加する",
+  "settingsEditColor": "色の編集",
+  "settingsDeleteColor": "色の削除",
+  "settingsBackToSections": "設定セクションに戻る",
+  "settingsAvailablePlaceholders": "利用可能なプレースホルダー",
+  "settingsPlaceholderTitleArtist": "タイトル: %<title> アーティスト: %<artist>",
+  "settingsPlaceholderAlbumId": "アルバム: %<album> 曲/歌詞 ID: %<id>",
+  "settingsPlaceholderLangs": "言語タイプ: %<langs>",
+  "settingsCurrentTemplate": "現在のテンプレート: {template}",
+  "settingsTranslateSourceLabel": "翻訳元",
+  "settingsTranslateTargetLabel": "対象言語",
+  "settingsOpenAiProfileLabel": "プリセット",
+  "settingsOpenAiProfileHelper": "組み込みプロバイダーは、ベース URL を自動的に入力します。 API キーとモデルを設定する必要があります。",
+  "settingsAppLanguageLabel": "インターフェース言語",
+  "settingsColorSchemeLabel": "テーマモード",
+  "settingsLogLevelLabel": "ログレベル",
+  "settingsLogLevelHelper": "情報は通常の使用のために保管してください。 TRACE と DEBUG はより詳細に記録し、より大きなログを作成します。",
+  "settingsAutoCheckUpdateLabel": "アップデートの自動チェック",
+  "settingsRestoreDefaultsWarning": "デフォルトを復元すると、構成がすぐに書き込まれます。続行する前に確認してください。",
+  "settingsRestoreAllTitle": "デフォルト設定の復元",
+  "settingsRestoreAllContent": "これにより、すべての設定が復元され、構成にすぐに書き込まれます。",
+  "settingsRestoreAllAction": "デフォルト設定の復元",
+  "settingsOpenAssociationManager": "オープン歌詞協会マネージャー",
+  "settingsOpenAssociationManagerSubtitle": "次の設定ページを開いて、曲と歌詞の関連付けを管理します。",
+  "settingsOpenLogDirectory": "ログディレクトリを開く",
+  "settingsOpenLogDirectorySubtitle": "実行時ログとトラブルシューティング ファイルを表示します。",
+  "settingsClearCache": "キャッシュのクリア",
+  "settingsClearCacheSubtitle": "設定ファイルを変更せずに検索と翻訳のキャッシュをクリアします。",
+  "settingsClearCacheContent": "キャッシュをクリアした後、その後の検索や変換で再度データが要求される場合があります。",
+  "settingsRestoreSectionTitle": "このセクションを復元する",
+  "settingsRestoreSectionContent": "「{sectionTitle}」セクションの設定のみが復元されます。他のセクションは変更されません。",
+  "settingsRestoreSectionTooltip": "{sectionTitle} をデフォルトに戻す",
+  "settingsDefaultSavePathHelper": "プラットフォームのデフォルトの音楽ディレクトリを使用するには、空のままにしておきます。",
+  "settingsChooseFolder": "フォルダーの選択",
+  "settingsLyricsFileNameFormat": "歌詞ファイル名のテンプレート",
+  "settingsLyricsFileNameFormatHelper": "保存されたファイル名を作成するには、以下のプレースホルダーを使用します。",
+  "settingsId3Version": "ID3バージョン",
+  "settingsId3VersionHelper": "オーディオタグに書き込まれた歌詞のみに影響します。不明な場合は、v2.3 をそのままにしておいてください。",
+  "settingsSearchSourcesTitle": "集約検索ソース",
+  "settingsSearchSourcesDescription": "検索で集計を使用する場合、チェックされたソースがクエリされます。リストの上位にあるソースは、結果のグループ化と自動マッチングで最初にランクされます。 Local Match はデフォルトでこのリストを使用します。",
+  "settingsReorderPriorityHint": "ドラッグして優先度を変更します",
+  "settingsReorderOrderHint": "ドラッグして順序を変更します",
+  "settingsDefaultLanguage": "デフォルトの表示言語",
+  "settingsDefaultLanguageDescription": "デスクトップの歌詞にデフォルトで表示される言語を選択し、ドラッグして表示順序を変更します。",
+  "settingsDesktopAutoFetchSources": "ソースの自動取得",
+  "settingsDesktopAutoFetchSourcesDescription": "デスクトップの歌詞にリンクされた歌詞がない場合、ソースは上から下に試行されます。",
+  "settingsFont": "フォント",
+  "settingsFollowSystemFont": "システムフォントに従う",
+  "settingsFontSizeByResize": "デスクトップの歌詞ウィンドウのサイズを変更して、メインのフォント サイズを調整します。",
+  "settingsPanelFontSize": "歌詞パネルのフォントサイズ",
+  "settingsAdaptiveRefreshRate": "アダプティブリフレッシュレート",
+  "settingsAdaptiveRefreshRateSubtitle": "歌詞アニメーションの状態に基づいて更新頻度を自動的に選択します。",
+  "settingsFixedRefreshRate": "固定リフレッシュレート",
+  "settingsShowFurigana": "ふりがなを表示",
+  "settingsLyricsMatchBehavior": "マッチング動作",
+  "settingsLyricsMatchBehaviorDescription": "ローカルマッチングおよびKugou歌詞候補のデフォルトの処理を設定します。",
+  "settingsLyricsExport": "LRC エクスポート",
+  "settingsLyricsExportDescription": "歌詞ファイルを保存するときに使用する言語順序と LRC タイムスタンプ形式を設定します。",
+  "settingsDisplayOrder": "エクスポート言語の順序",
+  "settingsDisplayOrderDescription": "ドラッグして、エクスポートされたファイル内のオリジナルの歌詞、翻訳された歌詞、ローマ字表記の歌詞を配置します。",
+  "settingsSkipInstrumental": "インストゥルメンタルトラックをスキップする",
+  "settingsSkipInstrumentalSubtitle": "Local Match でインストゥルメンタル トラックが特定された場合は、歌詞を保存しないでください。",
+  "settingsAutoSelectKugou": "九号候補自動選択",
+  "settingsAutoSelectKugouSubtitle": "検索で Kugou の曲を開くと、最適な歌詞候補が自動的に選択されます。",
+  "settingsAddLrcEndTimestamp": "LRC のエクスポート時に終了タイムスタンプを追加する",
+  "settingsAddLrcEndTimestampSubtitle": "行ごとの LRC にのみ影響し、必要に応じて行終了タイムスタンプを書き込みます。",
+  "settingsMillisecondsDigits": "ミリ秒桁",
+  "settingsMillisecondsDigitsHelper": "センチ秒には 2 桁を使用し、ミリ秒を完全に保持するには 3 桁を使用します。",
+  "settingsDigitsValue": "{value} 桁",
+  "settingsLastRefStyle": "最後の言語行のタイムスタンプ",
+  "settingsLastRefStyleHelper": "複数言語の行ごとの LRC の場合は、現在の行時刻、または最後の言語行の次の行の 1 ミリ秒前を使用します。",
+  "settingsLastRefCurrentLine": "現在の行時間を使用",
+  "settingsLastRefNextLine": "次の行の前に 1 ミリ秒を使用する",
+  "settingsTagInfoSource": "タグ情報ソース",
+  "settingsTagInfoLyricsSource": "歌詞ソース",
+  "settingsTagInfoSongInfo": "曲情報",
+  "settingsNoticeDefaultSavePathUpdated": "デフォルトの保存先を更新しました",
+  "settingsNoticeDefaultSavePathRestored": "デフォルトの保存先を復元しました",
+  "settingsNoticeLyricsFileNameFormatUpdated": "歌詞ファイル名テンプレートを更新しました",
+  "settingsNoticeId3VersionUpdated": "ID3バージョンが更新されました",
+  "settingsNoticeLyricsLangOrderEmpty": "歌詞の言語順序を空にすることはできません",
+  "settingsNoticeLyricsLangOrderUpdated": "歌詞の言語順序を更新しました",
+  "settingsNoticeSkipInstUpdated": "楽器スキップポリシーが更新されました",
+  "settingsNoticeAutoSelectUpdated": "自動選択ポリシーが更新されました",
+  "settingsNoticeAddEndTimestampUpdated": "終了タイムスタンプポリシーが更新されました",
+  "settingsNoticeMsDigitsUpdated": "ミリ秒の桁が更新されました",
+  "settingsNoticeLastRefStyleUpdated": "最終行時間スタイルが更新されました",
+  "settingsNoticeTagInfoSourceUpdated": "タグ情報ソースが更新されました",
+  "settingsNoticeDesktopSourcesEmpty": "デスクトップの歌詞ソースを空にすることはできません",
+  "settingsNoticeDesktopSourcesUpdated": "デスクトップの歌詞ソースが更新されました",
+  "settingsNoticeDesktopDefaultLangsEmpty": "デスクトップのデフォルト言語を空にすることはできません",
+  "settingsNoticeDesktopLangsUpdated": "デスクトップの歌詞言語設定が更新されました",
+  "settingsNoticeDesktopFontFamilyUpdated": "デスクトップの歌詞フォントが更新されました",
+  "settingsNoticeDesktopRefreshRateUpdated": "リフレッシュレートが更新されました",
+  "settingsNoticeDesktopPlayedColorsUpdated": "再生色を更新しました",
+  "settingsNoticeDesktopUnplayedColorsUpdated": "未再生のカラーが更新されました",
+  "settingsNoticeDesktopFontSizeUpdated": "デスクトップの歌詞のフォントサイズが更新されました",
+  "settingsNoticeDesktopPanelFontSizeUpdated": "デスクトップパネルのフォントサイズが更新されました",
+  "settingsNoticeDesktopShowFuriganaUpdated": "ふりがな表示ポリシーが更新されました",
+  "settingsNoticeTranslateSourceUpdated": "翻訳ソースを更新しました",
+  "settingsNoticeTranslateTargetLangUpdated": "翻訳対象言語が更新されました",
+  "settingsNoticeOpenAiProfileUpdated": "OpenAI プリセットが更新されました",
+  "settingsNoticeOpenAiBaseUrlUpdated": "OpenAI ベース URL が更新されました",
+  "settingsNoticeOpenAiApiKeyUpdated": "OpenAI APIキーが更新されました",
+  "settingsNoticeOpenAiModelUpdated": "OpenAI モデルが更新されました",
+  "settingsNoticeSearchSourcesEmpty": "集約検索ソースを空にすることはできません",
+  "settingsNoticeSearchSourcesUpdated": "集約検索ソースが更新されました",
+  "settingsNoticeAppLanguageUpdated": "インターフェース言語が更新されました",
+  "settingsNoticeAppColorSchemeUpdated": "テーマモードが更新されました",
+  "settingsNoticeAppLogLevelUpdated": "ログレベルが更新されました",
+  "settingsNoticeAutoCheckUpdateUpdated": "更新の自動チェック設定が更新されました",
+  "settingsNoticeSectionNoRestorableConfig": "このセクションには復元可能な構成項目がありません",
+  "settingsNoticeSectionDefaultsRestored": "現在のセクションのデフォルトが復元されました",
+  "settingsNoticeAllDefaultsRestored": "アプリケーション設定がデフォルトに復元されました",
+  "settingsNoticeAssociationManagerOpened": "作詞協会マネージャー開設",
+  "settingsNoticeLogDirectoryOpened": "ログディレクトリが開かれました",
+  "settingsNoticeLogDirectoryOpenFailed": "ログディレクトリを開けませんでした",
+  "settingsNoticeCacheCleared": "キャッシュがクリアされました",
+  "settingsNoticeCacheClearFailed": "キャッシュのクリアに失敗しました",
+  "settingsNoticeConfigWriteFailed": "設定の書き込みに失敗しました",
+  "settingsCurrentSavePathLabel": "デフォルトの保存パス",
+  "aboutLoadFailed": "メタデータに関する読み込みに失敗しました。",
+  "aboutActionOpenRepository": "GitHub リポジトリ",
+  "aboutActionCheckUpdate": "アップデートを確認する",
+  "aboutHeroHeadline": "正確な歌詞を実現するために構築",
+  "aboutHeroDescription": "LDDC は、検索、変換、デスクトップ歌詞、およびバッチ ワークフローを 1 つの効率的な画面に統合するため、歌詞の検索、整理、使用を迅速かつ集中的に行うことができます。",
+  "aboutLinksSectionTitle": "クイックリンク",
+  "aboutLinksSectionDescription": "フィードバック チャネル、リリース ノート、またはライセンスの詳細が必要な場合は、これらのリンクを使用してください。",
+  "aboutCopyrightNoticeBody": "著作権 (C) {years} {author}",
+  "aboutLicenseNoticeBody": "{license} に基づいてライセンスが付与されています。",
+  "aboutLinkRepositoryTitle": "GitHub リポジトリ",
+  "aboutLinkIssueTrackerTitle": "問題追跡ツール",
+  "aboutLinkIssueTrackerDescription": "バグ、UX のギャップ、機能のリクエストを報告します。",
+  "aboutLinkLicenseTitle": "ライセンス",
+  "aboutLinkLicenseDescription": "現在のオープンソース ライセンスを確認します。",
+  "aboutLinkChangelogTitle": "リリースノート",
+  "aboutLinkChangelogDescription": "公開されたバージョンとその変更の概要を参照してください。",
+  "aboutExternalLinksUnavailable": "このプラットフォームでは、外部リンクを開くことはサポートされていません。",
+  "aboutCheckUpdateUnavailable": "このプラットフォームではアップデートの確認はサポートされていません。",
+  "aboutCheckUpdateOpenedReleaseNotes": "リリースノートページを開設しました。",
+  "aboutCheckUpdateUpToDate": "すでに最新バージョンを使用しています。",
+  "aboutCheckUpdateAvailable": "新しいバージョンが見つかりました: {version}。詳細については、リリース ノート ページを開いてください。",
+  "aboutCheckUpdateFailed": "アップデートの確認に失敗しました。後でもう一度試してください。",
+  "aboutActionOpenedLink": "{title} をオープンしました",
+  "aboutActionOpenLinkFailed": "{title} を開けませんでした",
+  "actionConfirm": "確認する",
+  "libraryLinkManagerTitle": "作詞協会マネージャー",
+  "libraryLinkManagerReturnToSettings": "設定に戻る",
+  "libraryLinkManagerRefresh": "リフレッシュ",
+  "libraryLinkManagerDeleteSelected": "選択したものを削除 ({count})",
+  "libraryLinkManagerDeleteAll": "すべて削除",
+  "libraryLinkManagerClearInvalid": "無効なデータの消去",
+  "libraryLinkManagerChangeDirectory": "ディレクトリの一括変更",
+  "libraryLinkManagerBackupToJson": "JSONへのバックアップ",
+  "libraryLinkManagerRestoreFromJson": "JSONから復元",
+  "libraryLinkManagerRestoreAction": "復元する",
+  "libraryLinkManagerExportLyrics": "歌詞のエクスポート",
+  "libraryLinkManagerSummary": "{totalCount} レコード · {selectedCount} が選択されました",
+  "libraryLinkManagerSearchHint": "曲、アーティスト、アルバム、またはパスを検索する",
+  "libraryLinkManagerClearSearch": "検索をクリア",
+  "libraryLinkManagerSearchSummary": "{totalCount} が一致 · {selectedCount} が選択されました",
+  "libraryLinkManagerEmpty": "歌詞リンクレコードなし",
+  "libraryLinkManagerLoadFailed": "歌詞リンク レコードのロードに失敗しました: {error}",
+  "libraryLinkManagerDeleteSelectedSuccess": "選択した歌詞リンクを削除しました",
+  "libraryLinkManagerDeleteAllConfirm": "すべての歌詞リンク レコードを削除してもよろしいですか?",
+  "libraryLinkManagerDeleteAllSuccess": "すべての歌詞リンクレコードを削除しました",
+  "libraryLinkManagerClearInvalidSuccess": "{count} 無効なレコードをクリアしました",
+  "libraryLinkManagerChangeDirectorySuccess": "ディレクトリの書き換え後に {count} レコードを更新しました",
+  "libraryLinkManagerBackupSuccess": "{path} にバックアップされた歌詞リンク データ",
+  "libraryLinkManagerRestoreConfirm": "復元すると、現在の歌詞リンク レコードがすべて上書きされます。続く？",
+  "libraryLinkManagerRestoreSuccess": "歌詞リンクデータ復旧しました",
+  "libraryLinkManagerInvalidBackupFormat": "無効なバックアップ ファイル形式です",
+  "libraryLinkManagerExportSuccess": "エクスポートされた {count} 歌詞ファイル",
+  "libraryLinkManagerOperationFailed": "操作が失敗しました: {error}",
+  "libraryLinkManagerUnnamedSong": "無題の歌",
+  "libraryLinkManagerUnknownArtist": "不明なアーティスト",
+  "libraryLinkManagerUnknownAlbum": "未知のアルバム",
+  "libraryLinkManagerSongPathLabel": "歌の道",
+  "libraryLinkManagerSongPathEmpty": "ソングパスが記録されていません",
+  "libraryLinkManagerLyricsPathLabel": "歌詞パス",
+  "libraryLinkManagerLyricsPathEmpty": "歌詞がリンクされていません",
+  "libraryLinkManagerTrackLabel": "トラック {track}",
+  "libraryLinkManagerTrackTooltip": "トラック番号: {track}",
+  "libraryLinkManagerTrackEmpty": "なし",
+  "libraryLinkManagerOffsetLabel": "オフセット {offset}",
+  "libraryLinkManagerOffsetTooltip": "歌詞オフセット: {offset}",
+  "libraryLinkManagerLanguagesLabel": "言語 {langs}",
+  "libraryLinkManagerLanguagesTooltip": "歌詞言語: {langs}",
+  "libraryLinkManagerInstrumental": "インストゥルメンタル",
+  "libraryLinkManagerInstrumentalTooltip": "この曲はインストゥルメンタルとしてマークされています",
+  "libraryLinkManagerDisableAutoSearch": "自動検索を無効にする",
+  "libraryLinkManagerDisableAutoSearchTooltip": "この曲の自動検索は無効になっています",
+  "libraryLinkManagerOtherConfig": "その他の構成 {count}",
+  "libraryLinkManagerDefaultConfig": "デフォルト設定",
+  "libraryLinkManagerDefaultConfigTooltip": "このレコードには曲レベルのオーバーライド設定は保存されません",
+  "openLyricsNoticeOpenFailed": "オープンに失敗しました: {detail}",
+  "openLyricsNoticeLyricsFileUnavailable": "歌詞ファイルが利用できません",
+  "openLyricsNoticeSongFileUnavailable": "曲ファイルが利用できません",
+  "openLyricsNoticeNoEmbeddedLyrics": "この曲には判読可能な埋め込み歌詞が見つかりませんでした",
+  "openLyricsNoticeAlreadyConverted": "この歌詞はすでに変換されています",
+  "openLyricsNoticeEmptyLyrics": "歌詞の内容を空にすることはできません",
+  "openLyricsNoticeConvertFailed": "変換に失敗しました: {detail}",
+  "openLyricsNoticeConvertFirst": "まず歌詞を変換してください",
+  "openLyricsNoticeNoLyricsToSave": "保存する歌詞がありません",
+  "openLyricsNoticeSaveFileSucceeded": "保存された歌詞: {detail}",
+  "openLyricsNoticeSaveFileFailed": "保存に失敗しました: {detail}",
+  "openLyricsNoticeOpenSongFirst": "まず曲ファイルを開いてください",
+  "openLyricsNoticeAudioTagUnsupported": "このプラットフォームでは曲タグを書き込むことができません",
+  "openLyricsDropUnsupportedItem": "Open Lyrics は歌詞ファイルまたはオーディオ ファイルを受け入れます",
+  "openLyricsPreviewTitle": "プレビュー",
+  "openLyricsPreviewRawText": "生のテキスト",
+  "openLyricsPreviewLanguages": "歌詞言語 · {langs}",
+  "openLyricsPreviewStateIdle": "ロードされていません",
+  "openLyricsPreviewStateRawLoaded": "変換の準備ができました",
+  "openLyricsPreviewStateConverted": "変換された",
+  "openLyricsPreviewEmptyNoInput": "最初に歌詞ファイルまたは曲ファイルを開きます",
+  "openLyricsActionOpening": "オープニング...",
+  "openLyricsActionOpenLyricsFile": "歌詞ファイルを開く",
+  "openLyricsActionOpenSongFile": "ソングファイルを開く",
+  "openLyricsActionConvertFormat": "フォーマットの変換",
+  "openLyricsActionSaveLyrics": "歌詞の保存",
+  "openLyricsActionSaveToTag": "ソングタグに保存",
+  "openLyricsActionTranslate": "歌詞を翻訳する",
+  "openLyricsExportFormatCanWriteTag": "現在のエクスポート形式: {format} · タグを書き込むことができます",
+  "openLyricsExportFormatFileOnly": "現在のエクスポート形式: {format} · ファイル エクスポートのみ",
+  "searchLyricsSelectorTitle": "歌詞を選択",
+  "searchLyricsSelectorOpenLocal": "ローカルの歌詞を開く",
+  "searchLyricsSelectorSelect": "歌詞を選択",
+  "searchLyricsSelectorDescription": "デスクトップ歌詞としてオンラインまたはローカルの歌詞を選択します",
+  "searchLyricsSelectorOpenLocalFailed": "ローカルの歌詞を開けませんでした: {detail}",
+  "searchLyricsSelectorSelectLyricsFirst": "最初に歌詞を選択してください",
+  "searchLyricsSelectorSelectFailed": "歌詞の選択に失敗しました。後でもう一度試してください",
+  "searchDropUnsupportedItem": "検索では解析可能な曲アイテムまたはオーディオ ファイルを受け入れます",
+  "searchNoticePartialSourcesFailed": "一部のソースが失敗しました。他のソースからの結果が表示されます",
+  "searchNoticeAllSourcesFailed": "すべての検索ソースが失敗しました",
+  "searchNoticeLoadMoreFailed": "一部のソースがさらに結果をロードできませんでした",
+  "searchNoticeDirectoryPickerUnsupported": "このプラットフォームではディレクトリの選択はサポートされていません",
+  "searchNoticeAutoFetchSucceeded": "{detail} の歌詞を取得しました",
+  "searchNoticeAutoFetchFailed": "自動フェッチに失敗しました: {detail}",
+  "searchNoticeSelectedSongUnavailable": "利用可能な曲ファイルが選択されていません",
+  "searchNoticeFilePickerUnsupported": "ソング ファイルの選択はこのプラットフォームではサポートされていません",
+  "searchNoticeOpenSongFailed": "曲を開けませんでした: {detail}",
+  "searchNoticeDroppedSongUnavailable": "ドロップされた曲ファイルは利用できません",
+  "searchNoticeDroppedSongResolveFailed": "ドロップされた曲を解決できませんでした: {detail}",
+  "searchNoticeEmptyKeyword": "検索キーワードを入力してください",
+  "searchNoticeGetLyricsFirst": "まずは歌詞を入手",
+  "searchNoticeLyricsSaveSucceededWithPath": "保存された歌詞: {detail}",
+  "searchNoticeSaveFileUnsupported": "このプラットフォームではファイルの保存はサポートされていません",
+  "searchNoticeFilePickerForTagUnsupported": "ソングタグファイルの選択はこのプラットフォームではサポートされていません",
+  "searchNoticeFilePickerFailed": "ファイルの選択に失敗しました: {detail}",
+  "searchNoticeBatchCancelling": "一括保存をキャンセルしています...",
+  "searchNoticeSelectAlbumOrPlaylistFirst": "最初にアルバムまたはプレイリストを選択してください",
+  "searchNoticeSelectAtLeastOneLyricsLanguage": "少なくとも 1 つの歌詞言語を選択してください",
+  "searchNoticeNoSongsToSave": "保存する曲がありません",
+  "searchNoticeBatchSaveCancelled": "バッチ保存がキャンセルされました: {saved} は保存されました、{failed} は失敗しました、{skipped} はスキップされました",
+  "searchNoticeBatchSaveCompleted": "バッチ保存が完了しました: {saved} は保存されました、{failed} は失敗しました、{skipped} はスキップされました",
+  "searchNoticeBatchSaveFailed": "バッチ保存に失敗しました: {detail}",
+  "searchNoticeMultipleLyricsCandidates": "複数の歌詞候補が見つかりました。続行するには 1 つ選択してください",
+  "searchNoticeGetLyricsFailed": "歌詞の取得に失敗しました: {detail}",
+  "searchNoticeSelectSavePathFirst": "最初に保存パスを選択してください",
+  "searchNoticeDirectoryPickFailed": "ディレクトリの選択に失敗しました: {detail}",
+  "searchNoticePreviewLoading": "歌詞はまだ読み込み中です",
+  "searchNoticePreviewNoLanguage": "少なくとも 1 つの歌詞言語を選択してください",
+  "searchNoticePreviewNoContent": "現在の歌詞にはプレビュー可能なコンテンツがありません",
+  "searchNoticePreviewNoSelection": "まずは歌詞をダウンロードしてプレビュー",
+  "desktopWindowActionSelectLyrics": "歌詞を選択",
+  "desktopWindowActionMarkInstrumental": "楽器としてマークする",
+  "desktopWindowActionDisableAutoSearch": "この曲の自動検索を無効にする",
+  "desktopWindowActionUnlinkLyrics": "歌詞のリンクを解除する",
+  "desktopWindowActionAssociationManager": "作詞協会マネージャー",
+  "desktopWindowActionToggleFloating": "デスクトップの歌詞を表示または非表示にする",
+  "desktopWindowActionShowMainWindow": "メインウィンドウを表示",
+  "desktopWindowActionClickThrough": "クリックスルー",
+  "desktopWindowActionPrevious": "前の",
+  "desktopWindowActionPlay": "遊ぶ",
+  "desktopWindowActionPause": "一時停止",
+  "desktopWindowActionNext": "次",
+  "desktopWindowActionHide": "隠れる",
+  "desktopTrayCurrentTarget": "現在の目標:",
+  "desktopTrayNoSelection": "なし",
+  "desktopTrayTargetInstance": "ターゲットインスタンス",
+  "desktopTrayInstance": "実例",
+  "desktopTrayExit": "出口",
+  "desktopWindowInfoInstrumental": "インストゥルメンタル",
+  "desktopWindowControlConnectionLost": "プレーヤーの接続が失われました。アクションは実行されませんでした。",
+  "desktopWindowClientDisconnected": "プレーヤーの接続が失われました。デスクトップの歌詞が閉じられました。"
+}

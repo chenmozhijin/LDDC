@@ -1,0 +1,1389 @@
+{
+  "@@locale": "zh_Hant",
+  "appTitle": "LDDC",
+  "commonWarning": "警告",
+  "commonError": "錯誤",
+  "commonSuccess": "成功",
+  "commonFailed": "失敗",
+  "commonSkipped": "跳過",
+  "commonTotal": "總數",
+  "commonDelete": "刪除",
+  "commonConfirm": "確認",
+  "commonRestoreDefault": "恢復預設",
+  "commonEnabled": "已啟用",
+  "commonDisabledByDefault": "預設關閉",
+  "commonFormat": "格式",
+  "commonOffset": "偏移",
+  "commonSaving": "儲存中...",
+  "commonAddFiles": "新增檔案",
+  "commonClearQueue": "清空佇列",
+  "commonUnsupportedOperation": "當前平臺不支援此操作",
+  "commonLyricsFileUnavailable": "當前條目還沒有可開啟的歌詞檔案",
+  "commonAudioTagRequiresLrc": "歌曲標籤中的歌詞應為 LRC 格式",
+  "commonLyricsLanguageTypeSummary": "{language}（{type}）",
+  "@commonLyricsLanguageTypeSummary": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "commonTranslationCancelled": "已取消翻譯",
+  "commonCancelTranslation": "取消翻譯",
+  "commonTranslating": "翻譯中...",
+  "commonTranslationProgress": "翻譯中 {completed}/{total}",
+  "@commonTranslationProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "commonOpenAiTranslationProgress": "OpenAI 流式翻譯中：{completed} / {total} 行",
+  "@commonOpenAiTranslationProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "commonTranslationCompleted": "翻譯完成",
+  "commonLyricsSaved": "歌詞儲存成功",
+  "commonDropFailed": "拖拽處理失敗：{detail}",
+  "@commonDropFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "commonSelectSaveDirectoryFailed": "選擇儲存目錄失敗：{detail}",
+  "@commonSelectSaveDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "commonOpenSaveDirectoryFailed": "開啟儲存目錄失敗：{detail}",
+  "@commonOpenSaveDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "commonTranslationFailed": "翻譯失敗：{detail}",
+  "@commonTranslationFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "commonLyricsSaveFailed": "歌詞儲存失敗：{detail}",
+  "@commonLyricsSaveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "appErrorUnknown": "發生未知錯誤。",
+  "appErrorOperationTimeout": "操作超時，請稍後重試。",
+  "appErrorNetworkUnavailable": "網路不可用，請檢查連線。",
+  "appErrorInvalidPayload": "資料格式錯誤。",
+  "appErrorUnsupportedOperation": "當前操作不受支援。",
+  "appErrorPermissionDenied": "沒有執行此操作的許可權。",
+  "appErrorIoFailure": "檔案讀寫失敗。",
+  "appErrorLyricsRequestFailed": "請求歌詞失敗。",
+  "appErrorLyricsNotFound": "沒有找到歌詞。",
+  "appErrorLyricsProcessing": "歌詞處理失敗。",
+  "appErrorLyricsDecrypt": "歌詞解密失敗。",
+  "appErrorLyricsFormatUnsupported": "不支援的歌詞格式。",
+  "appErrorDecoding": "解碼失敗。",
+  "appErrorSongInfoRead": "獲取歌曲資訊失敗。",
+  "appErrorUnsupportedFileType": "不支援的檔案格式。",
+  "appErrorDragDropInvalid": "拖拽資料無效。",
+  "appErrorTranslateFailed": "翻譯失敗。",
+  "appErrorApiParamsInvalid": "請求引數不正確。",
+  "appErrorApiRequestFailed": "介面請求失敗。",
+  "appErrorAutoFetchUnknown": "自動匹配發生未知錯誤。",
+  "appErrorNotEnoughInfo": "搜尋資訊不足。",
+  "appErrorIpcInvalidLength": "IPC 訊息長度無效。",
+  "appErrorIpcUnsupportedTask": "IPC 任務不受支援。",
+  "appErrorIpcInstanceNotFound": "IPC 例項不存在。",
+  "appErrorIpcPanelNotFound": "IPC 面板不存在。",
+  "appErrorIpcInvalidWindowId": "視窗控制代碼無效。",
+  "appErrorIpcEmbedUnsupported": "當前平臺不支援嵌入模式。",
+  "appErrorActionRetryNetwork": "請檢查網路後重試。",
+  "appErrorActionCheckPayload": "請檢查輸入資料格式。",
+  "appErrorActionChangeFormat": "請更換支援的檔案或格式。",
+  "appErrorActionDetachedMode": "請回退到 detached 模式。",
+  "actionRetry": "重試",
+  "actionViewDetails": "檢視詳情",
+  "actionCancel": "取消",
+  "sourceAggregate": "聚合",
+  "sourceQQMusic": "QQ音樂",
+  "sourceKugou": "酷狗音樂",
+  "sourceNetease": "網易雲音樂",
+  "sourceLrclib": "Lrclib",
+  "sourceLocal": "本地",
+  "lyricOriginal": "原文",
+  "lyricTranslation": "譯文",
+  "lyricRomanized": "羅馬音",
+  "lyricsFormatVerbatimLrc": "LRC（逐字）",
+  "lyricsFormatLineByLineLrc": "LRC（逐行）",
+  "lyricsFormatEnhancedLrc": "增強型 LRC（ESLyric）",
+  "lyricsFormatSrt": "SRT",
+  "lyricsFormatAss": "ASS",
+  "lyricsTypeVerbatim": "逐字",
+  "lyricsTypeLineByLine": "逐行",
+  "lyricsTypePlainText": "純文本",
+  "searchSong": "單曲",
+  "searchAlbum": "專輯",
+  "searchSongList": "歌單",
+  "searchArtist": "歌手",
+  "searchLyrics": "歌詞",
+  "searchSongId": "歌曲id",
+  "localMatchIteratingFiles": "遍歷檔案...",
+  "localMatchProgressImportCompleted": "匯入完成",
+  "localMatchProgressScanCompleted": "掃描完成",
+  "localMatchProgressScanFailed": "掃描失敗",
+  "localMatchProgressMatchCompleted": "匹配完成",
+  "localMatchProgressMatchFailed": "匹配失敗",
+  "localMatchProgressPreparingMatch": "準備開始匹配...",
+  "localMatchPreviewTagOnly": "僅寫入標籤",
+  "localMatchPreviewWriteTag": "儲存到標籤",
+  "localMatchPreviewNoOutput": "未配置輸出",
+  "localMatchPreviewSongTagOnly": "僅寫入歌曲標籤",
+  "localMatchPendingLyricsFileName": "等待歌詞資訊後確定檔名",
+  "localMatchPendingLyricsFileNameAt": "{root} / 等待歌詞資訊後確定檔名",
+  "@localMatchPendingLyricsFileNameAt": {
+    "placeholders": {
+      "root": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchCalcSavePathFailed": "計算歌詞儲存路徑失敗",
+  "localMatchNoticeBusyImportFiles": "當前任務執行中，無法繼續匯入檔案",
+  "localMatchNoticeSelectedFilesUnavailable": "所選檔案不可訪問",
+  "localMatchNoticeImportFilesFailed": "匯入檔案失敗：{detail}",
+  "@localMatchNoticeImportFilesFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeBusyImportDirectories": "當前任務執行中，無法繼續匯入目錄",
+  "localMatchNoticeImportDirectoriesFailed": "匯入目錄失敗：{detail}",
+  "@localMatchNoticeImportDirectoriesFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeDroppedNoAccessibleFiles": "拖拽資料中沒有可訪問的檔案",
+  "localMatchNoticeDroppedSongResolveFailed": "解析拖拽歌曲失敗：{detail}",
+  "@localMatchNoticeDroppedSongResolveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeImportCompletedWithErrors": "匯入完成，但有部分條目解析失敗",
+  "localMatchNoticeSafTreeUnsupported": "當前平臺不支援目錄樹授權",
+  "localMatchNoticeBusySwitchTree": "當前任務執行中，無法切換目錄樹",
+  "localMatchNoticeSelectTreeFailed": "選擇目錄樹失敗：{detail}",
+  "@localMatchNoticeSelectTreeFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeBusyClearQueue": "當前任務執行中，無法清空佇列",
+  "localMatchNoticeSelectItemsToDelete": "請先選擇要刪除的條目",
+  "localMatchNoticeSelectItemsToSetRoot": "請先選擇要設定根目錄的條目",
+  "localMatchNoticeSelectedRootSkippedSongs": "以下歌曲不在所選根目錄中，已跳過：{detail}",
+  "@localMatchNoticeSelectedRootSkippedSongs": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeSetRootFailed": "設定根目錄失敗：{detail}",
+  "@localMatchNoticeSetRootFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeSelectItemsToRestore": "請先選擇要恢復的條目",
+  "localMatchNoticeCancelling": "正在取消當前任務...",
+  "localMatchNoticeValidationFailed": "請先處理本地匹配啟動條件",
+  "localMatchNoticeSongDirectoryUnavailable": "當前條目不支援開啟歌曲目錄",
+  "localMatchNoticeOpenSongDirectoryFailed": "開啟歌曲目錄失敗：{detail}",
+  "@localMatchNoticeOpenSongDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeSaveDirectoryUnavailable": "當前條目還沒有可開啟的儲存目錄",
+  "localMatchNoticeOpenLyricsFailed": "開啟歌詞失敗：{detail}",
+  "@localMatchNoticeOpenLyricsFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeScanCancelled": "掃描已取消",
+  "localMatchNoticeScanCompletedWithErrors": "掃描完成，但有部分檔案解析失敗",
+  "localMatchNoticeScanFailed": "掃描失敗：{detail}",
+  "@localMatchNoticeScanFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeTreeScanFailed": "目錄樹掃描失敗：{detail}",
+  "@localMatchNoticeTreeScanFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeMatchCancelled": "匹配已取消",
+  "localMatchNoticeMatchCompleted": "總共{total}首歌曲，匹配成功{success}首，匹配失敗{failed}首，跳過{skipped}首。",
+  "@localMatchNoticeMatchCompleted": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "localMatchNoticeMatchFailed": "本地匹配執行失敗：{detail}",
+  "@localMatchNoticeMatchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeAndroidMatchCancelledResume": "匹配已取消，可再次開始從斷點繼續",
+  "localMatchNoticeAndroidMatchFailed": "Android SAF 本地匹配執行失敗：{detail}",
+  "@localMatchNoticeAndroidMatchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchValidationEmptyLangs": "請選擇要匹配的語言",
+  "localMatchValidationEmptySources": "請選擇至少一個源",
+  "localMatchValidationEmptyQueue": "請先匯入要匹配的歌曲",
+  "localMatchValidationSkipExistingFileNameConflict": "跳過已有歌詞時，如果還需要儲存檔案，則檔名模式不能為按歌詞資訊命名",
+  "localMatchValidationMissingAndroidTree": "請先選擇目錄樹",
+  "localMatchValidationNeedsSaveRoot": "需要指定儲存路徑",
+  "localMatchValidationNeedsSongRoot": "需要指定歌曲根目錄",
+  "localMatchValidationUnknownSavePath": "未知儲存路徑錯誤",
+  "localMatchIntro": "匯入本地歌曲或目錄，預估輸出結果後執行批次匹配。",
+  "localMatchDropUnsupportedItem": "本地匹配頁只接受歌曲檔案、目錄或可解析播放器條目拖入",
+  "localMatchReadyToStart": "準備開始本地匹配",
+  "localMatchQueueTitle": "任務佇列",
+  "localMatchQueueEmptyHint": "先匯入檔案或資料夾以建立任務佇列",
+  "localMatchQueueDesktopHint": "共 {count} 條任務，右鍵行可執行更多操作",
+  "@localMatchQueueDesktopHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localMatchQueueMobileHint": "共 {count} 條任務，長按或點選更多按鈕可開啟操作選單",
+  "@localMatchQueueMobileHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localMatchImportAndRunTitle": "匯入與執行",
+  "localMatchActionStart": "開始匹配",
+  "localMatchActionAddFolders": "新增資料夾",
+  "localMatchActionSelectSaveRoot": "選擇儲存根目錄",
+  "localMatchActionSelectTree": "選擇目錄樹",
+  "localMatchActionReselectTree": "重新選擇目錄樹",
+  "localMatchActionBulkSelect": "批次選擇",
+  "localMatchActionExitSelection": "退出批次選擇",
+  "localMatchActionSelectAll": "全選",
+  "localMatchActionDeselectAll": "取消全選",
+  "localMatchActionSetRoot": "設定根目錄",
+  "localMatchSelectedCount": "已選 {count} 項",
+  "@localMatchSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localMatchBulkActionHint": "批次操作會直接作用於當前選中的任務",
+  "localMatchPhaseIdle": "等待開始",
+  "localMatchPhaseScanning": "掃描中",
+  "localMatchPhaseMatching": "匹配中",
+  "localMatchPhaseWriting": "寫回中",
+  "localMatchPhaseCompleted": "已完成",
+  "localMatchPhaseHintIdle": "匯入歌曲後即可開始匹配",
+  "localMatchPhaseHintScanning": "正在建立任務佇列與預估輸出",
+  "localMatchPhaseHintMatching": "正在請求來源並計算最佳匹配",
+  "localMatchPhaseHintWriting": "正在寫入歌詞檔案或歌曲標籤",
+  "localMatchPhaseHintCompleted": "本輪任務已完成，可繼續調整後重跑",
+  "localMatchPipelineIdle": "掃描 -> 匹配 -> 寫回",
+  "localMatchPipelineScanning": "當前階段：掃描",
+  "localMatchPipelineMatching": "當前階段：匹配",
+  "localMatchPipelineWriting": "當前階段：寫回",
+  "localMatchPipelineCompleted": "已完成本輪掃描、匹配與寫回",
+  "localMatchUnknownSong": "未知歌曲",
+  "localMatchUnknownDuration": "未知時長",
+  "localMatchStatusNotStarted": "未開始",
+  "localMatchSongPathLabel": "歌曲路徑",
+  "localMatchLyricsPathLabel": "歌詞儲存路徑",
+  "localMatchExpandDetails": "展開詳情",
+  "localMatchCollapseDetails": "收起詳情",
+  "localMatchRowActionOpenInSearch": "在搜尋中開啟",
+  "localMatchRowActionEnterSelection": "進入批次選擇",
+  "localMatchRowActionOpenSongDirectory": "開啟歌曲目錄",
+  "localMatchRowActionOpenSaveDirectory": "開啟儲存目錄",
+  "localMatchRowActionOpenLyrics": "開啟歌詞",
+  "localMatchFieldLyricsType": "歌詞型別",
+  "localMatchFieldOutputStrategy": "輸出策略",
+  "localMatchFieldSaveMode": "儲存模式",
+  "localMatchFieldFileNameMode": "檔名模式",
+  "localMatchFieldLyricsFormat": "歌詞格式",
+  "localMatchFieldThreshold": "匹配門檻",
+  "localMatchFieldSaveRoot": "儲存根目錄",
+  "localMatchMoreSettings": "更多設定",
+  "localMatchRulesTitle": "匹配規則",
+  "localMatchRulesSubtitle": "來源、語言、輸出策略與匹配門檻",
+  "localMatchMinScore": "最低匹配度",
+  "localMatchSkipExisting": "跳過已有歌詞",
+  "localMatchSkipExistingConflictHint": "當前“輸出策略 + 檔名模式”組合不支援開啟跳過已有歌詞；若還需要儲存檔案，請避免選擇“按歌詞資訊命名”。",
+  "localMatchSaveToSongDirectoryHint": "當前儲存到歌曲目錄，無需額外儲存根目錄。",
+  "localMatchAndroidTreeSaveHint": "Android 目錄樹檔案儲存會直接寫入已授權目錄樹。",
+  "localMatchFileNameTemplateHint": "命名模板沿用設定頁中的 lyrics_file_name_fmt。",
+  "localMatchSaveRootPath": "儲存根目錄：{path}",
+  "@localMatchSaveRootPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchSaveRootRequired": "當前儲存模式需要儲存根目錄，請先選擇。",
+  "localMatchTreeNotSelected": "尚未選擇目錄樹",
+  "localMatchSaveModeSong": "儲存到歌曲目錄",
+  "localMatchSaveModeMirror": "映象目錄",
+  "localMatchSaveModeSpecify": "指定目錄",
+  "localMatchFileNameModeSong": "按歌曲檔名",
+  "localMatchFileNameModeFormatBySong": "按歌曲資訊命名",
+  "localMatchFileNameModeFormatByLyrics": "按歌詞資訊命名",
+  "localMatchFileNameHintSong": "沿用音訊檔名，僅替換歌詞副檔名。",
+  "localMatchFileNameHintFormatBySong": "使用標題、藝術家、專輯等歌曲後設資料生成檔名。",
+  "localMatchFileNameHintFormatByLyrics": "使用匹配到的歌詞歌曲資訊生成檔名；未匹配前可能無法確定。",
+  "localMatchSaveToTagOnlyFile": "僅儲存檔案",
+  "localMatchSaveToTagOnlyTag": "僅寫入標籤",
+  "localMatchSaveToTagBoth": "檔案 + 標籤",
+  "localMatchValidationTitle": "開始前需要處理的問題",
+  "localMatchValidationMoreIssues": "還有 {count} 個問題需要先處理",
+  "@localMatchValidationMoreIssues": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeSelectedFilesUnavailable": "所選檔案當前不可直接訪問",
+  "batchConvertNoticeImportFilesCompleted": "已匯入 {count} 個歌詞檔案",
+  "@batchConvertNoticeImportFilesCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeDroppedNoAccessibleFiles": "拖拽資料中沒有可訪問的歌詞檔案",
+  "batchConvertNoticeEmptyQueue": "請先新增要轉換的歌詞檔案",
+  "batchConvertNoticeOverwriteCancelled": "已取消批次轉換",
+  "batchConvertNoticeConversionCancelledCompleted": "批次轉換已取消，已完成 {count} 項",
+  "@batchConvertNoticeConversionCancelledCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeConversionCompletedWithFailures": "批次轉換完成：成功 {success}，失敗 {failure}",
+  "@batchConvertNoticeConversionCompletedWithFailures": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeConversionCompleted": "批次轉換完成：共 {count} 項",
+  "@batchConvertNoticeConversionCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeConversionFailed": "批次轉換失敗：{detail}",
+  "@batchConvertNoticeConversionFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertNoticeOpenSourceDirectoryFailed": "開啟原目錄失敗：{detail}",
+  "@batchConvertNoticeOpenSourceDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertNoticeOpenOutputFileFailed": "開啟歌詞檔案失敗：{detail}",
+  "@batchConvertNoticeOpenOutputFileFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertNoticeScanNoSupportedFiles": "所選資料夾中沒有找到支援的歌詞檔案",
+  "batchConvertNoticeScanImportedFromDirectory": "已從資料夾匯入 {count} 個歌詞檔案",
+  "@batchConvertNoticeScanImportedFromDirectory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeDuplicateItems": "所選條目都已在佇列中",
+  "batchConvertControlsTitle": "匯入與設定",
+  "batchConvertCompactControlsTitle": "匯入與輸出設定",
+  "batchConvertCompactControlsSubtitle": "格式：{format}",
+  "@batchConvertCompactControlsSubtitle": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertImportTitle": "匯入",
+  "batchConvertAddFolders": "新增資料夾",
+  "batchConvertOutputSettingsTitle": "輸出設定",
+  "batchConvertTargetFormat": "目標格式",
+  "batchConvertSaveDirectoryTitle": "儲存目錄",
+  "batchConvertSaveDirectoryDefault": "未設定時預設輸出到原歌詞所在目錄",
+  "batchConvertSelectSaveDirectory": "選擇儲存目錄",
+  "batchConvertRestoreOriginalDirectory": "恢復原目錄",
+  "batchConvertRecursiveTitle": "遍歷子資料夾",
+  "batchConvertRecursiveSubtitle": "目錄匯入時繼續掃描子目錄中的歌詞檔案",
+  "batchConvertStart": "開始轉換",
+  "batchConvertCancel": "取消轉換",
+  "batchConvertQueueTitle": "轉換佇列",
+  "batchConvertQueueSubtitle": "共 {count} 項，輸出格式為 {format}",
+  "@batchConvertQueueSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertPageErrorFallback": "批次轉換頁面出現錯誤",
+  "batchConvertRetryImport": "重新匯入",
+  "batchConvertEmptyQueue": "新增歌詞檔案或資料夾後，這裡會顯示批次轉換佇列。",
+  "batchConvertOutputPathLabel": "輸出路徑",
+  "batchConvertQueueStatusWaiting": "等待轉換",
+  "batchConvertQueueStatusRunning": "正在轉換",
+  "batchConvertQueueStatusSuccess": "轉換成功",
+  "batchConvertQueueStatusFailure": "轉換失敗",
+  "batchConvertMoreActions": "更多操作",
+  "batchConvertActionOpenSourceDirectory": "開啟原歌詞目錄",
+  "batchConvertActionOpenSaveDirectory": "開啟儲存目錄",
+  "batchConvertActionOpenOutputFile": "開啟歌詞檔案",
+  "batchConvertActionOpenInOpenLyrics": "在開啟歌詞頁中開啟",
+  "batchConvertPhaseIdle": "等待開始",
+  "batchConvertPhaseScanning": "正在掃描",
+  "batchConvertPhaseRunning": "正在轉換",
+  "batchConvertPhaseCompleted": "已完成",
+  "batchConvertPipelineIdle": "匯入 -> 掃描 -> 轉換 -> 完成",
+  "batchConvertPipelineScanning": "掃描目錄 -> 建立佇列",
+  "batchConvertPipelineRunning": "逐條轉換 -> 持續更新狀態",
+  "batchConvertPipelineCompleted": "可繼續調整格式或重新匯入",
+  "batchConvertHintCancelled": "已取消，成功 {success}，失敗 {failure}",
+  "@batchConvertHintCancelled": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertHintCompleted": "成功 {success}，失敗 {failure}",
+  "@batchConvertHintCompleted": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertHintNoQueue": "新增檔案或資料夾後開始轉換",
+  "batchConvertHintReady": "當前佇列已就緒",
+  "batchConvertMetricWaiting": "待處理",
+  "batchConvertDropUnsupported": "批次轉換頁只接受歌詞檔案或目錄拖入",
+  "batchConvertDropFailed": "拖拽處理失敗：{detail}",
+  "@batchConvertDropFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertProgressConvertingFile": "正在轉換 {fileName}",
+  "@batchConvertProgressConvertingFile": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertProgressItemSuccess": "轉換成功",
+  "batchConvertProgressItemFailure": "轉換失敗",
+  "batchConvertProgressPreparingConversion": "準備開始轉換...",
+  "batchConvertProgressCancellingConversion": "正在取消轉換...",
+  "batchConvertProgressConversionCancelled": "轉換已取消",
+  "batchConvertProgressConversionCompleted": "轉換完成：成功 {success}，失敗 {failure}",
+  "@batchConvertProgressConversionCompleted": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertProgressConversionFailed": "轉換失敗：{detail}",
+  "@batchConvertProgressConversionFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertProgressScanningFolders": "正在遍歷資料夾...",
+  "batchConvertProgressScanningDirectory": "正在掃描 {directoryName}",
+  "@batchConvertProgressScanningDirectory": {
+    "placeholders": {
+      "directoryName": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertProgressScannedLyricsFiles": "已掃描到 {count} 個歌詞檔案",
+  "@batchConvertProgressScannedLyricsFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertProgressScanCancelled": "掃描已取消",
+  "batchConvertProgressScanNoSupportedFiles": "未找到支援的歌詞檔案",
+  "batchConvertProgressScanCompleted": "掃描完成",
+  "navSearch": "搜尋",
+  "navLocalMatch": "本地匹配",
+  "navOpenLyrics": "開啟歌詞",
+  "navBatchConvert": "批次轉換",
+  "navSettings": "設定",
+  "navAbout": "關於",
+  "commonSearch": "搜尋",
+  "commonSource": "來源",
+  "searchKeywordHint": "輸入關鍵詞",
+  "uiLoading": "載入中...",
+  "uiLoadingStepFetching": "正在獲取列表與預覽...",
+  "uiEmpty": "暫無資料",
+  "uiNoMoreResult": "沒有更多結果",
+  "searchInitialResultTitle": "輸入關鍵詞開始搜尋",
+  "searchInitialResultDescription": "在上方選擇來源併發起搜尋",
+  "searchResultTitle": "搜尋結果",
+  "searchResultReturn": "返回上一層",
+  "searchPreviewTitle": "歌詞預覽",
+  "searchPreviewLangsLabel": "歌詞語言",
+  "searchPreviewSongIdLabel": "歌曲ID",
+  "searchPreviewPlaceholder": "請先選擇歌曲或歌詞條目",
+  "searchPreviewNoLanguage": "請至少選擇一種歌詞語言",
+  "searchPreviewNoContent": "當前歌詞暫無可預覽內容",
+  "searchPreviewLoading": "正在載入歌詞...",
+  "searchFormatLabel": "歌詞格式",
+  "searchTranslateLyrics": "翻譯歌詞",
+  "searchResizeWorkspacePanes": "調整搜尋結果與歌詞預覽寬度",
+  "searchSavePreviewToDirectory": "儲存到資料夾",
+  "searchSavePreviewToFile": "儲存到檔案",
+  "searchSavePreviewToTag": "儲存到歌曲標籤",
+  "searchSaveListLyrics": "儲存專輯/歌單的歌詞",
+  "searchSaveListLyricsCancel": "取消批次儲存",
+  "searchSelectSavePath": "選擇儲存路徑",
+  "searchBatchSaveProgressTitle": "批次儲存進度",
+  "searchBatchSaveProgressPreparing": "準備批次儲存...",
+  "searchBatchSaveProgressFetchingLyrics": "正在獲取 {songName} 的歌詞...",
+  "@searchBatchSaveProgressFetchingLyrics": {
+    "placeholders": {
+      "songName": {
+        "type": "String"
+      }
+    }
+  },
+  "searchTableSongCountValue": "{count} 首",
+  "@searchTableSongCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchTableStatusAutoFetching": "正在自動獲取...",
+  "searchTableStatusSearching": "正在搜尋...",
+  "searchTableStatusFetchingSongList": "正在獲取歌曲列表...",
+  "searchTableStatusNoResults": "沒有搜尋到相關結果",
+  "searchTableStatusEmptyList": "列表為空",
+  "searchTableStatusUnsupportedSearchType": "所選來源不支援當前搜尋型別",
+  "searchTableStatusSearchFailed": "搜尋失敗",
+  "searchTableStatusSearchFailedWithDetail": "搜尋失敗：{detail}",
+  "@searchTableStatusSearchFailedWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchTableStatusAutoFetchFailed": "自動獲取歌詞失敗：{detail}",
+  "@searchTableStatusAutoFetchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchTableStatusSongListFailed": "獲取歌曲列表失敗：{detail}",
+  "@searchTableStatusSongListFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchTableStatusPartialSourceUnavailable": "部分來源不可用，已展示可用結果",
+  "searchTableStatusLoadMoreFailed": "部分來源載入更多失敗",
+  "searchSourceFailureDetailsTitle": "搜尋錯誤詳情",
+  "searchSourceFailureRequest": "請求失敗",
+  "searchSourceFailureTimeout": "請求超時",
+  "searchSourceFailureParameters": "引數錯誤",
+  "searchSourceFailureUnsupported": "不支援的操作",
+  "searchSourceFailureUnknown": "未知錯誤",
+  "searchResultLoadingMore": "正在繼續載入更多結果...",
+  "searchResultLoadMoreFailed": "自動續取失敗，可重試繼續載入剩餘結果",
+  "searchResultScrollForMore": "繼續向下滾動以自動載入更多結果",
+  "tableSavePath": "儲存路徑",
+  "settingsSectionSave": "儲存",
+  "settingsSectionLyrics": "歌詞",
+  "settingsSectionDesktopLyrics": "桌面歌詞",
+  "settingsSectionTranslate": "翻譯",
+  "settingsSectionSearch": "搜尋",
+  "settingsSectionApp": "應用",
+  "settingsSectionTools": "工具與資料",
+  "settingsSectionSaveSummary": "儲存路徑、檔名模板與 ID3 版本",
+  "settingsSectionSearchSummary": "決定“聚合”搜尋和本地匹配預設使用的歌詞來源。",
+  "settingsSectionDesktopLyricsSummary": "桌面歌詞自動獲取、顯示語言、外觀與重新整理率。",
+  "settingsSectionLyricsSummary": "本地匹配策略與歌詞檔案匯出格式。",
+  "settingsSectionTranslateSummary": "翻譯源、目標語言與條件欄位",
+  "settingsSectionAppSummary": "語言、主題、日誌與更新策略",
+  "settingsSectionToolsSummary": "桌面工具入口、日誌目錄與快取清理",
+  "settingsTranslateSourceBing": "必應翻譯",
+  "settingsTranslateSourceGoogle": "谷歌翻譯",
+  "settingsTranslateSourceOpenAi": "OpenAI相容API",
+  "settingsLangSimplifiedChinese": "簡體中文",
+  "settingsLangTraditionalChinese": "繁體中文",
+  "settingsLangEnglish": "英語",
+  "settingsLangJapanese": "日語",
+  "settingsLangKorean": "韓語",
+  "settingsLangSpanish": "西班牙語",
+  "settingsLangFrench": "法語",
+  "settingsLangPortuguese": "葡萄牙語",
+  "settingsLangGerman": "德語",
+  "settingsLangRussian": "俄語",
+  "settingsAppLanguageAuto": "自動",
+  "settingsColorSchemeAuto": "跟隨系統",
+  "settingsColorSchemeLight": "淺色",
+  "settingsColorSchemeDark": "深色",
+  "settingsDesktopGradientColors": "漸變顏色",
+  "settingsDesktopPlayedColors": "已播放顏色",
+  "settingsDesktopUnplayedColors": "未播放顏色",
+  "settingsAddColor": "新增顏色",
+  "settingsEditColor": "編輯顏色",
+  "settingsDeleteColor": "刪除顏色",
+  "settingsBackToSections": "返回設定分組",
+  "settingsAvailablePlaceholders": "可用佔位符",
+  "settingsPlaceholderTitleArtist": "歌名：%<title>    藝術家：%<artist>",
+  "settingsPlaceholderAlbumId": "專輯名：%<album>    歌曲/歌詞 id：%<id>",
+  "settingsPlaceholderLangs": "語言型別：%<langs>",
+  "settingsCurrentTemplate": "當前模板：{template}",
+  "@settingsCurrentTemplate": {
+    "placeholders": {
+      "template": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsTranslateSourceLabel": "翻譯源",
+  "settingsTranslateTargetLabel": "目標語言",
+  "settingsOpenAiProfileLabel": "預設",
+  "settingsOpenAiProfileHelper": "選擇內建服務商會自動填入 Base URL，API Key 和模型仍需配置。",
+  "settingsAppLanguageLabel": "介面語言",
+  "settingsColorSchemeLabel": "主題模式",
+  "settingsLogLevelLabel": "日誌級別",
+  "settingsLogLevelHelper": "通常保持 INFO；TRACE 和 DEBUG 會記錄更多內容並增大日誌。",
+  "settingsAutoCheckUpdateLabel": "自動檢查更新",
+  "settingsRestoreDefaultsWarning": "恢復預設值會立即寫入配置，請確認後執行。",
+  "settingsRestoreAllTitle": "恢復預設設定",
+  "settingsRestoreAllContent": "該操作會恢復所有設定項，並立即寫入配置。",
+  "settingsRestoreAllAction": "恢復預設設定",
+  "settingsOpenAssociationManager": "開啟歌詞關聯管理器",
+  "settingsOpenAssociationManagerSubtitle": "進入設定下一級頁面，統一管理歌曲與歌詞關聯記錄。",
+  "settingsOpenLogDirectory": "開啟日誌目錄",
+  "settingsOpenLogDirectorySubtitle": "檢視執行日誌與問題排查檔案。",
+  "settingsClearCache": "清理快取",
+  "settingsClearCacheSubtitle": "清理搜尋與翻譯快取，不影響配置檔案。",
+  "settingsClearCacheContent": "快取清理後，後續搜尋與翻譯可能需要重新請求。",
+  "settingsRestoreSectionTitle": "恢復本組預設值",
+  "settingsRestoreSectionContent": "僅恢復“{sectionTitle}”分組中的設定項，其他分組不會被修改。",
+  "@settingsRestoreSectionContent": {
+    "placeholders": {
+      "sectionTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRestoreSectionTooltip": "恢復{sectionTitle}分組預設值",
+  "@settingsRestoreSectionTooltip": {
+    "placeholders": {
+      "sectionTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDefaultSavePathHelper": "留空時使用平臺預設音樂目錄。",
+  "settingsChooseFolder": "選擇資料夾",
+  "settingsLyricsFileNameFormat": "歌詞檔名模板",
+  "settingsLyricsFileNameFormatHelper": "可使用下方佔位符組合生成儲存檔名。",
+  "settingsId3Version": "ID3 版本",
+  "settingsId3VersionHelper": "僅影響把歌詞寫入音訊標籤；不確定時保持 v2.3。",
+  "settingsSearchSourcesTitle": "聚合搜尋來源",
+  "settingsSearchSourcesDescription": "搜尋頁選擇“聚合”時查詢已勾選來源；越靠上，結果排列和自動匹配優先順序越高。本地匹配預設沿用此列表。",
+  "settingsReorderPriorityHint": "拖動調整優先順序",
+  "settingsReorderOrderHint": "拖動調整順序",
+  "settingsDefaultLanguage": "預設顯示語言",
+  "settingsDefaultLanguageDescription": "勾選桌面歌詞預設顯示的語言，拖動調整多語言歌詞的排列順序。",
+  "settingsDesktopAutoFetchSources": "自動獲取來源",
+  "settingsDesktopAutoFetchSourcesDescription": "桌面歌詞沒有關聯歌詞時，按從上到下的優先順序自動獲取。",
+  "settingsFont": "字型",
+  "settingsFollowSystemFont": "跟隨系統字型",
+  "settingsFontSizeByResize": "桌面歌詞主視窗字號通過拖拽視窗大小調整。",
+  "settingsPanelFontSize": "歌詞面板字號",
+  "settingsAdaptiveRefreshRate": "自適應重新整理率",
+  "settingsAdaptiveRefreshRateSubtitle": "開啟後根據歌詞動畫狀態自動選擇重新整理節奏。",
+  "settingsFixedRefreshRate": "固定重新整理率",
+  "settingsShowFurigana": "顯示注音",
+  "settingsLyricsMatchBehavior": "匹配行為",
+  "settingsLyricsMatchBehaviorDescription": "控制本地匹配和酷狗歌詞候選的預設處理方式。",
+  "settingsLyricsExport": "LRC 匯出",
+  "settingsLyricsExportDescription": "控制儲存歌詞檔案時使用的語言順序和 LRC 時間戳格式。",
+  "settingsDisplayOrder": "匯出語言順序",
+  "settingsDisplayOrderDescription": "拖動調整原文、譯文和羅馬音在歌詞檔案中的順序。",
+  "settingsSkipInstrumental": "跳過純音樂",
+  "settingsSkipInstrumentalSubtitle": "本地匹配識別為純音樂時不儲存歌詞。",
+  "settingsAutoSelectKugou": "自動選擇酷狗候選",
+  "settingsAutoSelectKugouSubtitle": "搜尋頁開啟酷狗歌曲時自動選擇最佳歌詞候選。",
+  "settingsAddLrcEndTimestamp": "匯出 LRC 時新增結尾時間戳",
+  "settingsAddLrcEndTimestampSubtitle": "僅影響逐行 LRC，在需要時寫入行結束時間戳。",
+  "settingsMillisecondsDigits": "毫秒位數",
+  "settingsMillisecondsDigitsHelper": "兩位使用百分之一秒，三位保留完整毫秒。",
+  "settingsDigitsValue": "{value} 位",
+  "@settingsDigitsValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLastRefStyle": "同句最後一行時間戳",
+  "settingsLastRefStyleHelper": "決定多語言逐行 LRC 中同一句最後一種語言使用當前行時間，還是下一行前 1 毫秒。",
+  "settingsLastRefCurrentLine": "使用當前行時間",
+  "settingsLastRefNextLine": "使用下一行前一毫秒",
+  "settingsTagInfoSource": "標籤資訊來源",
+  "settingsTagInfoLyricsSource": "歌詞來源",
+  "settingsTagInfoSongInfo": "歌曲資訊",
+  "settingsNoticeDefaultSavePathUpdated": "預設儲存路徑已更新",
+  "settingsNoticeDefaultSavePathRestored": "預設儲存路徑已恢復",
+  "settingsNoticeLyricsFileNameFormatUpdated": "歌詞檔名模板已更新",
+  "settingsNoticeId3VersionUpdated": "ID3 版本已更新",
+  "settingsNoticeLyricsLangOrderEmpty": "歌詞語言順序不能為空",
+  "settingsNoticeLyricsLangOrderUpdated": "歌詞語言順序已更新",
+  "settingsNoticeSkipInstUpdated": "純音樂跳過策略已更新",
+  "settingsNoticeAutoSelectUpdated": "自動選擇策略已更新",
+  "settingsNoticeAddEndTimestampUpdated": "結尾時間戳策略已更新",
+  "settingsNoticeMsDigitsUpdated": "毫秒位數已更新",
+  "settingsNoticeLastRefStyleUpdated": "尾行時間樣式已更新",
+  "settingsNoticeTagInfoSourceUpdated": "標籤來源已更新",
+  "settingsNoticeDesktopSourcesEmpty": "桌面歌詞來源不能為空",
+  "settingsNoticeDesktopSourcesUpdated": "桌面歌詞來源已更新",
+  "settingsNoticeDesktopDefaultLangsEmpty": "桌面預設語言不能為空",
+  "settingsNoticeDesktopLangsUpdated": "桌面歌詞語言設定已更新",
+  "settingsNoticeDesktopFontFamilyUpdated": "桌面歌詞字型已更新",
+  "settingsNoticeDesktopRefreshRateUpdated": "重新整理率已更新",
+  "settingsNoticeDesktopPlayedColorsUpdated": "已播放顏色已更新",
+  "settingsNoticeDesktopUnplayedColorsUpdated": "未播放顏色已更新",
+  "settingsNoticeDesktopFontSizeUpdated": "桌面歌詞字號已更新",
+  "settingsNoticeDesktopPanelFontSizeUpdated": "桌面面板字號已更新",
+  "settingsNoticeDesktopShowFuriganaUpdated": "注音顯示策略已更新",
+  "settingsNoticeTranslateSourceUpdated": "翻譯源已更新",
+  "settingsNoticeTranslateTargetLangUpdated": "翻譯目標語言已更新",
+  "settingsNoticeOpenAiProfileUpdated": "OpenAI 預設已更新",
+  "settingsNoticeOpenAiBaseUrlUpdated": "OpenAI Base URL 已更新",
+  "settingsNoticeOpenAiApiKeyUpdated": "OpenAI API Key 已更新",
+  "settingsNoticeOpenAiModelUpdated": "OpenAI 模型已更新",
+  "settingsNoticeSearchSourcesEmpty": "聚合搜尋來源不能為空",
+  "settingsNoticeSearchSourcesUpdated": "聚合搜尋來源已更新",
+  "settingsNoticeAppLanguageUpdated": "介面語言已更新",
+  "settingsNoticeAppColorSchemeUpdated": "主題模式已更新",
+  "settingsNoticeAppLogLevelUpdated": "日誌級別已更新",
+  "settingsNoticeAutoCheckUpdateUpdated": "自動檢查更新已更新",
+  "settingsNoticeSectionNoRestorableConfig": "當前分組沒有可恢復的配置項",
+  "settingsNoticeSectionDefaultsRestored": "當前分組已恢復預設值",
+  "settingsNoticeAllDefaultsRestored": "應用設定已恢復預設值",
+  "settingsNoticeAssociationManagerOpened": "已開啟歌詞關聯管理器",
+  "settingsNoticeLogDirectoryOpened": "日誌目錄已開啟",
+  "settingsNoticeLogDirectoryOpenFailed": "開啟日誌目錄失敗",
+  "settingsNoticeCacheCleared": "快取已清理",
+  "settingsNoticeCacheClearFailed": "清理快取失敗",
+  "settingsNoticeConfigWriteFailed": "設定寫入失敗",
+  "settingsCurrentSavePathLabel": "預設儲存路徑",
+  "aboutLoadFailed": "載入關於頁資訊失敗",
+  "aboutActionOpenRepository": "GitHub倉庫",
+  "aboutActionCheckUpdate": "檢查更新",
+  "aboutHeroHeadline": "為精準歌詞而設計",
+  "aboutHeroDescription": "LDDC 將搜尋、轉換、桌面歌詞與批處理工作流收口到同一套高效率體驗裡，讓精準歌詞獲取、整理與使用保持順滑。",
+  "aboutLinksSectionTitle": "常用連結",
+  "aboutLinksSectionDescription": "需要繼續瞭解專案時，可以從這裡檢視反饋、更新與許可證資訊。",
+  "aboutCopyrightNoticeBody": "Copyright (C) {years} {author}",
+  "@aboutCopyrightNoticeBody": {
+    "placeholders": {
+      "years": {
+        "type": "String"
+      },
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutLicenseNoticeBody": "Licensed under {license}.",
+  "@aboutLicenseNoticeBody": {
+    "placeholders": {
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutLinkRepositoryTitle": "GitHub 倉庫",
+  "aboutLinkIssueTrackerTitle": "問題反饋",
+  "aboutLinkIssueTrackerDescription": "提交 Bug、互動建議和功能需求。",
+  "aboutLinkLicenseTitle": "許可證",
+  "aboutLinkLicenseDescription": "檢視專案當前採用的開源許可證：",
+  "aboutLinkChangelogTitle": "更新日誌",
+  "aboutLinkChangelogDescription": "瀏覽版本釋出記錄與變更摘要。",
+  "aboutExternalLinksUnavailable": "當前平臺暫不支援開啟外部連結。",
+  "aboutCheckUpdateUnavailable": "當前平臺暫不支援檢查更新。",
+  "aboutCheckUpdateOpenedReleaseNotes": "已開啟更新日誌頁面。",
+  "aboutCheckUpdateUpToDate": "當前已經是最新版本。",
+  "aboutCheckUpdateAvailable": "發現新版本：{version}。請開啟更新日誌頁面檢視詳情。",
+  "@aboutCheckUpdateAvailable": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "aboutCheckUpdateFailed": "檢查更新失敗，請稍後重試。",
+  "aboutActionOpenedLink": "已開啟 {title}",
+  "@aboutActionOpenedLink": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutActionOpenLinkFailed": "開啟 {title} 失敗",
+  "@aboutActionOpenLinkFailed": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "actionConfirm": "確定",
+  "libraryLinkManagerTitle": "歌詞關聯管理器",
+  "libraryLinkManagerReturnToSettings": "返回設定",
+  "libraryLinkManagerRefresh": "重新整理",
+  "libraryLinkManagerDeleteSelected": "刪除選中 ({count})",
+  "@libraryLinkManagerDeleteSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerDeleteAll": "刪除全部",
+  "libraryLinkManagerClearInvalid": "清理無效資料",
+  "libraryLinkManagerChangeDirectory": "批次改目錄",
+  "libraryLinkManagerBackupToJson": "備份到 JSON",
+  "libraryLinkManagerRestoreFromJson": "從 JSON 恢復",
+  "libraryLinkManagerRestoreAction": "恢復",
+  "libraryLinkManagerExportLyrics": "匯出歌詞",
+  "libraryLinkManagerSummary": "共 {totalCount} 條記錄 · 已選擇 {selectedCount} 條記錄",
+  "@libraryLinkManagerSummary": {
+    "placeholders": {
+      "totalCount": {
+        "type": "int"
+      },
+      "selectedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerSearchHint": "搜尋歌曲、藝術家、專輯或路徑",
+  "libraryLinkManagerClearSearch": "清除搜尋",
+  "libraryLinkManagerSearchSummary": "匹配 {totalCount} 條記錄 · 已選擇 {selectedCount} 條記錄",
+  "@libraryLinkManagerSearchSummary": {
+    "placeholders": {
+      "totalCount": {
+        "type": "int"
+      },
+      "selectedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerEmpty": "暫無歌詞關聯記錄",
+  "libraryLinkManagerLoadFailed": "載入關聯記錄失敗: {error}",
+  "@libraryLinkManagerLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerDeleteSelectedSuccess": "已刪除選中的歌詞關聯",
+  "libraryLinkManagerDeleteAllConfirm": "確定要刪除全部歌詞關聯記錄嗎？",
+  "libraryLinkManagerDeleteAllSuccess": "已刪除全部歌詞關聯記錄",
+  "libraryLinkManagerClearInvalidSuccess": "清理完成，共清理 {count} 條無效資料",
+  "@libraryLinkManagerClearInvalidSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerChangeDirectorySuccess": "批次改目錄完成，共更新 {count} 條記錄",
+  "@libraryLinkManagerChangeDirectorySuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerBackupSuccess": "歌詞關聯資料已備份到 {path}",
+  "@libraryLinkManagerBackupSuccess": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerRestoreConfirm": "恢復會覆蓋當前全部歌詞關聯記錄，是否繼續？",
+  "libraryLinkManagerRestoreSuccess": "歌詞關聯資料已恢復",
+  "libraryLinkManagerInvalidBackupFormat": "備份檔案格式錯誤",
+  "libraryLinkManagerExportSuccess": "匯出完成，共匯出 {count} 條歌詞檔案",
+  "@libraryLinkManagerExportSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerOperationFailed": "操作失敗: {error}",
+  "@libraryLinkManagerOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerUnnamedSong": "未命名歌曲",
+  "libraryLinkManagerUnknownArtist": "未知藝術家",
+  "libraryLinkManagerUnknownAlbum": "未知專輯",
+  "libraryLinkManagerSongPathLabel": "歌曲路徑",
+  "libraryLinkManagerSongPathEmpty": "未記錄歌曲路徑",
+  "libraryLinkManagerLyricsPathLabel": "歌詞路徑",
+  "libraryLinkManagerLyricsPathEmpty": "未關聯歌詞",
+  "libraryLinkManagerTrackLabel": "軌道 {track}",
+  "@libraryLinkManagerTrackLabel": {
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerTrackTooltip": "軌道編號：{track}",
+  "@libraryLinkManagerTrackTooltip": {
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerTrackEmpty": "無",
+  "libraryLinkManagerOffsetLabel": "偏移 {offset}",
+  "@libraryLinkManagerOffsetLabel": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerOffsetTooltip": "歌詞偏移：{offset}",
+  "@libraryLinkManagerOffsetTooltip": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerLanguagesLabel": "語言 {langs}",
+  "@libraryLinkManagerLanguagesLabel": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerLanguagesTooltip": "歌詞語言：{langs}",
+  "@libraryLinkManagerLanguagesTooltip": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerInstrumental": "純音樂",
+  "libraryLinkManagerInstrumentalTooltip": "當前歌曲已標記為純音樂",
+  "libraryLinkManagerDisableAutoSearch": "停用自動搜尋",
+  "libraryLinkManagerDisableAutoSearchTooltip": "當前歌曲已停用自動搜尋",
+  "libraryLinkManagerOtherConfig": "其他配置 {count} 項",
+  "@libraryLinkManagerOtherConfig": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerDefaultConfig": "預設配置",
+  "libraryLinkManagerDefaultConfigTooltip": "當前記錄未儲存歌曲級特殊配置",
+  "openLyricsNoticeOpenFailed": "開啟失敗：{detail}",
+  "@openLyricsNoticeOpenFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsNoticeLyricsFileUnavailable": "當前歌詞檔案不可訪問",
+  "openLyricsNoticeSongFileUnavailable": "當前歌曲檔案不可訪問",
+  "openLyricsNoticeNoEmbeddedLyrics": "歌曲內沒有可讀取的內嵌歌詞",
+  "openLyricsNoticeAlreadyConverted": "當前歌詞已經轉換過了",
+  "openLyricsNoticeEmptyLyrics": "歌詞內容不能為空",
+  "openLyricsNoticeConvertFailed": "轉換失敗：{detail}",
+  "@openLyricsNoticeConvertFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsNoticeConvertFirst": "請先轉換歌詞",
+  "openLyricsNoticeNoLyricsToSave": "沒有歌詞可以儲存",
+  "openLyricsNoticeSaveFileSucceeded": "歌詞儲存成功：{detail}",
+  "@openLyricsNoticeSaveFileSucceeded": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsNoticeSaveFileFailed": "儲存失敗：{detail}",
+  "@openLyricsNoticeSaveFileFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsNoticeOpenSongFirst": "請先開啟歌曲檔案",
+  "openLyricsNoticeAudioTagUnsupported": "當前平臺不支援寫入歌曲標籤",
+  "openLyricsDropUnsupportedItem": "開啟歌詞頁只接受歌詞檔案或音訊檔案拖入",
+  "openLyricsPreviewTitle": "預覽",
+  "openLyricsPreviewRawText": "原始文本",
+  "openLyricsPreviewLanguages": "歌詞語言 · {langs}",
+  "@openLyricsPreviewLanguages": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsPreviewStateIdle": "未載入",
+  "openLyricsPreviewStateRawLoaded": "待轉換",
+  "openLyricsPreviewStateConverted": "已轉換",
+  "openLyricsPreviewEmptyNoInput": "請先開啟歌詞檔案或歌曲檔案",
+  "openLyricsActionOpening": "開啟中...",
+  "openLyricsActionOpenLyricsFile": "開啟歌詞檔案",
+  "openLyricsActionOpenSongFile": "開啟歌曲檔案",
+  "openLyricsActionConvertFormat": "轉換格式",
+  "openLyricsActionSaveLyrics": "儲存歌詞",
+  "openLyricsActionSaveToTag": "儲存到歌曲標籤",
+  "openLyricsActionTranslate": "翻譯歌詞",
+  "openLyricsExportFormatCanWriteTag": "當前匯出格式：{format} · 可寫回標籤",
+  "@openLyricsExportFormatCanWriteTag": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsExportFormatFileOnly": "當前匯出格式：{format} · 僅支援匯出檔案",
+  "@openLyricsExportFormatFileOnly": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "searchLyricsSelectorTitle": "選擇歌詞",
+  "searchLyricsSelectorOpenLocal": "開啟本地歌詞",
+  "searchLyricsSelectorSelect": "選定歌詞",
+  "searchLyricsSelectorDescription": "為桌面歌詞選擇雲端或本地歌詞",
+  "searchLyricsSelectorOpenLocalFailed": "開啟本地歌詞失敗：{detail}",
+  "@searchLyricsSelectorOpenLocalFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchLyricsSelectorSelectLyricsFirst": "請先選擇歌詞",
+  "searchLyricsSelectorSelectFailed": "選定歌詞失敗，請稍後重試",
+  "searchDropUnsupportedItem": "搜尋頁只接受可解析歌曲條目或音訊檔案拖入",
+  "searchNoticePartialSourcesFailed": "部分來源搜尋失敗，已顯示其他來源結果",
+  "searchNoticeAllSourcesFailed": "所有來源搜尋失敗",
+  "searchNoticeLoadMoreFailed": "部分來源載入更多失敗",
+  "searchNoticeDirectoryPickerUnsupported": "當前平臺不支援選擇目錄",
+  "searchNoticeAutoFetchSucceeded": "已自動獲取 {detail} 的歌詞",
+  "@searchNoticeAutoFetchSucceeded": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeAutoFetchFailed": "自動獲取歌詞失敗：{detail}",
+  "@searchNoticeAutoFetchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeSelectedSongUnavailable": "未選擇可用歌曲檔案",
+  "searchNoticeFilePickerUnsupported": "當前平臺不支援選擇歌曲檔案",
+  "searchNoticeOpenSongFailed": "開啟歌曲失敗：{detail}",
+  "@searchNoticeOpenSongFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeDroppedSongUnavailable": "拖入的歌曲檔案不可用",
+  "searchNoticeDroppedSongResolveFailed": "解析拖入歌曲失敗：{detail}",
+  "@searchNoticeDroppedSongResolveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeEmptyKeyword": "請輸入搜尋關鍵詞",
+  "searchNoticeGetLyricsFirst": "請先獲取歌詞",
+  "searchNoticeLyricsSaveSucceededWithPath": "歌詞儲存成功：{detail}",
+  "@searchNoticeLyricsSaveSucceededWithPath": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeSaveFileUnsupported": "當前平臺不支援儲存檔案",
+  "searchNoticeFilePickerForTagUnsupported": "當前平臺不支援選擇歌曲標籤檔案",
+  "searchNoticeFilePickerFailed": "選擇檔案失敗：{detail}",
+  "@searchNoticeFilePickerFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeBatchCancelling": "正在取消批次儲存...",
+  "searchNoticeSelectAlbumOrPlaylistFirst": "請先選擇專輯或歌單",
+  "searchNoticeSelectAtLeastOneLyricsLanguage": "請至少選擇一種歌詞語言",
+  "searchNoticeNoSongsToSave": "沒有可儲存的歌曲",
+  "searchNoticeBatchSaveCancelled": "批次儲存已取消：成功{saved}，失敗{failed}，跳過{skipped}",
+  "@searchNoticeBatchSaveCancelled": {
+    "placeholders": {
+      "saved": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "searchNoticeBatchSaveCompleted": "批次儲存完成：成功{saved}，失敗{failed}，跳過{skipped}",
+  "@searchNoticeBatchSaveCompleted": {
+    "placeholders": {
+      "saved": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "searchNoticeBatchSaveFailed": "批次儲存失敗：{detail}",
+  "@searchNoticeBatchSaveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeMultipleLyricsCandidates": "發現多個候選歌詞，請選擇一個繼續",
+  "searchNoticeGetLyricsFailed": "獲取歌詞失敗：{detail}",
+  "@searchNoticeGetLyricsFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeSelectSavePathFirst": "請先選擇儲存路徑",
+  "searchNoticeDirectoryPickFailed": "選擇目錄失敗：{detail}",
+  "@searchNoticeDirectoryPickFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticePreviewLoading": "歌詞仍在載入中",
+  "searchNoticePreviewNoLanguage": "請至少選擇一種歌詞語言",
+  "searchNoticePreviewNoContent": "當前歌詞暫無可預覽內容",
+  "searchNoticePreviewNoSelection": "請先下載並預覽歌詞",
+  "desktopWindowActionSelectLyrics": "選擇歌詞",
+  "desktopWindowActionMarkInstrumental": "標記為純音樂",
+  "desktopWindowActionDisableAutoSearch": "停用自動搜尋(僅本曲)",
+  "desktopWindowActionUnlinkLyrics": "取消歌詞關聯",
+  "desktopWindowActionAssociationManager": "歌詞關聯管理器",
+  "desktopWindowActionToggleFloating": "顯示/隱藏桌面歌詞",
+  "desktopWindowActionShowMainWindow": "顯示主視窗",
+  "desktopWindowActionClickThrough": "滑鼠穿透",
+  "desktopWindowActionPrevious": "上一首",
+  "desktopWindowActionPlay": "播放",
+  "desktopWindowActionPause": "暫停",
+  "desktopWindowActionNext": "下一首",
+  "desktopWindowActionHide": "隱藏",
+  "desktopTrayCurrentTarget": "當前目標：",
+  "desktopTrayNoSelection": "未選擇",
+  "desktopTrayTargetInstance": "目標例項",
+  "desktopTrayInstance": "例項",
+  "desktopTrayExit": "退出",
+  "desktopWindowInfoInstrumental": "純音樂",
+  "desktopWindowControlConnectionLost": "播放器連線已斷開，操作未執行",
+  "desktopWindowClientDisconnected": "播放器連線已斷開，桌面歌詞已關閉"
+}

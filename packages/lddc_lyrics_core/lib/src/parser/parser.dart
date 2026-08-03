@@ -1,0 +1,16 @@
+// 解析模块统一导出入口。
+export 'ass_parser.dart';
+export 'json_lrc_parser.dart';
+export 'krc_parser.dart';
+export 'lrc_parser.dart';
+export 'lyrics_assembler.dart';
+export 'lyrics_parser_dispatcher.dart';
+export 'lyrics_parser_engine.dart';
+export 'lyrics_parser.dart';
+export 'lyrics_parser_port.dart';
+export 'parser_format.dart';
+export 'parser_utils.dart';
+export 'qrc_parser.dart';
+export 'srt_parser.dart';
+export 'unknown_encoding_reader.dart';
+export 'yrc_parser.dart';

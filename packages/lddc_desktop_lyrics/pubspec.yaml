@@ -1,0 +1,22 @@
+name: lddc_desktop_lyrics
+description: LDDC 的桌面歌词面板、浮窗、投影与窗口宿主能力。
+version: 0.1.0-dev.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.47.0-0.2.pre"
+
+dependencies:
+  characters: ^1.4.1
+  desktop_multi_window: ^0.3.0
+  flutter:
+    sdk: flutter
+  lddc_lyrics_core: ^0.1.0-dev.1
+  window_manager: ^0.5.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

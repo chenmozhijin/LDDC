@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "originClass": "sanitized-qm-response-success",
+      "responseStatus": "success",
+      "response": {
+        "classical": 0,
+        "crypt": 0,
+        "hasContributor": false,
+        "hasMultiTrans": false,
+        "lyric": "c90db2e3f6940a43538b45865eb6753863c981f936a71a093b450246d48b65f03f3563cd2daf4951992461c1ff11dafba7f86ae9df09caa02530b2d19734bc0d385c152b36c85703",
+        "qrc": 1,
+        "qrc_t": 1,
+        "lrc_t": 0,
+        "trans": "WzAwOjAxLjAwXXRyYW5zbGF0ZWQ=",
+        "trans_t": 1,
+        "roma": "WzAwOjAxLjAwXWEgbCBwIGggYQ==",
+        "roma_t": 1
+      }
+    },
+    {
+      "originClass": "sanitized-qm-response-not-found",
+      "responseStatus": "not_found",
+      "response": {
+        "classical": 0,
+        "crypt": 0,
+        "hasContributor": false,
+        "hasMultiTrans": false,
+        "lyric": "",
+        "qrc": 1,
+        "qrc_t": 0,
+        "lrc_t": 0,
+        "trans": "",
+        "trans_t": 0,
+        "roma": "",
+        "roma_t": 0
+      }
+    }
+  ]
+}

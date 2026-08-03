@@ -1,0 +1,288 @@
+name: Cross-Platform Validation
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-platform-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.47.0-0.2.pre
+
+jobs:
+  windows-validation:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - run: flutter pub get
+      - name: Build Windows release
+        working-directory: lddc
+        run: flutter build windows --release
+      - name: Build Windows debug application for native automation
+        working-directory: lddc
+        run: flutter build windows --debug
+      - name: Run offline application flows
+        shell: pwsh
+        run: ./tool/test/run_real_integration.ps1 -Profile offline -Device windows -Platform windows
+      - name: Run native channel flows
+        shell: pwsh
+        run: ./tool/test/run_real_integration.ps1 -Profile platform -Device windows -Platform windows
+      - name: Run Windows file dialog automation
+        shell: pwsh
+        run: ./tool/test/run_windows_platform_tests.ps1
+      - name: Run real desktop process and service tests
+        shell: pwsh
+        run: ./tool/test/run_desktop_process_e2e.ps1 -Platform windows
+      - name: Run production media resource checks
+        shell: pwsh
+        run: ./tool/test/run_platform_media_resource.ps1 -Platform windows -LoopCount 3
+      - name: Upload failed Windows diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-validation-failure
+          path: lddc/build/integration_reports/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  macos-validation:
+    runs-on: macos-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - uses: actions/cache@v6
+        with:
+          path: lddc/macos/Pods
+          key: pods-macos-${{ hashFiles('lddc/macos/Podfile.lock') }}
+      - run: flutter pub get
+      - name: Build macOS release
+        working-directory: lddc
+        run: flutter build macos --release
+      - name: Build macOS debug application for native automation
+        working-directory: lddc
+        run: flutter build macos --debug
+      - name: Run offline application flows
+        shell: pwsh
+        run: ./tool/test/run_real_integration.ps1 -Profile offline -Device macos -Platform macos
+      - name: Run native channel flows
+        shell: pwsh
+        run: ./tool/test/run_real_integration.ps1 -Profile platform -Device macos -Platform macos
+      - name: Run macOS file panel automation
+        shell: pwsh
+        run: ./tool/test/run_macos_platform_tests.ps1
+      - name: Run real desktop process and service tests
+        shell: pwsh
+        run: ./tool/test/run_desktop_process_e2e.ps1 -Platform macos
+      - name: Run production media resource checks
+        shell: pwsh
+        run: ./tool/test/run_platform_media_resource.ps1 -Platform macos -LoopCount 3
+      - name: Upload failed macOS diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-validation-failure
+          path: lddc/build/integration_reports/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  linux-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - name: Install Linux build and automation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev \
+            liblzma-dev libstdc++-12-dev libayatana-appindicator3-dev dbus-x11 \
+            xvfb xauth at-spi2-core gir1.2-atspi-2.0 gir1.2-gtk-3.0 \
+            python3-gi python3-pyatspi python3-pytest python3-venv ffmpeg
+          python3 -m venv --system-site-packages .venv-linux-platform
+          .venv-linux-platform/bin/python -m pip install \
+            --no-deps --require-hashes -r tool/test/requirements-linux-platform.txt
+      - run: flutter pub get
+      - name: Build Linux release
+        working-directory: lddc
+        run: flutter build linux --release
+      - name: Build Linux debug application for native automation
+        working-directory: lddc
+        run: flutter build linux --debug
+      - name: Run offline application flows
+        run: >-
+          xvfb-run -a --server-args="-screen 0 1600x1000x24"
+          pwsh -NoProfile -File tool/test/run_real_integration.ps1
+          -Profile offline -Device linux -Platform linux
+      - name: Run native channel flows
+        run: >-
+          xvfb-run -a --server-args="-screen 0 1600x1000x24"
+          pwsh -NoProfile -File tool/test/run_real_integration.ps1
+          -Profile platform -Device linux -Platform linux
+      - name: Run Linux file dialog automation
+        run: >-
+          dbus-run-session -- xvfb-run -a --server-args="-screen 0 1600x1000x24"
+          env LDDC_PLATFORM_PYTHON="$PWD/.venv-linux-platform/bin/python"
+          bash tool/test/run_linux_platform_tests.sh
+      - name: Run real desktop process and service tests
+        run: >-
+          dbus-run-session -- xvfb-run -a --server-args="-screen 0 1600x1000x24"
+          pwsh -NoProfile -File tool/test/run_desktop_process_e2e.ps1 -Platform linux
+      - name: Run production media resource checks
+        shell: pwsh
+        run: ./tool/test/run_platform_media_resource.ps1 -Platform linux -LoopCount 3
+      - name: Upload failed Linux diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-validation-failure
+          path: lddc/build/integration_reports/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  android-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      LDDC_ALLOW_UNSIGNED_CI_RELEASE: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - uses: gradle/actions/setup-gradle@v6
+      - run: flutter pub get
+      - name: Build unsigned Android release outputs
+        working-directory: lddc
+        run: |
+          flutter build apk --release
+          flutter build appbundle --release
+      - name: Run Android application, channel, and DocumentsUI validation
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            cd lddc/android && chmod +x gradlew && ./gradlew :app:testDebugUnitTest && cd ../..
+            pwsh -NoProfile -File tool/test/run_real_integration.ps1 -Profile offline -Device emulator-5554 -Platform android
+            pwsh -NoProfile -File tool/test/run_real_integration.ps1 -Profile platform -Device emulator-5554 -Platform android
+            pwsh -NoProfile -File tool/test/run_android_platform_tests.ps1 -Device emulator-5554
+      - name: Upload failed Android diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-validation-failure
+          path: |
+            lddc/build/integration_reports/**
+            lddc/build/app/outputs/androidTest-results/**/*.xml
+          if-no-files-found: ignore
+          retention-days: 7
+
+  ios-validation:
+    runs-on: macos-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - uses: actions/cache@v6
+        with:
+          path: lddc/ios/Pods
+          key: pods-ios-${{ hashFiles('lddc/ios/Podfile.lock') }}
+      - uses: futureware-tech/simulator-action@v5
+        with:
+          model: iPhone 15
+      - run: flutter pub get
+      - name: Build iOS release without codesigning
+        working-directory: lddc
+        run: flutter build ios --release --no-codesign
+      - name: Resolve booted simulator
+        run: |
+          DEVICE_ID="$(xcrun simctl list devices booted -j | jq -r '.devices[][] | select(.state == "Booted") | .udid' | head -n 1)"
+          test -n "$DEVICE_ID"
+          echo "DEVICE_ID=$DEVICE_ID" >> "$GITHUB_ENV"
+      - name: Run offline application flows
+        shell: pwsh
+        run: ./tool/test/run_real_integration.ps1 -Profile offline -Device $env:DEVICE_ID -Platform ios
+      - name: Run native channel flows
+        shell: pwsh
+        run: ./tool/test/run_real_integration.ps1 -Profile platform -Device $env:DEVICE_ID -Platform ios
+      - name: Run iOS native unit tests
+        working-directory: lddc
+        run: >-
+          xcodebuild test
+          -workspace ios/Runner.xcworkspace
+          -scheme Runner
+          -destination "platform=iOS Simulator,id=$DEVICE_ID"
+          CODE_SIGNING_ALLOWED=NO
+      - name: Run iOS Document Picker automation
+        shell: pwsh
+        run: ./tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID
+      - name: Upload failed iOS diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-validation-failure
+          path: lddc/build/integration_reports/**
+          if-no-files-found: ignore
+          retention-days: 7
+
+  experimental-web:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - run: flutter pub get
+      - name: Build experimental Web client
+        working-directory: lddc
+        run: flutter build web --release
+      - name: Run browser capability observation
+        working-directory: lddc
+        run: |
+          mkdir -p build/web-observation
+          flutter test test_observation/web_capability_smoke_test.dart -d chrome \
+            --file-reporter=json:build/web-observation/tests.jsonl
+          python ../tool/test/json_report_to_junit.py \
+            --input build/web-observation/tests.jsonl \
+            --output build/web-observation/tests.xml
+      - name: Upload Web observation report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: experimental-web-observation
+          path: lddc/build/web-observation/**
+          if-no-files-found: warn
+          retention-days: 7

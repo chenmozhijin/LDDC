@@ -1,0 +1,1385 @@
+{
+  "@@locale": "en",
+  "appTitle": "LDDC",
+  "commonWarning": "Warning",
+  "commonError": "Error",
+  "commonSuccess": "Success",
+  "commonFailed": "Failed",
+  "commonSkipped": "Skipped",
+  "commonTotal": "Total",
+  "commonDelete": "Delete",
+  "commonConfirm": "Confirm",
+  "commonRestoreDefault": "Restore Default",
+  "commonEnabled": "Enabled",
+  "commonDisabledByDefault": "Disabled by default",
+  "commonFormat": "Format",
+  "commonOffset": "Offset",
+  "commonSaving": "Saving...",
+  "commonAddFiles": "Add Files",
+  "commonClearQueue": "Clear Queue",
+  "commonUnsupportedOperation": "This operation is not supported on this platform",
+  "commonLyricsFileUnavailable": "This entry has no lyrics file to open yet",
+  "commonAudioTagRequiresLrc": "Song-tag lyrics must use LRC format",
+  "commonLyricsLanguageTypeSummary": "{language} ({type})",
+  "@commonLyricsLanguageTypeSummary": {
+    "placeholders": {
+      "language": {"type": "String"},
+      "type": {"type": "String"}
+    }
+  },
+  "commonTranslationCancelled": "Translation removed",
+  "commonCancelTranslation": "Remove Translation",
+  "commonTranslating": "Translating...",
+  "commonTranslationProgress": "Translating {completed}/{total}",
+  "@commonTranslationProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "commonOpenAiTranslationProgress": "OpenAI streaming translation: {completed} / {total} lines",
+  "@commonOpenAiTranslationProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "commonTranslationCompleted": "Translation completed",
+  "commonLyricsSaved": "Lyrics saved",
+  "commonDropFailed": "Drop failed: {detail}",
+  "@commonDropFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "commonSelectSaveDirectoryFailed": "Failed to select save directory: {detail}",
+  "@commonSelectSaveDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "commonOpenSaveDirectoryFailed": "Failed to open save directory: {detail}",
+  "@commonOpenSaveDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "commonTranslationFailed": "Translation failed: {detail}",
+  "@commonTranslationFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "commonLyricsSaveFailed": "Failed to save lyrics: {detail}",
+  "@commonLyricsSaveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "appErrorUnknown": "An unknown error occurred.",
+  "appErrorOperationTimeout": "The operation timed out. Please try again later.",
+  "appErrorNetworkUnavailable": "Network is unavailable. Please check your connection.",
+  "appErrorInvalidPayload": "The data format is invalid.",
+  "appErrorUnsupportedOperation": "This operation is not supported.",
+  "appErrorPermissionDenied": "You do not have permission to perform this operation.",
+  "appErrorIoFailure": "File read or write failed.",
+  "appErrorLyricsRequestFailed": "Failed to request lyrics.",
+  "appErrorLyricsNotFound": "No lyrics found.",
+  "appErrorLyricsProcessing": "Failed to process lyrics.",
+  "appErrorLyricsDecrypt": "Failed to decrypt lyrics.",
+  "appErrorLyricsFormatUnsupported": "Unsupported lyrics format.",
+  "appErrorDecoding": "Decoding failed.",
+  "appErrorSongInfoRead": "Failed to read song info.",
+  "appErrorUnsupportedFileType": "Unsupported file format.",
+  "appErrorDragDropInvalid": "Invalid drag-and-drop data.",
+  "appErrorTranslateFailed": "Translation failed.",
+  "appErrorApiParamsInvalid": "The request parameters are invalid.",
+  "appErrorApiRequestFailed": "API request failed.",
+  "appErrorAutoFetchUnknown": "Automatic matching failed with an unknown error.",
+  "appErrorNotEnoughInfo": "Not enough information to search.",
+  "appErrorIpcInvalidLength": "The IPC message length is invalid.",
+  "appErrorIpcUnsupportedTask": "The IPC task is not supported.",
+  "appErrorIpcInstanceNotFound": "The IPC instance does not exist.",
+  "appErrorIpcPanelNotFound": "The IPC panel does not exist.",
+  "appErrorIpcInvalidWindowId": "The window handle is invalid.",
+  "appErrorIpcEmbedUnsupported": "Embedded mode is not supported on this platform.",
+  "appErrorActionRetryNetwork": "Please check the network and try again.",
+  "appErrorActionCheckPayload": "Please check the input data format.",
+  "appErrorActionChangeFormat": "Please use a supported file or format.",
+  "appErrorActionDetachedMode": "Please fall back to detached mode.",
+  "actionRetry": "Retry",
+  "actionViewDetails": "View details",
+  "actionCancel": "Cancel",
+  "sourceAggregate": "Aggregate",
+  "sourceQQMusic": "QQ Music",
+  "sourceKugou": "Kugou Music",
+  "sourceNetease": "Netease Music",
+  "sourceLrclib": "Lrclib",
+  "sourceLocal": "Local",
+  "lyricOriginal": "Original",
+  "lyricTranslation": "Translation",
+  "lyricRomanized": "Romanized",
+  "lyricsFormatVerbatimLrc": "Word-timed LRC",
+  "lyricsFormatLineByLineLrc": "Line-timed LRC",
+  "lyricsFormatEnhancedLrc": "Enhanced LRC (ESLyric)",
+  "lyricsFormatSrt": "SRT",
+  "lyricsFormatAss": "ASS",
+  "lyricsTypeVerbatim": "Word-timed",
+  "lyricsTypeLineByLine": "Line-timed",
+  "lyricsTypePlainText": "Plain text",
+  "searchSong": "Song",
+  "searchAlbum": "Album",
+  "searchSongList": "Playlist",
+  "searchArtist": "Artist",
+  "searchLyrics": "Lyrics",
+  "searchSongId": "Song ID",
+  "localMatchIteratingFiles": "Scanning files...",
+  "localMatchProgressImportCompleted": "Import completed",
+  "localMatchProgressScanCompleted": "Scan completed",
+  "localMatchProgressScanFailed": "Scan failed",
+  "localMatchProgressMatchCompleted": "Match completed",
+  "localMatchProgressMatchFailed": "Match failed",
+  "localMatchProgressPreparingMatch": "Preparing to match...",
+  "localMatchPreviewTagOnly": "Write tags only",
+  "localMatchPreviewWriteTag": "Write to tags",
+  "localMatchPreviewNoOutput": "No output configured",
+  "localMatchPreviewSongTagOnly": "Song tags only",
+  "localMatchPendingLyricsFileName": "Waiting for matched lyrics info to determine the file name",
+  "localMatchPendingLyricsFileNameAt": "{root} / waiting for matched lyrics info to determine the file name",
+  "@localMatchPendingLyricsFileNameAt": {
+    "placeholders": {
+      "root": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchCalcSavePathFailed": "Failed to calculate save path",
+  "localMatchNoticeBusyImportFiles": "A task is running, so files cannot be imported now",
+  "localMatchNoticeSelectedFilesUnavailable": "The selected files are unavailable",
+  "localMatchNoticeImportFilesFailed": "Failed to import files: {detail}",
+  "@localMatchNoticeImportFilesFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeBusyImportDirectories": "A task is running, so directories cannot be imported now",
+  "localMatchNoticeImportDirectoriesFailed": "Failed to import directories: {detail}",
+  "@localMatchNoticeImportDirectoriesFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeDroppedNoAccessibleFiles": "The dropped data contains no accessible files",
+  "localMatchNoticeDroppedSongResolveFailed": "Failed to resolve dropped song: {detail}",
+  "@localMatchNoticeDroppedSongResolveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeImportCompletedWithErrors": "Import completed, but some entries could not be parsed",
+  "localMatchNoticeSafTreeUnsupported": "Directory tree access is not supported on this platform",
+  "localMatchNoticeBusySwitchTree": "A task is running, so the directory tree cannot be changed now",
+  "localMatchNoticeSelectTreeFailed": "Failed to select directory tree: {detail}",
+  "@localMatchNoticeSelectTreeFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeBusyClearQueue": "A task is running, so the queue cannot be cleared now",
+  "localMatchNoticeSelectItemsToDelete": "Select entries to delete first",
+  "localMatchNoticeSelectItemsToSetRoot": "Select entries before setting a root directory",
+  "localMatchNoticeSelectedRootSkippedSongs": "These songs are outside the selected root and were skipped: {detail}",
+  "@localMatchNoticeSelectedRootSkippedSongs": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeSetRootFailed": "Failed to set root directory: {detail}",
+  "@localMatchNoticeSetRootFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeSelectItemsToRestore": "Select entries to restore first",
+  "localMatchNoticeCancelling": "Cancelling current task...",
+  "localMatchNoticeValidationFailed": "Resolve the local match requirements first",
+  "localMatchNoticeSongDirectoryUnavailable": "This entry cannot open a song directory",
+  "localMatchNoticeOpenSongDirectoryFailed": "Failed to open song directory: {detail}",
+  "@localMatchNoticeOpenSongDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeSaveDirectoryUnavailable": "This entry has no save directory to open yet",
+  "localMatchNoticeOpenLyricsFailed": "Failed to open lyrics: {detail}",
+  "@localMatchNoticeOpenLyricsFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeScanCancelled": "Scan cancelled",
+  "localMatchNoticeScanCompletedWithErrors": "Scan completed, but some files could not be parsed",
+  "localMatchNoticeScanFailed": "Scan failed: {detail}",
+  "@localMatchNoticeScanFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeTreeScanFailed": "Directory tree scan failed: {detail}",
+  "@localMatchNoticeTreeScanFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeMatchCancelled": "Match cancelled",
+  "localMatchNoticeMatchCompleted": "{total} songs total, {success} matched, {failed} failed, {skipped} skipped.",
+  "@localMatchNoticeMatchCompleted": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "success": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "localMatchNoticeMatchFailed": "Local match failed: {detail}",
+  "@localMatchNoticeMatchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchNoticeAndroidMatchCancelledResume": "Match cancelled. Start again to resume from the checkpoint",
+  "localMatchNoticeAndroidMatchFailed": "Android SAF local match failed: {detail}",
+  "@localMatchNoticeAndroidMatchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchValidationEmptyLangs": "Select lyrics languages to match",
+  "localMatchValidationEmptySources": "Select at least one source",
+  "localMatchValidationEmptyQueue": "Import songs to match first",
+  "localMatchValidationSkipExistingFileNameConflict": "When skipping existing lyrics while also saving files, the file name mode cannot use matched lyrics info",
+  "localMatchValidationMissingAndroidTree": "Select a directory tree first",
+  "localMatchValidationNeedsSaveRoot": "A save path is required",
+  "localMatchValidationNeedsSongRoot": "A song root directory is required",
+  "localMatchValidationUnknownSavePath": "Unknown save path error",
+  "localMatchIntro": "Import local songs or folders, preview the output, then run batch matching.",
+  "localMatchDropUnsupportedItem": "Local match accepts song files, folders, or parseable player items",
+  "localMatchReadyToStart": "Ready to start local matching",
+  "localMatchQueueTitle": "Task Queue",
+  "localMatchQueueEmptyHint": "Import files or folders to build the task queue",
+  "localMatchQueueDesktopHint": "{count} tasks. Right-click a row for more actions",
+  "@localMatchQueueDesktopHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localMatchQueueMobileHint": "{count} tasks. Long-press or tap more to open actions",
+  "@localMatchQueueMobileHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localMatchImportAndRunTitle": "Import And Run",
+  "localMatchActionStart": "Start Matching",
+  "localMatchActionAddFolders": "Add Folders",
+  "localMatchActionSelectSaveRoot": "Select Save Root",
+  "localMatchActionSelectTree": "Select Tree",
+  "localMatchActionReselectTree": "Reselect Tree",
+  "localMatchActionBulkSelect": "Bulk Select",
+  "localMatchActionExitSelection": "Exit bulk selection",
+  "localMatchActionSelectAll": "Select All",
+  "localMatchActionDeselectAll": "Deselect All",
+  "localMatchActionSetRoot": "Set Root",
+  "localMatchSelectedCount": "{count} selected",
+  "@localMatchSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localMatchBulkActionHint": "Bulk actions apply directly to the selected tasks",
+  "localMatchPhaseIdle": "Waiting",
+  "localMatchPhaseScanning": "Scanning",
+  "localMatchPhaseMatching": "Matching",
+  "localMatchPhaseWriting": "Writing",
+  "localMatchPhaseCompleted": "Completed",
+  "localMatchPhaseHintIdle": "Import songs to start matching",
+  "localMatchPhaseHintScanning": "Building the task queue and estimating output",
+  "localMatchPhaseHintMatching": "Querying sources and calculating the best match",
+  "localMatchPhaseHintWriting": "Writing lyrics files or song tags",
+  "localMatchPhaseHintCompleted": "This run is complete. Adjust and run again if needed",
+  "localMatchPipelineIdle": "Scan -> Match -> Write",
+  "localMatchPipelineScanning": "Current stage: scan",
+  "localMatchPipelineMatching": "Current stage: match",
+  "localMatchPipelineWriting": "Current stage: write",
+  "localMatchPipelineCompleted": "Scan, match, and write completed",
+  "localMatchUnknownSong": "Unknown Song",
+  "localMatchUnknownDuration": "Unknown Duration",
+  "localMatchStatusNotStarted": "Not Started",
+  "localMatchSongPathLabel": "Song Path",
+  "localMatchLyricsPathLabel": "Lyrics Save Path",
+  "localMatchExpandDetails": "Expand details",
+  "localMatchCollapseDetails": "Collapse details",
+  "localMatchRowActionOpenInSearch": "Open In Search",
+  "localMatchRowActionEnterSelection": "Enter Bulk Selection",
+  "localMatchRowActionOpenSongDirectory": "Open Song Folder",
+  "localMatchRowActionOpenSaveDirectory": "Open Save Folder",
+  "localMatchRowActionOpenLyrics": "Open Lyrics",
+  "localMatchFieldLyricsType": "Lyrics Type",
+  "localMatchFieldOutputStrategy": "Output Strategy",
+  "localMatchFieldSaveMode": "Save Mode",
+  "localMatchFieldFileNameMode": "File Name Mode",
+  "localMatchFieldLyricsFormat": "Lyrics Format",
+  "localMatchFieldThreshold": "Match Threshold",
+  "localMatchFieldSaveRoot": "Save Root",
+  "localMatchMoreSettings": "More Settings",
+  "localMatchRulesTitle": "Match Rules",
+  "localMatchRulesSubtitle": "Sources, languages, output strategy, and threshold",
+  "localMatchMinScore": "Minimum Score",
+  "localMatchSkipExisting": "Skip Existing Lyrics",
+  "localMatchSkipExistingConflictHint": "The current output strategy and file-name mode cannot skip existing lyrics. If files still need to be saved, avoid naming by matched lyrics info.",
+  "localMatchSaveToSongDirectoryHint": "Saving to the song folder does not need an extra save root.",
+  "localMatchAndroidTreeSaveHint": "Android directory tree saves are written directly into the authorized tree.",
+  "localMatchFileNameTemplateHint": "The file name template uses lyrics_file_name_fmt from Settings.",
+  "localMatchSaveRootPath": "Save root: {path}",
+  "@localMatchSaveRootPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "localMatchSaveRootRequired": "This save mode needs a save root. Select one first.",
+  "localMatchTreeNotSelected": "No directory tree selected",
+  "localMatchSaveModeSong": "Save To Song Folder",
+  "localMatchSaveModeMirror": "Mirror Folders",
+  "localMatchSaveModeSpecify": "Specific Folder",
+  "localMatchFileNameModeSong": "Use Song File Name",
+  "localMatchFileNameModeFormatBySong": "Name By Song Info",
+  "localMatchFileNameModeFormatByLyrics": "Name By Lyrics Info",
+  "localMatchFileNameHintSong": "Reuse the audio file name and only replace the lyrics extension.",
+  "localMatchFileNameHintFormatBySong": "Generate the file name from song metadata such as title, artist, and album.",
+  "localMatchFileNameHintFormatByLyrics": "Generate the file name from the matched lyrics song info; it may be unknown before matching.",
+  "localMatchSaveToTagOnlyFile": "File Only",
+  "localMatchSaveToTagOnlyTag": "Tag Only",
+  "localMatchSaveToTagBoth": "File + Tag",
+  "localMatchValidationTitle": "Issues to fix before starting",
+  "localMatchValidationMoreIssues": "{count} more issues need to be fixed",
+  "@localMatchValidationMoreIssues": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeSelectedFilesUnavailable": "The selected files are not directly accessible",
+  "batchConvertNoticeImportFilesCompleted": "Imported {count} lyrics files",
+  "@batchConvertNoticeImportFilesCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeDroppedNoAccessibleFiles": "The dropped data contains no accessible lyrics files",
+  "batchConvertNoticeEmptyQueue": "Add lyrics files to convert first",
+  "batchConvertNoticeOverwriteCancelled": "Batch conversion cancelled",
+  "batchConvertNoticeConversionCancelledCompleted": "Batch conversion cancelled, {count} items completed",
+  "@batchConvertNoticeConversionCancelledCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeConversionCompletedWithFailures": "Batch conversion completed: {success} succeeded, {failure} failed",
+  "@batchConvertNoticeConversionCompletedWithFailures": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeConversionCompleted": "Batch conversion completed: {count} items",
+  "@batchConvertNoticeConversionCompleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeConversionFailed": "Batch conversion failed: {detail}",
+  "@batchConvertNoticeConversionFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertNoticeOpenSourceDirectoryFailed": "Failed to open source directory: {detail}",
+  "@batchConvertNoticeOpenSourceDirectoryFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertNoticeOpenOutputFileFailed": "Failed to open lyrics file: {detail}",
+  "@batchConvertNoticeOpenOutputFileFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertNoticeScanNoSupportedFiles": "No supported lyrics files were found in the selected folder",
+  "batchConvertNoticeScanImportedFromDirectory": "Imported {count} lyrics files from folder",
+  "@batchConvertNoticeScanImportedFromDirectory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertNoticeDuplicateItems": "All selected entries are already in the queue",
+  "batchConvertControlsTitle": "Import & Settings",
+  "batchConvertCompactControlsTitle": "Import & Output Settings",
+  "batchConvertCompactControlsSubtitle": "Format: {format}",
+  "@batchConvertCompactControlsSubtitle": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertImportTitle": "Import",
+  "batchConvertAddFolders": "Add Folder",
+  "batchConvertOutputSettingsTitle": "Output Settings",
+  "batchConvertTargetFormat": "Target Format",
+  "batchConvertSaveDirectoryTitle": "Save Folder",
+  "batchConvertSaveDirectoryDefault": "When unset, output goes next to the source lyrics file",
+  "batchConvertSelectSaveDirectory": "Choose Save Folder",
+  "batchConvertRestoreOriginalDirectory": "Use Source Folder",
+  "batchConvertRecursiveTitle": "Scan Subfolders",
+  "batchConvertRecursiveSubtitle": "When importing a folder, continue scanning lyrics files in subfolders",
+  "batchConvertStart": "Start Conversion",
+  "batchConvertCancel": "Cancel Conversion",
+  "batchConvertQueueTitle": "Conversion Queue",
+  "batchConvertQueueSubtitle": "{count} items, output format {format}",
+  "@batchConvertQueueSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertPageErrorFallback": "The batch conversion page encountered an error",
+  "batchConvertRetryImport": "Import Again",
+  "batchConvertEmptyQueue": "Add lyrics files or folders and the batch conversion queue will appear here.",
+  "batchConvertOutputPathLabel": "Output Path",
+  "batchConvertQueueStatusWaiting": "Waiting",
+  "batchConvertQueueStatusRunning": "Converting",
+  "batchConvertQueueStatusSuccess": "Converted",
+  "batchConvertQueueStatusFailure": "Failed",
+  "batchConvertMoreActions": "More Actions",
+  "batchConvertActionOpenSourceDirectory": "Open Source Folder",
+  "batchConvertActionOpenSaveDirectory": "Open Save Folder",
+  "batchConvertActionOpenOutputFile": "Open Lyrics File",
+  "batchConvertActionOpenInOpenLyrics": "Open in Open Lyrics",
+  "batchConvertPhaseIdle": "Waiting",
+  "batchConvertPhaseScanning": "Scanning",
+  "batchConvertPhaseRunning": "Converting",
+  "batchConvertPhaseCompleted": "Completed",
+  "batchConvertPipelineIdle": "Import -> Scan -> Convert -> Finish",
+  "batchConvertPipelineScanning": "Scan folders -> Build queue",
+  "batchConvertPipelineRunning": "Convert each item -> Update status",
+  "batchConvertPipelineCompleted": "Adjust format or import again",
+  "batchConvertHintCancelled": "Cancelled, {success} succeeded, {failure} failed",
+  "@batchConvertHintCancelled": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertHintCompleted": "{success} succeeded, {failure} failed",
+  "@batchConvertHintCompleted": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertHintNoQueue": "Add files or folders to start converting",
+  "batchConvertHintReady": "The queue is ready",
+  "batchConvertMetricWaiting": "Waiting",
+  "batchConvertDropUnsupported": "The batch conversion page accepts only lyrics files or folders",
+  "batchConvertDropFailed": "Failed to process drop: {detail}",
+  "@batchConvertDropFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertProgressConvertingFile": "Converting {fileName}",
+  "@batchConvertProgressConvertingFile": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertProgressItemSuccess": "Converted",
+  "batchConvertProgressItemFailure": "Failed",
+  "batchConvertProgressPreparingConversion": "Preparing conversion...",
+  "batchConvertProgressCancellingConversion": "Cancelling conversion...",
+  "batchConvertProgressConversionCancelled": "Conversion cancelled",
+  "batchConvertProgressConversionCompleted": "Conversion completed: {success} succeeded, {failure} failed",
+  "@batchConvertProgressConversionCompleted": {
+    "placeholders": {
+      "success": {
+        "type": "int"
+      },
+      "failure": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertProgressConversionFailed": "Conversion failed: {detail}",
+  "@batchConvertProgressConversionFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertProgressScanningFolders": "Scanning folders...",
+  "batchConvertProgressScanningDirectory": "Scanning {directoryName}",
+  "@batchConvertProgressScanningDirectory": {
+    "placeholders": {
+      "directoryName": {
+        "type": "String"
+      }
+    }
+  },
+  "batchConvertProgressScannedLyricsFiles": "Found {count} lyrics files",
+  "@batchConvertProgressScannedLyricsFiles": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertProgressScanCancelled": "Scan cancelled",
+  "batchConvertProgressScanNoSupportedFiles": "No supported lyrics files found",
+  "batchConvertProgressScanCompleted": "Scan completed",
+  "navSearch": "Search",
+  "navLocalMatch": "Local Match",
+  "navOpenLyrics": "Open Lyrics",
+  "navBatchConvert": "Batch Convert",
+  "navSettings": "Settings",
+  "navAbout": "About",
+  "commonSearch": "Search",
+  "commonSource": "Source",
+  "searchKeywordHint": "Input keyword",
+  "uiLoading": "Loading...",
+  "uiLoadingStepFetching": "Fetching list and preview...",
+  "uiEmpty": "No data",
+  "uiNoMoreResult": "No more results",
+  "searchInitialResultTitle": "Enter keywords to start searching",
+  "searchInitialResultDescription": "Choose a source above and run a search",
+  "searchResultTitle": "Search Results",
+  "searchResultReturn": "Back",
+  "searchPreviewTitle": "Lyrics Preview",
+  "searchPreviewLangsLabel": "Languages",
+  "searchPreviewSongIdLabel": "Song ID",
+  "searchPreviewPlaceholder": "Select a song or lyric item first",
+  "searchPreviewNoLanguage": "Select at least one lyric language",
+  "searchPreviewNoContent": "No previewable content is available",
+  "searchPreviewLoading": "Loading lyrics...",
+  "searchFormatLabel": "Lyrics Format",
+  "searchTranslateLyrics": "Translate Lyrics",
+  "searchResizeWorkspacePanes": "Resize search results and lyrics preview",
+  "searchSavePreviewToDirectory": "Save to Folder",
+  "searchSavePreviewToFile": "Save to File",
+  "searchSavePreviewToTag": "Save Preview to Tag",
+  "searchSaveListLyrics": "Save Album/Playlist Lyrics",
+  "searchSaveListLyricsCancel": "Cancel Batch Save",
+  "searchSelectSavePath": "Choose Save Folder",
+  "searchBatchSaveProgressTitle": "Batch Save Progress",
+  "searchBatchSaveProgressPreparing": "Preparing batch save...",
+  "searchBatchSaveProgressFetchingLyrics": "Fetching lyrics for {songName}...",
+  "@searchBatchSaveProgressFetchingLyrics": {
+    "placeholders": {
+      "songName": {
+        "type": "String"
+      }
+    }
+  },
+  "searchTableSongCountValue": "{count} songs",
+  "@searchTableSongCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchTableStatusAutoFetching": "Auto fetching...",
+  "searchTableStatusSearching": "Searching...",
+  "searchTableStatusFetchingSongList": "Fetching song list...",
+  "searchTableStatusNoResults": "No matching results found",
+  "searchTableStatusEmptyList": "The list is empty",
+  "searchTableStatusUnsupportedSearchType": "The selected source does not support this search type",
+  "searchTableStatusSearchFailed": "Search failed",
+  "searchTableStatusSearchFailedWithDetail": "Search failed: {detail}",
+  "@searchTableStatusSearchFailedWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchTableStatusAutoFetchFailed": "Auto fetch failed: {detail}",
+  "@searchTableStatusAutoFetchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchTableStatusSongListFailed": "Failed to fetch song list: {detail}",
+  "@searchTableStatusSongListFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchTableStatusPartialSourceUnavailable": "Some sources are unavailable. Showing available results",
+  "searchTableStatusLoadMoreFailed": "Some sources failed to load more results",
+  "searchSourceFailureDetailsTitle": "Search error details",
+  "searchSourceFailureRequest": "Request failed",
+  "searchSourceFailureTimeout": "Request timed out",
+  "searchSourceFailureParameters": "Invalid parameters",
+  "searchSourceFailureUnsupported": "Unsupported operation",
+  "searchSourceFailureUnknown": "Unknown error",
+  "searchResultLoadingMore": "Loading more results...",
+  "searchResultLoadMoreFailed": "Auto load failed. Retry to continue loading remaining results",
+  "searchResultScrollForMore": "Scroll down to automatically load more results",
+  "tableSavePath": "Save Path",
+  "settingsSectionSave": "Save",
+  "settingsSectionLyrics": "Lyrics",
+  "settingsSectionDesktopLyrics": "Desktop Lyrics",
+  "settingsSectionTranslate": "Translate",
+  "settingsSectionSearch": "Search",
+  "settingsSectionApp": "App",
+  "settingsSectionTools": "Tools And Data",
+  "settingsSectionSaveSummary": "Save paths, file name template, and ID3 version",
+  "settingsSectionSearchSummary": "Choose the default lyric sources for Aggregate search and local matching.",
+  "settingsSectionDesktopLyricsSummary": "Desktop lyrics auto-fetch, display languages, appearance, and refresh rate.",
+  "settingsSectionLyricsSummary": "Local matching behavior and lyrics file export format.",
+  "settingsSectionTranslateSummary": "Translation source, target language, and conditional fields",
+  "settingsSectionAppSummary": "Language, theme, logs, and update policy",
+  "settingsSectionToolsSummary": "Desktop tools, log folder, and cache cleanup",
+  "settingsTranslateSourceBing": "Bing Translate",
+  "settingsTranslateSourceGoogle": "Google Translate",
+  "settingsTranslateSourceOpenAi": "OpenAI-compatible API",
+  "settingsLangSimplifiedChinese": "Simplified Chinese",
+  "settingsLangTraditionalChinese": "Traditional Chinese",
+  "settingsLangEnglish": "English",
+  "settingsLangJapanese": "Japanese",
+  "settingsLangKorean": "Korean",
+  "settingsLangSpanish": "Spanish",
+  "settingsLangFrench": "French",
+  "settingsLangPortuguese": "Portuguese",
+  "settingsLangGerman": "German",
+  "settingsLangRussian": "Russian",
+  "settingsAppLanguageAuto": "Auto",
+  "settingsColorSchemeAuto": "Follow System",
+  "settingsColorSchemeLight": "Light",
+  "settingsColorSchemeDark": "Dark",
+  "settingsDesktopGradientColors": "Gradient Colors",
+  "settingsDesktopPlayedColors": "Played Colors",
+  "settingsDesktopUnplayedColors": "Unplayed Colors",
+  "settingsAddColor": "Add Color",
+  "settingsEditColor": "Edit Color",
+  "settingsDeleteColor": "Delete Color",
+  "settingsBackToSections": "Back To Setting Sections",
+  "settingsAvailablePlaceholders": "Available Placeholders",
+  "settingsPlaceholderTitleArtist": "Title: %<title>    Artist: %<artist>",
+  "settingsPlaceholderAlbumId": "Album: %<album>    Song/Lyrics id: %<id>",
+  "settingsPlaceholderLangs": "Language types: %<langs>",
+  "settingsCurrentTemplate": "Current template: {template}",
+  "@settingsCurrentTemplate": {
+    "placeholders": {
+      "template": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsTranslateSourceLabel": "Translation Source",
+  "settingsTranslateTargetLabel": "Target Language",
+  "settingsOpenAiProfileLabel": "Preset",
+  "settingsOpenAiProfileHelper": "Built-in providers fill the Base URL automatically. You still need to configure the API Key and model.",
+  "settingsAppLanguageLabel": "Interface Language",
+  "settingsColorSchemeLabel": "Theme Mode",
+  "settingsLogLevelLabel": "Log Level",
+  "settingsLogLevelHelper": "Keep INFO for normal use. TRACE and DEBUG record more detail and create larger logs.",
+  "settingsAutoCheckUpdateLabel": "Auto Check Updates",
+  "settingsRestoreDefaultsWarning": "Restoring defaults writes the config immediately. Please confirm before continuing.",
+  "settingsRestoreAllTitle": "Restore Default Settings",
+  "settingsRestoreAllContent": "This restores all settings and writes them to the config immediately.",
+  "settingsRestoreAllAction": "Restore Default Settings",
+  "settingsOpenAssociationManager": "Open Lyrics Association Manager",
+  "settingsOpenAssociationManagerSubtitle": "Open the next settings page to manage song and lyrics associations.",
+  "settingsOpenLogDirectory": "Open Log Directory",
+  "settingsOpenLogDirectorySubtitle": "View runtime logs and troubleshooting files.",
+  "settingsClearCache": "Clear Cache",
+  "settingsClearCacheSubtitle": "Clear search and translation cache without changing config files.",
+  "settingsClearCacheContent": "After clearing cache, later searches and translations may request data again.",
+  "settingsRestoreSectionTitle": "Restore This Section",
+  "settingsRestoreSectionContent": "Only settings in the “{sectionTitle}” section will be restored. Other sections will not change.",
+  "@settingsRestoreSectionContent": {
+    "placeholders": {
+      "sectionTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsRestoreSectionTooltip": "Restore defaults for {sectionTitle}",
+  "@settingsRestoreSectionTooltip": {
+    "placeholders": {
+      "sectionTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsDefaultSavePathHelper": "Leave empty to use the platform default Music directory.",
+  "settingsChooseFolder": "Choose Folder",
+  "settingsLyricsFileNameFormat": "Lyrics File Name Template",
+  "settingsLyricsFileNameFormatHelper": "Use the placeholders below to compose saved file names.",
+  "settingsId3Version": "ID3 Version",
+  "settingsId3VersionHelper": "Only affects lyrics written to audio tags. Keep v2.3 if you are unsure.",
+  "settingsSearchSourcesTitle": "Aggregate Search Sources",
+  "settingsSearchSourcesDescription": "Checked sources are queried when Search uses Aggregate. Sources higher in the list rank first for result grouping and automatic matching. Local Match uses this list by default.",
+  "settingsReorderPriorityHint": "Drag to change priority",
+  "settingsReorderOrderHint": "Drag to change order",
+  "settingsDefaultLanguage": "Default Display Languages",
+  "settingsDefaultLanguageDescription": "Select the languages shown by default in desktop lyrics, then drag to change their display order.",
+  "settingsDesktopAutoFetchSources": "Auto-fetch Sources",
+  "settingsDesktopAutoFetchSourcesDescription": "When desktop lyrics has no linked lyrics, sources are tried from top to bottom.",
+  "settingsFont": "Font",
+  "settingsFollowSystemFont": "Follow System Font",
+  "settingsFontSizeByResize": "Resize the desktop lyrics window to adjust its main font size.",
+  "settingsPanelFontSize": "Lyrics Panel Font Size",
+  "settingsAdaptiveRefreshRate": "Adaptive Refresh Rate",
+  "settingsAdaptiveRefreshRateSubtitle": "Automatically choose the refresh cadence based on lyrics animation state.",
+  "settingsFixedRefreshRate": "Fixed Refresh Rate",
+  "settingsShowFurigana": "Show Furigana",
+  "settingsLyricsMatchBehavior": "Matching Behavior",
+  "settingsLyricsMatchBehaviorDescription": "Set the default handling for local matching and Kugou lyric candidates.",
+  "settingsLyricsExport": "LRC Export",
+  "settingsLyricsExportDescription": "Set the language order and LRC timestamp format used when saving lyrics files.",
+  "settingsDisplayOrder": "Export Language Order",
+  "settingsDisplayOrderDescription": "Drag to arrange original, translated, and romanized lyrics in exported files.",
+  "settingsSkipInstrumental": "Skip Instrumental Tracks",
+  "settingsSkipInstrumentalSubtitle": "Do not save lyrics when Local Match identifies an instrumental track.",
+  "settingsAutoSelectKugou": "Auto Select Kugou Candidate",
+  "settingsAutoSelectKugouSubtitle": "Automatically choose the best lyric candidate when opening a Kugou song in Search.",
+  "settingsAddLrcEndTimestamp": "Add End Timestamp When Exporting LRC",
+  "settingsAddLrcEndTimestampSubtitle": "Only affects line-by-line LRC and writes line end timestamps when needed.",
+  "settingsMillisecondsDigits": "Millisecond Digits",
+  "settingsMillisecondsDigitsHelper": "Use two digits for centiseconds or three digits to keep full milliseconds.",
+  "settingsDigitsValue": "{value} digits",
+  "@settingsDigitsValue": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLastRefStyle": "Last Language Line Timestamp",
+  "settingsLastRefStyleHelper": "For multi-language line-by-line LRC, use the current line time or one millisecond before the next line for the last language line.",
+  "settingsLastRefCurrentLine": "Use Current Line Time",
+  "settingsLastRefNextLine": "Use One Millisecond Before Next Line",
+  "settingsTagInfoSource": "Tag Info Source",
+  "settingsTagInfoLyricsSource": "Lyrics Source",
+  "settingsTagInfoSongInfo": "Song Info",
+  "settingsNoticeDefaultSavePathUpdated": "Default save path updated",
+  "settingsNoticeDefaultSavePathRestored": "Default save path restored",
+  "settingsNoticeLyricsFileNameFormatUpdated": "Lyrics file name template updated",
+  "settingsNoticeId3VersionUpdated": "ID3 version updated",
+  "settingsNoticeLyricsLangOrderEmpty": "Lyrics language order cannot be empty",
+  "settingsNoticeLyricsLangOrderUpdated": "Lyrics language order updated",
+  "settingsNoticeSkipInstUpdated": "Instrumental skip policy updated",
+  "settingsNoticeAutoSelectUpdated": "Auto select policy updated",
+  "settingsNoticeAddEndTimestampUpdated": "End timestamp policy updated",
+  "settingsNoticeMsDigitsUpdated": "Millisecond digits updated",
+  "settingsNoticeLastRefStyleUpdated": "Last line time style updated",
+  "settingsNoticeTagInfoSourceUpdated": "Tag info source updated",
+  "settingsNoticeDesktopSourcesEmpty": "Desktop lyrics sources cannot be empty",
+  "settingsNoticeDesktopSourcesUpdated": "Desktop lyrics sources updated",
+  "settingsNoticeDesktopDefaultLangsEmpty": "Desktop default languages cannot be empty",
+  "settingsNoticeDesktopLangsUpdated": "Desktop lyrics language settings updated",
+  "settingsNoticeDesktopFontFamilyUpdated": "Desktop lyrics font updated",
+  "settingsNoticeDesktopRefreshRateUpdated": "Refresh rate updated",
+  "settingsNoticeDesktopPlayedColorsUpdated": "Played colors updated",
+  "settingsNoticeDesktopUnplayedColorsUpdated": "Unplayed colors updated",
+  "settingsNoticeDesktopFontSizeUpdated": "Desktop lyrics font size updated",
+  "settingsNoticeDesktopPanelFontSizeUpdated": "Desktop panel font size updated",
+  "settingsNoticeDesktopShowFuriganaUpdated": "Furigana display policy updated",
+  "settingsNoticeTranslateSourceUpdated": "Translation source updated",
+  "settingsNoticeTranslateTargetLangUpdated": "Translation target language updated",
+  "settingsNoticeOpenAiProfileUpdated": "OpenAI preset updated",
+  "settingsNoticeOpenAiBaseUrlUpdated": "OpenAI Base URL updated",
+  "settingsNoticeOpenAiApiKeyUpdated": "OpenAI API Key updated",
+  "settingsNoticeOpenAiModelUpdated": "OpenAI model updated",
+  "settingsNoticeSearchSourcesEmpty": "Aggregate search sources cannot be empty",
+  "settingsNoticeSearchSourcesUpdated": "Aggregate search sources updated",
+  "settingsNoticeAppLanguageUpdated": "Interface language updated",
+  "settingsNoticeAppColorSchemeUpdated": "Theme mode updated",
+  "settingsNoticeAppLogLevelUpdated": "Log level updated",
+  "settingsNoticeAutoCheckUpdateUpdated": "Auto check updates setting updated",
+  "settingsNoticeSectionNoRestorableConfig": "This section has no restorable config items",
+  "settingsNoticeSectionDefaultsRestored": "Current section defaults restored",
+  "settingsNoticeAllDefaultsRestored": "Application settings restored to defaults",
+  "settingsNoticeAssociationManagerOpened": "Lyrics association manager opened",
+  "settingsNoticeLogDirectoryOpened": "Log directory opened",
+  "settingsNoticeLogDirectoryOpenFailed": "Failed to open log directory",
+  "settingsNoticeCacheCleared": "Cache cleared",
+  "settingsNoticeCacheClearFailed": "Failed to clear cache",
+  "settingsNoticeConfigWriteFailed": "Failed to write settings",
+  "settingsCurrentSavePathLabel": "Default Save Path",
+  "aboutLoadFailed": "Failed to load about metadata.",
+  "aboutActionOpenRepository": "GitHub Repo",
+  "aboutActionCheckUpdate": "Check Update",
+  "aboutHeroHeadline": "Built for precise lyrics",
+  "aboutHeroDescription": "LDDC brings search, conversion, desktop lyrics, and batch workflows into one efficient surface so finding, organizing, and using lyrics stays fast and focused.",
+  "aboutLinksSectionTitle": "Quick Links",
+  "aboutLinksSectionDescription": "Use these links when you want feedback channels, release notes, or license details.",
+  "aboutCopyrightNoticeBody": "Copyright (C) {years} {author}",
+  "@aboutCopyrightNoticeBody": {
+    "placeholders": {
+      "years": {
+        "type": "String"
+      },
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutLicenseNoticeBody": "Licensed under {license}.",
+  "@aboutLicenseNoticeBody": {
+    "placeholders": {
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutLinkRepositoryTitle": "GitHub Repository",
+  "aboutLinkIssueTrackerTitle": "Issue Tracker",
+  "aboutLinkIssueTrackerDescription": "Report bugs, UX gaps, and feature requests.",
+  "aboutLinkLicenseTitle": "License",
+  "aboutLinkLicenseDescription": "Review the current open source license:",
+  "aboutLinkChangelogTitle": "Release Notes",
+  "aboutLinkChangelogDescription": "See published versions and their change summaries.",
+  "aboutExternalLinksUnavailable": "Opening external links is not supported on this platform.",
+  "aboutCheckUpdateUnavailable": "Checking for updates is not supported on this platform.",
+  "aboutCheckUpdateOpenedReleaseNotes": "Opened the release notes page.",
+  "aboutCheckUpdateUpToDate": "You are already on the latest version.",
+  "aboutCheckUpdateAvailable": "New version found: {version}. Open the release notes page for details.",
+  "@aboutCheckUpdateAvailable": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "aboutCheckUpdateFailed": "Failed to check for updates. Please try again later.",
+  "aboutActionOpenedLink": "Opened {title}",
+  "@aboutActionOpenedLink": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutActionOpenLinkFailed": "Failed to open {title}",
+  "@aboutActionOpenLinkFailed": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "actionConfirm": "Confirm",
+  "libraryLinkManagerTitle": "Lyrics Association Manager",
+  "libraryLinkManagerReturnToSettings": "Back to Settings",
+  "libraryLinkManagerRefresh": "Refresh",
+  "libraryLinkManagerDeleteSelected": "Delete Selected ({count})",
+  "@libraryLinkManagerDeleteSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerDeleteAll": "Delete All",
+  "libraryLinkManagerClearInvalid": "Clear Invalid Data",
+  "libraryLinkManagerChangeDirectory": "Batch Change Directory",
+  "libraryLinkManagerBackupToJson": "Backup to JSON",
+  "libraryLinkManagerRestoreFromJson": "Restore from JSON",
+  "libraryLinkManagerRestoreAction": "Restore",
+  "libraryLinkManagerExportLyrics": "Export Lyrics",
+  "libraryLinkManagerSummary": "{totalCount} records · {selectedCount} selected",
+  "@libraryLinkManagerSummary": {
+    "placeholders": {
+      "totalCount": {
+        "type": "int"
+      },
+      "selectedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerSearchHint": "Search songs, artists, albums, or paths",
+  "libraryLinkManagerClearSearch": "Clear search",
+  "libraryLinkManagerSearchSummary": "{totalCount} matches · {selectedCount} selected",
+  "@libraryLinkManagerSearchSummary": {
+    "placeholders": {
+      "totalCount": {
+        "type": "int"
+      },
+      "selectedCount": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerEmpty": "No lyrics link records",
+  "libraryLinkManagerLoadFailed": "Failed to load lyrics link records: {error}",
+  "@libraryLinkManagerLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerDeleteSelectedSuccess": "Deleted selected lyrics links",
+  "libraryLinkManagerDeleteAllConfirm": "Are you sure you want to delete all lyrics link records?",
+  "libraryLinkManagerDeleteAllSuccess": "Deleted all lyrics link records",
+  "libraryLinkManagerClearInvalidSuccess": "Cleared {count} invalid records",
+  "@libraryLinkManagerClearInvalidSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerChangeDirectorySuccess": "Updated {count} records after directory rewrite",
+  "@libraryLinkManagerChangeDirectorySuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerBackupSuccess": "Lyrics link data backed up to {path}",
+  "@libraryLinkManagerBackupSuccess": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerRestoreConfirm": "Restoring will overwrite all current lyrics link records. Continue?",
+  "libraryLinkManagerRestoreSuccess": "Lyrics link data restored",
+  "libraryLinkManagerInvalidBackupFormat": "Invalid backup file format",
+  "libraryLinkManagerExportSuccess": "Exported {count} lyric files",
+  "@libraryLinkManagerExportSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerOperationFailed": "Operation failed: {error}",
+  "@libraryLinkManagerOperationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerUnnamedSong": "Untitled Song",
+  "libraryLinkManagerUnknownArtist": "Unknown Artist",
+  "libraryLinkManagerUnknownAlbum": "Unknown Album",
+  "libraryLinkManagerSongPathLabel": "Song Path",
+  "libraryLinkManagerSongPathEmpty": "No song path recorded",
+  "libraryLinkManagerLyricsPathLabel": "Lyrics Path",
+  "libraryLinkManagerLyricsPathEmpty": "No lyrics linked",
+  "libraryLinkManagerTrackLabel": "Track {track}",
+  "@libraryLinkManagerTrackLabel": {
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerTrackTooltip": "Track number: {track}",
+  "@libraryLinkManagerTrackTooltip": {
+    "placeholders": {
+      "track": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerTrackEmpty": "None",
+  "libraryLinkManagerOffsetLabel": "Offset {offset}",
+  "@libraryLinkManagerOffsetLabel": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerOffsetTooltip": "Lyric offset: {offset}",
+  "@libraryLinkManagerOffsetTooltip": {
+    "placeholders": {
+      "offset": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerLanguagesLabel": "Languages {langs}",
+  "@libraryLinkManagerLanguagesLabel": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerLanguagesTooltip": "Lyrics languages: {langs}",
+  "@libraryLinkManagerLanguagesTooltip": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "libraryLinkManagerInstrumental": "Instrumental",
+  "libraryLinkManagerInstrumentalTooltip": "This song is marked as instrumental",
+  "libraryLinkManagerDisableAutoSearch": "Disable Auto Search",
+  "libraryLinkManagerDisableAutoSearchTooltip": "Auto search is disabled for this song",
+  "libraryLinkManagerOtherConfig": "Other Config {count}",
+  "@libraryLinkManagerOtherConfig": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryLinkManagerDefaultConfig": "Default Config",
+  "libraryLinkManagerDefaultConfigTooltip": "No song-level override config is saved for this record",
+  "openLyricsNoticeOpenFailed": "Open failed: {detail}",
+  "@openLyricsNoticeOpenFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsNoticeLyricsFileUnavailable": "The lyrics file is unavailable",
+  "openLyricsNoticeSongFileUnavailable": "The song file is unavailable",
+  "openLyricsNoticeNoEmbeddedLyrics": "No readable embedded lyrics were found in this song",
+  "openLyricsNoticeAlreadyConverted": "These lyrics have already been converted",
+  "openLyricsNoticeEmptyLyrics": "Lyrics content cannot be empty",
+  "openLyricsNoticeConvertFailed": "Conversion failed: {detail}",
+  "@openLyricsNoticeConvertFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsNoticeConvertFirst": "Convert the lyrics first",
+  "openLyricsNoticeNoLyricsToSave": "There are no lyrics to save",
+  "openLyricsNoticeSaveFileSucceeded": "Lyrics saved: {detail}",
+  "@openLyricsNoticeSaveFileSucceeded": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsNoticeSaveFileFailed": "Save failed: {detail}",
+  "@openLyricsNoticeSaveFileFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsNoticeOpenSongFirst": "Open a song file first",
+  "openLyricsNoticeAudioTagUnsupported": "This platform cannot write song tags",
+  "openLyricsDropUnsupportedItem": "Open Lyrics accepts lyrics files or audio files",
+  "openLyricsPreviewTitle": "Preview",
+  "openLyricsPreviewRawText": "Raw Text",
+  "openLyricsPreviewLanguages": "Lyrics languages · {langs}",
+  "@openLyricsPreviewLanguages": {
+    "placeholders": {
+      "langs": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsPreviewStateIdle": "Not Loaded",
+  "openLyricsPreviewStateRawLoaded": "Ready To Convert",
+  "openLyricsPreviewStateConverted": "Converted",
+  "openLyricsPreviewEmptyNoInput": "Open a lyrics file or song file first",
+  "openLyricsActionOpening": "Opening...",
+  "openLyricsActionOpenLyricsFile": "Open Lyrics File",
+  "openLyricsActionOpenSongFile": "Open Song File",
+  "openLyricsActionConvertFormat": "Convert Format",
+  "openLyricsActionSaveLyrics": "Save Lyrics",
+  "openLyricsActionSaveToTag": "Save To Song Tag",
+  "openLyricsActionTranslate": "Translate Lyrics",
+  "openLyricsExportFormatCanWriteTag": "Current export format: {format} · can write tags",
+  "@openLyricsExportFormatCanWriteTag": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "openLyricsExportFormatFileOnly": "Current export format: {format} · file export only",
+  "@openLyricsExportFormatFileOnly": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "searchLyricsSelectorTitle": "Select Lyrics",
+  "searchLyricsSelectorOpenLocal": "Open Local Lyrics",
+  "searchLyricsSelectorSelect": "Select Lyrics",
+  "searchLyricsSelectorDescription": "Select online or local lyrics for desktop lyrics",
+  "searchLyricsSelectorOpenLocalFailed": "Failed to open local lyrics: {detail}",
+  "@searchLyricsSelectorOpenLocalFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchLyricsSelectorSelectLyricsFirst": "Select lyrics first",
+  "searchLyricsSelectorSelectFailed": "Failed to select lyrics. Try again later",
+  "searchDropUnsupportedItem": "Search accepts parseable song items or audio files",
+  "searchNoticePartialSourcesFailed": "Some sources failed. Results from other sources are shown",
+  "searchNoticeAllSourcesFailed": "All search sources failed",
+  "searchNoticeLoadMoreFailed": "Some sources failed to load more results",
+  "searchNoticeDirectoryPickerUnsupported": "Directory selection is not supported on this platform",
+  "searchNoticeAutoFetchSucceeded": "Fetched lyrics for {detail}",
+  "@searchNoticeAutoFetchSucceeded": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeAutoFetchFailed": "Auto fetch failed: {detail}",
+  "@searchNoticeAutoFetchFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeSelectedSongUnavailable": "No available song file was selected",
+  "searchNoticeFilePickerUnsupported": "Song file selection is not supported on this platform",
+  "searchNoticeOpenSongFailed": "Failed to open song: {detail}",
+  "@searchNoticeOpenSongFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeDroppedSongUnavailable": "The dropped song file is unavailable",
+  "searchNoticeDroppedSongResolveFailed": "Failed to resolve dropped song: {detail}",
+  "@searchNoticeDroppedSongResolveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeEmptyKeyword": "Enter a search keyword",
+  "searchNoticeGetLyricsFirst": "Get lyrics first",
+  "searchNoticeLyricsSaveSucceededWithPath": "Lyrics saved: {detail}",
+  "@searchNoticeLyricsSaveSucceededWithPath": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeSaveFileUnsupported": "Saving files is not supported on this platform",
+  "searchNoticeFilePickerForTagUnsupported": "Selecting a song tag file is not supported on this platform",
+  "searchNoticeFilePickerFailed": "File selection failed: {detail}",
+  "@searchNoticeFilePickerFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeBatchCancelling": "Cancelling batch save...",
+  "searchNoticeSelectAlbumOrPlaylistFirst": "Select an album or playlist first",
+  "searchNoticeSelectAtLeastOneLyricsLanguage": "Select at least one lyrics language",
+  "searchNoticeNoSongsToSave": "There are no songs to save",
+  "searchNoticeBatchSaveCancelled": "Batch save cancelled: {saved} saved, {failed} failed, {skipped} skipped",
+  "@searchNoticeBatchSaveCancelled": {
+    "placeholders": {
+      "saved": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "searchNoticeBatchSaveCompleted": "Batch save completed: {saved} saved, {failed} failed, {skipped} skipped",
+  "@searchNoticeBatchSaveCompleted": {
+    "placeholders": {
+      "saved": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "searchNoticeBatchSaveFailed": "Batch save failed: {detail}",
+  "@searchNoticeBatchSaveFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeMultipleLyricsCandidates": "Multiple lyric candidates were found. Select one to continue",
+  "searchNoticeGetLyricsFailed": "Failed to get lyrics: {detail}",
+  "@searchNoticeGetLyricsFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticeSelectSavePathFirst": "Select a save path first",
+  "searchNoticeDirectoryPickFailed": "Directory selection failed: {detail}",
+  "@searchNoticeDirectoryPickFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "searchNoticePreviewLoading": "Lyrics are still loading",
+  "searchNoticePreviewNoLanguage": "Select at least one lyrics language",
+  "searchNoticePreviewNoContent": "The current lyrics have no previewable content",
+  "searchNoticePreviewNoSelection": "Download and preview lyrics first",
+  "desktopWindowActionSelectLyrics": "Select lyrics",
+  "desktopWindowActionMarkInstrumental": "Mark as instrumental",
+  "desktopWindowActionDisableAutoSearch": "Disable auto search for this song",
+  "desktopWindowActionUnlinkLyrics": "Unlink lyrics",
+  "desktopWindowActionAssociationManager": "Lyrics association manager",
+  "desktopWindowActionToggleFloating": "Show or hide desktop lyrics",
+  "desktopWindowActionShowMainWindow": "Show main window",
+  "desktopWindowActionClickThrough": "Click-through",
+  "desktopWindowActionPrevious": "Previous",
+  "desktopWindowActionPlay": "Play",
+  "desktopWindowActionPause": "Pause",
+  "desktopWindowActionNext": "Next",
+  "desktopWindowActionHide": "Hide",
+  "desktopTrayCurrentTarget": "Current target: ",
+  "desktopTrayNoSelection": "None",
+  "desktopTrayTargetInstance": "Target instance",
+  "desktopTrayInstance": "Instance",
+  "desktopTrayExit": "Exit",
+  "desktopWindowInfoInstrumental": "Instrumental",
+  "desktopWindowControlConnectionLost": "The player connection was lost. The action was not performed.",
+  "desktopWindowClientDisconnected": "The player connection was lost. Desktop lyrics were closed."
+}

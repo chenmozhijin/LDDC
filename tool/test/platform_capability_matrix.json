@@ -1,0 +1,799 @@
+{
+  "schemaVersion": 2,
+  "profiles": {
+    "offline": {
+      "network": {
+        "mode": "fake",
+        "required": false,
+        "applicable": true,
+        "reason": "离线业务场景使用确定性歌词源，禁止访问外部网络"
+      },
+      "translation": {
+        "mode": "fake",
+        "required": false,
+        "applicable": true,
+        "reason": "离线业务场景使用确定性翻译替身"
+      },
+      "filePicker": {
+        "mode": "scripted",
+        "required": false,
+        "applicable": true,
+        "reason": "离线业务场景只验证应用流程，系统文件界面由原生平台场景覆盖"
+      },
+      "pathOpener": {
+        "mode": "recording",
+        "required": false,
+        "applicable": true,
+        "reason": "离线业务场景记录路径打开请求，不启动宿主应用"
+      },
+      "media": {
+        "mode": "memory",
+        "required": false,
+        "applicable": true,
+        "reason": "离线业务场景使用有界内存媒体网关"
+      },
+      "nativeChannels": {
+        "mode": "mocked",
+        "required": false,
+        "applicable": true,
+        "reason": "离线业务场景不验证原生通道实现"
+      },
+      "desktopProcess": {
+        "mode": "inProcess",
+        "required": false,
+        "applicable": true,
+        "reason": "离线桌面协议场景在测试进程内运行"
+      },
+      "windowHost": {
+        "mode": "noop",
+        "required": false,
+        "applicable": true,
+        "reason": "离线业务场景不以真实宿主窗口作为通过条件"
+      }
+    },
+    "platform": {
+      "network": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "平台边界场景不依赖外部歌词服务"
+      },
+      "translation": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "平台边界场景不调用翻译服务"
+      },
+      "filePicker": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "当前 Flutter 通道 smoke 不覆盖系统文件界面，后续由原生 UI 场景单独报告"
+      },
+      "pathOpener": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "当前 Flutter 通道 smoke 不覆盖路径打开器"
+      },
+      "media": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "当前 Flutter 通道 smoke 不覆盖真实媒体读写"
+      },
+      "nativeChannels": {
+        "mode": "real",
+        "required": true,
+        "applicable": true,
+        "reason": "场景必须调用当前平台实际注册的 MethodChannel 或桌面插件通道"
+      },
+      "desktopProcess": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "真实子进程与单实例行为由独立桌面进程 E2E 覆盖"
+      },
+      "windowHost": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "移动端没有桌面窗口宿主，桌面平台由场景覆盖项显式启用"
+      }
+    },
+    "live": {
+      "network": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "具体 live 场景必须显式声明所调用的网络能力"
+      },
+      "translation": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "具体 live 场景必须显式声明是否调用翻译服务"
+      },
+      "filePicker": {
+        "mode": "scripted",
+        "required": false,
+        "applicable": true,
+        "reason": "live 场景验证服务协议，文件落盘仍使用隔离的脚本选择器"
+      },
+      "pathOpener": {
+        "mode": "recording",
+        "required": false,
+        "applicable": true,
+        "reason": "live 场景不启动外部宿主应用"
+      },
+      "media": {
+        "mode": "notApplicable",
+        "required": false,
+        "applicable": false,
+        "reason": "具体 live 场景必须显式声明是否使用真实媒体实现"
+      },
+      "nativeChannels": {
+        "mode": "mocked",
+        "required": false,
+        "applicable": true,
+        "reason": "live 场景验证网络服务，不承担原生通道门禁"
+      },
+      "desktopProcess": {
+        "mode": "inProcess",
+        "required": false,
+        "applicable": true,
+        "reason": "live 场景在测试进程内运行"
+      },
+      "windowHost": {
+        "mode": "noop",
+        "required": false,
+        "applicable": true,
+        "reason": "live 场景不以真实桌面窗口为通过条件"
+      }
+    }
+  },
+  "contracts": [
+    {
+      "profile": "platform",
+      "platform": "windows",
+      "scenario": "platform_capability_smoke",
+      "framework": "integration_test",
+      "capabilities": {
+        "windowHost": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Windows smoke 必须通过真实 window_manager 插件读取主窗口状态"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "macos",
+      "scenario": "platform_capability_smoke",
+      "framework": "integration_test",
+      "capabilities": {
+        "windowHost": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "macOS smoke 必须通过真实 window_manager 插件读取主窗口状态"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "linux",
+      "scenario": "platform_capability_smoke",
+      "framework": "integration_test",
+      "capabilities": {
+        "windowHost": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Linux smoke 必须通过真实 window_manager 插件读取主窗口状态"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "android",
+      "scenario": "platform_capability_smoke",
+      "framework": "integration_test",
+      "capabilities": {}
+    },
+    {
+      "profile": "platform",
+      "platform": "ios",
+      "scenario": "platform_capability_smoke",
+      "framework": "integration_test",
+      "capabilities": {}
+    },
+    {
+      "profile": "platform",
+      "platform": "android",
+      "scenario": "android_documentsui_select",
+      "framework": "uiautomator",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "UI Automator 必须操作真实 DocumentsUI 并选择 MediaStore 音频"
+        },
+        "media": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "选择后必须通过生产 SAF fd 与 TagLib 回读、写入并在 Activity 重建后重新打开匿名音频"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "选择完成后 pending picker 与 raw fd 必须回到基线"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "android",
+      "scenario": "android_documentsui_cancel",
+      "framework": "uiautomator",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "UI Automator 必须在真实 DocumentsUI 中执行系统返回取消"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消后 pending picker 与 raw fd 必须回到基线"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "android",
+      "scenario": "android_documentsui_save",
+      "framework": "uiautomator",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "UI Automator 必须操作真实 ACTION_CREATE_DOCUMENT 并确认用户输出"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "歌词正文必须通过生产保存通道写入系统返回的 URI"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "输出完成后 raw fd、pending picker 与测试创建的文档必须清理"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "android",
+      "scenario": "android_documentsui_tree",
+      "framework": "uiautomator",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "UI Automator 必须操作真实 ACTION_OPEN_DOCUMENT_TREE"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "目录 URI 必须经生产通道取得并形成可查询的持久授权"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "场景结束后 pending picker 与测试新增的持久授权必须回到基线"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "android",
+      "scenario": "android_documentsui_lifecycle",
+      "framework": "uiautomator",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "UI Automator 必须在真实 DocumentsUI pending 期间销毁 Activity，并在新实例中再次打开和取消"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "生产 picker 通道必须清除旧 Activity 的 pending 请求且新实例不得返回 busy"
+        },
+        "lifecycle": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "系统 Picker 前台期间销毁和重建真实 Activity"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "销毁前 pending 必须为 1，重启并取消后 pending picker 与 raw fd 必须回到基线"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "ios",
+      "scenario": "ios_document_picker_select",
+      "framework": "xcuitest",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "XCUITest 必须操作真实 UIDocumentPicker 并选择应用 Documents 中的匿名音频"
+        },
+        "media": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "选择后必须通过生产 security-scoped fd 与 TagLib 回读、升级写入并在应用重启后重新打开匿名音频"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "选择完成后测试应用和 Document Picker 必须关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "ios",
+      "scenario": "ios_document_picker_cancel",
+      "framework": "xcuitest",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "XCUITest 必须在真实 UIDocumentPicker 中执行取消并返回 Flutter"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消后测试应用和 Document Picker 必须关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "ios",
+      "scenario": "ios_document_picker_export",
+      "framework": "xcuitest",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "XCUITest 必须操作真实 UIDocumentPicker 导出并生成歌词文件"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "导出正文必须通过生产 saveTextFile 通道与 delegate 回调往返"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "成功导出后临时源文件、Picker 和应用进程必须关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "ios",
+      "scenario": "ios_document_picker_export_cancel",
+      "framework": "xcuitest",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "XCUITest 必须在真实导出 Picker 中执行取消"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消必须通过生产 delegate 回调返回 Flutter"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消后不得留下用户输出或临时导出文件"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "ios",
+      "scenario": "ios_document_picker_export_termination",
+      "framework": "xcuitest",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "XCUITest 必须在真实导出 Picker 仍处于前台时终止测试应用"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "场景必须先通过生产 saveTextFile 通道建立 pending 导出，再验证插件重建"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "导出中终止后，下次应用启动必须删除遗留临时导出资源"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "macos",
+      "scenario": "macos_open_panel_select",
+      "framework": "xcuitest",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "XCUITest 必须操作真实 NSOpenPanel 并选择匿名音频 fixture"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "选择完成后应用和 NSOpenPanel 必须关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "macos",
+      "scenario": "macos_open_panel_cancel",
+      "framework": "xcuitest",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "XCUITest 必须在真实 NSOpenPanel 中执行取消"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消后应用和 NSOpenPanel 必须关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "windows",
+      "scenario": "windows_file_dialog_select",
+      "framework": "integration_test+flaui-uia3",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "integration_test 触发生产文件选择器，FlaUI/UIA3 必须操作真实 IFileDialog 并选择匿名歌词 fixture"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "选择结果必须通过生产文件选择通道返回 Flutter 页面"
+        },
+        "desktopProcess": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Flutter integration_test 必须启动并关闭真实 Windows 应用进程"
+        },
+        "windowHost": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "integration_test 必须操作 Flutter 页面，UIA3 只能接管其打开的原生系统对话框"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "场景结束后生产进程和系统文件对话框必须全部关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "windows",
+      "scenario": "windows_file_dialog_cancel",
+      "framework": "integration_test+flaui-uia3",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "integration_test 触发生产文件选择器，FlaUI/UIA3 必须在真实 IFileDialog 中执行取消"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消结果必须通过生产文件选择通道返回 Flutter 页面"
+        },
+        "desktopProcess": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Flutter integration_test 必须启动并关闭真实 Windows 应用进程"
+        },
+        "windowHost": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "integration_test 必须操作 Flutter 页面并再次触发，UIA3 只能接管原生系统对话框"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消后生产进程和系统文件对话框必须全部关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "linux",
+      "scenario": "linux_gtk_file_chooser_select",
+      "framework": "dogtail-atspi",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Dogtail 必须操作真实 GTK 文件选择器并选择匿名音频 fixture"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "选择结果必须通过生产文件选择通道返回 Flutter 页面"
+        },
+        "desktopProcess": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "场景必须在独立进程组启动并关闭真实 Linux 应用"
+        },
+        "windowHost": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "AT-SPI 必须发现真实 Flutter 窗口和 Semantics identifier"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "场景结束后应用进程组和 GTK 文件选择器必须关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "linux",
+      "scenario": "linux_gtk_file_chooser_cancel",
+      "framework": "dogtail-atspi",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Dogtail 必须在真实 GTK 文件选择器中执行取消"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消结果必须通过生产文件选择通道返回 Flutter 页面"
+        },
+        "desktopProcess": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "场景必须在独立进程组启动并关闭真实 Linux 应用"
+        },
+        "windowHost": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "AT-SPI 必须发现真实 Flutter 窗口和 Semantics identifier"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消后应用进程组和 GTK 文件选择器必须关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "*",
+      "scenario": "platform_media_resource",
+      "framework": "dart-native-assets",
+      "capabilities": {
+        "filePicker": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "媒体资源场景从只读匿名 fixture 复制到 runId 临时目录，不打开系统文件界面"
+        },
+        "pathOpener": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "媒体资源场景不启动外部路径宿主"
+        },
+        "media": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "场景必须通过生产 dart_taglib native asset 读取、写入并重开匿名 MP3、FLAC 和 WAV"
+        },
+        "nativeChannels": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "桌面文件路径由 TagLib native asset 直接处理，不经过 Flutter MethodChannel"
+        },
+        "desktopProcess": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "媒体资源场景运行纯 Dart package 测试，不启动 LDDC 桌面应用"
+        },
+        "windowHost": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "媒体资源场景不创建窗口"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "每轮 TagLib 会话和后台 isolate 结束后临时文件必须可重命名并删除"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "*",
+      "scenario": "desktop_real_process",
+      "framework": "dart-process-e2e",
+      "capabilities": {
+        "filePicker": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "真实进程场景不打开系统文件界面"
+        },
+        "pathOpener": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "真实进程场景不启动外部路径宿主"
+        },
+        "media": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "真实媒体读写由独立平台资源场景覆盖"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "场景必须通过生产长度帧 codec 与真实 loopback 服务完成 hello、更新和删除实例"
+        },
+        "desktopProcess": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "场景必须验证隐藏主进程、服务端口 CLI、第二实例转发和最终正常退出"
+        },
+        "windowHost": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "进程 E2E 以隐藏服务运行，窗口数量由后续 UI driver 生命周期场景覆盖"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "最后实例删除后进程、socket 和 IPC 会话必须回到基线"
+        }
+      }
+    },
+    {
+      "profile": "live",
+      "platform": "*",
+      "scenario": "search_collection_flow",
+      "framework": "integration_test",
+      "capabilities": {
+        "network": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "集合搜索场景必须从真实歌词服务取得并校验结果"
+        }
+      }
+    },
+    {
+      "profile": "live",
+      "platform": "*",
+      "scenario": "search_song_flow",
+      "framework": "integration_test",
+      "capabilities": {
+        "network": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "歌曲搜索场景必须从真实歌词服务取得并校验结果"
+        },
+        "translation": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "歌曲搜索场景必须调用真实翻译服务并校验结果"
+        },
+        "media": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "歌曲搜索场景必须使用生产媒体实现读取匿名音频 fixture"
+        }
+      }
+    }
+  ]
+}

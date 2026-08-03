@@ -1,0 +1,33 @@
+/// LDDC 的通用 Flutter 歌词组件公共 API。
+library;
+
+export 'src/resources/bundled_ne_device_ids.dart';
+export 'src/drag_drop/drag_drop.dart';
+export 'src/drag_drop/desktop_drop_surface.dart';
+export 'src/lyrics/lyrics_preview_composer.dart';
+export 'src/search/search_android_saf_batch_save_lyrics_usecase.dart';
+export 'src/search/search_batch_save_lyrics_usecase.dart';
+export 'src/search/search_batch_save_models.dart';
+export 'src/search/search_dependencies.dart';
+export 'src/search/search_lyrics_selector_models.dart';
+export 'src/search/search_path_formatter.dart';
+export 'src/search/search_result_interaction_controller.dart';
+export 'src/search/search_source_descriptor.dart';
+export 'src/search/search_workflow_controller.dart';
+export 'src/search/search_workflow_state.dart';
+export 'src/search/ui/search_lyrics_selector_page.dart';
+export 'src/search/ui/search_notice_text.dart';
+export 'src/search/ui/search_preview_pane.dart';
+export 'src/search/ui/search_result_pane.dart';
+export 'src/search/ui/search_source_failure_dialog.dart';
+export 'src/search/ui/search_workspace.dart';
+export 'src/state/state.dart';
+export 'src/ui/lyrics_language_summary_text.dart';
+export 'src/ui/lyrics_ui_strings.dart';
+export 'src/ui/search_ui_strings.dart';
+export 'src/ui/widgets/lyrics_preview_controls.dart';
+export 'src/ui/widgets/lyrics_preview_viewport.dart';
+export 'src/ui/widgets/lyrics_translation_progress_overlay.dart';
+export 'src/ui/widgets/progress_panel.dart';
+export 'src/ui/widgets/search_toolbar.dart';
+export 'src/ui/widgets/translation_progress_ui.dart';

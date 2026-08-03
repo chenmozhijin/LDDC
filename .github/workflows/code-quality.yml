@@ -1,0 +1,188 @@
+name: Code Quality
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: code-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.47.0-0.2.pre
+
+jobs:
+  static-and-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+
+      - name: Resolve workspace dependencies
+        run: flutter pub get
+
+      - name: Check formatting and static analysis
+        run: |
+          dart format --output=none --set-exit-if-changed lddc packages examples tool
+          dart analyze
+          git diff --check
+
+      - name: Check architecture, localization, docs, and repository hygiene
+        run: |
+          dart run tool/check_modular_architecture.dart
+          python lddc/tool/check_l10n_arb.py
+          python tool/check_desktop_window_contract.py
+          python tool/check_public_docs.py
+          python tool/check_git_hygiene.py
+          python tool/test/verify_platform_fixtures.py \
+            --manifest lddc/integration_test/fixtures/media/manifest.json
+          python tool/test/check_native_test_isolation.py
+          python -m unittest tool.test.test_quality_tools
+
+      - name: Regenerate localization and reject generated drift
+        run: |
+          cd lddc
+          flutter gen-l10n
+          cd ..
+          git diff --exit-code -- lddc/lib/src/core/i18n/l10n
+
+      - name: Test architecture tooling
+        run: dart test tool/test/check_modular_architecture_test.dart
+
+      - name: Test desktop IPC protocol package
+        working-directory: packages/lddc_desktop_protocol
+        run: dart test test
+
+      - name: Prove replacement tests reject controlled faults
+        run: python tool/verify_test_sensitivity.py --output build/test_sensitivity.json
+
+      - name: Test lddc_lyrics_core with branch coverage
+        working-directory: packages/lddc_lyrics_core
+        run: |
+          mkdir -p reports coverage
+          dart test --exclude-tags full-benchmark --branch-coverage --coverage-path=coverage/lcov.info \
+            --file-reporter=json:reports/tests.jsonl
+
+      - name: Test lddc_lyrics_runtime with branch coverage
+        working-directory: packages/lddc_lyrics_runtime
+        run: |
+          mkdir -p reports coverage
+          dart test --branch-coverage --coverage-path=coverage/lcov.info \
+            --file-reporter=json:reports/tests.jsonl
+
+      - name: Test Flutter packages with branch coverage
+        run: |
+          cd packages/lddc_lyrics_flutter
+          mkdir -p reports coverage
+          flutter test test --branch-coverage --coverage-path=coverage/lcov.info \
+            --file-reporter=json:reports/tests.jsonl
+          cd ../lddc_desktop_lyrics
+          mkdir -p reports coverage
+          flutter test test --branch-coverage --coverage-path=coverage/lcov.info \
+            --file-reporter=json:reports/tests.jsonl
+
+      - name: Test application with branch coverage
+        working-directory: lddc
+        run: |
+          mkdir -p reports coverage
+          flutter test test --exclude-tags live --branch-coverage \
+            --coverage-path=coverage/lcov.info \
+            --file-reporter=json:reports/tests.jsonl
+
+      - name: Convert test event streams to JUnit
+        run: |
+          python tool/test/json_report_to_junit.py \
+            --input packages/lddc_lyrics_core/reports/tests.jsonl \
+            --output packages/lddc_lyrics_core/reports/tests.xml
+          python tool/test/json_report_to_junit.py \
+            --input packages/lddc_lyrics_runtime/reports/tests.jsonl \
+            --output packages/lddc_lyrics_runtime/reports/tests.xml
+          python tool/test/json_report_to_junit.py \
+            --input packages/lddc_lyrics_flutter/reports/tests.jsonl \
+            --output packages/lddc_lyrics_flutter/reports/tests.xml
+          python tool/test/json_report_to_junit.py \
+            --input packages/lddc_desktop_lyrics/reports/tests.jsonl \
+            --output packages/lddc_desktop_lyrics/reports/tests.xml
+          python tool/test/json_report_to_junit.py \
+            --input lddc/reports/tests.jsonl \
+            --output lddc/reports/tests.xml
+
+      - name: Enforce package coverage thresholds
+        run: |
+          # 当前实测值作为只升不降的首个基线；目标值记录在 tool/coverage_thresholds.json。
+          python tool/check_coverage.py \
+            --input packages/lddc_lyrics_core/coverage/lcov.info=packages/lddc_lyrics_core \
+            --require-source-root packages/lddc_lyrics_core/lib=packages/lddc_lyrics_core/lib \
+            --threshold-config tool/coverage_thresholds.json --scope lddc_lyrics_core
+          python tool/check_coverage.py \
+            --input packages/lddc_lyrics_runtime/coverage/lcov.info=packages/lddc_lyrics_runtime \
+            --require-source-root packages/lddc_lyrics_runtime/lib=packages/lddc_lyrics_runtime/lib \
+            --threshold-config tool/coverage_thresholds.json --scope lddc_lyrics_runtime
+          python tool/check_coverage.py \
+            --input packages/lddc_lyrics_flutter/coverage/lcov.info=packages/lddc_lyrics_flutter \
+            --require-source-root packages/lddc_lyrics_flutter/lib=packages/lddc_lyrics_flutter/lib \
+            --threshold-config tool/coverage_thresholds.json --scope lddc_lyrics_flutter
+          python tool/check_coverage.py \
+            --input packages/lddc_desktop_lyrics/coverage/lcov.info=packages/lddc_desktop_lyrics \
+            --require-source-root packages/lddc_desktop_lyrics/lib=packages/lddc_desktop_lyrics/lib \
+            --threshold-config tool/coverage_thresholds.json --scope lddc_desktop_lyrics
+          python tool/check_coverage.py \
+            --input lddc/coverage/lcov.info=lddc \
+            --require-source-root lddc/lib/src/core=lddc/lib/src/core \
+            --require-source-root lddc/lib/src/features=lddc/lib/src/features \
+            --threshold-config tool/coverage_thresholds.json --scope application
+
+      - name: Build changed-lines diff
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        run: |
+          mkdir -p build
+          BASE_SHA="${PR_BASE:-$PUSH_BASE}"
+          if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]] \
+            && git cat-file -e "$BASE_SHA^{commit}" \
+            && git merge-base "$BASE_SHA" "$GITHUB_SHA" >/dev/null; then
+            git diff --unified=0 "$BASE_SHA" "$GITHUB_SHA" -- '*.dart' > build/changed.diff
+          elif git rev-parse "$GITHUB_SHA^" >/dev/null 2>&1; then
+            git diff --unified=0 "$GITHUB_SHA^" "$GITHUB_SHA" -- '*.dart' > build/changed.diff
+          else
+            # orphan 根提交没有可比较基线；后续提交继续执行 80% 改动行门禁。
+            : > build/changed.diff
+            echo "changed-lines coverage: not applicable for root/unrelated history"
+          fi
+
+      - name: Enforce changed-lines coverage
+        run: |
+          python tool/check_coverage.py \
+            --input packages/lddc_lyrics_core/coverage/lcov.info=packages/lddc_lyrics_core \
+            --input packages/lddc_lyrics_runtime/coverage/lcov.info=packages/lddc_lyrics_runtime \
+            --input packages/lddc_lyrics_flutter/coverage/lcov.info=packages/lddc_lyrics_flutter \
+            --input packages/lddc_desktop_lyrics/coverage/lcov.info=packages/lddc_desktop_lyrics \
+            --input lddc/coverage/lcov.info=lddc \
+            --diff build/changed.diff \
+            --threshold-config tool/coverage_thresholds.json
+
+      - name: Upload failed quality diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: code-quality-diagnostics
+          path: |
+            **/reports/**
+            **/coverage/lcov.info
+            build/changed.diff
+            build/test_sensitivity.json
+          if-no-files-found: ignore
+          retention-days: 7

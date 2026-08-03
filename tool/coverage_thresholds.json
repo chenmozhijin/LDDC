@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "changedLines": 80,
+  "scopes": {
+    "lddc_lyrics_core": {
+      "minimumLine": 85,
+      "minimumBranch": 75,
+      "targetLine": 85,
+      "targetBranch": 75
+    },
+    "lddc_lyrics_runtime": {
+      "minimumLine": 81,
+      "minimumBranch": 70,
+      "targetLine": 80,
+      "targetBranch": 70
+    },
+    "lddc_lyrics_flutter": {
+      "minimumLine": 75,
+      "minimumBranch": 65,
+      "targetLine": 75,
+      "targetBranch": 65
+    },
+    "lddc_desktop_lyrics": {
+      "minimumLine": 64,
+      "minimumBranch": 56,
+      "targetLine": 80,
+      "targetBranch": 70
+    },
+    "application": {
+      "minimumLine": 76,
+      "minimumBranch": 61,
+      "targetLine": 76,
+      "targetBranch": 65
+    }
+  }
+}

@@ -1,0 +1,23 @@
+name: lddc_lyrics_core
+description: LDDC 的纯 Dart 歌词模型、解析、转换、算法与加解密能力。
+version: 0.1.0-dev.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  archive: ^4.0.9
+  characters: ^1.4.1
+  charset_codec: ^0.1.1
+  charset_normalizer_dart: ^0.1.0
+  collection: ^1.19.1
+  crypto: ^3.0.7
+  path: ^1.9.1
+  pointycastle: ^4.0.0
+  unorm_dart: ^0.3.2
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.1
