@@ -65,7 +65,7 @@ $environmentNames = @(
   "LDDC_IT_RUN_ID", "LDDC_IT_PLATFORM",
   "LDDC_PROCESS_E2E_APP_EXE", "LDDC_NATIVE_EVIDENCE_DIR",
   "LDDC_NATIVE_LOG_DIR", "LDDC_PROCESS_E2E_PID_FILE",
-  "LDDC_PROCESS_E2E_INFO_FILE",
+  "LDDC_PROCESS_E2E_INFO_FILE", "LDDC_PROCESS_E2E_CONTROL_FILE",
   "LDDC_PROCESS_E2E_APPDATA", "LDDC_PROCESS_E2E_LOCALAPPDATA",
   "LDDC_PROCESS_E2E_HOME", "LDDC_PROCESS_E2E_XDG_CONFIG_HOME",
   "LDDC_PROCESS_E2E_XDG_CACHE_HOME", "LDDC_PROCESS_E2E_XDG_DATA_HOME",
@@ -131,6 +131,11 @@ $env:LDDC_PROCESS_E2E_INFO_FILE = switch ($Platform) {
   "windows" { Join-Path $env:LDDC_PROCESS_E2E_LOCALAPPDATA "LDDC/info.json" }
   "linux" { Join-Path $env:LDDC_PROCESS_E2E_XDG_DATA_HOME "LDDC/info.json" }
   "macos" { Join-Path $macosApplicationDataRoot "info.json" }
+}
+$env:LDDC_PROCESS_E2E_CONTROL_FILE = if ($Platform -eq "macos") {
+  Join-Path $macosApplicationDataRoot "runtime/control.json"
+} else {
+  ""
 }
 $runStartedAt = Get-Date
 

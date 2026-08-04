@@ -128,6 +128,17 @@ function Invoke-RequiredSimctl {
   return $output
 }
 
+function Get-PlatformTestContainer {
+  $containerOutput = Invoke-RequiredSimctl `
+    -Stage "resolve-app-container" `
+    -CommandArguments @("get_app_container", $Device, "com.cmzj.lddc.platformtests", "data")
+  $resolvedContainer = (($containerOutput) -join "").Trim()
+  if ([string]::IsNullOrWhiteSpace($resolvedContainer)) {
+    throw "无法取得 iOS 平台测试应用容器"
+  }
+  return $resolvedContainer
+}
+
 function Ensure-SimulatorBooted {
   param([Parameter(Mandatory = $true)][string]$Stage)
 
@@ -187,6 +198,56 @@ function Add-EvidenceFailure {
     ($payload | ConvertTo-Json -Depth 20),
     [Text.UTF8Encoding]::new($false)
   )
+}
+
+function Add-SummaryFailure {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$SummaryPath,
+    [Parameter(Mandatory = $true)]
+    [string]$Message
+  )
+
+  $payload = Get-Content -LiteralPath $SummaryPath -Raw | ConvertFrom-Json
+  $existing = if ($payload.PSObject.Properties.Name -contains "error") {
+    [string]$payload.error
+  } else {
+    ""
+  }
+  $payload.totalTestCount = [Math]::Max(1, [int]$payload.totalTestCount)
+  $payload.passedTests = 0
+  $payload.failedTests = [Math]::Max(1, [int]$payload.failedTests)
+  $errorMessage = if ([string]::IsNullOrWhiteSpace($existing)) {
+    $Message
+  } else {
+    "$existing; $Message"
+  }
+  if ($payload.PSObject.Properties.Name -contains "error") {
+    $payload.error = $errorMessage
+  } else {
+    $payload | Add-Member -NotePropertyName error -NotePropertyValue $errorMessage
+  }
+  [IO.File]::WriteAllText(
+    $SummaryPath,
+    ($payload | ConvertTo-Json -Depth 20),
+    [Text.UTF8Encoding]::new($false)
+  )
+}
+
+function Add-PostconditionFailure {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$EvidencePath,
+    [Parameter(Mandatory = $true)]
+    [string]$SummaryPath,
+    [Parameter(Mandatory = $true)]
+    [string]$Message
+  )
+
+  # 文件正文、hash 和临时资源属于 XCTest 之外的宿主后验条件。它们失败时必须
+  # 同时更新 evidence 与 summary，使统一报告、JUnit 和退出码保持一致。
+  Add-EvidenceFailure -EvidencePath $EvidencePath -Message $Message
+  Add-SummaryFailure -SummaryPath $SummaryPath -Message $Message
 }
 
 function Add-SimulatorEvidence {
@@ -330,13 +391,7 @@ try {
   Invoke-RequiredSimctl `
     -Stage "install-platform-test-app" `
     -CommandArguments @("install", $Device, $appBundle.FullName) | Out-Null
-  $containerOutput = Invoke-RequiredSimctl `
-    -Stage "resolve-app-container" `
-    -CommandArguments @("get_app_container", $Device, "com.cmzj.lddc.platformtests", "data")
-  $container = (($containerOutput) -join "").Trim()
-  if ([string]::IsNullOrWhiteSpace($container)) {
-    throw "无法取得 iOS 平台测试应用容器"
-  }
+  $container = Get-PlatformTestContainer
   $documents = Join-Path $container "Documents"
   New-Item -ItemType Directory -Force -Path $documents | Out-Null
   Copy-Item -LiteralPath $fixture -Destination (Join-Path $documents "audio_sample.mp3") -Force
@@ -406,82 +461,99 @@ try {
       $evidencePath = Get-Item -LiteralPath $fallbackEvidence
     }
     Add-SimulatorEvidence -EvidencePath $evidencePath.FullName
-    if ($scenario -eq "ios_document_picker_select") {
-      # XCUITest 写入的是测试 app Documents 中的真实文件。测试返回后由宿主计算
-      # 最终摘要并写入结构化 evidence，避免把 Simulator 绝对路径带入报告。
-      $selectedFixture = Join-Path $documents "audio_sample.mp3"
-      if (-not (Test-Path -LiteralPath $selectedFixture -PathType Leaf)) {
-        throw "iOS 写入后 fixture 不存在"
-      }
-      $evidencePayload = Get-Content -LiteralPath $evidencePath.FullName -Raw | ConvertFrom-Json
-      $evidencePayload.artifacts = @(
-        [ordered]@{
-          name = "audio_sample.mp3"
-          size = (Get-Item -LiteralPath $selectedFixture).Length
-          sha256 = (Get-FileHash -LiteralPath $selectedFixture -Algorithm SHA256).Hash.ToLowerInvariant()
-        }
-      )
-      [IO.File]::WriteAllText(
-        $evidencePath.FullName,
-        ($evidencePayload | ConvertTo-Json -Depth 20),
-        [Text.UTF8Encoding]::new($false)
-      )
-    } elseif ($scenario -eq "ios_document_picker_export") {
-      $exportedFiles = @(
-        Get-ChildItem -LiteralPath $documents -File `
-          | Where-Object { $_.Extension.Equals(".lrc", [StringComparison]::OrdinalIgnoreCase) }
-      )
-      if ($exportedFiles.Count -ne 1) {
-        Add-EvidenceFailure `
-          -EvidencePath $evidencePath.FullName `
-          -Message "iOS 导出场景应生成且只生成一个 LRC，实际为 $($exportedFiles.Count)"
-      } else {
-        $exportedFile = $exportedFiles[0]
-        if ($exportedFile.Name -match '^[0-9a-fA-F-]{36}-') {
-          Add-EvidenceFailure `
-            -EvidencePath $evidencePath.FullName `
-            -Message "iOS 导出文件名泄露了内部临时 UUID"
-        }
-        $exportedText = Get-Content -LiteralPath $exportedFile.FullName -Raw
-        if (-not $exportedText.Contains("Hello LDDC", [StringComparison]::Ordinal)) {
-          Add-EvidenceFailure `
-            -EvidencePath $evidencePath.FullName `
-            -Message "iOS 导出文件缺少预期歌词正文"
-        }
-        $evidencePayload = Get-Content -LiteralPath $evidencePath.FullName -Raw | ConvertFrom-Json
-        $evidencePayload.artifacts = @(
-          [ordered]@{
-            name = $exportedFile.Name
-            size = $exportedFile.Length
-            sha256 = (Get-FileHash -LiteralPath $exportedFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $effectiveExitCode = $testExitCode
+    if ($testExitCode -eq 0) {
+      try {
+        # Xcode 可能在 UI 测试安装阶段更换 Simulator data container。后验检查必须
+        # 重新解析当前容器，不能继续使用测试前缓存的绝对路径。
+        $postTestContainer = Get-PlatformTestContainer
+        $postTestDocuments = Join-Path $postTestContainer "Documents"
+        if ($scenario -eq "ios_document_picker_select") {
+          # XCUITest 写入的是测试 app Documents 中的真实文件。测试返回后由宿主计算
+          # 最终摘要并写入结构化 evidence，避免把 Simulator 绝对路径带入报告。
+          $selectedFixture = Join-Path $postTestDocuments "audio_sample.mp3"
+          if (-not (Test-Path -LiteralPath $selectedFixture -PathType Leaf)) {
+            $message = "iOS 写入后 fixture 不存在"
+            Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
+            $effectiveExitCode = 1
+          } else {
+            $evidencePayload = Get-Content -LiteralPath $evidencePath.FullName -Raw | ConvertFrom-Json
+            $evidencePayload.artifacts = @(
+              [ordered]@{
+                name = "audio_sample.mp3"
+                size = (Get-Item -LiteralPath $selectedFixture).Length
+                sha256 = (Get-FileHash -LiteralPath $selectedFixture -Algorithm SHA256).Hash.ToLowerInvariant()
+              }
+            )
+            [IO.File]::WriteAllText(
+              $evidencePath.FullName,
+              ($evidencePayload | ConvertTo-Json -Depth 20),
+              [Text.UTF8Encoding]::new($false)
+            )
           }
-        )
-        [IO.File]::WriteAllText(
-          $evidencePath.FullName,
-          ($evidencePayload | ConvertTo-Json -Depth 20),
-          [Text.UTF8Encoding]::new($false)
-        )
-        # 导出产物已完成正文与摘要验证，删除测试容器副本，防止影响后续取消场景。
-        Remove-Item -LiteralPath $exportedFile.FullName -Force
-      }
-    } elseif ($scenario -in @("ios_document_picker_export_cancel", "ios_document_picker_export_termination")) {
-      $unexpectedExports = @(
-        Get-ChildItem -LiteralPath $documents -File `
-          | Where-Object { $_.Extension.Equals(".lrc", [StringComparison]::OrdinalIgnoreCase) }
-      )
-      if ($unexpectedExports.Count -ne 0) {
-        Add-EvidenceFailure `
-          -EvidencePath $evidencePath.FullName `
-          -Message "iOS 取消或终止导出后残留了用户输出文件"
-      }
-    }
-    $temporaryExportRoot = Join-Path $container "tmp/lddc_search_exports"
-    if (Test-Path -LiteralPath $temporaryExportRoot) {
-      $temporaryExportEntries = @(Get-ChildItem -LiteralPath $temporaryExportRoot -Force)
-      if ($temporaryExportEntries.Count -ne 0) {
-        Add-EvidenceFailure `
-          -EvidencePath $evidencePath.FullName `
-          -Message "iOS 场景 $scenario 结束后仍残留临时导出资源"
+        } elseif ($scenario -eq "ios_document_picker_export") {
+          $exportedFiles = @(
+            Get-ChildItem -LiteralPath $postTestDocuments -File `
+              | Where-Object { $_.Extension.Equals(".lrc", [StringComparison]::OrdinalIgnoreCase) }
+          )
+          if ($exportedFiles.Count -ne 1) {
+            $message = "iOS 导出场景应生成且只生成一个 LRC，实际为 $($exportedFiles.Count)"
+            Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
+            $effectiveExitCode = 1
+          } else {
+            $exportedFile = $exportedFiles[0]
+            if ($exportedFile.Name -match '^[0-9a-fA-F-]{36}-') {
+              $message = "iOS 导出文件名泄露了内部临时 UUID"
+              Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
+              $effectiveExitCode = 1
+            }
+            $exportedText = Get-Content -LiteralPath $exportedFile.FullName -Raw
+            if (-not $exportedText.Contains("Hello LDDC", [StringComparison]::Ordinal)) {
+              $message = "iOS 导出文件缺少预期歌词正文"
+              Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
+              $effectiveExitCode = 1
+            }
+            $evidencePayload = Get-Content -LiteralPath $evidencePath.FullName -Raw | ConvertFrom-Json
+            $evidencePayload.artifacts = @(
+              [ordered]@{
+                name = $exportedFile.Name
+                size = $exportedFile.Length
+                sha256 = (Get-FileHash -LiteralPath $exportedFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              }
+            )
+            [IO.File]::WriteAllText(
+              $evidencePath.FullName,
+              ($evidencePayload | ConvertTo-Json -Depth 20),
+              [Text.UTF8Encoding]::new($false)
+            )
+            # 导出产物已完成正文与摘要验证，删除测试容器副本，防止影响后续取消场景。
+            Remove-Item -LiteralPath $exportedFile.FullName -Force
+          }
+        } elseif ($scenario -in @("ios_document_picker_export_cancel", "ios_document_picker_export_termination")) {
+          $unexpectedExports = @(
+            Get-ChildItem -LiteralPath $postTestDocuments -File `
+              | Where-Object { $_.Extension.Equals(".lrc", [StringComparison]::OrdinalIgnoreCase) }
+          )
+          if ($unexpectedExports.Count -ne 0) {
+            $message = "iOS 取消或终止导出后残留了用户输出文件"
+            Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
+            $effectiveExitCode = 1
+          }
+        }
+        $temporaryExportRoot = Join-Path $postTestContainer "tmp/lddc_search_exports"
+        if (Test-Path -LiteralPath $temporaryExportRoot) {
+          $temporaryExportEntries = @(Get-ChildItem -LiteralPath $temporaryExportRoot -Force)
+          if ($temporaryExportEntries.Count -ne 0) {
+            $message = "iOS 场景 $scenario 结束后仍残留临时导出资源"
+            Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
+            $effectiveExitCode = 1
+          }
+        }
+      } catch {
+        # 宿主后验检查失败不能覆盖已完成的 XCTest 结果，也不能中断后续独立场景。
+        $message = "iOS 场景 $scenario 后验检查失败: $($_.Exception.Message)"
+        Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
+        $effectiveExitCode = 1
       }
     }
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
@@ -490,14 +562,14 @@ try {
       --raw-report $summaryPath `
       --raw-report-type xcresult-summary `
       --framework xcuitest `
-      --exit-code $testExitCode `
+      --exit-code $effectiveExitCode `
       --evidence $evidencePath.FullName `
       --matrix $matrix
     $normalizeExitCode = $LASTEXITCODE
     $junitPath = Join-Path $junitDir "$scenario.xml"
     & python $junitConverter --input $summaryPath --output $junitPath --scenario $scenario
     $junitExitCode = $LASTEXITCODE
-    if ($testExitCode -ne 0 -or $normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
+    if ($effectiveExitCode -ne 0 -or $normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
       # Document Picker 的选择、取消、导出和生命周期场景彼此独立。单个失败
       # 不能阻断后续证据收集，但最终退出码仍必须失败，避免 CI 假绿。
       $overallExitCode = 1

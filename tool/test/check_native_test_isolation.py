@@ -265,9 +265,14 @@ def failures() -> list[str]:
         "testDocumentPickerExportCancellationCleansTemporaryFile",
         "testTerminatedExportIsCleanedOnNextLaunch",
         "stale_export_removed_on_next_launch",
+        "systemPickerRoots",
+        '"On My iPhone"',
+        'private let platformTestDisplayName = "LDDC Platform Tests"',
     ):
         if marker not in ios_ui_test:
             problems.append(f"iOS 导出与清理场景缺少: {marker}")
+    if "documents.wait(for: .runningForeground" in ios_ui_test:
+        problems.append("iOS Document Picker 禁止依赖 DocumentsApp 前台进程状态")
 
     capability_matrix = json.loads(
         (ROOT / "tool/test/platform_capability_matrix.json").read_text(encoding="utf-8")
@@ -686,6 +691,10 @@ def failures() -> list[str]:
         "Get-SimulatorMetadata",
         'simulator = $simulatorMetadata',
         '"-parallel-testing-enabled", "NO"',
+        "Get-PlatformTestContainer",
+        "Add-PostconditionFailure",
+        "if ($testExitCode -eq 0)",
+        "--exit-code $effectiveExitCode",
     ):
         if required not in ios_runner:
             problems.append(f"iOS runner 缺少 Simulator 证据或串行测试契约: {required}")

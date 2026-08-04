@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart' show ValueKey;
@@ -6,7 +7,9 @@ import 'package:lddc/src/app/shell/app_shell_route.dart';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc_lyrics_flutter/lddc_lyrics_flutter.dart';
 import 'package:lddc/src/features/search/application/search_workflow_providers.dart'
-    show searchWorkflowControllerProvider;
+    show
+        searchWorkflowControllerInstanceProvider,
+        searchWorkflowControllerProvider;
 import 'package:lddc/src/features/search/presentation/search_page.dart';
 import 'package:path/path.dart' as p;
 
@@ -266,13 +269,50 @@ void main() {
         await runStepWithTimeout(
           () async {
             await search.enterKeyword('');
-            await search.submitSearch();
-            await pumpUntilVisible(
+            await pumpUntil(
               tester,
-              find.byKey(const ValueKey<String>('search_notice_emptyKeyword')),
-              timeout: runtime.defaultStepTimeout,
-              reason: '等待空关键词提示出现',
+              () => searchContainer
+                  .read(searchWorkflowControllerProvider)
+                  .keyword
+                  .isEmpty,
+              timeout: const Duration(seconds: 5),
+              reason: '等待空关键词同步到搜索状态',
             );
+
+            final SearchWorkflowController controller = searchContainer.read(
+              searchWorkflowControllerInstanceProvider,
+            );
+            final Completer<SearchWorkflowState> noticeEvent =
+                Completer<SearchWorkflowState>();
+            final StreamSubscription<SearchWorkflowState> subscription =
+                controller.states.listen((SearchWorkflowState state) {
+                  if (!noticeEvent.isCompleted &&
+                      state.notice?.code == SearchNoticeCode.emptyKeyword) {
+                    noticeEvent.complete(state);
+                  }
+                });
+            try {
+              // states 是 async* 适配器；先完成一次 pump，确保监听已经接到内部
+              // 同步状态流，再点击搜索。否则极快的空关键词分支可能在订阅建立前
+              // 已被页面消费，测试只剩对瞬时 SnackBar 的脆弱等待。
+              await tester.pump();
+              await search.submitSearch();
+              final SearchWorkflowState emittedState = await noticeEvent.future
+                  .timeout(runtime.defaultStepTimeout);
+              expect(emittedState.keyword, isEmpty);
+              expect(emittedState.notice?.code, SearchNoticeCode.emptyKeyword);
+              expect(emittedState.isSearching, isFalse);
+              await pumpUntilVisible(
+                tester,
+                find.byKey(
+                  const ValueKey<String>('search_notice_emptyKeyword'),
+                ),
+                timeout: runtime.defaultStepTimeout,
+                reason: '等待空关键词提示出现',
+              );
+            } finally {
+              await subscription.cancel();
+            }
           },
           // 内部可见性等待会在 defaultStepTimeout 给出具体失败原因；外层预算
           // 必须略大，避免两个相同计时器同时触发后遗留仍在 pump 的 Future，

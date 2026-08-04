@@ -46,6 +46,9 @@ class DocumentsUiPlatformPocTest {
         private const val FIXTURE_DIRECTORY = "LDDCPlatformTest"
         private const val FIXTURE_PROVIDER_TITLE = "LDDC Platform Fixtures"
         private const val TIMEOUT_MS = 15_000L
+        private const val RESOURCE_SETTLE_TIMEOUT_MS = 10_000L
+        private const val RESOURCE_SAMPLE_INTERVAL_MS = 100L
+        private const val RESOURCE_STABLE_SAMPLE_COUNT = 3
         private const val EVIDENCE_LOG_TAG = "LDDC_NATIVE_EVIDENCE"
         private const val EVIDENCE_LOG_PREFIX = "LDDC_EVIDENCE"
         private const val EVIDENCE_LOG_CHUNK_SIZE = 2_400
@@ -780,7 +783,11 @@ class DocumentsUiPlatformPocTest {
         }
         val final =
             try {
-                activityResourceSnapshot()
+                if (failure == null) {
+                    waitForActivityResourcesToReturnToBaseline(baseline)
+                } else {
+                    activityResourceSnapshot()
+                }
             } catch (error: Throwable) {
                 failure = failure ?: error
                 emptyMap()
@@ -801,6 +808,26 @@ class DocumentsUiPlatformPocTest {
             failure = failure,
         )
         failure?.let { throw it }
+    }
+
+    private fun waitForActivityResourcesToReturnToBaseline(
+        baseline: Map<String, Int>,
+    ): Map<String, Int> {
+        val deadline = System.currentTimeMillis() + RESOURCE_SETTLE_TIMEOUT_MS
+        var latest = activityResourceSnapshot()
+        var stableSamples = 0
+        while (System.currentTimeMillis() < deadline) {
+            latest = activityResourceSnapshot()
+            stableSamples = if (latest == baseline) stableSamples + 1 else 0
+            if (stableSamples >= RESOURCE_STABLE_SAMPLE_COUNT) {
+                return latest
+            }
+            // DocumentsUI 返回后，生产 LocalMatch controller 会继续 await 真实
+            // SAF 元数据扫描。等待连续样本稳定只消除“Future 尚未完成”的取样竞态；
+            // 真正遗漏 closeFd 时计数不会回零，仍会在固定期限后按资源泄漏失败。
+            Thread.sleep(RESOURCE_SAMPLE_INTERVAL_MS)
+        }
+        return latest
     }
 
     private fun activityResourceSnapshot(): Map<String, Int> {

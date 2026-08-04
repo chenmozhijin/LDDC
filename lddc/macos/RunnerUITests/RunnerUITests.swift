@@ -58,7 +58,7 @@ final class RunnerUITests: XCTestCase {
       try require(waitForRunningApplication(app, timeout: 15), "Flutter integration_test 没有保持 LDDC 运行")
       let panel = app.sheets.firstMatch
       try require(panel.waitForExistence(timeout: 20), "Flutter 没有打开可访问的生产 NSOpenPanel")
-      operation(app, panel)
+      try operation(app, panel)
       try require(waitForElementToDisappear(panel, timeout: 15), "NSOpenPanel 操作后没有关闭")
       nativeDialogClosed = true
       addAction(&actions, capability: "filePicker", action: action)

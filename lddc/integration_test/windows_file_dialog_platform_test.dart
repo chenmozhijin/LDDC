@@ -154,7 +154,7 @@ void main() {
           );
         }
 
-        await reporter.runStep('release_native_accessibility_client', () async {
+        await reporter.runStep('release_native_automation_client', () async {
           await pumpUntil(
             tester,
             () => File(
@@ -163,18 +163,10 @@ void main() {
             timeout: runtime.defaultStepTimeout,
             reason: '等待 FlaUI 释放 UIA3 automation 客户端',
           );
-          expect(
-            tester.binding.platformDispatcher.semanticsEnabled,
-            isTrue,
-            reason: 'FlaUI 必须已通过真实 UIA 连接启用 Windows 平台语义',
-          );
-          // Flutter Windows engine 在 UIA 客户端断开后仍会把本进程的
-          // semanticsEnabled 保持为 true。Flutter Test 无法区分该平台持有句柄
-          // 与测试自己遗漏的句柄，因此只在已收到 Automation.Dispose 证据后，
-          // 通过公开 TestPlatformDispatcher 覆盖触发标准回调释放平台句柄。
-          // testWidgets 本身禁用 semantics，随后 outstanding 仍非零就是真泄漏。
-          tester.binding.platformDispatcher.semanticsEnabledTestValue = false;
-          await tester.pump();
+          // Hybrid 边界要求 FlaUI 只连接系统 IFileDialog，不连接
+          // Flutter 的 UIA provider。因此 platformDispatcher.semanticsEnabled
+          // 不应被 FlaUI 改变；这里只核对 testWidgets 自身没有遗留
+          // semantics 句柄，原生客户端释放则由上面的 marker 证明。
           expect(tester.binding.debugOutstandingSemanticsHandles, 0);
         });
       });

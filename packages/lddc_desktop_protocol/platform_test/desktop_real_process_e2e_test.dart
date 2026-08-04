@@ -46,7 +46,31 @@ void main() {
       // info.json 在 claim mutex/Unix socket 之前写入。先等待生产 bootstrap
       // 到达该明确里程碑，再留出一个短轮询周期完成 claim；若直接启动端口 CLI，
       // CLI 会把“首进程尚未 claim”误判为无服务并额外拉起后台主进程。
-      await _waitForPrimaryBootstrap(hiddenPrimary, environment.infoFile);
+      await _waitForPrimaryBootstrap(
+        hiddenPrimary,
+        environment.infoFile,
+        controlFile: environment.controlFile,
+      );
+
+      int? directlyProbedPort;
+      final File? controlFile = environment.controlFile;
+      if (controlFile != null) {
+        final bool primaryAlive = await _isProcessAlive(hiddenPrimary);
+        evidence
+          ..diagnostic('controlFileObserved', await controlFile.exists())
+          ..diagnostic('primaryAliveAtControlProbe', primaryAlive)
+          ..diagnostic('directControlProbeSucceeded', false);
+        if (!primaryAlive) {
+          throw StateError('macOS 隐藏主进程在 control endpoint 探测前退出');
+        }
+        directlyProbedPort = await _probeMacOsControlEndpoint(controlFile);
+        evidence
+          ..diagnostic('directControlProbeSucceeded', true)
+          ..add(
+            'desktopProcess',
+            'macos_control_endpoint_direct_probe_completed',
+          );
+      }
 
       final _ProcessResult portResult = await _runBoundedProcess(
         environment.executable,
@@ -58,6 +82,13 @@ void main() {
       expect(portResult.exitCode, 0, reason: portResult.stderr);
       final int port = _parseServicePort(portResult);
       expect(port, inInclusiveRange(1, 65535));
+      if (directlyProbedPort != null) {
+        expect(
+          port,
+          directlyProbedPort,
+          reason: 'macOS CLI 与 control.json 直接探针必须解析到同一业务端口',
+        );
+      }
       evidence.add('desktopProcess', 'service_port_cli_resolved_primary');
 
       socket = await Socket.connect(
@@ -165,7 +196,11 @@ void main() {
             environment.logDirectory.file('forwarding-primary-stderr.log'),
           ),
         );
-      await _waitForPrimaryBootstrap(forwardingPrimary, environment.infoFile);
+      await _waitForPrimaryBootstrap(
+        forwardingPrimary,
+        environment.infoFile,
+        controlFile: environment.controlFile,
+      );
 
       final _ProcessResult secondaryResult = await _runBoundedProcess(
         environment.executable,
@@ -184,6 +219,26 @@ void main() {
     } on Object catch (error, stackTrace) {
       failure = error;
       failureStack = stackTrace;
+      final Process? hiddenPrimary = primaryProcesses.isEmpty
+          ? null
+          : primaryProcesses.first;
+      if (hiddenPrimary != null) {
+        final bool isAlive = await _isProcessAlive(hiddenPrimary);
+        evidence.diagnostic('primaryAliveAtFailure', isAlive);
+        if (!isAlive) {
+          evidence.diagnostic(
+            'primaryExitCodeAtFailure',
+            await hiddenPrimary.exitCode,
+          );
+        }
+      }
+      final File? controlFile = environment.controlFile;
+      if (controlFile != null) {
+        evidence.diagnostic(
+          'controlFileExistsAtFailure',
+          await controlFile.exists(),
+        );
+      }
     } finally {
       await reader?.dispose();
       socket?.destroy();
@@ -215,6 +270,13 @@ void main() {
       if (environment.pidFile.existsSync()) {
         environment.pidFile.deleteSync();
       }
+      final File? controlFile = environment.controlFile;
+      if (controlFile != null) {
+        evidence.diagnostic(
+          'controlFileExistsAfterProcessCleanup',
+          await controlFile.exists(),
+        );
+      }
       await evidence.write(failure, finalChildProcessCount);
     }
     if (failure != null) {
@@ -231,6 +293,7 @@ final class _ProcessE2eEnvironment {
     required this.platform,
     required this.evidenceFile,
     required this.infoFile,
+    required this.controlFile,
     required this.pidFile,
     required this.logDirectory,
     required this.appEnvironment,
@@ -242,6 +305,7 @@ final class _ProcessE2eEnvironment {
   final String platform;
   final File evidenceFile;
   final File infoFile;
+  final File? controlFile;
   final File pidFile;
   final Directory logDirectory;
   final Map<String, String> appEnvironment;
@@ -258,15 +322,19 @@ final class _ProcessE2eEnvironment {
     final Directory logDirectory = Directory(
       _requiredEnvironment('LDDC_NATIVE_LOG_DIR'),
     )..createSync(recursive: true);
+    final String platform = _requiredEnvironment('LDDC_IT_PLATFORM');
     return _ProcessE2eEnvironment(
       executable: executableFile.path,
       workingDirectory: executableFile.parent.path,
       runId: _requiredEnvironment('LDDC_IT_RUN_ID'),
-      platform: _requiredEnvironment('LDDC_IT_PLATFORM'),
+      platform: platform,
       evidenceFile: File(
         '${evidenceDirectory.path}${Platform.pathSeparator}desktop_real_process.json',
       ),
       infoFile: File(_requiredEnvironment('LDDC_PROCESS_E2E_INFO_FILE')),
+      controlFile: platform == 'macos'
+          ? File(_requiredEnvironment('LDDC_PROCESS_E2E_CONTROL_FILE'))
+          : null,
       pidFile: File(_requiredEnvironment('LDDC_PROCESS_E2E_PID_FILE')),
       logDirectory: logDirectory,
       appEnvironment: <String, String>{
@@ -293,11 +361,20 @@ final class _ProcessEvidence {
   final _ProcessE2eEnvironment environment;
   final Map<String, List<Map<String, Object?>>> _actions =
       <String, List<Map<String, Object?>>>{};
+  final Map<String, Object?> _diagnostics = <String, Object?>{};
 
-  void add(String capability, String action) {
+  void add(
+    String capability,
+    String action, {
+    Map<String, Object?> details = const <String, Object?>{},
+  }) {
     _actions.putIfAbsent(capability, () => <Map<String, Object?>>[]).add(
-      <String, Object?>{'action': action},
+      <String, Object?>{'action': action, ...details},
     );
+  }
+
+  void diagnostic(String name, Object? value) {
+    _diagnostics[name] = value;
   }
 
   Future<void> write(Object? failure, int finalChildProcessCount) async {
@@ -321,7 +398,8 @@ final class _ProcessEvidence {
         'thresholds': <String, Object?>{'childProcessCount': 0},
       },
       'artifacts': <Object?>[],
-      'extra': <String, Object?>{},
+      // 诊断只保存结果级布尔值、退出码和端口；绝不复制 endpoint 路径或 token。
+      'extra': Map<String, Object?>.unmodifiable(_diagnostics),
     };
     final File temporary = File('${environment.evidenceFile.path}.tmp');
     await temporary.writeAsString(
@@ -456,19 +534,83 @@ Future<bool> _isProcessAlive(Process process) async {
   }
 }
 
-Future<void> _waitForPrimaryBootstrap(Process process, File infoFile) async {
+Future<void> _waitForPrimaryBootstrap(
+  Process process,
+  File infoFile, {
+  File? controlFile,
+}) async {
   final DateTime deadline = DateTime.now().add(const Duration(seconds: 15));
   while (DateTime.now().isBefore(deadline)) {
     if (!await _isProcessAlive(process)) {
       throw StateError('隐藏主进程在服务 bootstrap 完成前退出');
     }
-    if (await infoFile.exists()) {
-      await Future<void>.delayed(const Duration(milliseconds: 250));
+    final bool infoReady = await infoFile.exists();
+    final bool controlReady = controlFile == null || await controlFile.exists();
+    if (infoReady && controlReady) {
+      if (controlFile == null) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
       return;
     }
     await Future<void>.delayed(const Duration(milliseconds: 100));
   }
-  throw TimeoutException('等待隐藏主进程生成 info.json 超时');
+  throw TimeoutException(
+    controlFile == null
+        ? '等待隐藏主进程生成 info.json 超时'
+        : '等待隐藏主进程生成 info.json/control.json 超时',
+  );
+}
+
+Future<int> _probeMacOsControlEndpoint(File controlFile) async {
+  final Object? decoded = jsonDecode(await controlFile.readAsString());
+  if (decoded is! Map<Object?, Object?>) {
+    throw const FormatException('macOS control.json 必须是 JSON 对象');
+  }
+  final Map<String, Object?> endpoint = <String, Object?>{
+    for (final MapEntry<Object?, Object?> entry in decoded.entries)
+      entry.key.toString(): entry.value,
+  };
+  expect(endpoint.keys.toSet(), <String>{
+    'schema',
+    'port',
+    'token',
+  }, reason: 'control.json 必须保持现有 v1 三字段契约');
+  expect(endpoint['schema'], 'lddc.macos_singleton_control');
+  final Object? rawPort = endpoint['port'];
+  final Object? rawToken = endpoint['token'];
+  if (rawPort is! int || rawPort <= 0 || rawPort > 65535) {
+    throw const FormatException('macOS control.json 端口无效');
+  }
+  if (rawToken is! String || !RegExp(r'^[0-9a-f]{64}$').hasMatch(rawToken)) {
+    throw const FormatException('macOS control.json token 无效');
+  }
+
+  final Socket socket = await Socket.connect(
+    InternetAddress.loopbackIPv4,
+    rawPort,
+    timeout: const Duration(seconds: 5),
+  );
+  final _SocketFrameReader reader = _SocketFrameReader(socket);
+  try {
+    const DesktopIpcFramer framer = DesktopIpcFramer();
+    final Uint8List request = framer.encodeJson(<String, Object?>{
+      '_lddcControl': 1,
+      'token': rawToken,
+      'command': 'get_service_port',
+    });
+    expect(request.length, lessThanOrEqualTo(4 * 1024 + 4));
+    socket.add(request);
+    await socket.flush();
+    final Map<String, Object?> response = await reader.nextFrame().timeout(
+      const Duration(seconds: 5),
+    );
+    expect(response['_lddcControl'], 1);
+    expect(response['ok'], isTrue);
+    expect(response['port'], rawPort);
+    return rawPort;
+  } finally {
+    await reader.dispose();
+  }
 }
 
 String _boundedText(String value) {

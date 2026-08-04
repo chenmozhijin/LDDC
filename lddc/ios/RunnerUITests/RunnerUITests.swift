@@ -8,10 +8,14 @@ final class RunnerUITests: XCTestCase {
   private let saveFileIdentifier = "lddc.open_lyrics.save_file"
   private let saveTagIdentifier = "lddc.open_lyrics.save_tag"
   private let saveTagSucceededIdentifier = "lddc.open_lyrics.notice.saveTagSucceeded"
+  private let documentsBundleIdentifier = "com.apple.DocumentsApp"
+  private let springBoardBundleIdentifier = "com.apple.springboard"
+  private let platformTestDisplayName = "LDDC Platform Tests"
   private var cleanupVerified = false
 
   override func setUpWithError() throws {
     continueAfterFailure = false
+    cleanupVerified = false
   }
 
   func testDocumentPickerSelectsSeededAudio() throws {
@@ -56,16 +60,10 @@ final class RunnerUITests: XCTestCase {
       let app = launchApp()
       defer { app.terminate() }
       try openDocumentPicker(app: app)
-      let documents = XCUIApplication(bundleIdentifier: "com.apple.DocumentsApp")
-      try require(documents.wait(for: .runningForeground, timeout: 15), "系统文件界面没有进入前台")
-      let cancel = documents.buttons["Cancel"]
-      try require(cancel.waitForExistence(timeout: 15), "系统文件界面没有可访问的取消按钮")
-      cancel.tap()
+      try cancelSystemPicker(app: app)
       try require(app.wait(for: .runningForeground, timeout: 15), "取消后 LDDC 没有返回前台")
-      try require(
-        app.buttons[openSongIdentifier].waitForExistence(timeout: 15),
-        "取消后 Flutter 打开歌曲动作不可再次发现"
-      )
+      let openSong = app.buttons[openSongIdentifier]
+      try require(waitForHittable(openSong, timeout: 15), "取消后 Flutter 打开歌曲动作不可再次操作")
       addAction(&actions, capability: "filePicker", action: "document_picker_cancel")
       addAction(&actions, capability: "nativeChannels", action: "flutter_picker_cancel_round_trip")
       try terminateAndVerify(app)
@@ -86,11 +84,12 @@ final class RunnerUITests: XCTestCase {
       let app = launchApp()
       defer { app.terminate() }
       try selectSeededAudio(app: app)
-      let documents = try openExportPicker(app: app)
-      let save = documents.buttons["Save"]
-      try require(save.waitForExistence(timeout: 15), "系统导出界面没有可访问的保存按钮")
+      try openExportPicker(app: app)
+      let save = try requireSystemPickerElement(named: ["Save"], app: app, timeout: 15)
       save.tap()
       try require(app.wait(for: .runningForeground, timeout: 15), "导出后 LDDC 没有返回前台")
+      let saveFile = app.descendants(matching: .any)[saveFileIdentifier]
+      try require(waitForHittable(saveFile, timeout: 15), "导出完成后 Flutter 页面没有恢复交互")
       addAction(&actions, capability: "filePicker", action: "document_picker_export_lyrics")
       addAction(&actions, capability: "nativeChannels", action: "flutter_export_round_trip")
       try terminateAndVerify(app)
@@ -111,11 +110,11 @@ final class RunnerUITests: XCTestCase {
       let app = launchApp()
       defer { app.terminate() }
       try selectSeededAudio(app: app)
-      let documents = try openExportPicker(app: app)
-      let cancel = documents.buttons["Cancel"]
-      try require(cancel.waitForExistence(timeout: 15), "系统导出界面没有可访问的取消按钮")
-      cancel.tap()
+      try openExportPicker(app: app)
+      try cancelSystemPicker(app: app)
       try require(app.wait(for: .runningForeground, timeout: 15), "取消导出后 LDDC 没有返回前台")
+      let saveFile = app.descendants(matching: .any)[saveFileIdentifier]
+      try require(waitForHittable(saveFile, timeout: 15), "取消导出后 Flutter 页面没有恢复交互")
       addAction(&actions, capability: "filePicker", action: "document_picker_export_cancel")
       addAction(&actions, capability: "nativeChannels", action: "flutter_export_cancel_round_trip")
       try terminateAndVerify(app)
@@ -136,10 +135,9 @@ final class RunnerUITests: XCTestCase {
       let app = launchApp()
       defer { app.terminate() }
       try selectSeededAudio(app: app)
-      let documents = try openExportPicker(app: app)
-      try require(documents.wait(for: .runningForeground, timeout: 15), "终止清理场景没有进入系统导出界面")
+      try openExportPicker(app: app)
       app.terminate()
-      documents.terminate()
+      try require(app.wait(for: .notRunning, timeout: 5), "导出中终止时 LDDC 未在超时内关闭")
 
       // 强制终止不保证 iOS 发送生命周期回调；下一次插件初始化必须删除上次
       // 遗留的临时导出目录，runner 会从 Simulator 容器进行最终空目录断言。
@@ -179,14 +177,25 @@ final class RunnerUITests: XCTestCase {
     let openSong = app.buttons[openSongIdentifier]
     try require(openSong.waitForExistence(timeout: 15), "Flutter 没有暴露打开歌曲按钮 identifier")
     openSong.tap()
+    try waitForSystemPicker(app: app, expectedLabels: ["Recents", "Shared", "Browse"])
   }
 
   private func selectSeededAudio(app: XCUIApplication) throws {
     try openDocumentPicker(app: app)
-    let documents = XCUIApplication(bundleIdentifier: "com.apple.DocumentsApp")
-    try require(documents.wait(for: .runningForeground, timeout: 15), "系统文件界面没有进入前台")
-    let fixture = documents.descendants(matching: .any)[fixtureName]
-    try require(fixture.waitForExistence(timeout: 15), "系统文件界面没有显示 seed 音频")
+    try tapSystemPickerElement(named: ["Browse"], app: app, timeout: 15)
+    try tapSystemPickerElement(named: ["On My iPhone"], app: app, timeout: 15)
+
+    // 测试 fixture 位于 PlatformTest 应用公开给 Files 的 Documents 中。Recents 只
+    // 记录用户近期打开的文件，在全新 Simulator 上必然可能为空，因此必须显式进入
+    // “On My iPhone -> LDDC Platform Tests”，不能把 Recents 当作测试数据目录。
+    if findSystemPickerElement(named: [fixtureName], app: app) == nil {
+      try tapSystemPickerElement(
+        named: [platformTestDisplayName, "LDDCPlatformTests", "LDDC"],
+        app: app,
+        timeout: 15
+      )
+    }
+    let fixture = try requireSystemPickerElement(named: [fixtureName], app: app, timeout: 15)
     fixture.tap()
     try require(app.wait(for: .runningForeground, timeout: 15), "选择文件后 LDDC 没有返回前台")
     try require(
@@ -202,13 +211,129 @@ final class RunnerUITests: XCTestCase {
     )
   }
 
-  private func openExportPicker(app: XCUIApplication) throws -> XCUIApplication {
+  private func openExportPicker(app: XCUIApplication) throws {
     let saveFile = app.descendants(matching: .any)[saveFileIdentifier]
     try requireHittable(saveFile, in: app, message: "Flutter 未暴露可点击的歌词导出按钮")
     saveFile.tap()
-    let documents = XCUIApplication(bundleIdentifier: "com.apple.DocumentsApp")
-    try require(documents.wait(for: .runningForeground, timeout: 15), "系统导出界面没有进入前台")
-    return documents
+    try waitForSystemPicker(app: app, expectedLabels: ["Save", "Cancel", "Browse", "Recents"])
+  }
+
+  private func systemPickerRoots(app: XCUIApplication) -> [XCUIElement] {
+    // iOS 版本不同，UIDocumentPicker 可能作为宿主应用的远程 view service、Files
+    // 应用界面或 SpringBoard 管理的系统 sheet 暴露。这里只查询系统实际导出的
+    // accessibility tree，不启动、激活或伪造任何系统应用。
+    [
+      app,
+      XCUIApplication(bundleIdentifier: documentsBundleIdentifier),
+      XCUIApplication(bundleIdentifier: springBoardBundleIdentifier),
+    ]
+  }
+
+  private func pickerElement(named labels: [String], in root: XCUIElement) -> XCUIElement? {
+    var firstExisting: XCUIElement?
+    for label in labels {
+      let predicate = NSPredicate(
+        format: "label == %@ OR identifier == %@ OR label BEGINSWITH %@",
+        label,
+        label,
+        label
+      )
+      let elements = root.descendants(matching: .any).matching(predicate).allElementsBoundByIndex
+      for element in elements where element.exists {
+        if element.isHittable {
+          return element
+        }
+        firstExisting = firstExisting ?? element
+      }
+    }
+    return firstExisting
+  }
+
+  private func findSystemPickerElement(named labels: [String], app: XCUIApplication) -> XCUIElement? {
+    var firstExisting: XCUIElement?
+    for root in systemPickerRoots(app: app) {
+      if let element = pickerElement(named: labels, in: root) {
+        if element.isHittable {
+          return element
+        }
+        firstExisting = firstExisting ?? element
+      }
+    }
+    return firstExisting
+  }
+
+  private func requireSystemPickerElement(
+    named labels: [String],
+    app: XCUIApplication,
+    timeout: TimeInterval
+  ) throws -> XCUIElement {
+    if let element = waitForSystemPickerElement(named: labels, app: app, timeout: timeout) {
+      return element
+    }
+    try require(false, "系统文件界面没有可访问的控件：\(labels.joined(separator: " / "))")
+    // require(false, ...) 必然抛出；该返回值只用于满足 Swift 的控制流检查。
+    return app
+  }
+
+  private func waitForSystemPickerElement(
+    named labels: [String],
+    app: XCUIApplication,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if let element = findSystemPickerElement(named: labels, app: app), element.isHittable {
+        return element
+      }
+      Thread.sleep(forTimeInterval: 0.2)
+    } while Date() < deadline
+    return nil
+  }
+
+  private func tapSystemPickerElement(
+    named labels: [String],
+    app: XCUIApplication,
+    timeout: TimeInterval
+  ) throws {
+    let element = try requireSystemPickerElement(named: labels, app: app, timeout: timeout)
+    element.tap()
+  }
+
+  private func waitForSystemPicker(app: XCUIApplication, expectedLabels: [String]) throws {
+    _ = try requireSystemPickerElement(named: expectedLabels, app: app, timeout: 15)
+  }
+
+  private func cancelSystemPicker(app: XCUIApplication) throws {
+    if let cancel = waitForSystemPickerElement(
+      named: ["Cancel", "Close", "Dismiss"],
+      app: app,
+      timeout: 3
+    ) {
+      cancel.tap()
+      return
+    }
+
+    // iOS 26 的紧凑 Document Picker 使用可下拉关闭的系统 sheet，界面中不再固定
+    // 提供 Cancel 按钮。swipeDown 作用于可访问的 sheet 元素本身，不使用屏幕坐标；
+    // 找不到 sheet 时直接失败，禁止退化为坐标脚本或强制激活宿主应用。
+    for root in systemPickerRoots(app: app) {
+      for sheet in root.sheets.allElementsBoundByIndex where sheet.exists && sheet.isHittable {
+        sheet.swipeDown()
+        return
+      }
+    }
+    try require(false, "系统文件界面既没有取消控件，也没有可访问的模态 sheet")
+  }
+
+  private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if element.exists, element.isHittable {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.2)
+    } while Date() < deadline
+    return false
   }
 
   private func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
@@ -245,16 +370,9 @@ final class RunnerUITests: XCTestCase {
   private func terminateAndVerify(_ app: XCUIApplication) throws {
     app.terminate()
     try require(app.wait(for: .notRunning, timeout: 5), "LDDC 未在超时内关闭")
-    let picker = XCUIApplication(bundleIdentifier: "com.apple.DocumentsApp")
-    // DocumentsApp 是系统常驻进程，关闭 Picker 后可能留在后台；资源清理的正确
-    // 边界是它不再占据前台。测试主动终止其测试会话，避免影响下一个场景。
-    if picker.state == .runningForeground {
-      picker.terminate()
-    }
-    try require(
-      picker.state != .runningForeground,
-      "Document Picker 仍占据前台，系统文件界面没有完成收口"
-    )
+    // UIDocumentPicker 在新系统中可能由常驻 view service 承载，终止 DocumentsApp
+    // 既不能证明 picker session 已释放，也可能干扰后续场景。应用进程退出和 runner
+    // 对 fd、临时导出目录的最终检查共同构成资源释放证据。
     cleanupVerified = true
   }
 
