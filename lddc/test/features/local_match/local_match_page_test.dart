@@ -18,6 +18,7 @@ import 'package:lddc/src/features/local_match/application/local_match_input_pick
 import 'package:lddc/src/features/local_match/application/local_match_page_controller.dart';
 import 'package:lddc/src/features/local_match/application/local_match_page_state.dart';
 import 'package:lddc/src/features/local_match/presentation/local_match_page.dart';
+import 'package:lddc/src/features/local_match/presentation/widgets/local_match_rules.dart';
 import 'package:lddc/src/platform/android/saf/android_saf_lyrics_save_persistence.dart';
 import 'package:lddc/src/platform/drag_drop/drag_drop_port.dart';
 
@@ -787,6 +788,41 @@ void main() {
   });
 
   group('LocalMatchPage', () {
+    testWidgets('紧凑状态摘要在窄宽和长进度文本下保持可布局', (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(360, 800));
+      final LocalMatchPageState state =
+          LocalMatchPageState.initial(
+            defaultSources: const <Source>[Source.qm],
+            defaultSaveRootPath: null,
+            inputMode: LocalMatchInputMode.androidTree,
+          ).copyWith(
+            taskPhase: LocalMatchTaskPhase.matching,
+            progressCurrent: 123,
+            progressTotal: 456,
+            progressMessage: const LocalMatchProgressMessage.external(
+              '正在写入一个非常长的多语言歌词文件名称 multilingual-progress-message',
+            ),
+          );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('zh'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SizedBox(
+              width: 328,
+              child: LocalMatchCompactQueueStatusSummary(state: state),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(LocalMatchCompactQueueStatusSummary), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('桌面默认宽度下展示队列优先布局与全显侧栏', (WidgetTester tester) async {
       _setTestViewport(tester, const Size(1040, 900));
       final ProviderContainer container = _createContainer(
@@ -880,8 +916,10 @@ void main() {
       expect(find.text('保存根目录'), findsNothing);
     });
 
-    testWidgets('窄屏下队列优先显示且匹配规则默认折叠', (WidgetTester tester) async {
-      _setTestViewport(tester, const Size(390, 844));
+    testWidgets('Android 实际窄屏下队列优先显示且规则展开不溢出', (WidgetTester tester) async {
+      // 与 hosted Android emulator 报告的逻辑 viewport 一致，避免只在整数设计稿
+      // 尺寸测试而漏掉 380 px 高度临界点触发的嵌入状态摘要。
+      _setTestViewport(tester, const Size(411.428571, 914.285714));
       final ProviderContainer container = _createContainer(
         capability: _desktopCapability(),
         picker: _FakeLocalMatchInputPicker(
@@ -928,6 +966,7 @@ void main() {
         find.byKey(const ValueKey<String>('local_match_status_strip')),
         findsNothing,
       );
+      expect(find.byType(LocalMatchCompactQueueStatusSummary), findsNothing);
       expect(
         find.byKey(const ValueKey<String>('local_match_rules_card')),
         findsOneWidget,
@@ -940,6 +979,7 @@ void main() {
         find.byKey(const ValueKey<String>('local_match_mobile_more_settings')),
         findsNothing,
       );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('切换保存模式后按规则显示保存根目录入口', (WidgetTester tester) async {

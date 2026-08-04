@@ -501,13 +501,22 @@ Future<T> runStepWithTimeout<T>(
   Future<T> Function() action, {
   required Duration timeout,
   required String label,
-}) {
-  return action().timeout(
-    timeout,
-    onTimeout: () {
+}) async {
+  // Flutter tester 的 pump/tap 由 TestAsyncUtils.guard 串行保护。Future.timeout 只停止
+  // 等待，不会取消底层 action；超时后 teardown 再调用 pumpWidget 会与仍在执行的 pump
+  // 冲突。这里让 timer 只记录超时，等待 action 释放 guard 后再报告失败；永久挂起仍由
+  // runner 的进程级硬超时终止，因此不会留下与 teardown 并发的 tester Future。
+  bool exceeded = false;
+  final Timer timer = Timer(timeout, () => exceeded = true);
+  try {
+    final T result = await action();
+    if (exceeded) {
       throw TimeoutException('$label 超时', timeout);
-    },
-  );
+    }
+    return result;
+  } finally {
+    timer.cancel();
+  }
 }
 
 class IntegrationFilePicker implements AppFilePicker {

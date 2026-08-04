@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../integration_test/support/integration_harness.dart';
 import '../../integration_test/support/search_preview_save_strategy.dart';
 
 void main() {
@@ -26,5 +29,28 @@ void main() {
       () => searchPreviewSaveActionForPlatform('web'),
       throwsUnsupportedError,
     );
+  });
+
+  test('步骤超时会先等待受保护动作收口再抛出原始超时', () async {
+    bool actionCompleted = false;
+
+    await expectLater(
+      runStepWithTimeout<void>(
+        () async {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+          actionCompleted = true;
+        },
+        timeout: const Duration(milliseconds: 1),
+        label: 'guarded_action',
+      ),
+      throwsA(
+        isA<TimeoutException>().having(
+          (TimeoutException error) => error.message,
+          'message',
+          'guarded_action 超时',
+        ),
+      ),
+    );
+    expect(actionCompleted, isTrue);
   });
 }

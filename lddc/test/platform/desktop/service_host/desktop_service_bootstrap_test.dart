@@ -120,6 +120,101 @@ void main() {
     );
   });
 
+  test('macOS 重复 claim 更新处理器且第二实例发现现有 primary', () async {
+    final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
+      paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
+    );
+    final DesktopMacOsSingletonBootstrapPort primary =
+        DesktopMacOsSingletonBootstrapPort(
+          runtimePaths: runtimePaths,
+          tokenFactory: () => 'c' * 64,
+        );
+    final DesktopMacOsSingletonBootstrapPort secondary =
+        DesktopMacOsSingletonBootstrapPort(runtimePaths: runtimePaths);
+    addTearDown(primary.close);
+    addTearDown(secondary.close);
+
+    expect(
+      await primary.claimPrimary(onRequest: (_) => 'first'),
+      DesktopPrimaryClaimResult.primary,
+    );
+    expect(
+      await primary.claimPrimary(onRequest: (_) => 'updated'),
+      DesktopPrimaryClaimResult.primary,
+    );
+    expect(await secondary.hasPrimaryInstance(), isTrue);
+    expect(
+      await secondary.claimPrimary(onRequest: (_) => 'unused'),
+      DesktopPrimaryClaimResult.existingPrimary,
+    );
+    expect(await secondary.request('show'), 'updated');
+  });
+
+  test('macOS 关闭后拒绝 claim 且等待不存在的 primary 会有界返回', () async {
+    final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
+      paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
+    );
+    final DesktopMacOsSingletonBootstrapPort port =
+        DesktopMacOsSingletonBootstrapPort(runtimePaths: runtimePaths);
+
+    expect(
+      await port.waitUntilPrimaryAvailable(
+        timeout: const Duration(milliseconds: 30),
+        pollInterval: const Duration(milliseconds: 5),
+      ),
+      isFalse,
+    );
+    await port.close();
+    expect(
+      () => port.claimPrimary(onRequest: (_) => 'unused'),
+      throwsStateError,
+    );
+  });
+
+  test('macOS 非法控制令牌初始化失败后释放端口与锁句柄', () async {
+    final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
+      paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
+    );
+    final DesktopMacOsSingletonBootstrapPort invalid =
+        DesktopMacOsSingletonBootstrapPort(
+          runtimePaths: runtimePaths,
+          tokenFactory: () => 'not-a-32-byte-token',
+        );
+
+    await expectLater(
+      invalid.claimPrimary(onRequest: (_) => 'unused'),
+      throwsStateError,
+    );
+
+    // 若失败路径遗留文件锁，后续合法实例会被误判为已有 primary。
+    final DesktopMacOsSingletonBootstrapPort recovered =
+        DesktopMacOsSingletonBootstrapPort(
+          runtimePaths: runtimePaths,
+          tokenFactory: () => 'd' * 64,
+        );
+    addTearDown(recovered.close);
+    expect(
+      await recovered.claimPrimary(onRequest: (_) => 'recovered'),
+      DesktopPrimaryClaimResult.primary,
+    );
+    expect(await recovered.request('show'), 'recovered');
+  });
+
+  test('macOS 损坏 endpoint 不会被识别为存活 primary', () async {
+    final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
+      paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
+    );
+    final File endpoint = await runtimePaths.resolveMacOsControlEndpointFile();
+    await endpoint.parent.create(recursive: true);
+    await endpoint.writeAsString('{"schema":"broken"}');
+    final DesktopMacOsSingletonBootstrapPort port =
+        DesktopMacOsSingletonBootstrapPort(runtimePaths: runtimePaths);
+    addTearDown(port.close);
+
+    expect(await port.hasPrimaryInstance(), isFalse);
+    await expectLater(port.request('show'), throwsFormatException);
+  });
+
   test('主窗口首次成为 primary 时会写入 info.json 并继续启动', () async {
     final _FakeSingletonBootstrapPort port = _FakeSingletonBootstrapPort(
       claimResult: DesktopPrimaryClaimResult.primary,

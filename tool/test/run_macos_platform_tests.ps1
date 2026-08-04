@@ -1,8 +1,7 @@
 param(
   [string]$ReportDir = "build/integration_reports/macos-native",
   [ValidateRange(30, 600)]
-  [int]$ScenarioTimeoutSeconds = 120,
-  [switch]$BuildOnly
+  [int]$ScenarioTimeoutSeconds = 120
 )
 
 $ErrorActionPreference = "Stop"
@@ -136,15 +135,6 @@ try {
   if ($null -eq $xctestrun) {
     throw "macOS build-for-testing 没有生成 xctestrun"
   }
-  if ($BuildOnly) {
-    # GitHub-hosted macOS 没有可由仓库非交互授予的 Xcode Helper 辅助功能权限，
-    # XCUIApplication 会在系统 accessibility 握手阶段失败。CI 仍编译完整 UI
-    # test bundle 和 xctestrun，防止 Swift、scheme 或链接配置回归；真实 NSOpenPanel
-    # 场景继续由默认运行模式在已授权实体 Mac 上执行，不能由此模式生成通过报告。
-    Write-Host "macOS XCUITest build-only validation passed: $($xctestrun.FullName)"
-    return
-  }
-
   $scenarios = @(
     @{ Name = "macos_open_panel_select"; Method = "testOpenPanelSelectsFixture" },
     @{ Name = "macos_open_panel_cancel"; Method = "testOpenPanelCancellationReturnsToFlutter" }

@@ -583,8 +583,6 @@ def failures() -> list[str]:
         "run_ios_platform_tests.ps1",
         "run_windows_platform_tests.ps1",
         "run_macos_platform_tests.ps1",
-        "run_macos_platform_tests.ps1 -BuildOnly",
-        "Compile-only validation does not produce filePicker=real evidence",
         "run_desktop_process_e2e.ps1",
         "Snapshot Windows production application",
         "Snapshot macOS production application",
@@ -619,18 +617,29 @@ def failures() -> list[str]:
                 problems.append(
                     f"Linux 已知多窗口问题不得继续作为 hosted 必需门禁: {forbidden}"
                 )
-    if "./tool/test/run_macos_platform_tests.ps1\n" in workflow:
-        problems.append("hosted macOS 不得执行需要预授权辅助功能权限的 XCUITest runtime")
+    if "run_macos_platform_tests.ps1 -BuildOnly" in workflow:
+        problems.append("hosted macOS 不得用 build-only 替代真实 XCUITest")
     macos_runner = (ROOT / "tool/test/run_macos_platform_tests.ps1").read_text(
         encoding="utf-8"
     )
     for marker in (
-        "[switch]$BuildOnly",
-        "macOS XCUITest build-only validation passed",
-        "真实 NSOpenPanel",
+        "test-without-building",
+        "macos_open_panel_select",
+        "macos_open_panel_cancel",
     ):
         if marker not in macos_runner:
-            problems.append(f"macOS 手工 XCUITest runner 缺少编译/运行边界: {marker}")
+            problems.append(f"macOS XCUITest runner 缺少真实运行契约: {marker}")
+    macos_window = (ROOT / "lddc/macos/Runner/MainFlutterWindow.swift").read_text(
+        encoding="utf-8"
+    )
+    macos_ui_tests = (ROOT / "lddc/macos/RunnerUITests/RunnerUITests.swift").read_text(
+        encoding="utf-8"
+    )
+    accessibility_argument = "--lddc-enable-accessibility-for-ui-test"
+    if accessibility_argument not in macos_window or accessibility_argument not in macos_ui_tests:
+        problems.append("macOS XCUITest 缺少测试专用 accessibility 启动契约")
+    if "#if DEBUG" not in macos_window:
+        problems.append("macOS accessibility workaround 必须与 Release 编译隔离")
     for manual_linux_asset in (
         ROOT / "tool/test/run_linux_platform_tests.sh",
         ROOT / "tool/test/requirements-linux-platform.txt",

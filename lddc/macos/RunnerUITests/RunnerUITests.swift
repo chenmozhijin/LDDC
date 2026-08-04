@@ -74,7 +74,11 @@ final class RunnerUITests: XCTestCase {
 
   private func launchApp() -> XCUIApplication {
     let app = XCUIApplication()
-    app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+    app.launchArguments += [
+      "-AppleLanguages", "(en)",
+      "-AppleLocale", "en_US",
+      "--lddc-enable-accessibility-for-ui-test",
+    ]
     app.launch()
     return app
   }

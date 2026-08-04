@@ -80,6 +80,12 @@ void main() {
         name: firstTagTarget.file.uri.pathSegments.last,
         path: firstTagTarget.path,
       );
+      // 移动端离线场景使用脚本化文件选择器，但仍必须写出并回读真实文件。旧测试只
+      // 配置了标签目标，没有为 saveTextFile 提供路径，选择器按“用户取消”返回 null，
+      // 测试随后只能等待到超时，且无法证明保存产物正确。
+      app.filePicker.saveFilePath = File(
+        '${app.workspace.exportsDir.path}${Platform.pathSeparator}search-preview.lrc',
+      ).path;
 
       final AppShellDriver shell = AppShellDriver(tester);
       final SearchDriver search = SearchDriver(tester);

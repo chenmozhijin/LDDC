@@ -47,8 +47,11 @@ class LocalMatchQueueCard extends ConsumerWidget {
     return Card(
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
+          // 旧断点在 411 x 914 的手机上刚好启用约 240 px 高的状态摘要，留给队列的
+          // 高度不足并产生纵向溢出。摘要并非队列操作的必要条件，只在确实有足够空间
+          // 同时容纳标题、摘要和可操作列表时显示；更窄的视口仍可从运行按钮查看状态。
           final bool showStatusSummary =
-              showEmbeddedStatusSummary && constraints.maxHeight >= 380;
+              showEmbeddedStatusSummary && constraints.maxHeight >= 480;
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
