@@ -130,6 +130,7 @@ final class DesktopServiceHost {
   Future<void> _start() async {
     ServerSocket? server;
     StreamSubscription<Socket>? serverSubscription;
+    bool servicePortRegistered = false;
     try {
       server = await _serverSocketBinder();
       if (_disposed) {
@@ -138,14 +139,20 @@ final class DesktopServiceHost {
       _serviceHostLogger.info(
         'server listening on ${server.address.address}:${server.port}',
       );
+      // macOS 的 control.json 会发布这个业务端口。必须先安装连接监听回调，
+      // 再让第二实例发现 endpoint，避免客户端连接到尚无人消费的 socket。
+      serverSubscription = server.listen(_handleClientConnected);
       await _bootstrap.registerServicePort(server.port);
+      servicePortRegistered = true;
       if (_disposed) {
         throw StateError('DesktopServiceHost 在端口注册期间已释放');
       }
-      serverSubscription = server.listen(_handleClientConnected);
       _server = server;
       _serverSubscription = serverSubscription;
     } on Object {
+      if (servicePortRegistered) {
+        await _bootstrap.unregisterServicePort();
+      }
       await serverSubscription?.cancel();
       await server?.close();
       rethrow;
@@ -222,6 +229,8 @@ final class DesktopServiceHost {
         );
       }
     }
+    // 先撤销可发现 endpoint，再停止 listener；文件锁由 bootstrap 在更外层释放。
+    await _bootstrap.unregisterServicePort();
     await _serverSubscription?.cancel();
     _serverSubscription = null;
     final ServerSocket? server = _server;
@@ -274,6 +283,22 @@ final class DesktopServiceHost {
           for (final MapEntry<Object?, Object?> entry in decoded.entries)
             entry.key.toString(): entry.value,
         };
+        final DesktopPrivateControlFrameResult controlResult = await _bootstrap
+            .handlePrivateControlFrame(payload, encodedLength: frame.length);
+        switch (controlResult.action) {
+          case DesktopPrivateControlFrameAction.notControl:
+            break;
+          case DesktopPrivateControlFrameAction.respond:
+            connection.helloTimer?.cancel();
+            connection.helloTimer = null;
+            connection.socket.add(_framer.encodeJson(controlResult.response!));
+            await connection.socket.flush();
+            await _handleSocketClosed(connection);
+            return;
+          case DesktopPrivateControlFrameAction.rejectAndClose:
+            await _handleSocketClosed(connection);
+            return;
+        }
         final DesktopClientMessage message = _messageCodec.decodeClientMessage(
           payload,
         );

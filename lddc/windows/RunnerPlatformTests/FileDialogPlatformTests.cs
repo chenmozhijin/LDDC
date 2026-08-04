@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 using FlaUI.Core.Tools;
@@ -154,17 +157,41 @@ public sealed class FileDialogPlatformTests
 
     private sealed class NativeDialogSession : IDisposable
     {
+        private delegate bool EnumWindowsCallback(IntPtr windowHandle, IntPtr state);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumWindows(EnumWindowsCallback callback, IntPtr state);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsWindow(IntPtr windowHandle);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool IsWindowVisible(IntPtr windowHandle);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint GetWindowThreadProcessId(IntPtr windowHandle, out uint processId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern int GetClassName(IntPtr windowHandle, StringBuilder className, int capacity);
+
         private readonly UIA3Automation _automation = new();
         private readonly HashSet<IntPtr> _observedWindowHandles = [];
+        private readonly int _lddcProcessId;
         private IntPtr _currentWindowHandle;
 
         public string FixturePath { get; } = WindowsPlatformTestEnvironment.Required("LDDC_FIXTURE_PATH");
         public string SyncDirectory { get; } = WindowsPlatformTestEnvironment.Required("LDDC_NATIVE_SYNC_DIR");
         public Window? CurrentDialog { get; private set; }
 
-        public bool AllObservedDialogsClosed => _observedWindowHandles.All(handle =>
-            !FindFileDialogCandidates().Any(element =>
-                element.Properties.NativeWindowHandle.ValueOrDefault == handle));
+        public NativeDialogSession()
+        {
+            _lddcProcessId = WaitForFlutterProcessIdentity();
+        }
+
+        public bool AllObservedDialogsClosed => _observedWindowHandles.All(handle => !IsWindow(handle));
 
         public Window WaitForNextDialog()
         {
@@ -187,8 +214,7 @@ public sealed class FileDialogPlatformTests
             Assert.AreNotEqual(IntPtr.Zero, handle, "当前 IFileDialog 没有有效 HWND");
             Assert.IsTrue(
                 Retry.WhileFalse(
-                    () => !FindFileDialogCandidates().Any(element =>
-                        element.Properties.NativeWindowHandle.ValueOrDefault == handle),
+                    () => !IsWindow(handle),
                     DialogCloseTimeout).Result,
                 "IFileDialog 操作后未在超时内关闭");
             // Windows 可能为下一次文件对话框复用同一个 HWND；只有在已确认当前
@@ -222,17 +248,60 @@ public sealed class FileDialogPlatformTests
 
         private AutomationElement[] FindFileDialogCandidates()
         {
-            // Hosted Windows 的桌面 UIA 树包含任务栏、Shell 和其他 runner 进程，
-            // 对 Desktop 做 FindAllDescendants 会触发跨进程递归并在 COM 层超时。
-            // IFileDialog 是桌面的直接顶层 Window，只枚举该层后再校验稳定控件 ID；
-            // Flutter 控件不参与选择，进程名约束仍避免误操作其他应用的对话框。
-            return _automation.GetDesktop()
-                .FindAllChildren(condition => condition.ByControlType(ControlType.Window))
+            // Hosted Desktop 中任意 Shell/UIA provider 卡住都会让一次全局 FindAll 整体
+            // 超时。先用无 UIA provider 调用的 Win32 枚举限定 PID 和 #32770，再让
+            // FlaUI 检查至多几个目标 HWND，既保留真实 IFileDialog 又隔离无关进程。
+            return EnumerateLddcDialogHandles()
+                .Select(TryCreateAutomationElement)
+                .Where(element => element is not null)
+                .Cast<AutomationElement>()
                 .Where(IsFileDialogRoot)
-                .Where(IsLddcProcess)
                 .GroupBy(element => element.Properties.NativeWindowHandle.ValueOrDefault)
                 .Select(group => group.First())
                 .ToArray();
+        }
+
+        private IntPtr[] EnumerateLddcDialogHandles()
+        {
+            var handles = new List<IntPtr>();
+            var completed = EnumWindows((handle, _) =>
+            {
+                if (!IsWindow(handle) || !IsWindowVisible(handle))
+                {
+                    return true;
+                }
+                GetWindowThreadProcessId(handle, out var processId);
+                if (processId != _lddcProcessId)
+                {
+                    return true;
+                }
+                var className = new StringBuilder(64);
+                if (GetClassName(handle, className, className.Capacity) > 0
+                    && className.ToString().Equals("#32770", StringComparison.Ordinal))
+                {
+                    handles.Add(handle);
+                }
+                return true;
+            }, IntPtr.Zero);
+            if (!completed)
+            {
+                throw new AssertFailedException(
+                    $"EnumWindows 失败，Win32 error={Marshal.GetLastWin32Error()}");
+            }
+            return handles.ToArray();
+        }
+
+        private AutomationElement? TryCreateAutomationElement(IntPtr handle)
+        {
+            try
+            {
+                return IsWindow(handle) ? _automation.FromHandle(handle) : null;
+            }
+            catch
+            {
+                // HWND 可能在枚举和 UIA 包装之间关闭；下一次有界轮询会重新发现。
+                return null;
+            }
         }
 
         private static bool IsFileDialogRoot(AutomationElement element)
@@ -255,17 +324,48 @@ public sealed class FileDialogPlatformTests
             }
         }
 
-        private static bool IsLddcProcess(AutomationElement element)
+        private int WaitForFlutterProcessIdentity()
+        {
+            var runId = WindowsPlatformTestEnvironment.Required("LDDC_IT_RUN_ID");
+            var scenario = WindowsPlatformTestEnvironment.Required("LDDC_IT_SCENARIO");
+            var identityPath = Path.Combine(SyncDirectory, $"{scenario}.process.json");
+            var identity = Retry.WhileNull(
+                () => TryReadFlutterProcessIdentity(identityPath, runId, scenario),
+                DialogTimeout).Result
+                ?? throw new AssertFailedException(
+                    "Flutter integration_test 未发布可验证的 LDDC 进程身份");
+            using var process = Process.GetProcessById(identity.Pid);
+            Assert.IsFalse(process.HasExited, "Flutter 发布的 LDDC 进程已经退出");
+            Assert.IsTrue(
+                process.ProcessName.Equals("lddc", StringComparison.OrdinalIgnoreCase),
+                $"Flutter 发布的 PID {identity.Pid} 不是 lddc 进程");
+            return identity.Pid;
+        }
+
+        private static FlutterProcessIdentity? TryReadFlutterProcessIdentity(
+            string path,
+            string expectedRunId,
+            string expectedScenario)
         {
             try
             {
-                using var process = Process.GetProcessById(
-                    element.Properties.ProcessId.ValueOrDefault);
-                return process.ProcessName.Equals("lddc", StringComparison.OrdinalIgnoreCase);
+                if (!File.Exists(path))
+                {
+                    return null;
+                }
+                var identity = JsonSerializer.Deserialize<FlutterProcessIdentity>(
+                    File.ReadAllText(path),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return identity is not null
+                    && identity.RunId == expectedRunId
+                    && identity.Scenario == expectedScenario
+                    && identity.Pid > 0
+                    ? identity
+                    : null;
             }
-            catch
+            catch (JsonException)
             {
-                return false;
+                return null;
             }
         }
 
@@ -273,6 +373,8 @@ public sealed class FileDialogPlatformTests
         {
             _automation.Dispose();
         }
+
+        private sealed record FlutterProcessIdentity(string RunId, string Scenario, int Pid);
     }
 
 }

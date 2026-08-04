@@ -17,6 +17,13 @@ $matrix = Join-Path $repoRoot "tool/test/platform_capability_matrix.json"
 $fixture = Join-Path $appRoot "integration_test/fixtures/media/audio_sample.mp3"
 $fixtureSize = (Get-Item -LiteralPath $fixture).Length
 $fixtureSha256 = (Get-FileHash -LiteralPath $fixture -Algorithm SHA256).Hash.ToLowerInvariant()
+$simulatorMetadata = [ordered]@{
+  udid = $Device
+  runtime = "unknown"
+  model = "unknown"
+  deviceTypeIdentifier = "unknown"
+  state = "unknown"
+}
 if (-not [IO.Path]::IsPathRooted($ReportDir)) {
   $ReportDir = Join-Path $appRoot $ReportDir
 }
@@ -51,6 +58,7 @@ function Invoke-BoundedXcodeTest {
       "test-without-building",
       "-xctestrun", $XcTestRun,
       "-destination", "platform=iOS Simulator,id=$Device",
+      "-parallel-testing-enabled", "NO",
       "-only-testing:RunnerUITests/RunnerUITests/$Method",
       "-resultBundlePath", $ResultBundle
     )) {
@@ -67,6 +75,91 @@ function Invoke-BoundedXcodeTest {
     return $process.ExitCode
   } finally {
     $process.Dispose()
+  }
+}
+
+function Get-SimulatorState {
+  $output = & xcrun simctl list devices --json 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "无法查询 iOS Simulator 状态: $($output -join ' ')"
+  }
+  $payload = ($output -join [Environment]::NewLine) | ConvertFrom-Json
+  foreach ($runtime in $payload.devices.PSObject.Properties) {
+    foreach ($deviceInfo in @($runtime.Value)) {
+      if ($deviceInfo.udid -eq $Device) {
+        return [string]$deviceInfo.state
+      }
+    }
+  }
+  throw "Simulator $Device 不存在于 simctl 设备清单"
+}
+
+function Get-SimulatorMetadata {
+  $output = & xcrun simctl list devices --json 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "无法查询 iOS Simulator 元数据: $($output -join ' ')"
+  }
+  $payload = ($output -join [Environment]::NewLine) | ConvertFrom-Json
+  foreach ($runtime in $payload.devices.PSObject.Properties) {
+    foreach ($deviceInfo in @($runtime.Value)) {
+      if ($deviceInfo.udid -eq $Device) {
+        return [ordered]@{
+          udid = [string]$deviceInfo.udid
+          runtime = [string]$runtime.Name
+          model = [string]$deviceInfo.name
+          deviceTypeIdentifier = [string]$deviceInfo.deviceTypeIdentifier
+          state = [string]$deviceInfo.state
+        }
+      }
+    }
+  }
+  throw "Simulator $Device 不存在于 simctl 设备清单"
+}
+
+function Invoke-RequiredSimctl {
+  param(
+    [Parameter(Mandatory = $true)][string]$Stage,
+    [Parameter(Mandatory = $true)][string[]]$CommandArguments
+  )
+  $output = & xcrun simctl @CommandArguments 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "iOS Simulator 阶段 $Stage 失败: $($output -join ' ')"
+  }
+  return $output
+}
+
+function Ensure-SimulatorBooted {
+  param([Parameter(Mandatory = $true)][string]$Stage)
+
+  $state = Get-SimulatorState
+  if ($state -eq "Shutdown") {
+    Invoke-RequiredSimctl -Stage "$Stage/boot" -CommandArguments @("boot", $Device) | Out-Null
+  } elseif ($state -notin @("Booted", "Booting")) {
+    throw "iOS Simulator 在 $Stage 处于不可恢复状态: $state"
+  }
+  Invoke-RequiredSimctl -Stage "$Stage/bootstatus" -CommandArguments @("bootstatus", $Device, "-b") | Out-Null
+  $finalState = Get-SimulatorState
+  if ($finalState -ne "Booted") {
+    throw "iOS Simulator 在 $Stage 等待后仍不是 Booted: $finalState"
+  }
+}
+
+function Get-XcresultStartedTestCount {
+  param([Parameter(Mandatory = $true)][string]$ResultBundle)
+
+  if (-not (Test-Path -LiteralPath $ResultBundle)) {
+    return $null
+  }
+  $summary = & xcrun xcresulttool get test-results summary `
+    --path $ResultBundle --format json 2>$null
+  if ($LASTEXITCODE -ne 0 -or $summary.Count -eq 0) {
+    return $null
+  }
+  try {
+    $payload = ($summary -join [Environment]::NewLine) | ConvertFrom-Json
+    return [int]$payload.totalTestCount
+  } catch {
+    return $null
   }
 }
 
@@ -89,6 +182,21 @@ function Add-EvidenceFailure {
   } else {
     "$existing; $Message"
   }
+  [IO.File]::WriteAllText(
+    $EvidencePath,
+    ($payload | ConvertTo-Json -Depth 20),
+    [Text.UTF8Encoding]::new($false)
+  )
+}
+
+function Add-SimulatorEvidence {
+  param([Parameter(Mandatory = $true)][string]$EvidencePath)
+
+  $payload = Get-Content -LiteralPath $EvidencePath -Raw | ConvertFrom-Json -AsHashtable
+  if (-not $payload.ContainsKey("extra") -or $null -eq $payload.extra) {
+    $payload["extra"] = @{}
+  }
+  $payload.extra["simulator"] = $simulatorMetadata
   [IO.File]::WriteAllText(
     $EvidencePath,
     ($payload | ConvertTo-Json -Depth 20),
@@ -131,27 +239,84 @@ function Write-FallbackEvidence {
       thresholds = @{ nativeWindowCount = 0 }
     }
     artifacts = @()
-    extra = @{}
+    extra = @{ simulator = $simulatorMetadata }
   }
   [IO.File]::WriteAllText($Path, ($payload | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
 }
 
+function Write-InfrastructureFailureReports {
+  param([Parameter(Mandatory = $true)][string]$Message)
+
+  foreach ($entry in $scenarios) {
+    $scenario = $entry.Name
+    $scenarioPath = Join-Path $scenarioDir "$scenario.json"
+    $junitPath = Join-Path $junitDir "$scenario.xml"
+    if ((Test-Path -LiteralPath $scenarioPath) -and (Test-Path -LiteralPath $junitPath)) {
+      continue
+    }
+    $summaryPath = Join-Path $rawDir "$scenario.summary.json"
+    $fallbackEvidence = Join-Path $attachmentsDir "lddc-evidence-$scenario.json"
+    Write-FallbackSummary -Path $summaryPath -Message $Message
+    Write-FallbackEvidence -Path $fallbackEvidence -Scenario $scenario -Message $Message
+    & python $normalizer `
+      --scenario-report $scenarioPath `
+      --raw-report $summaryPath `
+      --raw-report-type xcresult-summary `
+      --framework xcuitest `
+      --exit-code 1 `
+      --evidence $fallbackEvidence `
+      --matrix $matrix
+    & python $junitConverter --input $summaryPath --output $junitPath --scenario $scenario
+  }
+}
+
+$scenarios = @(
+  @{
+    Name = "ios_document_picker_select"
+    Method = "testDocumentPickerSelectsSeededAudio"
+  },
+  @{
+    Name = "ios_document_picker_cancel"
+    Method = "testDocumentPickerCancellationReturnsToFlutter"
+  },
+  @{
+    Name = "ios_document_picker_export"
+    Method = "testDocumentPickerExportsLyricsFile"
+  },
+  @{
+    Name = "ios_document_picker_export_cancel"
+    Method = "testDocumentPickerExportCancellationCleansTemporaryFile"
+  },
+  @{
+    Name = "ios_document_picker_export_termination"
+    Method = "testTerminatedExportIsCleanedOnNextLaunch"
+  }
+)
+$overallExitCode = 0
+
 Push-Location $appRoot
 try {
-  & xcrun simctl spawn $Device defaults write NSGlobalDomain AppleLanguages -array en
-  & xcrun simctl spawn $Device defaults write NSGlobalDomain AppleLocale en_US
+  Ensure-SimulatorBooted -Stage "runner-entry"
+  $simulatorMetadata = Get-SimulatorMetadata
+  Invoke-RequiredSimctl `
+    -Stage "locale/languages" `
+    -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLanguages", "-array", "en") | Out-Null
+  Invoke-RequiredSimctl `
+    -Stage "locale/region" `
+    -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLocale", "en_US") | Out-Null
   & xcodebuild build-for-testing `
     -workspace ios/Runner.xcworkspace `
     -scheme RunnerPlatformTests `
     -configuration PlatformTest `
     -destination "platform=iOS Simulator,id=$Device" `
+    -parallel-testing-enabled NO `
     -derivedDataPath $derivedData `
     CODE_SIGNING_ALLOWED=NO `
     "LDDC_IT_RUN_ID=$runId" `
     "LDDC_FIXTURE_SIZE=$fixtureSize" `
     "LDDC_FIXTURE_SHA256=$fixtureSha256"
   if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
+    throw "iOS build-for-testing 失败，exit=$LASTEXITCODE"
   }
 
   $appBundle = Get-ChildItem -Path (Join-Path $derivedData "Build/Products") `
@@ -161,49 +326,45 @@ try {
   if ($null -eq $appBundle -or $null -eq $xctestrun) {
     throw "iOS build-for-testing 没有生成 app 或 xctestrun"
   }
-  & xcrun simctl install $Device $appBundle.FullName
-  if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
-  }
-  $container = ((& xcrun simctl get_app_container $Device com.cmzj.lddc.platformtests data) -join "").Trim()
-  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($container)) {
+  Ensure-SimulatorBooted -Stage "before-install"
+  Invoke-RequiredSimctl `
+    -Stage "install-platform-test-app" `
+    -CommandArguments @("install", $Device, $appBundle.FullName) | Out-Null
+  $containerOutput = Invoke-RequiredSimctl `
+    -Stage "resolve-app-container" `
+    -CommandArguments @("get_app_container", $Device, "com.cmzj.lddc.platformtests", "data")
+  $container = (($containerOutput) -join "").Trim()
+  if ([string]::IsNullOrWhiteSpace($container)) {
     throw "无法取得 iOS 平台测试应用容器"
   }
   $documents = Join-Path $container "Documents"
   New-Item -ItemType Directory -Force -Path $documents | Out-Null
   Copy-Item -LiteralPath $fixture -Destination (Join-Path $documents "audio_sample.mp3") -Force
 
-  $scenarios = @(
-    @{
-      Name = "ios_document_picker_select"
-      Method = "testDocumentPickerSelectsSeededAudio"
-    },
-    @{
-      Name = "ios_document_picker_cancel"
-      Method = "testDocumentPickerCancellationReturnsToFlutter"
-    },
-    @{
-      Name = "ios_document_picker_export"
-      Method = "testDocumentPickerExportsLyricsFile"
-    },
-    @{
-      Name = "ios_document_picker_export_cancel"
-      Method = "testDocumentPickerExportCancellationCleansTemporaryFile"
-    },
-    @{
-      Name = "ios_document_picker_export_termination"
-      Method = "testTerminatedExportIsCleanedOnNextLaunch"
-    }
-  )
-  $overallExitCode = 0
   foreach ($entry in $scenarios) {
     $scenario = $entry.Name
     $method = $entry.Method
     $resultBundle = Join-Path $rawDir "$scenario.xcresult"
+    Ensure-SimulatorBooted -Stage "before-$scenario"
     $testExitCode = Invoke-BoundedXcodeTest `
       -XcTestRun $xctestrun.FullName `
       -Method $method `
       -ResultBundle $resultBundle
+    if ($testExitCode -ne 0) {
+      $startedTestCount = Get-XcresultStartedTestCount -ResultBundle $resultBundle
+      $simulatorState = Get-SimulatorState
+      if ($startedTestCount -eq 0 -and $simulatorState -eq "Shutdown") {
+        # 只允许在 XCTest 尚未开始且设备意外关机时恢复一次。真实用例失败、
+        # assertion 失败和已经启动的测试绝不能通过自动重试被掩盖。
+        $firstAttemptBundle = Join-Path $rawDir "$scenario.attempt1.xcresult"
+        Move-Item -LiteralPath $resultBundle -Destination $firstAttemptBundle
+        Ensure-SimulatorBooted -Stage "retry-$scenario"
+        $testExitCode = Invoke-BoundedXcodeTest `
+          -XcTestRun $xctestrun.FullName `
+          -Method $method `
+          -ResultBundle $resultBundle
+      }
+    }
 
     $summaryPath = Join-Path $rawDir "$scenario.summary.json"
     $summaryReady = $false
@@ -244,6 +405,7 @@ try {
       Write-FallbackEvidence -Path $fallbackEvidence -Scenario $scenario -Message "XCUITest 未导出 evidence attachment"
       $evidencePath = Get-Item -LiteralPath $fallbackEvidence
     }
+    Add-SimulatorEvidence -EvidencePath $evidencePath.FullName
     if ($scenario -eq "ios_document_picker_select") {
       # XCUITest 写入的是测试 app Documents 中的真实文件。测试返回后由宿主计算
       # 最终摘要并写入结构化 evidence，避免把 Simulator 绝对路径带入报告。
@@ -342,6 +504,11 @@ try {
       Write-Warning "iOS XCUITest 场景 $scenario 失败，继续收集其余独立场景"
     }
   }
+} catch {
+  $overallExitCode = 1
+  $message = "iOS platform infrastructure failure: $($_.Exception.Message)"
+  Write-Error $message -ErrorAction Continue
+  Write-InfrastructureFailureReports -Message $message
 } finally {
   & xcrun simctl terminate $Device com.cmzj.lddc.platformtests 2>$null
   & xcrun simctl terminate $Device com.apple.DocumentsApp 2>$null

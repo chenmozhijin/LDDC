@@ -80,30 +80,36 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_platform_media_resource.ps1 -Platform windows -LoopCount 3
-      - name: Upload failed Windows diagnostics
+      - name: Summarize required Windows phases
+        id: required_outcomes
         if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python tool/test/ci_phase_summary.py `
+            --title 'Windows validation' `
+            --phase 'release_build|Release build|${{ steps.release_build.outcome }}' `
+            --phase 'production_e2e_artifact|Production snapshot|${{ steps.production_e2e_artifact.outcome }}' `
+            --phase 'debug_build|Debug build|${{ steps.debug_build.outcome }}' `
+            --phase 'offline|Offline application|${{ steps.offline.outcome }}' `
+            --phase 'native_channel|Native channels|${{ steps.native_channel.outcome }}' `
+            --phase 'system_ui|System file dialog|${{ steps.system_ui.outcome }}' `
+            --phase 'desktop_process|Desktop process|${{ steps.desktop_process.outcome }}' `
+            --phase 'media_resource|Media resources|${{ steps.media_resource.outcome }}'
+      - name: Upload Windows diagnostics
+        if: always() && steps.required_outcomes.outcome != 'success'
         uses: actions/upload-artifact@v7
         with:
-          name: windows-validation-failure
+          name: windows-validation-diagnostics
           path: lddc/build/integration_reports/**
           if-no-files-found: ignore
           retention-days: 7
-      - name: Enforce required Windows outcomes
+      - name: Enforce required Windows result
         if: always()
         shell: pwsh
         run: |
-          $outcomes = @(
-            '${{ steps.release_build.outcome }}',
-            '${{ steps.production_e2e_artifact.outcome }}',
-            '${{ steps.debug_build.outcome }}',
-            '${{ steps.offline.outcome }}',
-            '${{ steps.native_channel.outcome }}',
-            '${{ steps.system_ui.outcome }}',
-            '${{ steps.desktop_process.outcome }}',
-            '${{ steps.media_resource.outcome }}'
-          )
-          if ($outcomes | Where-Object { $_ -ne 'success' }) {
-            throw "Windows required phase failed or was skipped: $($outcomes -join ', ')"
+          if ('${{ steps.required_outcomes.outcome }}' -ne 'success') {
+            throw 'Windows required validation failed; see the phase summary and diagnostics artifact'
           }
 
   macos-validation:
@@ -167,30 +173,37 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_platform_media_resource.ps1 -Platform macos -LoopCount 3
-      - name: Upload failed macOS diagnostics
+      - name: Summarize required macOS phases
+        id: required_outcomes
         if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python tool/test/ci_phase_summary.py `
+            --title 'macOS validation' `
+            --phase 'release_build|Release build|${{ steps.release_build.outcome }}' `
+            --phase 'production_e2e_artifact|Production snapshot|${{ steps.production_e2e_artifact.outcome }}' `
+            --phase 'debug_build|Debug build|${{ steps.debug_build.outcome }}' `
+            --phase 'offline|Offline application|${{ steps.offline.outcome }}' `
+            --phase 'native_channel|Native channels|${{ steps.native_channel.outcome }}' `
+            --phase 'system_ui|NSOpenPanel hybrid|${{ steps.system_ui.outcome }}' `
+            --phase 'desktop_process|Desktop process|${{ steps.desktop_process.outcome }}' `
+            --phase 'media_resource|Media resources|${{ steps.media_resource.outcome }}'
+      - name: Upload macOS diagnostics
+        if: always() && steps.required_outcomes.outcome != 'success'
         uses: actions/upload-artifact@v7
         with:
-          name: macos-validation-failure
+          name: macos-validation-diagnostics
           path: lddc/build/integration_reports/**
           if-no-files-found: ignore
           retention-days: 7
-      - name: Enforce required macOS outcomes
+      - name: Enforce required macOS result
         if: always()
+        shell: pwsh
         run: |
-          outcomes=(
-            '${{ steps.release_build.outcome }}'
-            '${{ steps.production_e2e_artifact.outcome }}'
-            '${{ steps.debug_build.outcome }}'
-            '${{ steps.offline.outcome }}'
-            '${{ steps.native_channel.outcome }}'
-            '${{ steps.system_ui.outcome }}'
-            '${{ steps.desktop_process.outcome }}'
-            '${{ steps.media_resource.outcome }}'
-          )
-          for outcome in "${outcomes[@]}"; do
-            [[ "$outcome" == success ]] || exit 1
-          done
+          if ('${{ steps.required_outcomes.outcome }}' -ne 'success') {
+            throw 'macOS required validation failed; see the phase summary and diagnostics artifact'
+          }
 
   linux-validation:
     runs-on: ubuntu-latest
@@ -253,27 +266,34 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_platform_media_resource.ps1 -Platform linux -LoopCount 3
-      - name: Upload failed Linux diagnostics
+      - name: Summarize required Linux phases
+        id: required_outcomes
         if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python tool/test/ci_phase_summary.py `
+            --title 'Linux validation' `
+            --phase 'release_build|Release build|${{ steps.release_build.outcome }}' `
+            --phase 'debug_build|Debug build|${{ steps.debug_build.outcome }}' `
+            --phase 'offline|Offline application|${{ steps.offline.outcome }}' `
+            --phase 'native_channel|Native channels|${{ steps.native_channel.outcome }}' `
+            --phase 'media_resource|Media resources|${{ steps.media_resource.outcome }}'
+      - name: Upload Linux diagnostics
+        if: always() && steps.required_outcomes.outcome != 'success'
         uses: actions/upload-artifact@v7
         with:
-          name: linux-validation-failure
+          name: linux-validation-diagnostics
           path: lddc/build/integration_reports/**
           if-no-files-found: ignore
           retention-days: 7
-      - name: Enforce required Linux outcomes
+      - name: Enforce required Linux result
         if: always()
+        shell: pwsh
         run: |
-          outcomes=(
-            '${{ steps.release_build.outcome }}'
-            '${{ steps.debug_build.outcome }}'
-            '${{ steps.offline.outcome }}'
-            '${{ steps.native_channel.outcome }}'
-            '${{ steps.media_resource.outcome }}'
-          )
-          for outcome in "${outcomes[@]}"; do
-            [[ "$outcome" == success ]] || exit 1
-          done
+          if ('${{ steps.required_outcomes.outcome }}' -ne 'success') {
+            throw 'Linux required validation failed; see the phase summary and diagnostics artifact'
+          }
 
   android-validation:
     runs-on: ubuntu-latest
@@ -313,21 +333,33 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: bash tool/test/run_android_ci_validation.sh
-      - name: Upload failed Android diagnostics
+      - name: Summarize required Android phases
+        id: required_outcomes
         if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python tool/test/ci_phase_summary.py `
+            --title 'Android validation' `
+            --phase 'release_build|Release APK and AAB|${{ steps.release_build.outcome }}' `
+            --phase 'platform_validation|Application and DocumentsUI|${{ steps.platform_validation.outcome }}'
+      - name: Upload Android diagnostics
+        if: always() && steps.required_outcomes.outcome != 'success'
         uses: actions/upload-artifact@v7
         with:
-          name: android-validation-failure
+          name: android-validation-diagnostics
           path: |
             lddc/build/integration_reports/**
             lddc/build/app/outputs/androidTest-results/**/*.xml
           if-no-files-found: ignore
           retention-days: 7
-      - name: Enforce required Android outcomes
+      - name: Enforce required Android result
         if: always()
+        shell: pwsh
         run: |
-          [[ '${{ steps.release_build.outcome }}' == success ]]
-          [[ '${{ steps.platform_validation.outcome }}' == success ]]
+          if ('${{ steps.required_outcomes.outcome }}' -ne 'success') {
+            throw 'Android required validation failed; see the phase summary and diagnostics artifact'
+          }
 
   ios-validation:
     runs-on: macos-latest
@@ -380,12 +412,17 @@ jobs:
         if: always() && steps.debug_rebuild.outcome == 'success'
         continue-on-error: true
         working-directory: lddc
-        run: >-
-          xcodebuild test
-          -workspace ios/Runner.xcworkspace
-          -scheme Runner
-          -destination "platform=iOS Simulator,id=$DEVICE_ID"
-          CODE_SIGNING_ALLOWED=NO
+        run: |
+          # Flutter integration 结束后 Simulator 可能已关机；已启动时 boot 的
+          # 非零结果可以忽略，但 bootstatus 和 XCTest 都必须成功。
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcodebuild test \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=NO
       - name: Run iOS Document Picker automation
         id: system_ui
         if: always() && steps.debug_rebuild.outcome == 'success'
@@ -393,33 +430,44 @@ jobs:
         shell: pwsh
         run: ./tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID
       - name: Delete the CI iOS simulator
+        id: simulator_cleanup
         if: always() && env.DEVICE_ID != ''
+        continue-on-error: true
         run: |
+          # 已关机设备会让 shutdown 返回非零，但不代表泄漏；delete 必须成功。
           xcrun simctl shutdown "$DEVICE_ID" || true
-          xcrun simctl delete "$DEVICE_ID" || true
-      - name: Upload failed iOS diagnostics
+          xcrun simctl delete "$DEVICE_ID"
+      - name: Summarize required iOS phases
+        id: required_outcomes
         if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python tool/test/ci_phase_summary.py `
+            --title 'iOS validation' `
+            --phase 'simulator|Simulator lifecycle|${{ steps.simulator.outcome }}' `
+            --phase 'release_build|Release build|${{ steps.release_build.outcome }}' `
+            --phase 'offline|Offline application|${{ steps.offline.outcome }}' `
+            --phase 'native_channel|Native channels|${{ steps.native_channel.outcome }}' `
+            --phase 'debug_rebuild|Debug application|${{ steps.debug_rebuild.outcome }}' `
+            --phase 'native_tests|Native XCTest|${{ steps.native_tests.outcome }}' `
+            --phase 'system_ui|Document Picker XCUITest|${{ steps.system_ui.outcome }}' `
+            --phase 'simulator_cleanup|Simulator cleanup|${{ steps.simulator_cleanup.outcome }}'
+      - name: Upload iOS diagnostics
+        if: always() && steps.required_outcomes.outcome != 'success'
         uses: actions/upload-artifact@v7
         with:
-          name: ios-validation-failure
+          name: ios-validation-diagnostics
           path: lddc/build/integration_reports/**
           if-no-files-found: ignore
           retention-days: 7
-      - name: Enforce required iOS outcomes
+      - name: Enforce required iOS result
         if: always()
+        shell: pwsh
         run: |
-          outcomes=(
-            '${{ steps.simulator.outcome }}'
-            '${{ steps.release_build.outcome }}'
-            '${{ steps.offline.outcome }}'
-            '${{ steps.native_channel.outcome }}'
-            '${{ steps.debug_rebuild.outcome }}'
-            '${{ steps.native_tests.outcome }}'
-            '${{ steps.system_ui.outcome }}'
-          )
-          for outcome in "${outcomes[@]}"; do
-            [[ "$outcome" == success ]] || exit 1
-          done
+          if ('${{ steps.required_outcomes.outcome }}' -ne 'success') {
+            throw 'iOS required validation failed; see the phase summary and diagnostics artifact'
+          }
 
   experimental-web:
     runs-on: ubuntu-latest

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -59,6 +60,24 @@ void main() {
           workspaceParent: Directory(_workspaceRoot),
         );
         addTearDown(app.dispose);
+        await reporter.runStep('publish_windows_process_identity', () async {
+          final Directory syncDirectory = Directory(_nativeSyncRoot);
+          await syncDirectory.create(recursive: true);
+          final File target = File(
+            p.join(_nativeSyncRoot, '$scenarioName.process.json'),
+          );
+          final File staging = File('${target.path}.tmp');
+          await staging.writeAsString(
+            jsonEncode(<String, Object?>{
+              'runId': runtime.runId,
+              'scenario': scenarioName,
+              'pid': pid,
+            }),
+            flush: true,
+          );
+          await staging.rename(target.path);
+          expect(target.existsSync(), isTrue);
+        });
 
         final AppShellDriver shell = AppShellDriver(tester);
         final OpenLyricsDriver openLyrics = OpenLyricsDriver(tester);

@@ -54,6 +54,7 @@ Copy-Item -LiteralPath $fixtureSource -Destination $fixture -Force
 
 $environmentNames = @(
   "LDDC_IT_RUN_ID",
+  "LDDC_IT_SCENARIO",
   "LDDC_FIXTURE_PATH",
   "LDDC_NATIVE_EVIDENCE_DIR",
   "LDDC_NATIVE_SYNC_DIR"
@@ -209,6 +210,7 @@ try {
     $flutterTarget = $entry.Target
     $method = $entry.Method
     $capabilitiesB64 = Resolve-CapabilityContract -Scenario $scenario
+    $env:LDDC_IT_SCENARIO = $scenario
     $flutterJsonl = Join-Path $rawDir "$scenario.jsonl"
     $trxPath = Join-Path $rawDir "$scenario.trx"
     $evidencePath = Join-Path $evidenceDir "$scenario.json"

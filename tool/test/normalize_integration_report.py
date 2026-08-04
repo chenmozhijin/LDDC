@@ -246,6 +246,7 @@ def _normalize_flutter(args: argparse.Namespace) -> None:
         and payload.get("success") is True
         and not step_failed
     )
+    flutter_reported_success = payload.get("success") is True
     payload["runner"] = {
         "exitCode": args.exit_code,
         "originalReportType": args.raw_report_type,
@@ -255,6 +256,13 @@ def _normalize_flutter(args: argparse.Namespace) -> None:
     payload["status"] = "passed" if passed else "failed"
     payload["success"] = passed
     _write_atomic(args.scenario_report, payload)
+    if not passed and args.failure_junit is not None:
+        message = (
+            "联合场景最终状态失败: "
+            f"exitCode={args.exit_code}, testStarted={test_started}, "
+            f"flutterSuccess={flutter_reported_success}"
+        )
+        _write_failure_junit(args.failure_junit, str(payload.get("scenario")), message)
 
 
 def _normalize_native(args: argparse.Namespace) -> None:
@@ -326,6 +334,13 @@ def _normalize_native(args: argparse.Namespace) -> None:
         "extra": evidence.get("extra", {}),
     }
     _write_atomic(args.scenario_report, payload)
+    if not passed and args.failure_junit is not None:
+        message = (
+            "原生场景最终状态失败: "
+            f"exitCode={args.exit_code}, testStarted={test_started}, "
+            f"skipped={skipped}, stepFailed={step_failed}"
+        )
+        _write_failure_junit(args.failure_junit, str(evidence["scenario"]), message)
 
 
 def main() -> int:

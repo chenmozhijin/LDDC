@@ -467,13 +467,31 @@
       "profile": "platform",
       "platform": "macos",
       "scenario": "macos_open_panel_select",
-      "framework": "xcuitest",
+      "framework": "integration_test+xcuitest",
       "capabilities": {
         "filePicker": {
           "mode": "real",
           "required": true,
           "applicable": true,
-          "reason": "XCUITest 必须操作真实 NSOpenPanel 并选择匿名音频 fixture"
+          "reason": "Flutter integration_test 必须打开生产 NSOpenPanel，XCUITest 只附着现有应用并选择匿名音频 fixture"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "选择结果必须通过生产文件选择通道返回 Flutter"
+        },
+        "desktopProcess": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Flutter integration_test 必须启动和关闭真实 macOS 应用进程"
+        },
+        "windowHost": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Flutter integration_test 操作应用窗口，XCUITest 不查询 Flutter semantics"
         },
         "resourceCleanup": {
           "mode": "real",
@@ -487,13 +505,31 @@
       "profile": "platform",
       "platform": "macos",
       "scenario": "macos_open_panel_cancel",
-      "framework": "xcuitest",
+      "framework": "integration_test+xcuitest",
       "capabilities": {
         "filePicker": {
           "mode": "real",
           "required": true,
           "applicable": true,
-          "reason": "XCUITest 必须在真实 NSOpenPanel 中执行取消"
+          "reason": "Flutter integration_test 必须打开生产 NSOpenPanel，XCUITest 只附着现有应用并执行取消"
+        },
+        "nativeChannels": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消结果必须通过生产文件选择通道返回 Flutter"
+        },
+        "desktopProcess": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Flutter integration_test 必须启动和关闭真实 macOS 应用进程"
+        },
+        "windowHost": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "Flutter integration_test 操作应用窗口，XCUITest 不查询 Flutter semantics"
         },
         "resourceCleanup": {
           "mode": "real",

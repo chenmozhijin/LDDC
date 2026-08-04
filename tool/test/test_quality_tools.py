@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -39,6 +40,17 @@ def _load_coverage_checker():
     spec = importlib.util.spec_from_file_location("check_coverage", path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"无法加载覆盖率检查器: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_ci_phase_summary():
+    path = ROOT / "tool/test/ci_phase_summary.py"
+    spec = importlib.util.spec_from_file_location("ci_phase_summary", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"无法加载 CI 阶段汇总器: {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -115,6 +127,64 @@ def _load_test_sensitivity_checker():
 
 
 class QualityToolTests(unittest.TestCase):
+    def test_ci_phase_summary_accepts_only_all_success(self) -> None:
+        module = _load_ci_phase_summary()
+        phases = [
+            module.parse_phase("build|Release build|success"),
+            module.parse_phase("tests|Platform tests|success"),
+        ]
+
+        summary = module.render_summary("Windows validation", phases)
+
+        self.assertIn("Required result: `success`", summary)
+        self.assertTrue(all(phase.outcome == "success" for phase in phases))
+
+    def test_ci_phase_summary_preserves_failure_kinds_and_marks_missing(self) -> None:
+        module = _load_ci_phase_summary()
+        phases = [
+            module.parse_phase("failed|Failed phase|failure"),
+            module.parse_phase("skipped|Skipped phase|skipped"),
+            module.parse_phase("cancelled|Cancelled phase|cancelled"),
+            module.parse_phase("missing|Missing phase|"),
+        ]
+
+        summary = module.render_summary("Required phases", phases)
+
+        self.assertEqual(
+            [phase.outcome for phase in phases],
+            ["failure", "skipped", "cancelled", "missing"],
+        )
+        self.assertIn("Required result: `failure`", summary)
+
+    def test_ci_phase_summary_returns_nonzero_and_writes_failure_summary(self) -> None:
+        script = ROOT / "tool/test/ci_phase_summary.py"
+        with tempfile.TemporaryDirectory() as temp:
+            summary_path = Path(temp) / "step-summary.md"
+            environment = os.environ.copy()
+            environment["GITHUB_STEP_SUMMARY"] = str(summary_path)
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "--title",
+                    "iOS validation",
+                    "--phase",
+                    "system_ui|Document Picker|skipped",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("system_ui=skipped", result.stderr)
+            self.assertIn(
+                "Required result: `failure`",
+                summary_path.read_text(encoding="utf-8"),
+            )
+
     def test_coverage_parser_excludes_dependency_package_sources(self) -> None:
         checker = _load_coverage_checker()
         with tempfile.TemporaryDirectory() as temp:
@@ -827,6 +897,51 @@ class QualityToolTests(unittest.TestCase):
             self.assertIn("规范化失败", report["extra"]["infrastructureFailure"])
             suite = ET.parse(junit).getroot()
             self.assertEqual(suite.get("failures"), "1")
+
+    def test_flutter_normalizer_overrides_passing_junit_when_runner_failed(self) -> None:
+        normalizer = ROOT / "tool/test/normalize_integration_report.py"
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            scenario = root / "platform_capability_smoke.json"
+            raw = root / "platform_capability_smoke.jsonl"
+            junit = root / "platform_capability_smoke.xml"
+            payload = _complete_scenario_report(
+                profile="platform",
+                platform="android",
+                scenario="platform_capability_smoke",
+            )
+            scenario.write_text(json.dumps(payload), encoding="utf-8")
+            raw.write_text(
+                json.dumps({"type": "testStart", "test": {"id": 1}}) + "\n",
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(normalizer),
+                    "--scenario-report",
+                    str(scenario),
+                    "--raw-report",
+                    str(raw),
+                    "--raw-report-type",
+                    "flutter-jsonl",
+                    "--framework",
+                    "integration_test",
+                    "--exit-code",
+                    "1",
+                    "--failure-junit",
+                    str(junit),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            normalized = json.loads(scenario.read_text(encoding="utf-8"))
+            self.assertFalse(normalized["success"])
+            self.assertEqual(ET.parse(junit).getroot().get("failures"), "1")
 
     def test_flutter_normalizer_merges_flaui_evidence_and_rejects_mismatch(self) -> None:
         normalizer = ROOT / "tool/test/normalize_integration_report.py"

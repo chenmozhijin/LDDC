@@ -187,6 +187,57 @@ function Test-ScenarioExecutionStarted {
   return $false
 }
 
+function Test-IosSimulatorReady {
+  param([Parameter(Mandatory = $true)][string]$Stage)
+
+  if ($Platform -ne "ios") {
+    return $true
+  }
+  $deviceLines = & xcrun simctl list devices --json 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "iOS Simulator 在 $Stage 无法读取设备状态: $($deviceLines -join ' ')"
+    return $false
+  }
+  try {
+    $devices = (($deviceLines) -join [Environment]::NewLine) | ConvertFrom-Json
+    $deviceInfo = $null
+    foreach ($runtime in $devices.devices.PSObject.Properties) {
+      foreach ($candidate in @($runtime.Value)) {
+        if ($candidate.udid -eq $Device) {
+          $deviceInfo = $candidate
+          break
+        }
+      }
+      if ($null -ne $deviceInfo) {
+        break
+      }
+    }
+  } catch {
+    Write-Warning "iOS Simulator 在 $Stage 返回了损坏的设备清单: $($_.Exception.Message)"
+    return $false
+  }
+  if ($null -eq $deviceInfo) {
+    Write-Warning "iOS Simulator 在 $Stage 找不到指定 UDID=$Device"
+    return $false
+  }
+  if ($deviceInfo.state -eq "Shutdown") {
+    & xcrun simctl boot $Device 2>&1 | Write-Host
+    if ($LASTEXITCODE -ne 0) {
+      Write-Warning "iOS Simulator 在 $Stage 无法启动"
+      return $false
+    }
+  } elseif ($deviceInfo.state -notin @("Booted", "Booting")) {
+    Write-Warning "iOS Simulator 在 $Stage 状态不可恢复: $($deviceInfo.state)"
+    return $false
+  }
+  & xcrun simctl bootstatus $Device -b 2>&1 | Write-Host
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "iOS Simulator 在 $Stage 等待 Booted 失败"
+    return $false
+  }
+  return $true
+}
+
 function Invoke-BoundedFlutterTest {
   param(
     [Parameter(Mandatory = $true)][string[]]$Arguments,
@@ -315,9 +366,17 @@ try {
       if (Test-Path -LiteralPath $jsonPath) {
         Remove-Item -LiteralPath $jsonPath -Force
       }
-      $testExitCode = Invoke-BoundedFlutterTest `
-        -Arguments $flutterArguments `
-        -EventReportPath $jsonPath
+      $simulatorReady = Test-IosSimulatorReady `
+        -Stage "$scenarioName-attempt-$($infrastructureAttempt + 1)"
+      if ($simulatorReady) {
+        $testExitCode = Invoke-BoundedFlutterTest `
+          -Arguments $flutterArguments `
+          -EventReportPath $jsonPath
+      } else {
+        # 126 明确表示设备基础设施未就绪；后续 normalizer 仍会生成失败
+        # scenario/JUnit，且只允许按既有规则重试一次。
+        $testExitCode = 126
+      }
       if ($testExitCode -eq 0) {
         break
       }
@@ -344,6 +403,15 @@ try {
       }
     }
 
+    $convertExitCode = 0
+    if (Test-Path -LiteralPath $jsonPath -PathType Leaf) {
+      & python $converter --input $jsonPath --output $junitPath
+      $convertExitCode = $LASTEXITCODE
+    } else {
+      $convertExitCode = 1
+    }
+    # 原始 JSONL 先转换；normalizer 最后根据应用退出码与报告回收状态写入
+    # 联合结果，必要时用失败 JUnit 覆盖原始成功，保持三类结果一致。
     & python $normalizer `
       --scenario-report $scenarioPath `
       --raw-report $jsonPath `
@@ -356,11 +424,6 @@ try {
       --platform $Platform `
       --failure-junit $junitPath
     $normalizeExitCode = $LASTEXITCODE
-    $convertExitCode = 0
-    if ($normalizeExitCode -eq 0) {
-      & python $converter --input $jsonPath --output $junitPath
-      $convertExitCode = $LASTEXITCODE
-    }
     if ($testExitCode -ne 0 -or $collectionExitCode -ne 0 -or
         $normalizeExitCode -ne 0 -or $convertExitCode -ne 0) {
       $overallExitCode = 1

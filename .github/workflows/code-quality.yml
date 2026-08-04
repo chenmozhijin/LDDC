@@ -214,8 +214,31 @@ jobs:
             --diff build/changed.diff \
             --threshold-config tool/coverage_thresholds.json
 
-      - name: Upload failed quality diagnostics
+      - name: Summarize required quality phases
+        id: required_outcomes
         if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python tool/test/ci_phase_summary.py `
+            --title 'Code quality' `
+            --phase 'static_analysis|Formatting and analysis|${{ steps.static_analysis.outcome }}' `
+            --phase 'repository_quality|Repository quality|${{ steps.repository_quality.outcome }}' `
+            --phase 'localization_drift|Localization drift|${{ steps.localization_drift.outcome }}' `
+            --phase 'architecture_tests|Architecture tests|${{ steps.architecture_tests.outcome }}' `
+            --phase 'desktop_protocol_tests|Desktop protocol tests|${{ steps.desktop_protocol_tests.outcome }}' `
+            --phase 'sensitivity_tests|Mutation sensitivity|${{ steps.sensitivity_tests.outcome }}' `
+            --phase 'core_tests|Lyrics core tests|${{ steps.core_tests.outcome }}' `
+            --phase 'runtime_tests|Lyrics runtime tests|${{ steps.runtime_tests.outcome }}' `
+            --phase 'lyrics_flutter_tests|Lyrics Flutter tests|${{ steps.lyrics_flutter_tests.outcome }}' `
+            --phase 'desktop_lyrics_tests|Desktop lyrics tests|${{ steps.desktop_lyrics_tests.outcome }}' `
+            --phase 'application_tests|Application tests|${{ steps.application_tests.outcome }}' `
+            --phase 'junit_reports|JUnit conversion|${{ steps.junit_reports.outcome }}' `
+            --phase 'coverage_thresholds|Coverage thresholds|${{ steps.coverage_thresholds.outcome }}' `
+            --phase 'changed_diff|Changed-lines diff|${{ steps.changed_diff.outcome }}' `
+            --phase 'changed_coverage|Changed-lines coverage|${{ steps.changed_coverage.outcome }}'
+      - name: Upload code quality diagnostics
+        if: always() && steps.required_outcomes.outcome != 'success'
         uses: actions/upload-artifact@v7
         with:
           name: code-quality-diagnostics
@@ -226,26 +249,10 @@ jobs:
             build/test_sensitivity.json
           if-no-files-found: ignore
           retention-days: 7
-      - name: Enforce required quality outcomes
+      - name: Enforce required quality result
         if: always()
+        shell: pwsh
         run: |
-          outcomes=(
-            '${{ steps.static_analysis.outcome }}'
-            '${{ steps.repository_quality.outcome }}'
-            '${{ steps.localization_drift.outcome }}'
-            '${{ steps.architecture_tests.outcome }}'
-            '${{ steps.desktop_protocol_tests.outcome }}'
-            '${{ steps.sensitivity_tests.outcome }}'
-            '${{ steps.core_tests.outcome }}'
-            '${{ steps.runtime_tests.outcome }}'
-            '${{ steps.lyrics_flutter_tests.outcome }}'
-            '${{ steps.desktop_lyrics_tests.outcome }}'
-            '${{ steps.application_tests.outcome }}'
-            '${{ steps.junit_reports.outcome }}'
-            '${{ steps.coverage_thresholds.outcome }}'
-            '${{ steps.changed_diff.outcome }}'
-            '${{ steps.changed_coverage.outcome }}'
-          )
-          for outcome in "${outcomes[@]}"; do
-            [[ "$outcome" == success ]] || exit 1
-          done
+          if ('${{ steps.required_outcomes.outcome }}' -ne 'success') {
+            throw 'Code quality validation failed; see the phase summary and diagnostics artifact'
+          }

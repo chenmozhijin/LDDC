@@ -72,7 +72,7 @@ void main() {
     );
   });
 
-  test('macOS loopback 控制通道不依赖 Unix socket 路径并校验令牌', () async {
+  test('macOS 取得锁后延迟发布业务端口并校验私有控制令牌', () async {
     final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
       paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
     );
@@ -93,23 +93,51 @@ void main() {
       ),
       DesktopPrimaryClaimResult.primary,
     );
-    expect(await port.request('get_service_port'), '23333');
-    expect(await port.hasPrimaryInstance(), isTrue);
-    expect(requestCount, 1);
-
     final File endpointFile = await runtimePaths
         .resolveMacOsControlEndpointFile();
+    expect(await endpointFile.exists(), isFalse);
+    expect(await port.hasPrimaryInstance(), isTrue);
+
+    await port.setServicePort(23333);
     final Map<String, Object?> endpoint =
         jsonDecode(await endpointFile.readAsString()) as Map<String, Object?>;
+    expect(endpoint.keys, unorderedEquals(<String>['schema', 'port', 'token']));
     expect(endpoint['schema'], 'lddc.macos_singleton_control');
+    expect(endpoint['port'], 23333);
     expect(endpoint['token'], 'a' * 64);
-    final Socket unauthenticated = await Socket.connect(
-      InternetAddress.loopbackIPv4,
-      endpoint['port']! as int,
+    final DesktopPrivateControlFrameResult authenticated = await port
+        .handlePrivateControlFrame(<String, Object?>{
+          '_lddcControl': 1,
+          'token': 'a' * 64,
+          'command': 'get_service_port',
+        }, encodedLength: 128);
+    expect(authenticated.action, DesktopPrivateControlFrameAction.respond);
+    expect(authenticated.response, <String, Object?>{
+      '_lddcControl': 1,
+      'ok': true,
+      'port': 23333,
+    });
+    expect(requestCount, 1);
+
+    final DesktopPrivateControlFrameResult unauthenticated = await port
+        .handlePrivateControlFrame(<String, Object?>{
+          '_lddcControl': 1,
+          'token': 'b' * 64,
+          'command': 'get_service_port',
+        }, encodedLength: 128);
+    expect(
+      unauthenticated.action,
+      DesktopPrivateControlFrameAction.rejectAndClose,
     );
-    unauthenticated.write('${'b' * 64}\nget_service_port\n');
-    await unauthenticated.flush();
-    expect(await utf8.decoder.bind(unauthenticated).join(), isEmpty);
+    expect(requestCount, 1);
+
+    final DesktopPrivateControlFrameResult oversized = await port
+        .handlePrivateControlFrame(<String, Object?>{
+          '_lddcControl': 1,
+          'token': 'a' * 64,
+          'command': 'show',
+        }, encodedLength: 4097);
+    expect(oversized.action, DesktopPrivateControlFrameAction.rejectAndClose);
     expect(requestCount, 1);
 
     await port.close();
@@ -147,7 +175,14 @@ void main() {
       await secondary.claimPrimary(onRequest: (_) => 'unused'),
       DesktopPrimaryClaimResult.existingPrimary,
     );
-    expect(await secondary.request('show'), 'updated');
+    final DesktopPrivateControlFrameResult response = await primary
+        .handlePrivateControlFrame(<String, Object?>{
+          '_lddcControl': 1,
+          'token': 'c' * 64,
+          'command': 'show',
+        }, encodedLength: 128);
+    expect(response.action, DesktopPrivateControlFrameAction.respond);
+    expect(response.response, <String, Object?>{'_lddcControl': 1, 'ok': true});
   });
 
   test('macOS 关闭后拒绝 claim 且等待不存在的 primary 会有界返回', () async {
@@ -171,7 +206,7 @@ void main() {
     );
   });
 
-  test('macOS 非法控制令牌初始化失败后释放端口与锁句柄', () async {
+  test('macOS 非法控制令牌初始化失败后释放文件锁', () async {
     final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
       paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
     );
@@ -197,10 +232,9 @@ void main() {
       await recovered.claimPrimary(onRequest: (_) => 'recovered'),
       DesktopPrimaryClaimResult.primary,
     );
-    expect(await recovered.request('show'), 'recovered');
   });
 
-  test('macOS 损坏 endpoint 不会被识别为存活 primary', () async {
+  test('macOS 损坏 endpoint 不代表存活 primary 且取得锁后会清理', () async {
     final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
       paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
     );
@@ -213,6 +247,11 @@ void main() {
 
     expect(await port.hasPrimaryInstance(), isFalse);
     await expectLater(port.request('show'), throwsFormatException);
+    expect(
+      await port.claimPrimary(onRequest: (_) => 'ready'),
+      DesktopPrimaryClaimResult.primary,
+    );
+    expect(await endpoint.exists(), isFalse);
   });
 
   test('主窗口首次成为 primary 时会写入 info.json 并继续启动', () async {

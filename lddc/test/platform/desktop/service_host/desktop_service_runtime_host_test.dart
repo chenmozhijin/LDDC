@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lddc_desktop_protocol/lddc_desktop_protocol.dart';
+import 'package:lddc/src/infra/storage/app_storage_paths_io.dart';
 import 'package:lddc/src/platform/desktop/service_host/desktop_floating_effect_executor.dart';
 import 'package:lddc/src/platform/desktop/service_host/desktop_panel_effect_executor.dart';
 import 'package:lddc/src/platform/desktop/service_host/desktop_panel_host_bridge.dart';
 import 'package:lddc/src/platform/desktop/service_host/desktop_service_bootstrap_io.dart';
 import 'package:lddc/src/platform/desktop/service_host/desktop_service_coordinator.dart';
+import 'package:lddc/src/platform/desktop/service_host/desktop_service_launch_arguments.dart';
 import 'package:lddc/src/platform/desktop/service_host/desktop_selector_effect_executor.dart';
 import 'package:lddc/src/platform/desktop/service_host/desktop_service_runtime_host_io.dart';
 import 'package:lddc/src/platform/desktop/service_host/desktop_session_reducer.dart';
@@ -153,6 +155,105 @@ void main() {
         () => backend.floatingHost.showCalls.contains(ack.instanceId),
       );
       expect(backend.floatingHost.showCalls, contains(ack.instanceId));
+    });
+
+    test('macOS 私有控制帧复用业务端口且不影响公开 hello 协议', () async {
+      final Directory tempDir = Directory.systemTemp.createTempSync(
+        'lddc_macos_shared_listener_',
+      );
+      final AppStoragePaths storagePaths = _createTestStoragePaths(tempDir);
+      final DesktopServiceRuntimePaths runtimePaths =
+          DesktopServiceRuntimePaths(paths: storagePaths);
+      final DesktopMacOsSingletonBootstrapPort singletonPort =
+          DesktopMacOsSingletonBootstrapPort(
+            runtimePaths: runtimePaths,
+            tokenFactory: () => 'e' * 64,
+          );
+      final DesktopServiceBootstrap bootstrap = DesktopServiceBootstrap(
+        infoWriter: DesktopServiceInfoWriter(
+          paths: storagePaths,
+          commandProvider: () =>
+              const DesktopServiceLaunchCommand(executable: 'lddc-test'),
+        ),
+        singletonPort: singletonPort,
+        exitHandler: (_) {},
+      );
+      final DesktopSessionReducer reducer = DesktopSessionReducer();
+      final _FakeWindowBackend backend = _FakeWindowBackend();
+      final DesktopServiceCoordinator coordinator = DesktopServiceCoordinator(
+        reducer: reducer,
+        sceneStore: DesktopInMemorySceneStore(),
+        floatingEffectExecutor: DesktopFloatingEffectExecutor(
+          windowBackend: backend,
+        ),
+        panelEffectExecutor: DesktopPanelEffectExecutor(windowBackend: backend),
+        selectorEffectExecutor: DesktopSelectorEffectExecutor(
+          windowBackend: backend,
+        ),
+      );
+      final DesktopServiceHost host = DesktopServiceHost(
+        coordinator: coordinator,
+        reducer: reducer,
+        bootstrap: bootstrap,
+      );
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      addTearDown(() async {
+        debugDefaultTargetPlatformOverride = null;
+        await host.dispose();
+        await coordinator.dispose();
+        await bootstrap.dispose();
+        if (tempDir.existsSync()) {
+          tempDir.deleteSync(recursive: true);
+        }
+      });
+
+      final DesktopServiceEntrypointResult entrypoint = await bootstrap
+          .prepareEntrypoint(
+            windowLaunch: const DesktopWindowLaunchArguments.main(),
+            launchArguments: const DesktopServiceLaunchArguments(),
+          );
+      expect(entrypoint.shouldRunApp, isTrue);
+      final File endpoint = await runtimePaths
+          .resolveMacOsControlEndpointFile();
+      expect(endpoint.existsSync(), isFalse);
+
+      await host.ensureStarted();
+
+      expect(await singletonPort.request('get_service_port'), '${host.port}');
+      expect(await singletonPort.request('show'), 'message_received');
+      final Map<String, Object?> endpointPayload = Map<String, Object?>.from(
+        jsonDecode(endpoint.readAsStringSync())! as Map<Object?, Object?>,
+      );
+      expect(
+        endpointPayload.keys,
+        unorderedEquals(<String>['schema', 'port', 'token']),
+      );
+      expect(endpointPayload['port'], host.port);
+
+      final Socket publicClient = await Socket.connect(
+        InternetAddress.loopbackIPv4,
+        host.port!,
+      );
+      final TestSocketFrameReader reader = TestSocketFrameReader(publicClient);
+      publicClient.add(
+        const DesktopIpcFramer().encodeJson(
+          const DesktopHelloMessage().toJson(),
+        ),
+      );
+      await publicClient.flush();
+      final DesktopInstanceAckMessage ack = const DesktopIpcMessageCodec()
+          .decodeInstanceAck(await reader.nextFrame());
+      expect(ack.instanceId, greaterThanOrEqualTo(1024));
+      await reader.dispose();
+
+      await host.dispose();
+      expect(endpoint.existsSync(), isFalse);
+      expect(await singletonPort.hasPrimaryInstance(), isTrue);
+      await bootstrap.dispose();
+      final DesktopMacOsSingletonBootstrapPort probe =
+          DesktopMacOsSingletonBootstrapPort(runtimePaths: runtimePaths);
+      addTearDown(probe.close);
+      expect(await probe.hasPrimaryInstance(), isFalse);
     });
 
     test('并发启动只绑定一个服务端口，释放后不能重新启动', () async {
@@ -855,6 +956,22 @@ Future<Map<String, Object?>> _readSingleFrame(Socket socket) async {
     return Map<String, Object?>.from(payload! as Map<Object?, Object?>);
   }
   throw StateError('socket closed before first frame received');
+}
+
+AppStoragePaths _createTestStoragePaths(Directory root) {
+  return AppStoragePaths(
+    isWindows: false,
+    isLinux: false,
+    isMacOS: true,
+    windowsKnownFolderResolver: (_) async => root.path,
+    linuxConfigHomeResolver: () async => root,
+    linuxDataHomeResolver: () async => root,
+    linuxCacheHomeResolver: () async => root,
+    applicationSupportDirectoryResolver: () async => root,
+    applicationCacheDirectoryResolver: () async => root,
+    applicationDocumentsDirectoryResolver: () async => root,
+    libraryDirectoryResolver: () async => root,
+  );
 }
 
 final class _RuntimeHostHarness {

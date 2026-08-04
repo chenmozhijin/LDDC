@@ -347,6 +347,15 @@ def failures() -> list[str]:
         testable = macos_scheme.getroot().find(".//TestableReference")
         if testable is None or testable.get("parallelizable") != "NO":
             problems.append("macOS UI tests 必须禁用并行执行")
+        fixture_environment = macos_scheme.getroot().find(
+            ".//EnvironmentVariable[@key='LDDC_FIXTURE_PATH']"
+        )
+        if (
+            fixture_environment is None
+            or fixture_environment.get("value") != "$(LDDC_FIXTURE_PATH)"
+            or fixture_environment.get("isEnabled") != "YES"
+        ):
+            problems.append("macOS hybrid UI tests 缺少 fixture path 环境映射")
     except ET.ParseError as error:
         problems.append(f"macOS UI scheme XML 无效: {error}")
     macos_release_entitlements = (
@@ -490,6 +499,17 @@ def failures() -> list[str]:
     workflow = (workflow_dir / "cross-platform-validation.yml").read_text(
         encoding="utf-8"
     )
+    quality_workflow = (workflow_dir / "code-quality.yml").read_text(
+        encoding="utf-8"
+    )
+    if workflow.count("tool/test/ci_phase_summary.py") != 5:
+        problems.append("五个平台 job 必须统一使用 CI required phase 汇总器")
+    if quality_workflow.count("tool/test/ci_phase_summary.py") != 1:
+        problems.append("Code Quality 必须使用统一 CI required phase 汇总器")
+    if "validation-failure" in workflow or "Upload failed" in workflow:
+        problems.append("平台 artifact 必须使用条件 diagnostics 命名，禁止固定 failure 命名")
+    if workflow.count("steps.required_outcomes.outcome != 'success'") != 5:
+        problems.append("五个平台 diagnostics 必须仅在 required phase 失败时上传")
     protocol_pubspec = (
         ROOT / "packages/lddc_desktop_protocol/pubspec.yaml"
     ).read_text(encoding="utf-8")
@@ -629,17 +649,48 @@ def failures() -> list[str]:
     ):
         if marker not in macos_runner:
             problems.append(f"macOS XCUITest runner 缺少真实运行契约: {marker}")
-    macos_window = (ROOT / "lddc/macos/Runner/MainFlutterWindow.swift").read_text(
-        encoding="utf-8"
-    )
     macos_ui_tests = (ROOT / "lddc/macos/RunnerUITests/RunnerUITests.swift").read_text(
         encoding="utf-8"
     )
-    accessibility_argument = "--lddc-enable-accessibility-for-ui-test"
-    if accessibility_argument not in macos_window or accessibility_argument not in macos_ui_tests:
-        problems.append("macOS XCUITest 缺少测试专用 accessibility 启动契约")
-    if "#if DEBUG" not in macos_window:
-        problems.append("macOS accessibility workaround 必须与 Release 编译隔离")
+    for required in (
+        "XCUIApplication(bundleIdentifier:",
+        "waitForRunningApplication",
+        "app.sheets.firstMatch",
+        "attachedToExistingApplication",
+    ):
+        if required not in macos_ui_tests:
+            problems.append(f"macOS hybrid XCUITest 缺少附着运行中应用契约: {required}")
+    for forbidden in (
+        ".launch()",
+        ".activate()",
+        "--lddc-enable-accessibility-for-ui-test",
+        "lddc-open-lyrics",
+    ):
+        if forbidden in macos_ui_tests:
+            problems.append(f"macOS hybrid XCUITest 禁止启动应用或查询 Flutter 控件: {forbidden}")
+    for required in (
+        "integration_test/macos_file_dialog_platform_test.dart",
+        "LDDC_MACOS_HYBRID_SYNC_DIR",
+        "Wait-ForPickerMarker",
+        "marker.runId -ne $runId",
+        "marker.scenario -ne $Scenario",
+        "Copy-Item -LiteralPath $fixtureSource -Destination $fixture",
+        "Write-InfrastructureFailureReports",
+    ):
+        if required not in macos_runner:
+            problems.append(f"macOS hybrid runner 缺少协同或失败报告契约: {required}")
+    ios_runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
+        encoding="utf-8"
+    )
+    for required in (
+        "Get-SimulatorMetadata",
+        'simulator = $simulatorMetadata',
+        '"-parallel-testing-enabled", "NO"',
+    ):
+        if required not in ios_runner:
+            problems.append(f"iOS runner 缺少 Simulator 证据或串行测试契约: {required}")
+    if "-parallel-testing-enabled NO" not in workflow:
+        problems.append("iOS native XCTest 必须禁用并行执行")
     for manual_linux_asset in (
         ROOT / "tool/test/run_linux_platform_tests.sh",
         ROOT / "tool/test/requirements-linux-platform.txt",
@@ -655,6 +706,8 @@ def failures() -> list[str]:
         "Test-ScenarioExecutionStarted",
         'StartsWith("loading ")',
         '"code_cache/$ContainerReportDir/$Scenario.json"',
+        "Test-IosSimulatorReady",
+        "$testExitCode = 126",
         "$process.Kill($true)",
         "return 124",
         "return 125",

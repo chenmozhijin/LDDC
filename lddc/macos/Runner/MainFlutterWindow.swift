@@ -2,29 +2,6 @@ import Cocoa
 import FlutterMacOS
 import desktop_multi_window
 
-#if DEBUG
-enum MacOsUiTestAccessibility {
-  static let launchArgument = "--lddc-enable-accessibility-for-ui-test"
-  private static let notificationName = Notification.Name(
-    "NSApplicationDidChangeAccessibilityEnhancedUserInterfaceNotification"
-  )
-
-  static func enableIfRequested(arguments: [String] = ProcessInfo.processInfo.arguments) {
-    guard arguments.contains(launchArgument) else {
-      return
-    }
-    // Flutter macOS 尚未提供公开的强制 accessibility API（flutter/flutter#90673）。
-    // Engine 自身依赖此系统通知创建 native bridge；仅 Debug UI test 显式请求时投递，
-    // 避免开启 VoiceOver、修改 TCC 或调用 FlutterEngine_Internal 私有属性。
-    NotificationCenter.default.post(
-      name: notificationName,
-      object: nil,
-      userInfo: ["AXEnhancedUserInterface": true]
-    )
-  }
-}
-#endif
-
 enum DesktopDragDropPayloadBuilder {
   static func flutterY(localY: CGFloat, contentHeight: CGFloat) -> Double {
     return Double(contentHeight - localY)
@@ -109,13 +86,6 @@ class MainFlutterWindow: NSWindow {
 
     super.awakeFromNib()
 
-    #if DEBUG
-    // 下一轮主队列执行时 engine 已完成 observer 注册和 view attachment，确保通知能够
-    // 同时创建 accessibility bridge 并请求首棵 semantics tree。
-    DispatchQueue.main.async {
-      MacOsUiTestAccessibility.enableIfRequested()
-    }
-    #endif
   }
 
   @objc func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {

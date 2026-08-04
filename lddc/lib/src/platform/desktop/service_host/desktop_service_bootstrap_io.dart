@@ -11,6 +11,7 @@ import 'dart:math';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:lddc_desktop_protocol/lddc_desktop_protocol.dart';
 import 'package:path/path.dart' as p;
 import 'package:win32/win32.dart';
 
@@ -25,6 +26,27 @@ typedef DesktopServiceExitHandler = void Function(int exitCode);
 typedef DesktopServiceSingletonRequestHandler =
     FutureOr<String?> Function(String message);
 typedef DesktopShowRequestHandler = Future<void> Function();
+
+/// 业务监听器收到 JSON 帧后，对 macOS 私有单实例控制帧的分发结果。
+///
+/// 私有控制帧只在应用内部使用，不进入与 Python 版和桌面歌词插件兼容的公开 codec。
+enum DesktopPrivateControlFrameAction { notControl, respond, rejectAndClose }
+
+final class DesktopPrivateControlFrameResult {
+  const DesktopPrivateControlFrameResult._(this.action, this.response);
+
+  const DesktopPrivateControlFrameResult.notControl()
+    : this._(DesktopPrivateControlFrameAction.notControl, null);
+
+  const DesktopPrivateControlFrameResult.rejectAndClose()
+    : this._(DesktopPrivateControlFrameAction.rejectAndClose, null);
+
+  const DesktopPrivateControlFrameResult.respond(Map<String, Object?> response)
+    : this._(DesktopPrivateControlFrameAction.respond, response);
+
+  final DesktopPrivateControlFrameAction action;
+  final Map<String, Object?>? response;
+}
 
 final AppLogger _bootstrapLogger = AppLogger.scope('service-bootstrap');
 const int _maxControlRequestBytes = 4096;
@@ -1262,19 +1284,17 @@ final class DesktopMacOsSingletonBootstrapPort
     DesktopServiceRuntimePaths? runtimePaths,
     String Function()? tokenFactory,
   }) : _runtimePaths = runtimePaths ?? const DesktopServiceRuntimePaths(),
-       _tokenFactory = tokenFactory ?? _createMacOsControlToken {
-    _controlServer = _DesktopControlSocketServer(
-      logLabel: 'macOS loopback singleton',
-      requestReader: _readAuthenticatedRequest,
-    );
-  }
+       _tokenFactory = tokenFactory ?? _createMacOsControlToken;
 
   final DesktopServiceRuntimePaths _runtimePaths;
   final String Function() _tokenFactory;
-  late final _DesktopControlSocketServer _controlServer;
+  static final Set<String> _claimedLockPaths = <String>{};
+  static const DesktopIpcFramer _controlFramer = DesktopIpcFramer();
   RandomAccessFile? _lockHandle;
+  String? _lockIdentity;
   File? _endpointFile;
   String? _controlToken;
+  DesktopServiceSingletonRequestHandler? _onRequest;
   Future<void>? _closeFuture;
   bool _closed = false;
 
@@ -1284,18 +1304,20 @@ final class DesktopMacOsSingletonBootstrapPort
   Future<void> _close() async {
     _closed = true;
     try {
-      await _controlServer.close();
+      await unpublishServicePort();
     } finally {
       try {
-        final File? endpointFile = _endpointFile;
         _endpointFile = null;
-        if (endpointFile != null && await endpointFile.exists()) {
-          await endpointFile.delete();
-        }
       } finally {
         _controlToken = null;
+        _onRequest = null;
         final RandomAccessFile? lockHandle = _lockHandle;
         _lockHandle = null;
+        final String? lockIdentity = _lockIdentity;
+        _lockIdentity = null;
+        if (lockIdentity != null) {
+          _claimedLockPaths.remove(lockIdentity);
+        }
         if (lockHandle != null) {
           try {
             await lockHandle.unlock();
@@ -1320,16 +1342,70 @@ final class DesktopMacOsSingletonBootstrapPort
       timeout: timeout,
     );
     try {
-      socket.write('${endpoint.token}\n$message\n');
+      final List<int> requestFrame = _controlFramer.encodeJson(
+        <String, Object?>{
+          '_lddcControl': 1,
+          'token': endpoint.token,
+          'command': message,
+        },
+      );
+      if (requestFrame.length > _maxControlRequestBytes + 4) {
+        throw const FormatException('macOS 单实例控制请求超过 4 KiB');
+      }
+      socket.add(requestFrame);
       await socket.flush();
-      return await utf8.decoder.bind(socket).join().timeout(timeout);
+      final Map<String, Object?> response = await _readControlResponse(
+        socket,
+        timeout: timeout,
+      );
+      if (response['_lddcControl'] != 1 || response['ok'] is! bool) {
+        throw const FormatException('macOS 单实例控制响应格式无效');
+      }
+      if (response['ok'] != true) {
+        throw StateError('macOS 单实例控制请求失败: ${response['error'] ?? 'unknown'}');
+      }
+      if (message == 'get_service_port') {
+        final Object? port = response['port'];
+        if (port is! int || port <= 0 || port > 65535) {
+          throw const FormatException('macOS 单实例控制响应端口无效');
+        }
+        return '$port';
+      }
+      return 'message_received';
     } finally {
       socket.destroy();
     }
   }
 
   @override
-  Future<void> setServicePort(int port) async {}
+  Future<void> setServicePort(int port) async {
+    if (port <= 0 || port > 65535) {
+      throw ArgumentError.value(port, 'port', '必须是有效 TCP 端口');
+    }
+    final String? token = _controlToken;
+    if (_lockHandle == null || token == null || _onRequest == null) {
+      throw StateError('macOS primary 尚未完成单实例仲裁');
+    }
+    final File endpointFile =
+        _endpointFile ?? await _runtimePaths.resolveMacOsControlEndpointFile();
+    _endpointFile = endpointFile;
+    await _writeEndpoint(
+      endpointFile,
+      _DesktopMacOsControlEndpoint(port: port, token: token),
+    );
+    _bootstrapLogger.info(
+      'macOS singleton endpoint published',
+      fields: <String, Object?>{'port': port},
+    );
+  }
+
+  Future<void> unpublishServicePort() async {
+    final File? endpointFile = _endpointFile;
+    if (endpointFile != null && await endpointFile.exists()) {
+      await endpointFile.delete();
+      _bootstrapLogger.info('macOS singleton endpoint unpublished');
+    }
+  }
 
   @override
   Future<DesktopPrimaryClaimResult> claimPrimary({
@@ -1338,18 +1414,19 @@ final class DesktopMacOsSingletonBootstrapPort
     if (_closed) {
       throw StateError('DesktopMacOsSingletonBootstrapPort 已关闭');
     }
-    if (_controlServer.isListening) {
-      _controlServer.updateHandler(onRequest);
+    if (_lockHandle != null) {
+      _onRequest = onRequest;
       return DesktopPrimaryClaimResult.primary;
-    }
-    if (await _canReachExistingEndpoint()) {
-      return DesktopPrimaryClaimResult.existingPrimary;
     }
 
     final File lockFile = await _runtimePaths.resolveMacOsControlLockFile();
     final Directory parent = lockFile.parent;
     if (!await parent.exists()) {
       await parent.create(recursive: true);
+    }
+    final String lockIdentity = p.normalize(lockFile.absolute.path);
+    if (_claimedLockPaths.contains(lockIdentity)) {
+      return DesktopPrimaryClaimResult.existingPrimary;
     }
     final RandomAccessFile lockHandle = await lockFile.open(
       mode: FileMode.append,
@@ -1362,26 +1439,22 @@ final class DesktopMacOsSingletonBootstrapPort
         return DesktopPrimaryClaimResult.existingPrimary;
       }
 
-      final ServerSocket server = await ServerSocket.bind(
-        InternetAddress.loopbackIPv4,
-        0,
-        shared: false,
-      );
       final String token = _tokenFactory();
       if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(token)) {
-        await server.close();
         throw StateError('macOS 单实例控制令牌必须是 32 bytes 小写十六进制');
       }
       final File endpointFile = await _runtimePaths
           .resolveMacOsControlEndpointFile();
+      if (await endpointFile.exists()) {
+        // 文件锁已经证明旧 primary 不存在，此处删除的只能是崩溃遗留 endpoint。
+        await endpointFile.delete();
+      }
       _lockHandle = lockHandle;
+      _lockIdentity = lockIdentity;
+      _claimedLockPaths.add(lockIdentity);
       _endpointFile = endpointFile;
       _controlToken = token;
-      _controlServer.attach(server: server, onRequest: onRequest);
-      await _writeEndpoint(
-        endpointFile,
-        _DesktopMacOsControlEndpoint(port: server.port, token: token),
-      );
+      _onRequest = onRequest;
       return DesktopPrimaryClaimResult.primary;
     } on Object {
       if (!identical(_lockHandle, lockHandle)) {
@@ -1400,10 +1473,30 @@ final class DesktopMacOsSingletonBootstrapPort
 
   @override
   Future<bool> hasPrimaryInstance() async {
-    if (_controlServer.isListening) {
+    if (_lockHandle != null) {
       return true;
     }
-    return _canReachExistingEndpoint();
+    final File lockFile = await _runtimePaths.resolveMacOsControlLockFile();
+    final Directory parent = lockFile.parent;
+    if (!await parent.exists()) {
+      await parent.create(recursive: true);
+    }
+    final String lockIdentity = p.normalize(lockFile.absolute.path);
+    if (_claimedLockPaths.contains(lockIdentity)) {
+      return true;
+    }
+    final RandomAccessFile probe = await lockFile.open(mode: FileMode.append);
+    try {
+      try {
+        await probe.lock(FileLock.exclusive);
+      } on FileSystemException {
+        return true;
+      }
+      await probe.unlock();
+      return false;
+    } finally {
+      await probe.close();
+    }
   }
 
   @override
@@ -1419,24 +1512,6 @@ final class DesktopMacOsSingletonBootstrapPort
       await Future<void>.delayed(pollInterval);
     }
     return false;
-  }
-
-  Future<String?> _readAuthenticatedRequest(Socket socket) async {
-    final String? expectedToken = _controlToken;
-    if (expectedToken == null) {
-      return null;
-    }
-    // 令牌和命令必须在同一个 socket 订阅中读取。若分别创建 StreamIterator，
-    // 第一次 cancel 可能同时取消底层流，导致第二行在部分平台永久等待。
-    final List<String> lines = await _readBoundedControlLines(
-      socket,
-      lineCount: 2,
-    );
-    final String suppliedToken = lines.first.trim();
-    if (suppliedToken != expectedToken) {
-      return null;
-    }
-    return lines.last.trim();
   }
 
   Future<_DesktopMacOsControlEndpoint> _readEndpoint() async {
@@ -1459,6 +1534,86 @@ final class DesktopMacOsSingletonBootstrapPort
     } on Object {
       return false;
     }
+  }
+
+  Future<DesktopPrivateControlFrameResult> handlePrivateControlFrame(
+    Map<String, Object?> payload, {
+    required int encodedLength,
+  }) async {
+    if (payload['_lddcControl'] != 1) {
+      return const DesktopPrivateControlFrameResult.notControl();
+    }
+    if (encodedLength <= 0 || encodedLength > _maxControlRequestBytes) {
+      return const DesktopPrivateControlFrameResult.rejectAndClose();
+    }
+    final String? expectedToken = _controlToken;
+    if (expectedToken == null || payload['token'] != expectedToken) {
+      return const DesktopPrivateControlFrameResult.rejectAndClose();
+    }
+    final Object? command = payload['command'];
+    if (command != 'get_service_port' && command != 'show') {
+      return const DesktopPrivateControlFrameResult.respond(<String, Object?>{
+        '_lddcControl': 1,
+        'ok': false,
+        'error': 'unsupported_command',
+      });
+    }
+    final DesktopServiceSingletonRequestHandler? handler = _onRequest;
+    if (handler == null) {
+      return const DesktopPrivateControlFrameResult.respond(<String, Object?>{
+        '_lddcControl': 1,
+        'ok': false,
+        'error': 'service_unavailable',
+      });
+    }
+    final String response = (await handler(command as String) ?? '').trim();
+    if (command == 'get_service_port') {
+      final int? port = int.tryParse(response);
+      if (port == null || port <= 0 || port > 65535) {
+        return const DesktopPrivateControlFrameResult.respond(<String, Object?>{
+          '_lddcControl': 1,
+          'ok': false,
+          'error': 'service_unavailable',
+        });
+      }
+      return DesktopPrivateControlFrameResult.respond(<String, Object?>{
+        '_lddcControl': 1,
+        'ok': true,
+        'port': port,
+      });
+    }
+    return const DesktopPrivateControlFrameResult.respond(<String, Object?>{
+      '_lddcControl': 1,
+      'ok': true,
+    });
+  }
+
+  Future<Map<String, Object?>> _readControlResponse(
+    Socket socket, {
+    required Duration timeout,
+  }) async {
+    final List<int> bytes = <int>[];
+    await for (final List<int> chunk in socket.timeout(timeout)) {
+      if (bytes.length + chunk.length > _maxControlRequestBytes + 4) {
+        throw const FormatException('macOS 单实例控制响应超过 4 KiB');
+      }
+      bytes.addAll(chunk);
+    }
+    final DesktopIpcFrameBuffer buffer = DesktopIpcFrameBuffer(
+      maxFrameLength: _maxControlRequestBytes,
+    );
+    final List<List<int>> frames = buffer.addChunk(bytes);
+    if (frames.length != 1 || buffer.hasPendingBytes) {
+      throw const FormatException('macOS 单实例控制响应帧不完整');
+    }
+    final Object? decoded = jsonDecode(utf8.decode(frames.single));
+    if (decoded is! Map<Object?, Object?>) {
+      throw const FormatException('macOS 单实例控制响应必须是 JSON 对象');
+    }
+    return <String, Object?>{
+      for (final MapEntry<Object?, Object?> entry in decoded.entries)
+        entry.key.toString(): entry.value,
+    };
   }
 
   Future<void> _writeEndpoint(
@@ -1620,11 +1775,37 @@ class DesktopServiceBootstrap {
     _servicePort = port;
   }
 
+  /// 在关闭业务 listener 前撤销 macOS endpoint，避免新客户端连接正在退出的服务。
+  Future<void> unregisterServicePort() async {
+    _servicePort = null;
+    final DesktopSingletonBootstrapPort singletonPort = _singletonPort;
+    if (singletonPort is DesktopMacOsSingletonBootstrapPort) {
+      await singletonPort.unpublishServicePort();
+    }
+  }
+
+  /// 只让 macOS 单实例控制帧在公开 Python/插件 codec 之前被内部消费。
+  Future<DesktopPrivateControlFrameResult> handlePrivateControlFrame(
+    Map<String, Object?> payload, {
+    required int encodedLength,
+  }) {
+    final DesktopSingletonBootstrapPort singletonPort = _singletonPort;
+    if (singletonPort is DesktopMacOsSingletonBootstrapPort) {
+      return singletonPort.handlePrivateControlFrame(
+        payload,
+        encodedLength: encodedLength,
+      );
+    }
+    return Future<DesktopPrivateControlFrameResult>.value(
+      const DesktopPrivateControlFrameResult.notControl(),
+    );
+  }
+
   Future<void> dispose() => _disposeFuture ??= _dispose();
 
   Future<void> _dispose() async {
     _disposed = true;
-    _servicePort = null;
+    await unregisterServicePort();
     _pendingShowRequest = false;
     _showHandler = null;
     await _singletonPort.close();
