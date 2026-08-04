@@ -54,17 +54,69 @@ void main() {
     );
   }
 
-  test('macOS 单实例 socket 使用稳定应用数据目录而不是进程临时目录', () async {
+  test('macOS 单实例 endpoint 与 lock 使用稳定应用数据目录', () async {
     final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
       paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
-      isMacOS: true,
     );
 
-    final File socket = await runtimePaths.resolveControlSocketFile();
+    final File endpoint = await runtimePaths.resolveMacOsControlEndpointFile();
+    final File lock = await runtimePaths.resolveMacOsControlLockFile();
 
     expect(
-      socket.path.replaceAll('\\', '/'),
-      '${tempDir.path.replaceAll('\\', '/')}/Application Support/LDDC/runtime/service.sock',
+      endpoint.path.replaceAll('\\', '/'),
+      '${tempDir.path.replaceAll('\\', '/')}/Application Support/LDDC/runtime/control.json',
+    );
+    expect(
+      lock.path.replaceAll('\\', '/'),
+      '${tempDir.path.replaceAll('\\', '/')}/Application Support/LDDC/runtime/control.lock',
+    );
+  });
+
+  test('macOS loopback 控制通道不依赖 Unix socket 路径并校验令牌', () async {
+    final DesktopServiceRuntimePaths runtimePaths = DesktopServiceRuntimePaths(
+      paths: createPaths(isWindows: false, isLinux: false, isMacOS: true),
+    );
+    final DesktopMacOsSingletonBootstrapPort port =
+        DesktopMacOsSingletonBootstrapPort(
+          runtimePaths: runtimePaths,
+          tokenFactory: () => 'a' * 64,
+        );
+    addTearDown(port.close);
+    int requestCount = 0;
+
+    expect(
+      await port.claimPrimary(
+        onRequest: (String message) {
+          requestCount += 1;
+          return message == 'get_service_port' ? '23333' : 'unknown';
+        },
+      ),
+      DesktopPrimaryClaimResult.primary,
+    );
+    expect(await port.request('get_service_port'), '23333');
+    expect(await port.hasPrimaryInstance(), isTrue);
+    expect(requestCount, 1);
+
+    final File endpointFile = await runtimePaths
+        .resolveMacOsControlEndpointFile();
+    final Map<String, Object?> endpoint =
+        jsonDecode(await endpointFile.readAsString()) as Map<String, Object?>;
+    expect(endpoint['schema'], 'lddc.macos_singleton_control');
+    expect(endpoint['token'], 'a' * 64);
+    final Socket unauthenticated = await Socket.connect(
+      InternetAddress.loopbackIPv4,
+      endpoint['port']! as int,
+    );
+    unauthenticated.write('${'b' * 64}\nget_service_port\n');
+    await unauthenticated.flush();
+    expect(await utf8.decoder.bind(unauthenticated).join(), isEmpty);
+    expect(requestCount, 1);
+
+    await port.close();
+    expect(await endpointFile.exists(), isFalse);
+    expect(
+      await (await runtimePaths.resolveMacOsControlLockFile()).exists(),
+      isTrue,
     );
   });
 

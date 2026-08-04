@@ -443,6 +443,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmzj.lddc;
+				PRODUCT_MODULE_NAME = LDDC;
 				PRODUCT_NAME = LDDC;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
@@ -622,6 +623,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmzj.lddc;
+				PRODUCT_MODULE_NAME = LDDC;
 				PRODUCT_NAME = LDDC;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -644,6 +646,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmzj.lddc;
+				PRODUCT_MODULE_NAME = LDDC;
 				PRODUCT_NAME = LDDC;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
@@ -726,6 +729,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.cmzj.lddc.platformtests;
+				PRODUCT_MODULE_NAME = LDDC;
 				PRODUCT_NAME = LDDC;
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";

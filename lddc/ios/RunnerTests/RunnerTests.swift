@@ -2,7 +2,9 @@ import Flutter
 import UIKit
 import XCTest
 import Darwin
-@testable import Runner
+// 应用产品名已经从 Flutter 模板的 Runner 改为 LDDC。Swift 单元测试必须导入
+// PRODUCT_MODULE_NAME，而不是 Xcode target 的显示名称，否则显式模块构建会找不到宿主模块。
+@testable import LDDC
 
 final class RunnerTests: XCTestCase {
   func testReleaseMetadataMatchesBundle() {

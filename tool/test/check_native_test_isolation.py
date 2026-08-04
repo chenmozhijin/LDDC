@@ -104,6 +104,24 @@ def failures() -> list[str]:
         "PickerPendingRequestRegistryTest.kt"
     ).read_text(encoding="utf-8")
     for marker in (
+        'By.res("android", "aerr_wait")',
+        "handledSystemAnr || device.hasObject(By.pkg(APP_PACKAGE))",
+        "device.currentPackageName == APP_PACKAGE",
+        "Until.gone(systemAnrWaitSelector)",
+    ):
+        if marker not in android_platform_test:
+            problems.append(f"Android 前台状态机缺少严格 ANR/前台约束: {marker}")
+    wait_button_index = android_platform_test.find("val waitButton =")
+    foreground_index = android_platform_test.find(
+        "device.currentPackageName == APP_PACKAGE"
+    )
+    if (
+        wait_button_index >= 0
+        and foreground_index >= 0
+        and wait_button_index > foreground_index
+    ):
+        problems.append("Android 前台状态机必须先处理系统模态层，再判断 LDDC 可操作")
+    for marker in (
         "SafFileDescriptorChannelHandler(",
         "AndroidSafFileDescriptorGateway(contentResolver, ::queryDisplayName)",
         "PickerPendingRequestRegistry()",
@@ -188,6 +206,10 @@ def failures() -> list[str]:
             problems.append(f"iOS PlatformTest 工程缺少: {marker}")
     if project.count('INFOPLIST_FILE = "RunnerPlatformTests-Info.plist";') != 1:
         problems.append("测试 Info.plist 只能由单一 PlatformTest app 配置引用")
+    # Runner 是 Xcode target 名，Swift 实际模块名由 PRODUCT_MODULE_NAME 决定。
+    # 四个应用配置必须显式锁定为 LDDC，避免产品名调整后单测导入再次漂移。
+    if project.count("PRODUCT_MODULE_NAME = LDDC;") != 4:
+        problems.append("iOS 四个应用配置必须显式固定 PRODUCT_MODULE_NAME=LDDC")
     ios_ui_test = (ROOT / "lddc/ios/RunnerUITests/RunnerUITests.swift").read_text(
         encoding="utf-8"
     )
@@ -197,6 +219,18 @@ def failures() -> list[str]:
     ios_unit_tests = (ROOT / "lddc/ios/RunnerTests/RunnerTests.swift").read_text(
         encoding="utf-8"
     )
+    if "@testable import LDDC" not in ios_unit_tests:
+        problems.append("iOS RunnerTests 必须导入实际 Swift 模块 LDDC")
+    if "@testable import Runner" in ios_unit_tests:
+        problems.append("iOS RunnerTests 禁止导入旧模板模块 Runner")
+    for marker in (
+        "let errorValue: Any = failure.map",
+        '"error": errorValue,',
+    ):
+        if marker not in ios_ui_test:
+            problems.append(f"iOS XCUITest evidence JSON 缺少稳定类型处理: {marker}")
+    if '"error": failure.map' in ios_ui_test:
+        problems.append("iOS XCUITest 禁止让 Swift 推断 String/NSNull 混合表达式")
     for marker in (
         "security_scoped_fd_read_embedded_lyrics",
         "read_write_fd_tag_saved",
@@ -488,6 +522,22 @@ def failures() -> list[str]:
     process_runner = (ROOT / "tool/test/run_desktop_process_e2e.ps1").read_text(
         encoding="utf-8"
     )
+    service_bootstrap = (
+        ROOT
+        / "lddc/lib/src/platform/desktop/service_host/desktop_service_bootstrap_io.dart"
+    ).read_text(encoding="utf-8")
+    for marker in (
+        "final class DesktopMacOsSingletonBootstrapPort",
+        "FileLock.exclusive",
+        "InternetAddress.loopbackIPv4",
+        "lddc.macos_singleton_control",
+        "resolveMacOsControlEndpointFile",
+        "resolveMacOsControlLockFile",
+    ):
+        if marker not in service_bootstrap:
+            problems.append(f"macOS 单实例控制缺少无路径上限实现: {marker}")
+    if "Platform.isLinux || Platform.isMacOS" in service_bootstrap:
+        problems.append("macOS 禁止继续复用受 sun_path 长度限制的 Linux Unix socket")
     process_preflight = process_runner.find(
         'if ($Platform -in @("windows", "macos"))'
     )
@@ -533,13 +583,16 @@ def failures() -> list[str]:
         "run_ios_platform_tests.ps1",
         "run_windows_platform_tests.ps1",
         "run_macos_platform_tests.ps1",
+        "run_macos_platform_tests.ps1 -BuildOnly",
+        "Compile-only validation does not produce filePicker=real evidence",
         "run_desktop_process_e2e.ps1",
         "Snapshot Windows production application",
         "Snapshot macOS production application",
-        "Snapshot Linux production application",
         "-AppExe lddc/build/production_e2e/windows/lddc.exe",
         "-AppExe lddc/build/production_e2e/macos/LDDC.app/Contents/MacOS/LDDC",
-        "-AppExe lddc/build/production_e2e/linux/lddc",
+        "Record Linux multi-window known issue",
+        "MixinNetwork/flutter-plugins#448/#488",
+        "multi-window runtime remains a manual known issue and is not reported as passed",
         "run_platform_media_resource.ps1",
         "Run iOS native unit tests",
         "Restore iOS debug application after Flutter integration",
@@ -553,6 +606,31 @@ def failures() -> list[str]:
     # 便于在具备可访问性桥接的真实桌面环境中人工执行。
     if "Dogtail 脚本继续保留供人工环境验证" not in workflow:
         problems.append("Linux Dogtail 必须在 workflow 中明确标记为人工验证")
+    linux_start = workflow.find("  linux-validation:")
+    android_start = workflow.find("  android-validation:")
+    if linux_start >= 0 and android_start > linux_start:
+        linux_job = workflow[linux_start:android_start]
+        for forbidden in (
+            "run_desktop_process_e2e.ps1 -Platform linux",
+            "steps.desktop_process.outcome",
+            "Snapshot Linux production application",
+        ):
+            if forbidden in linux_job:
+                problems.append(
+                    f"Linux 已知多窗口问题不得继续作为 hosted 必需门禁: {forbidden}"
+                )
+    if "./tool/test/run_macos_platform_tests.ps1\n" in workflow:
+        problems.append("hosted macOS 不得执行需要预授权辅助功能权限的 XCUITest runtime")
+    macos_runner = (ROOT / "tool/test/run_macos_platform_tests.ps1").read_text(
+        encoding="utf-8"
+    )
+    for marker in (
+        "[switch]$BuildOnly",
+        "macOS XCUITest build-only validation passed",
+        "真实 NSOpenPanel",
+    ):
+        if marker not in macos_runner:
+            problems.append(f"macOS 手工 XCUITest runner 缺少编译/运行边界: {marker}")
     for manual_linux_asset in (
         ROOT / "tool/test/run_linux_platform_tests.sh",
         ROOT / "tool/test/requirements-linux-platform.txt",

@@ -380,7 +380,38 @@ class DocumentsUiPlatformPocTest {
         // 不再保证位于 depth(0)。固定根深度会把已经 RESUMED、完成首帧的 LDDC
         // 误判为未启动；包名仍由系统提供且不会匹配 DocumentsUI，因此只移除错误
         // 的层级假设，不降低“必须真实返回应用窗口”的前台证据。
-        return device.wait(Until.hasObject(By.pkg(APP_PACKAGE)), TIMEOUT_MS)
+        val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        var handledSystemAnr = false
+        val systemAnrWaitSelector = By.res("android", "aerr_wait")
+        while (System.currentTimeMillis() < deadline) {
+            val waitButton = device.findObject(systemAnrWaitSelector)
+            if (waitButton != null) {
+                // Hosted emulator 偶发在冷启动时弹出 Quickstep ANR，系统模态层会
+                // 挡住 ActivityScenario 请求启动的 LDDC。必须先处理模态层再判断
+                // 应用节点；否则 LDDC 节点即使位于对话框后方也会被误判为可操作。
+                // 只允许在 LDDC 节点尚不存在时按系统资源 ID 点一次“等待”。节点
+                // 已存在或 ANR 再次出现都可能是 LDDC 自身无响应，必须失败而不能
+                // 被测试基础设施吞掉。
+                if (handledSystemAnr || device.hasObject(By.pkg(APP_PACKAGE))) {
+                    Log.e(EVIDENCE_LOG_TAG, "system ANR remained after LDDC launch request")
+                    return false
+                }
+                waitButton.click()
+                handledSystemAnr = true
+                device.wait(Until.gone(systemAnrWaitSelector), 2_000)
+                device.waitForIdle(100)
+                Log.w(EVIDENCE_LOG_TAG, "dismissed pre-launch system ANR with android:id/aerr_wait")
+                continue
+            }
+            if (
+                device.currentPackageName == APP_PACKAGE &&
+                    device.hasObject(By.pkg(APP_PACKAGE))
+            ) {
+                return true
+            }
+            Thread.sleep(250)
+        }
+        return false
     }
 
     private fun openFixtureRunDirectoryInDocumentsUi() {

@@ -16,6 +16,7 @@ import 'support/integration_drivers.dart';
 import 'support/integration_harness.dart';
 import 'support/integration_reporter.dart';
 import 'support/sample_pool.dart';
+import 'support/search_preview_save_strategy.dart';
 
 void main() {
   ensureIntegrationBinding();
@@ -186,13 +187,24 @@ void main() {
         reporter.recordCapabilityEvidence('translation', 'translate_lyrics');
       }
 
+      final IntegrationSearchPreviewSaveAction previewSaveAction =
+          searchPreviewSaveActionForPlatform(runtime.deviceName);
+      final bool usesFileSave =
+          previewSaveAction == IntegrationSearchPreviewSaveAction.file;
       await reporter.runStep<Map<String, Object?>>(
-        'save_preview_to_directory',
+        usesFileSave ? 'save_preview_to_file' : 'save_preview_to_directory',
         () async {
           late final ExportArtifactSnapshot artifact;
           await runStepWithTimeout(
             () async {
-              await search.tapSaveDirectory();
+              // 移动端通过系统保存文件界面选择最终文件，桌面端则选择目录并由
+              // LDDC 生成文件名。旧测试在 Android/iOS 上寻找不存在的“保存目录”
+              // 按钮，误报为预览弹层未建立；这里按生产能力执行真实用户动作。
+              if (usesFileSave) {
+                await search.tapSaveFile();
+              } else {
+                await search.tapSaveDirectory();
+              }
               await pumpUntil(
                 tester,
                 () => app.workspace.exportsDir
@@ -200,7 +212,7 @@ void main() {
                     .whereType<File>()
                     .isNotEmpty,
                 timeout: runtime.defaultStepTimeout,
-                reason: '等待保存到目录完成',
+                reason: '等待歌词保存产物写入隔离工作区',
               );
               final File exported = app.workspace.exportsDir
                   .listSync(recursive: true)
@@ -213,7 +225,9 @@ void main() {
               );
             },
             timeout: runtime.defaultStepTimeout,
-            label: 'save_preview_to_directory',
+            label: usesFileSave
+                ? 'save_preview_to_file'
+                : 'save_preview_to_directory',
           );
           expect(
             searchContainer

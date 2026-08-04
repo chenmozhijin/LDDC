@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
@@ -871,26 +872,34 @@ final class DesktopWindowsSingletonBootstrapPort
 }
 
 final class DesktopServiceRuntimePaths {
-  const DesktopServiceRuntimePaths({AppStoragePathsPort? paths, bool? isMacOS})
-    : _paths = paths,
-      _isMacOS = isMacOS;
+  const DesktopServiceRuntimePaths({AppStoragePathsPort? paths})
+    : _paths = paths;
 
   final AppStoragePathsPort? _paths;
-  final bool? _isMacOS;
 
   Future<File> resolveControlSocketFile() async {
-    if (_isMacOS ?? Platform.isMacOS) {
-      // App Sandbox 会重写 TMPDIR，直接启动 app executable 与 LaunchServices
-      // 启动的 CLI 进程可能看到不同临时目录。旧实现会让已经监听的主进程无法
-      // 被第二实例发现。控制 socket 改放同一 bundle 数据容器的 runtime 子目录；
-      // stale socket 仍由 claimPrimary 清理，不改变用户配置或 Python 兼容文件。
-      final Directory dataDirectory =
-          await (_paths ?? AppStoragePathsRegistry.current)
-              .resolveDataDirectory();
-      return File(p.join(dataDirectory.path, 'runtime', 'service.sock'));
-    }
     final Directory baseDirectory = await _resolveBaseDirectory();
     return File(p.join(baseDirectory.path, 'LDDC', 'service.sock'));
+  }
+
+  Future<File> resolveMacOsControlEndpointFile() async {
+    final Directory directory = await _resolveMacOsControlDirectory();
+    return File(p.join(directory.path, 'control.json'));
+  }
+
+  Future<File> resolveMacOsControlLockFile() async {
+    final Directory directory = await _resolveMacOsControlDirectory();
+    return File(p.join(directory.path, 'control.lock'));
+  }
+
+  Future<Directory> _resolveMacOsControlDirectory() async {
+    // App Sandbox 下不同启动入口可能得到不同 TMPDIR，因此可发现信息必须放在
+    // 稳定的数据容器。这里只保存普通 lock/JSON 文件；真正的控制连接走
+    // loopback TCP，从根本上避开 macOS sockaddr_un 的短路径长度上限。
+    final Directory dataDirectory =
+        await (_paths ?? AppStoragePathsRegistry.current)
+            .resolveDataDirectory();
+    return Directory(p.join(dataDirectory.path, 'runtime'));
   }
 
   Future<Directory> _resolveBaseDirectory() async {
@@ -904,26 +913,46 @@ final class DesktopServiceRuntimePaths {
   }
 }
 
-/// Unix 桌面平台单服务发现适配器：本地控制 socket。
-final class DesktopUnixSingletonBootstrapPort
-    implements DesktopSingletonBootstrapPort {
-  DesktopUnixSingletonBootstrapPort({DesktopServiceRuntimePaths? runtimePaths})
-    : _runtimePaths = runtimePaths ?? const DesktopServiceRuntimePaths();
+typedef _DesktopControlRequestReader = Future<String?> Function(Socket socket);
 
-  final DesktopServiceRuntimePaths _runtimePaths;
+final class _DesktopControlSocketServer {
+  _DesktopControlSocketServer({
+    required String logLabel,
+    required _DesktopControlRequestReader requestReader,
+  }) : _logLabel = logLabel,
+       _requestReader = requestReader;
+
+  final String _logLabel;
+  final _DesktopControlRequestReader _requestReader;
   ServerSocket? _server;
-  File? _socketFile;
   StreamSubscription<Socket>? _serverSubscription;
   DesktopServiceSingletonRequestHandler? _onRequest;
   final Set<Socket> _clientSockets = <Socket>{};
   final Set<Future<void>> _clientTasks = <Future<void>>{};
-  Future<void>? _closeFuture;
   bool _closed = false;
 
-  @override
-  Future<void> close() => _closeFuture ??= _close();
+  bool get isListening => _server != null;
 
-  Future<void> _close() async {
+  void updateHandler(DesktopServiceSingletonRequestHandler handler) {
+    _onRequest = handler;
+  }
+
+  void attach({
+    required ServerSocket server,
+    required DesktopServiceSingletonRequestHandler onRequest,
+  }) {
+    if (_closed || _server != null) {
+      throw StateError('桌面单实例控制服务不能重复绑定');
+    }
+    _server = server;
+    _onRequest = onRequest;
+    _serverSubscription = server.listen(_handleClientConnected);
+  }
+
+  Future<void> close() async {
+    if (_closed) {
+      return;
+    }
     _closed = true;
     await _serverSubscription?.cancel();
     await _server?.close();
@@ -938,10 +967,123 @@ final class DesktopUnixSingletonBootstrapPort
     _clientSockets.clear();
     _clientTasks.clear();
     _onRequest = null;
-    final File? socketFile = _socketFile;
-    _socketFile = null;
-    if (socketFile != null && await socketFile.exists()) {
-      await socketFile.delete();
+  }
+
+  void _handleClientConnected(Socket socket) {
+    if (_closed) {
+      socket.destroy();
+      return;
+    }
+    _clientSockets.add(socket);
+    late final Future<void> clientTask;
+    clientTask = _handleClient(socket)
+        .then<void>(
+          (_) {},
+          onError: (Object error, StackTrace stackTrace) {
+            _bootstrapLogger.info(
+              '$_logLabel client failed error=$error stack=$stackTrace',
+            );
+          },
+        )
+        .whenComplete(() {
+          _clientSockets.remove(socket);
+          _clientTasks.remove(clientTask);
+        });
+    _clientTasks.add(clientTask);
+  }
+
+  Future<void> _handleClient(Socket socket) async {
+    try {
+      final String? requestMessage = await _requestReader(socket);
+      final DesktopServiceSingletonRequestHandler? handler = _onRequest;
+      final String response = requestMessage == null || handler == null
+          ? ''
+          : (await handler(requestMessage.trim()) ?? '');
+      socket.write(response);
+      await socket.flush();
+    } finally {
+      socket.destroy();
+    }
+  }
+}
+
+Future<String> _readBoundedControlLine(Socket socket) async {
+  return (await _readBoundedControlLines(socket, lineCount: 1)).single;
+}
+
+Future<List<String>> _readBoundedControlLines(
+  Socket socket, {
+  required int lineCount,
+}) async {
+  if (lineCount <= 0) {
+    throw ArgumentError.value(lineCount, 'lineCount', '必须大于 0');
+  }
+  final StreamIterator<List<int>> iterator = StreamIterator<List<int>>(socket);
+  final List<String> lines = <String>[];
+  final List<int> bytes = <int>[];
+  final DateTime deadline = DateTime.now().add(_controlRequestTimeout);
+  try {
+    while (true) {
+      final Duration remaining = deadline.difference(DateTime.now());
+      if (remaining <= Duration.zero ||
+          !await iterator.moveNext().timeout(remaining)) {
+        throw TimeoutException('桌面单实例控制请求未完整到达');
+      }
+      for (final int byte in iterator.current) {
+        if (byte == 0x0A) {
+          if (bytes.isNotEmpty && bytes.last == 0x0D) {
+            bytes.removeLast();
+          }
+          lines.add(utf8.decode(bytes));
+          bytes.clear();
+          if (lines.length == lineCount) {
+            return lines;
+          }
+          continue;
+        }
+        bytes.add(byte);
+        if (bytes.length > _maxControlRequestBytes) {
+          throw const FormatException('桌面单实例控制请求超过 4096 bytes');
+        }
+      }
+    }
+  } finally {
+    await iterator.cancel();
+  }
+}
+
+/// Linux 单服务发现适配器：本地 Unix domain socket。
+final class DesktopUnixSingletonBootstrapPort
+    implements DesktopSingletonBootstrapPort {
+  DesktopUnixSingletonBootstrapPort({DesktopServiceRuntimePaths? runtimePaths})
+    : _runtimePaths = runtimePaths ?? const DesktopServiceRuntimePaths() {
+    _controlServer = _DesktopControlSocketServer(
+      logLabel: 'unix singleton',
+      requestReader: (Socket socket) async {
+        return (await _readBoundedControlLine(socket)).trim();
+      },
+    );
+  }
+
+  final DesktopServiceRuntimePaths _runtimePaths;
+  late final _DesktopControlSocketServer _controlServer;
+  File? _socketFile;
+  Future<void>? _closeFuture;
+  bool _closed = false;
+
+  @override
+  Future<void> close() => _closeFuture ??= _close();
+
+  Future<void> _close() async {
+    _closed = true;
+    try {
+      await _controlServer.close();
+    } finally {
+      final File? socketFile = _socketFile;
+      _socketFile = null;
+      if (socketFile != null && await socketFile.exists()) {
+        await socketFile.delete();
+      }
     }
   }
 
@@ -979,10 +1121,8 @@ final class DesktopUnixSingletonBootstrapPort
     if (_closed) {
       throw StateError('DesktopUnixSingletonBootstrapPort 已关闭');
     }
-    final ServerSocket? server = _server;
-    if (server != null) {
-      _onRequest = onRequest;
-      _serverSubscription ??= server.listen(_handleClientConnected);
+    if (_controlServer.isListening) {
+      _controlServer.updateHandler(onRequest);
       return DesktopPrimaryClaimResult.primary;
     }
     final File socketFile = await _runtimePaths.resolveControlSocketFile();
@@ -1002,10 +1142,13 @@ final class DesktopUnixSingletonBootstrapPort
       type: InternetAddressType.unix,
     );
     try {
-      _server = await ServerSocket.bind(address, 0, shared: false);
+      final ServerSocket server = await ServerSocket.bind(
+        address,
+        0,
+        shared: false,
+      );
       _socketFile = socketFile;
-      _onRequest = onRequest;
-      _serverSubscription = _server!.listen(_handleClientConnected);
+      _controlServer.attach(server: server, onRequest: onRequest);
       return DesktopPrimaryClaimResult.primary;
     } on SocketException {
       final bool alive = await _canReachExistingSocket(socketFile);
@@ -1015,17 +1158,20 @@ final class DesktopUnixSingletonBootstrapPort
       if (await socketFile.exists()) {
         await socketFile.delete();
       }
-      _server = await ServerSocket.bind(address, 0, shared: false);
+      final ServerSocket retryServer = await ServerSocket.bind(
+        address,
+        0,
+        shared: false,
+      );
       _socketFile = socketFile;
-      _onRequest = onRequest;
-      _serverSubscription = _server!.listen(_handleClientConnected);
+      _controlServer.attach(server: retryServer, onRequest: onRequest);
       return DesktopPrimaryClaimResult.primary;
     }
   }
 
   @override
   Future<bool> hasPrimaryInstance() async {
-    if (_server != null) {
+    if (_controlServer.isListening) {
       return true;
     }
     final File socketFile = await _runtimePaths.resolveControlSocketFile();
@@ -1052,77 +1198,6 @@ final class DesktopUnixSingletonBootstrapPort
     return false;
   }
 
-  void _handleClientConnected(Socket socket) {
-    if (_closed) {
-      socket.destroy();
-      return;
-    }
-    _clientSockets.add(socket);
-    late final Future<void> clientTask;
-    clientTask = _handleClient(socket)
-        .then<void>(
-          (_) {},
-          onError: (Object error, StackTrace stackTrace) {
-            _bootstrapLogger.info(
-              'unix singleton client failed'
-              ' error=$error stack=$stackTrace',
-            );
-          },
-        )
-        .whenComplete(() {
-          _clientSockets.remove(socket);
-          _clientTasks.remove(clientTask);
-        });
-    _clientTasks.add(clientTask);
-  }
-
-  Future<void> _handleClient(Socket socket) async {
-    try {
-      final String requestMessage = (await _readBoundedControlLine(
-        socket,
-      )).trim();
-      final DesktopServiceSingletonRequestHandler? handler = _onRequest;
-      final String response = handler == null
-          ? ''
-          : (await handler(requestMessage) ?? '');
-      socket.write(response);
-      await socket.flush();
-    } finally {
-      socket.destroy();
-    }
-  }
-
-  Future<String> _readBoundedControlLine(Socket socket) async {
-    final StreamIterator<List<int>> iterator = StreamIterator<List<int>>(
-      socket,
-    );
-    final List<int> bytes = <int>[];
-    final DateTime deadline = DateTime.now().add(_controlRequestTimeout);
-    try {
-      while (true) {
-        final Duration remaining = deadline.difference(DateTime.now());
-        if (remaining <= Duration.zero ||
-            !await iterator.moveNext().timeout(remaining)) {
-          throw TimeoutException('桌面单实例控制请求未完整到达');
-        }
-        for (final int byte in iterator.current) {
-          if (byte == 0x0A) {
-            if (bytes.isNotEmpty && bytes.last == 0x0D) {
-              bytes.removeLast();
-            }
-            return utf8.decode(bytes);
-          }
-          bytes.add(byte);
-          if (bytes.length > _maxControlRequestBytes) {
-            throw const FormatException('桌面单实例控制请求超过 4096 bytes');
-          }
-        }
-      }
-    } finally {
-      await iterator.cancel();
-    }
-  }
-
   Future<bool> _canReachExistingSocket(File socketFile) async {
     try {
       final String? response = await request(
@@ -1136,11 +1211,294 @@ final class DesktopUnixSingletonBootstrapPort
   }
 }
 
+final class _DesktopMacOsControlEndpoint {
+  const _DesktopMacOsControlEndpoint({required this.port, required this.token});
+
+  static const String schema = 'lddc.macos_singleton_control';
+
+  final int port;
+  final String token;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'schema': schema,
+    'port': port,
+    'token': token,
+  };
+
+  static _DesktopMacOsControlEndpoint decode(String source) {
+    final Object? decoded = jsonDecode(source);
+    if (decoded is! Map<String, Object?> || decoded['schema'] != schema) {
+      throw const FormatException('macOS 单实例控制 endpoint schema 无效');
+    }
+    final Object? rawPort = decoded['port'];
+    final Object? rawToken = decoded['token'];
+    if (rawPort is! int || rawPort <= 0 || rawPort > 65535) {
+      throw const FormatException('macOS 单实例控制 endpoint 端口无效');
+    }
+    if (rawToken is! String || !RegExp(r'^[0-9a-f]{64}$').hasMatch(rawToken)) {
+      throw const FormatException('macOS 单实例控制 endpoint 令牌无效');
+    }
+    return _DesktopMacOsControlEndpoint(port: rawPort, token: rawToken);
+  }
+}
+
+String _createMacOsControlToken() {
+  final Random random = Random.secure();
+  final StringBuffer buffer = StringBuffer();
+  for (int index = 0; index < 32; index += 1) {
+    buffer.write(random.nextInt(256).toRadixString(16).padLeft(2, '0'));
+  }
+  return buffer.toString();
+}
+
+/// macOS 单服务发现适配器：文件锁仲裁 + 带令牌的 loopback 控制连接。
+///
+/// App Sandbox 的容器路径可能超过 Unix domain socket 的 `sun_path` 上限，
+/// 而不同启动入口的 TMPDIR 又不保证一致。稳定目录只保存普通文件，实际连接
+/// 使用随机 loopback 端口，可以同时满足可发现性、路径长度和本机隔离要求。
+final class DesktopMacOsSingletonBootstrapPort
+    implements DesktopSingletonBootstrapPort {
+  DesktopMacOsSingletonBootstrapPort({
+    DesktopServiceRuntimePaths? runtimePaths,
+    String Function()? tokenFactory,
+  }) : _runtimePaths = runtimePaths ?? const DesktopServiceRuntimePaths(),
+       _tokenFactory = tokenFactory ?? _createMacOsControlToken {
+    _controlServer = _DesktopControlSocketServer(
+      logLabel: 'macOS loopback singleton',
+      requestReader: _readAuthenticatedRequest,
+    );
+  }
+
+  final DesktopServiceRuntimePaths _runtimePaths;
+  final String Function() _tokenFactory;
+  late final _DesktopControlSocketServer _controlServer;
+  RandomAccessFile? _lockHandle;
+  File? _endpointFile;
+  String? _controlToken;
+  Future<void>? _closeFuture;
+  bool _closed = false;
+
+  @override
+  Future<void> close() => _closeFuture ??= _close();
+
+  Future<void> _close() async {
+    _closed = true;
+    try {
+      await _controlServer.close();
+    } finally {
+      try {
+        final File? endpointFile = _endpointFile;
+        _endpointFile = null;
+        if (endpointFile != null && await endpointFile.exists()) {
+          await endpointFile.delete();
+        }
+      } finally {
+        _controlToken = null;
+        final RandomAccessFile? lockHandle = _lockHandle;
+        _lockHandle = null;
+        if (lockHandle != null) {
+          try {
+            await lockHandle.unlock();
+          } on Object {
+            // close 会释放进程持有的文件锁；这里仍继续执行，避免异常路径泄漏 fd。
+          }
+          await lockHandle.close();
+        }
+      }
+    }
+  }
+
+  @override
+  Future<String?> request(
+    String message, {
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final _DesktopMacOsControlEndpoint endpoint = await _readEndpoint();
+    final Socket socket = await Socket.connect(
+      InternetAddress.loopbackIPv4,
+      endpoint.port,
+      timeout: timeout,
+    );
+    try {
+      socket.write('${endpoint.token}\n$message\n');
+      await socket.flush();
+      return await utf8.decoder.bind(socket).join().timeout(timeout);
+    } finally {
+      socket.destroy();
+    }
+  }
+
+  @override
+  Future<void> setServicePort(int port) async {}
+
+  @override
+  Future<DesktopPrimaryClaimResult> claimPrimary({
+    required DesktopServiceSingletonRequestHandler onRequest,
+  }) async {
+    if (_closed) {
+      throw StateError('DesktopMacOsSingletonBootstrapPort 已关闭');
+    }
+    if (_controlServer.isListening) {
+      _controlServer.updateHandler(onRequest);
+      return DesktopPrimaryClaimResult.primary;
+    }
+    if (await _canReachExistingEndpoint()) {
+      return DesktopPrimaryClaimResult.existingPrimary;
+    }
+
+    final File lockFile = await _runtimePaths.resolveMacOsControlLockFile();
+    final Directory parent = lockFile.parent;
+    if (!await parent.exists()) {
+      await parent.create(recursive: true);
+    }
+    final RandomAccessFile lockHandle = await lockFile.open(
+      mode: FileMode.append,
+    );
+    try {
+      try {
+        await lockHandle.lock(FileLock.exclusive);
+      } on FileSystemException {
+        await lockHandle.close();
+        return DesktopPrimaryClaimResult.existingPrimary;
+      }
+
+      final ServerSocket server = await ServerSocket.bind(
+        InternetAddress.loopbackIPv4,
+        0,
+        shared: false,
+      );
+      final String token = _tokenFactory();
+      if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(token)) {
+        await server.close();
+        throw StateError('macOS 单实例控制令牌必须是 32 bytes 小写十六进制');
+      }
+      final File endpointFile = await _runtimePaths
+          .resolveMacOsControlEndpointFile();
+      _lockHandle = lockHandle;
+      _endpointFile = endpointFile;
+      _controlToken = token;
+      _controlServer.attach(server: server, onRequest: onRequest);
+      await _writeEndpoint(
+        endpointFile,
+        _DesktopMacOsControlEndpoint(port: server.port, token: token),
+      );
+      return DesktopPrimaryClaimResult.primary;
+    } on Object {
+      if (!identical(_lockHandle, lockHandle)) {
+        try {
+          await lockHandle.unlock();
+        } on Object {
+          // 获取锁后的初始化失败仍必须关闭句柄，unlock 失败由 close 兜底。
+        }
+        await lockHandle.close();
+      } else {
+        await close();
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> hasPrimaryInstance() async {
+    if (_controlServer.isListening) {
+      return true;
+    }
+    return _canReachExistingEndpoint();
+  }
+
+  @override
+  Future<bool> waitUntilPrimaryAvailable({
+    Duration timeout = const Duration(seconds: 5),
+    Duration pollInterval = const Duration(milliseconds: 100),
+  }) async {
+    final DateTime deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      if (await _canReachExistingEndpoint(timeout: pollInterval)) {
+        return true;
+      }
+      await Future<void>.delayed(pollInterval);
+    }
+    return false;
+  }
+
+  Future<String?> _readAuthenticatedRequest(Socket socket) async {
+    final String? expectedToken = _controlToken;
+    if (expectedToken == null) {
+      return null;
+    }
+    // 令牌和命令必须在同一个 socket 订阅中读取。若分别创建 StreamIterator，
+    // 第一次 cancel 可能同时取消底层流，导致第二行在部分平台永久等待。
+    final List<String> lines = await _readBoundedControlLines(
+      socket,
+      lineCount: 2,
+    );
+    final String suppliedToken = lines.first.trim();
+    if (suppliedToken != expectedToken) {
+      return null;
+    }
+    return lines.last.trim();
+  }
+
+  Future<_DesktopMacOsControlEndpoint> _readEndpoint() async {
+    final File endpointFile = await _runtimePaths
+        .resolveMacOsControlEndpointFile();
+    return _DesktopMacOsControlEndpoint.decode(
+      await endpointFile.readAsString(),
+    );
+  }
+
+  Future<bool> _canReachExistingEndpoint({
+    Duration timeout = const Duration(milliseconds: 200),
+  }) async {
+    try {
+      final String? response = await request(
+        'get_service_port',
+        timeout: timeout,
+      );
+      return response != null;
+    } on Object {
+      return false;
+    }
+  }
+
+  Future<void> _writeEndpoint(
+    File endpointFile,
+    _DesktopMacOsControlEndpoint endpoint,
+  ) async {
+    final Directory parent = endpointFile.parent;
+    if (!await parent.exists()) {
+      await parent.create(recursive: true);
+    }
+    final Directory stagingDirectory = await parent.createTemp(
+      '.control-endpoint-${pid.toString()}-',
+    );
+    final File stagingFile = File(
+      p.join(stagingDirectory.path, p.basename(endpointFile.path)),
+    );
+    try {
+      await stagingFile.writeAsString(
+        jsonEncode(endpoint.toJson()),
+        flush: true,
+      );
+      // macOS 的 rename 在同一文件系统内会原子替换目标文件。不能先删除
+      // 旧 endpoint，否则第二实例可能在发布窗口中误判为没有 primary。
+      await stagingFile.rename(endpointFile.path);
+    } finally {
+      if (await stagingDirectory.exists()) {
+        await stagingDirectory.delete(recursive: true);
+      }
+    }
+  }
+}
+
 DesktopSingletonBootstrapPort _createDefaultSingletonBootstrapPort() {
   if (Platform.isWindows) {
     return DesktopWindowsSingletonBootstrapPort();
   }
-  if (Platform.isLinux || Platform.isMacOS) {
+  if (Platform.isMacOS) {
+    return DesktopMacOsSingletonBootstrapPort();
+  }
+  if (Platform.isLinux) {
     return DesktopUnixSingletonBootstrapPort();
   }
   return const DesktopNoopSingletonBootstrapPort();

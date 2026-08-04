@@ -129,6 +129,7 @@ public sealed class FileDialogPlatformTests
             {
                 dialogsClosed = session.AllObservedDialogsClosed;
                 session.Dispose();
+                session.SignalAutomationDisposed();
             }
         }
 
@@ -199,8 +200,21 @@ public sealed class FileDialogPlatformTests
 
         public void SignalDialogClosed(int attempt)
         {
+            SignalReady($"dialog_{attempt}_closed.ready");
+        }
+
+        public void SignalAutomationDisposed()
+        {
+            // UIA3 客户端连接会让 Flutter Windows engine 启用平台语义。只有
+            // Automation.Dispose 完成后才能通知 Flutter 等待 accessibility 关闭，
+            // 否则 WidgetTester 会把平台仍持有的 SemanticsHandle 误报为测试泄漏。
+            SignalReady("automation_disposed.ready");
+        }
+
+        private void SignalReady(string fileName)
+        {
             Directory.CreateDirectory(SyncDirectory);
-            var target = Path.Combine(SyncDirectory, $"dialog_{attempt}_closed.ready");
+            var target = Path.Combine(SyncDirectory, fileName);
             var temporary = target + ".tmp";
             File.WriteAllText(temporary, "ready");
             File.Move(temporary, target, true);

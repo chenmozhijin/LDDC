@@ -107,10 +107,9 @@ jobs:
           }
 
   macos-validation:
-    # Xcode 26 系列 hosted 镜像会在 XCUIApplication.launch() 阶段等待
-    # accessibility 60 秒后失败，测试尚未获得任何应用节点。固定 macOS 15
-    # 使用稳定的 XCUITest accessibility 链，避免把系统框架故障误报为 LDDC
-    # 文件面板失败；仍保留零原生动作即失败的门禁，不用重试伪装覆盖。
+    # GitHub-hosted macOS 无法由仓库非交互授予 Xcode Helper 辅助功能权限。
+    # hosted 环境只编译严格 XCUITest；真实 NSOpenPanel 选择与取消保留给
+    # 已授权实体 Mac 手工运行，不能把 accessibility 启动失败误报为 LDDC 失败。
     runs-on: macos-15
     timeout-minutes: 150
     steps:
@@ -153,12 +152,21 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_real_integration.ps1 -Profile platform -Device macos -Platform macos
-      - name: Run macOS file panel automation
-        id: system_ui
+      - name: Compile macOS file panel automation
+        id: system_ui_build
         if: always() && steps.debug_build.outcome == 'success'
         continue-on-error: true
         shell: pwsh
-        run: ./tool/test/run_macos_platform_tests.ps1
+        run: ./tool/test/run_macos_platform_tests.ps1 -BuildOnly
+      - name: Record macOS manual system UI boundary
+        if: always()
+        run: |
+          {
+            echo '### macOS system UI coverage'
+            echo '- XCUITest source, scheme and test bundle: compiled in hosted CI'
+            echo '- NSOpenPanel selection/cancellation runtime: manual verification on an accessibility-authorized Mac'
+            echo '- Compile-only validation does not produce filePicker=real evidence'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Run real desktop process and service tests
         id: desktop_process
         continue-on-error: true
@@ -188,7 +196,7 @@ jobs:
             '${{ steps.debug_build.outcome }}'
             '${{ steps.offline.outcome }}'
             '${{ steps.native_channel.outcome }}'
-            '${{ steps.system_ui.outcome }}'
+            '${{ steps.system_ui_build.outcome }}'
             '${{ steps.desktop_process.outcome }}'
             '${{ steps.media_resource.outcome }}'
           )
@@ -218,16 +226,6 @@ jobs:
         continue-on-error: true
         working-directory: lddc
         run: flutter build linux --release
-      - name: Snapshot Linux production application
-        id: production_e2e_artifact
-        if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
-        run: |
-          destination='lddc/build/production_e2e/linux'
-          rm -rf "$destination"
-          mkdir -p "$(dirname "$destination")"
-          cp -a 'lddc/build/linux/x64/release/bundle' "$destination"
-          test -x "$destination/lddc"
       - name: Build Linux debug application for native automation
         id: debug_build
         continue-on-error: true
@@ -250,13 +248,18 @@ jobs:
       # Flutter Linux 当前不会把 Semantics identifier 暴露到 AT-SPI 子树。
       # Dogtail 脚本继续保留供人工环境验证；hosted CI 不使用坐标回退，
       # 也不把无法发现 Flutter 控件的场景伪装成自动化覆盖。
-      - name: Run real desktop process and service tests
-        id: desktop_process
-        continue-on-error: true
-        run: >-
-          dbus-run-session -- xvfb-run -a --server-args="-screen 0 1600x1000x24"
-          pwsh -NoProfile -File tool/test/run_desktop_process_e2e.ps1 -Platform linux
-          -AppExe lddc/build/production_e2e/linux/lddc
+      # desktop_multi_window 0.3.0 与上游未发布 0.3.1 的 Linux teardown
+      # 仍会错误移除 implicit FlView；上游 #448/#488 尚未修复。当前不维护
+      # 第三方 fork，也不能用忽略退出码或保留 child engine 伪造资源回收证据。
+      - name: Record Linux multi-window known issue
+        if: always()
+        run: |
+          {
+            echo '### Linux multi-window coverage'
+            echo '- Release/Debug, offline flows, native channels and media resources remain required'
+            echo '- Real desktop_multi_window child teardown: known upstream issue MixinNetwork/flutter-plugins#448/#488'
+            echo '- No fork is maintained; multi-window runtime remains a manual known issue and is not reported as passed'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Run production media resource checks
         id: media_resource
         continue-on-error: true
@@ -275,11 +278,9 @@ jobs:
         run: |
           outcomes=(
             '${{ steps.release_build.outcome }}'
-            '${{ steps.production_e2e_artifact.outcome }}'
             '${{ steps.debug_build.outcome }}'
             '${{ steps.offline.outcome }}'
             '${{ steps.native_channel.outcome }}'
-            '${{ steps.desktop_process.outcome }}'
             '${{ steps.media_resource.outcome }}'
           )
           for outcome in "${outcomes[@]}"; do

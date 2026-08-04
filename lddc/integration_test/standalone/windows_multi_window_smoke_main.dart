@@ -15,6 +15,8 @@ import 'package:lddc/src/app/bootstrap/app_entrypoint.dart'
     if (dart.library.io) 'package:lddc/src/app/bootstrap/app_entrypoint_io.dart'
     as app_entrypoint;
 
+import '../support/windows_resource_trend.dart';
+
 typedef _GetCurrentProcessNative = IntPtr Function();
 typedef _GetCurrentProcessDart = int Function();
 typedef _GetProcessHandleCountNative =
@@ -27,7 +29,7 @@ typedef _GetGuiResourcesDart = int Function(int process, int flag);
 const int _kGdiObjects = 0;
 const int _kUserObjects = 1;
 const int _kPrivateBytesSlack = 24 * 1024 * 1024;
-const int _kLastCycleGrowthLimit = 256 * 1024;
+const int _kPrivateBytesGrowthPerOperationLimit = 256 * 1024;
 const int _kResidentWarmupOperations = 20;
 
 Future<void> main(List<String> args) async {
@@ -156,14 +158,18 @@ Future<Map<String, Object?>> _runRebuildSmoke(
       floatingReadyMs.fold<int>(0, math.max),
       selectorReadyMs.fold<int>(0, math.max),
     ].fold<int>(0, math.max);
-    final int lastCycleGrowth = _tailMedianPrivateGrowth(cycleResources);
+    final int cycleGrowth = estimatePrivateBytesGrowthPerOperation(
+      cycleResources
+          .map((_ProcessResources value) => value.privateBytes)
+          .toList(growable: false),
+    );
     final bool resourcesPass =
         finalResources.handleCount <= baseline.handleCount &&
         finalResources.gdiObjects <= baseline.gdiObjects &&
         finalResources.userObjects <= baseline.userObjects + 2 &&
         finalResources.privateBytes <=
             baseline.privateBytes + _kPrivateBytesSlack &&
-        lastCycleGrowth <= _kLastCycleGrowthLimit;
+        cycleGrowth <= _kPrivateBytesGrowthPerOperationLimit;
     final bool timingPass =
         floatingP95 <= 3000 && selectorP95 <= 3000 && maxReadyMs <= 15000;
 
@@ -184,13 +190,14 @@ Future<Map<String, Object?>> _runRebuildSmoke(
         'privateBytesByCycle': cycleResources
             .map((_ProcessResources value) => value.privateBytes)
             .toList(growable: false),
-        'last20MedianPrivateGrowthPerCycle': lastCycleGrowth,
+        'theilSenPrivateGrowthPerCycle': cycleGrowth,
         'limits': <String, Object?>{
           'handleDelta': 0,
           'gdiDelta': 0,
           'userDelta': 2,
           'privateBytesDelta': _kPrivateBytesSlack,
-          'last20MedianPrivateGrowthPerCycle': _kLastCycleGrowthLimit,
+          'theilSenPrivateGrowthPerCycle':
+              _kPrivateBytesGrowthPerOperationLimit,
         },
       },
     };
@@ -550,7 +557,11 @@ Future<Map<String, Object?>> _runResidentSmoke(
       floatingOperationMs.fold<int>(0, math.max),
       selectorOperationMs.fold<int>(0, math.max),
     ].fold<int>(0, math.max);
-    final int tailGrowth = _tailMedianPrivateGrowth(operationResources);
+    final int tailGrowth = estimatePrivateBytesGrowthPerOperation(
+      operationResources
+          .map((_ProcessResources value) => value.privateBytes)
+          .toList(growable: false),
+    );
     final bool timingPass =
         floatingP95 <= 3000 && selectorP95 <= 3000 && maxOperationMs <= 15000;
     final bool lifecyclePass =
@@ -593,7 +604,7 @@ Future<Map<String, Object?>> _runResidentSmoke(
         finalResources.userObjects <= baseline.userObjects + 2 &&
         finalResources.privateBytes <=
             baseline.privateBytes + _kPrivateBytesSlack &&
-        tailGrowth <= _kLastCycleGrowthLimit;
+        tailGrowth <= _kPrivateBytesGrowthPerOperationLimit;
 
     return <String, Object?>{
       'success':
@@ -660,13 +671,14 @@ Future<Map<String, Object?>> _runResidentSmoke(
         'userObjectsByOperation': operationResources
             .map((_ProcessResources value) => value.userObjects)
             .toList(growable: false),
-        'last20MedianPrivateGrowthPerOperation': tailGrowth,
+        'theilSenPrivateGrowthPerOperation': tailGrowth,
         'limits': <String, Object?>{
           'handleDelta': 0,
           'gdiDelta': 0,
           'userDelta': 2,
           'privateBytesDelta': _kPrivateBytesSlack,
-          'last20MedianPrivateGrowthPerOperation': _kLastCycleGrowthLimit,
+          'theilSenPrivateGrowthPerOperation':
+              _kPrivateBytesGrowthPerOperationLimit,
         },
       },
     };
@@ -945,36 +957,6 @@ int _percentile95(List<int> values) {
   final List<int> sorted = List<int>.from(values)..sort();
   final int index = ((sorted.length - 1) * 0.95).ceil();
   return sorted[index];
-}
-
-int _tailMedianPrivateGrowth(List<_ProcessResources> resources) {
-  if (resources.length < 4) {
-    return 0;
-  }
-  final int start = math.max(0, resources.length - 20);
-  final List<_ProcessResources> tail = resources.sublist(start);
-  final int split = tail.length ~/ 2;
-  final List<int> firstHalf = tail
-      .take(split)
-      .map((resource) => resource.privateBytes)
-      .toList(growable: false);
-  final List<int> secondHalf = tail
-      .skip(split)
-      .map((resource) => resource.privateBytes)
-      .toList(growable: false);
-  // Dart VM 与 Windows working set 会在 GC 前后形成明显锯齿。用尾段前后
-  // 两半的中位数趋势替代首尾单点差，避免一次 GC 时机制造假红；持续增长会
-  // 同时抬高后一半的整体分布，因此仍受每次 256 KiB 的硬门槛约束。
-  return ((_median(secondHalf) - _median(firstHalf)) / split).round();
-}
-
-double _median(List<int> values) {
-  final List<int> sorted = List<int>.from(values)..sort();
-  final int middle = sorted.length ~/ 2;
-  if (sorted.length.isOdd) {
-    return sorted[middle].toDouble();
-  }
-  return (sorted[middle - 1] + sorted[middle]) / 2;
 }
 
 _ProcessResources _readProcessResources() {

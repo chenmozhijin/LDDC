@@ -281,6 +281,9 @@ final class RunnerUITests: XCTestCase {
     } else {
       artifact = []
     }
+    // String 与 NSNull 没有共同的具体 Swift 类型。先擦除为 Any，避免新版
+    // Swift 在 nil 合并表达式中把闭包结果错误约束为 NSNull，导致 UI 测试无法编译。
+    let errorValue: Any = failure.map { String(describing: $0) } ?? NSNull()
     let payload: [String: Any] = [
       "runId": runId,
       "scenario": scenario,
@@ -291,7 +294,7 @@ final class RunnerUITests: XCTestCase {
         "step": scenario,
         "success": failure == nil,
         // JSONSerialization 不能编码 Optional.none，失败为空时必须显式写入 JSON null。
-        "error": failure.map { String(describing: $0) } ?? NSNull(),
+        "error": errorValue,
       ]],
       "capabilityEvidence": actions,
       "resources": [
