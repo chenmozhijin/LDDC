@@ -200,7 +200,7 @@ jobs:
 
   macos-system-ui-validation:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
@@ -215,7 +215,22 @@ jobs:
         id: system_ui
         continue-on-error: true
         shell: pwsh
-        run: ./tool/test/run_macos_platform_tests.ps1
+        run: |
+          python tool/test/process_group_supervisor.py `
+            --phase macos-system-ui-workflow `
+            --timeout 600 `
+            --grace 5 `
+            --cwd $PWD.Path `
+            --status lddc/build/integration_reports/macos-native/workflow-watchdog.json `
+            -- pwsh -NoLogo -NoProfile -File ./tool/test/run_macos_platform_tests.ps1
+          exit $LASTEXITCODE
+      - name: Finalize macOS system UI reports
+        id: report_finalize
+        if: always()
+        continue-on-error: true
+        run: >-
+          python tool/test/finalize_macos_system_ui_reports.py
+          --step-outcome '${{ steps.system_ui.outcome }}'
       - name: Summarize required macOS system UI phase
         id: required_outcomes
         if: always()
@@ -224,7 +239,8 @@ jobs:
         run: |
           python tool/test/ci_phase_summary.py `
             --title 'macOS system UI validation' `
-            --phase 'system_ui|NSOpenPanel hybrid|${{ steps.system_ui.outcome }}'
+            --phase 'system_ui|NSOpenPanel hybrid|${{ steps.system_ui.outcome }}' `
+            --phase 'report_finalize|Report finalization|${{ steps.report_finalize.outcome }}'
       - name: Upload macOS system UI diagnostics
         if: always() && steps.required_outcomes.outcome != 'success'
         uses: actions/upload-artifact@v7

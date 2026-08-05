@@ -54,7 +54,10 @@ jobs:
           python tool/test/verify_platform_fixtures.py \
             --manifest lddc/integration_test/fixtures/media/manifest.json
           python tool/test/check_native_test_isolation.py
-          python -m unittest tool.test.test_quality_tools
+          python -m unittest \
+            tool.test.test_quality_tools \
+            tool.test.test_process_group_supervisor \
+            tool.test.test_finalize_macos_system_ui_reports
 
       - name: Regenerate localization and reject generated drift
         id: localization_drift

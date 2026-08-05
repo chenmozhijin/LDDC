@@ -369,6 +369,15 @@ def failures() -> list[str]:
             or fixture_environment.get("isEnabled") != "YES"
         ):
             problems.append("macOS hybrid UI tests 缺少 fixture path 环境映射")
+        sync_environment = macos_scheme.getroot().find(
+            ".//EnvironmentVariable[@key='LDDC_MACOS_HYBRID_SYNC_DIR']"
+        )
+        if (
+            sync_environment is None
+            or sync_environment.get("value") != "$(LDDC_MACOS_HYBRID_SYNC_DIR)"
+            or sync_environment.get("isEnabled") != "YES"
+        ):
+            problems.append("macOS hybrid UI tests 缺少双向同步目录环境映射")
     except ET.ParseError as error:
         problems.append(f"macOS UI scheme XML 无效: {error}")
     macos_release_entitlements = (
@@ -662,14 +671,27 @@ def failures() -> list[str]:
         "macos_open_panel_select",
         "macos_open_panel_cancel",
         "Invoke-BoundedProcess",
+        "Start-SupervisedProcess",
+        "process_group_supervisor.py",
         "Register-OwnedProcessTree",
         "Wait-ForOwnedProcessBaseline",
+        'ExpectedState "app_ready"',
         '$payload.resources["final"]["childProcessCount"] = $FinalChildProcessCount',
     ):
         if marker not in macos_runner:
             problems.append(f"macOS XCUITest runner 缺少真实运行契约: {marker}")
     if workflow.count("run_macos_platform_tests.ps1") != 1:
         problems.append("macOS hybrid runner 必须只在独立 system UI job 中执行一次")
+    for required in (
+        "process_group_supervisor.py",
+        "--phase macos-system-ui-workflow",
+        "--timeout 600",
+        "workflow-watchdog.json",
+        "finalize_macos_system_ui_reports.py",
+        "steps.report_finalize.outcome",
+    ):
+        if required not in workflow:
+            problems.append(f"macOS system UI workflow 缺少外层进程组 watchdog: {required}")
     for forbidden in (
         "& flutter build macos",
         "& xcodebuild build-for-testing",
@@ -678,6 +700,8 @@ def failures() -> list[str]:
     ):
         if forbidden in macos_runner:
             problems.append(f"macOS hybrid 外部进程禁止绕过硬超时执行器: {forbidden}")
+    if ".WaitForExit()" in macos_runner or "Kill($true)" in macos_runner:
+        problems.append("macOS hybrid runner 禁止无界 WaitForExit 或递归 Kill 后无界等待")
     macos_start = workflow.find("  macos-validation:")
     macos_system_ui_start = workflow.find("  macos-system-ui-validation:")
     linux_start = workflow.find("  linux-validation:")
@@ -704,16 +728,21 @@ def failures() -> list[str]:
         encoding="utf-8"
     )
     for required in (
-        "XCUIApplication(bundleIdentifier:",
+        "XCUIApplication(url:",
+        "app.activate()",
+        "isOriginalApplicationStillRunning",
         "waitForRunningApplication",
-        "app.sheets.firstMatch",
+        "NSWorkspace.shared.runningApplications",
+        "currentPanelServices",
+        'state: "native_ready"',
+        'state: "native_completed"',
         "attachedToExistingApplication",
+        "usedExactApplicationURL",
     ):
         if required not in macos_ui_tests:
             problems.append(f"macOS hybrid XCUITest 缺少附着运行中应用契约: {required}")
     for forbidden in (
         ".launch()",
-        ".activate()",
         "--lddc-enable-accessibility-for-ui-test",
         "lddc-open-lyrics",
     ):
@@ -722,9 +751,9 @@ def failures() -> list[str]:
     for required in (
         "integration_test/macos_file_dialog_platform_test.dart",
         "LDDC_MACOS_HYBRID_SYNC_DIR",
-        "Wait-ForPickerMarker",
-        "marker.runId -ne $runId",
-        "marker.scenario -ne $Scenario",
+        "Wait-ForHybridState",
+        "state.runId -ne $runId",
+        "state.scenario -ne $Scenario",
         "Copy-Item -LiteralPath $fixtureSource -Destination $fixture",
         "Write-InfrastructureFailureReports",
     ):
