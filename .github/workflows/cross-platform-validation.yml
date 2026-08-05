@@ -483,7 +483,17 @@ jobs:
         # flutter test 会把 Generated.xcconfig 暂时指向 test listener；测试结束后
         # 临时 listener 会被删除。原生测试前重建默认 main.dart，避免 Xcode
         # 继续引用已不存在的临时入口。
-        run: flutter build ios --debug --simulator
+        run: |
+          mkdir -p build/integration_reports/ios-debug-rebuild
+          python ../tool/test/process_group_supervisor.py \
+            --phase ios-debug-rebuild \
+            --timeout 900 \
+            --grace 5 \
+            --cwd "$PWD" \
+            --status build/integration_reports/ios-debug-rebuild/supervisor.json \
+            --stdout build/integration_reports/ios-debug-rebuild/flutter.stdout.log \
+            --stderr build/integration_reports/ios-debug-rebuild/flutter.stderr.log \
+            -- flutter build ios --debug --simulator
       - name: Run iOS native unit tests
         id: native_tests
         if: always() && steps.debug_rebuild.outcome == 'success'

@@ -1,7 +1,10 @@
 import Cocoa
 import FlutterMacOS
 import XCTest
-@testable import Runner
+
+// Xcode target 仍名为 Runner，但 AppInfo.xcconfig 将产品和 Swift 模块固定为 LDDC。
+// 原生单测必须导入编译日志中的真实模块名，否则会在执行测试前以 no such module 失败。
+@testable import LDDC
 
 final class RunnerTests: XCTestCase {
   func testHiddenDesktopServiceSurvivesLastWindowBeingHidden() {

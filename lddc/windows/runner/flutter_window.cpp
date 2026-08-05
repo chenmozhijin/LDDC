@@ -22,7 +22,13 @@ FlutterWindow::FlutterWindow(const flutter::DartProject& project,
                              bool show_on_first_frame)
     : project_(project), show_on_first_frame_(show_on_first_frame) {}
 
-FlutterWindow::~FlutterWindow() {}
+FlutterWindow::~FlutterWindow() {
+  // FlutterDesktopViewControllerDestroy 会同步销毁内部原生 view，并可能在删除
+  // 过程中重新进入顶层窗口过程。unique_ptr 的默认析构在 delete 完成前仍保存旧
+  // 指针，MessageHandler 因而会把嵌套消息转发给正在析构的 controller。
+  // reset() 会先把成员置空再调用 deleter，使重入消息只走 Win32 默认处理路径。
+  flutter_controller_.reset();
+}
 
 bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {

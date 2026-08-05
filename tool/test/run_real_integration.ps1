@@ -238,6 +238,58 @@ function Test-IosSimulatorReady {
   return $true
 }
 
+function Test-AndroidDeviceReady {
+  param([Parameter(Mandatory = $true)][string]$Stage)
+
+  if ($Platform -ne "android") {
+    return $true
+  }
+  $deadline = [DateTimeOffset]::UtcNow.AddSeconds(30)
+  $lastState = "unknown"
+  $lastBootCompleted = "unknown"
+  while ([DateTimeOffset]::UtcNow -lt $deadline) {
+    $stateOutput = & adb -s $Device get-state 2>&1
+    $stateExitCode = $LASTEXITCODE
+    $lastState = (($stateOutput) -join " ").Trim()
+    if ($stateExitCode -eq 0 -and $lastState -eq "device") {
+      $bootOutput = & adb -s $Device shell getprop sys.boot_completed 2>&1
+      $bootExitCode = $LASTEXITCODE
+      $lastBootCompleted = (($bootOutput) -join " ").Trim()
+      if ($bootExitCode -eq 0 -and $lastBootCompleted -eq "1") {
+        return $true
+      }
+    }
+    Start-Sleep -Milliseconds 500
+  }
+  Write-Warning (
+    "Android 设备在 $Stage 未于 30 秒内恢复可用: " +
+    "serial=$Device state=$lastState bootCompleted=$lastBootCompleted"
+  )
+  return $false
+}
+
+function Reset-AndroidInfrastructureAttempt {
+  param([Parameter(Mandatory = $true)][string]$Stage)
+
+  if (-not (Test-AndroidDeviceReady -Stage "$Stage/pre-cleanup")) {
+    return $false
+  }
+  # DDS 启动失败可能留下旧应用进程和 adb 端口转发。CI 每个 job 只拥有一个
+  # 独立 emulator，因此重试前只清理该设备的应用进程与转发，不重启全局 adb，
+  # 也不卸载应用或删除场景报告，避免把业务失败伪装成基础设施恢复。
+  & adb -s $Device shell am force-stop com.cmzj.lddc 2>&1 | Write-Host
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Android 设备在 $Stage 无法停止上一次测试应用"
+    return $false
+  }
+  & adb -s $Device forward --remove-all 2>&1 | Write-Host
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Android 设备在 $Stage 无法清理旧 adb 端口转发"
+    return $false
+  }
+  return Test-AndroidDeviceReady -Stage "$Stage/post-cleanup"
+}
+
 function Invoke-BoundedFlutterTest {
   param(
     [Parameter(Mandatory = $true)][string[]]$Arguments,
@@ -366,9 +418,15 @@ try {
       if (Test-Path -LiteralPath $jsonPath) {
         Remove-Item -LiteralPath $jsonPath -Force
       }
-      $simulatorReady = Test-IosSimulatorReady `
-        -Stage "$scenarioName-attempt-$($infrastructureAttempt + 1)"
-      if ($simulatorReady) {
+      $attemptStage = "$scenarioName-attempt-$($infrastructureAttempt + 1)"
+      $deviceReady = if ($Platform -eq "android" -and $infrastructureAttempt -gt 0) {
+        Reset-AndroidInfrastructureAttempt -Stage $attemptStage
+      } elseif ($Platform -eq "android") {
+        Test-AndroidDeviceReady -Stage $attemptStage
+      } else {
+        Test-IosSimulatorReady -Stage $attemptStage
+      }
+      if ($deviceReady) {
         $testExitCode = Invoke-BoundedFlutterTest `
           -Arguments $flutterArguments `
           -EventReportPath $jsonPath

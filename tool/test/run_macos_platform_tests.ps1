@@ -666,9 +666,20 @@ try {
   if ($existingLddc.Count -gt 0) {
     throw "macOS hybrid 测试要求启动前不存在 LDDC 进程，当前 PID: $($existingLddc.Id -join ', ')"
   }
-  # build-for-testing 会自行构建 Runner 与 UI test bundle。这里只解析 CocoaPods，
-  # 避免在独立 DerivedData 构建前重复完整编译一次 macOS 应用；Flutter 场景仍会
-  # 启动它自己的真实 Debug 应用，XCUITest 只附着该现有进程。
+  # xcodebuild 会自行编译 Runner 与 UI test bundle，但仍依赖 Flutter 生成的
+  # Generated.xcconfig 和 ephemeral/*.xcfilelist。config-only 只生成这些 Xcode
+  # 输入，不提前完整编译应用，因此既满足原生构建前置条件，也避免重复构建。
+  $flutterConfigResult = Invoke-BoundedProcess `
+    -Phase "flutter-macos-config" `
+    -FilePath $flutterCommand `
+    -ArgumentList @("build", "macos", "--debug", "--config-only") `
+    -WorkingDirectory $appRoot `
+    -TimeoutSeconds 180 `
+    -StdoutPath (Join-Path $diagnosticsDir "flutter-macos-config.stdout.log") `
+    -StderrPath (Join-Path $diagnosticsDir "flutter-macos-config.stderr.log")
+  if ($flutterConfigResult.ExitCode -ne 0) {
+    throw "macOS Flutter Xcode 配置生成失败，exit=$($flutterConfigResult.ExitCode)"
+  }
   $podInstallResult = Invoke-BoundedProcess `
     -Phase "pod-install" `
     -FilePath "pod" `

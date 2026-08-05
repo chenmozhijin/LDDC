@@ -228,11 +228,14 @@ def failures() -> list[str]:
     for marker in (
         "let errorValue: Any = failure.map",
         '"error": errorValue,',
+        "private func testFailure(_ message: String) -> NSError",
     ):
         if marker not in ios_ui_test:
             problems.append(f"iOS XCUITest evidence JSON 缺少稳定类型处理: {marker}")
     if '"error": failure.map' in ios_ui_test:
         problems.append("iOS XCUITest 禁止让 Swift 推断 String/NSNull 混合表达式")
+    if "throw failure(" in ios_ui_test:
+        problems.append("iOS XCUITest 禁止把局部 failure 变量误当成错误构造函数")
     if "#if LDDC_PLATFORM_TEST" not in ios_app_delegate:
         problems.append("iOS 匿名 fixture 写入器必须只编译进 PlatformTest app")
     platform_test_flag = (
@@ -385,6 +388,10 @@ def failures() -> list[str]:
     macos_unit_tests = (ROOT / "lddc/macos/RunnerTests/RunnerTests.swift").read_text(
         encoding="utf-8"
     )
+    if "@testable import LDDC" not in macos_unit_tests:
+        problems.append("macOS RunnerTests 必须导入实际 Swift 模块 LDDC")
+    if "@testable import Runner" in macos_unit_tests:
+        problems.append("macOS RunnerTests 禁止导入旧模板模块 Runner")
     if "testHiddenDesktopServiceSurvivesLastWindowBeingHidden" not in macos_unit_tests:
         problems.append("macOS RunnerTests 缺少隐藏服务生命周期断言")
 
@@ -651,6 +658,8 @@ def failures() -> list[str]:
         "--phase ios-native-unit",
         "Restore iOS debug application after Flutter integration",
         "flutter build ios --debug --simulator",
+        "--phase ios-debug-rebuild",
+        "--timeout 900",
         "-scheme Runner",
     ):
         if marker not in workflow:
@@ -679,6 +688,8 @@ def failures() -> list[str]:
         encoding="utf-8"
     )
     for marker in (
+        '@("build", "macos", "--debug", "--config-only")',
+        'Phase "flutter-macos-config"',
         "test-without-building",
         "macos_open_panel_select",
         "macos_open_panel_cancel",
@@ -692,6 +703,8 @@ def failures() -> list[str]:
     ):
         if marker not in macos_runner:
             problems.append(f"macOS XCUITest runner 缺少真实运行契约: {marker}")
+    if '@("build", "macos", "--debug")' in macos_runner:
+        problems.append("macOS hybrid runner 不得在 build-for-testing 前重复完整 Debug 构建")
     if workflow.count("run_macos_platform_tests.ps1") != 1:
         problems.append("macOS hybrid runner 必须只在独立 system UI job 中执行一次")
     for required in (
@@ -827,6 +840,12 @@ def failures() -> list[str]:
         'StartsWith("loading ")',
         '"code_cache/$ContainerReportDir/$Scenario.json"',
         "Test-IosSimulatorReady",
+        "Test-AndroidDeviceReady",
+        "Reset-AndroidInfrastructureAttempt",
+        "adb -s $Device get-state",
+        "adb -s $Device shell getprop sys.boot_completed",
+        "adb -s $Device shell am force-stop com.cmzj.lddc",
+        "adb -s $Device forward --remove-all",
         "$testExitCode = 126",
         "$process.Kill($true)",
         "return 124",
@@ -834,6 +853,30 @@ def failures() -> list[str]:
     ):
         if marker not in integration_runner:
             problems.append(f"真实集成 runner 缺少 target 级硬超时或进程树清理: {marker}")
+    windows_main = (ROOT / "lddc/windows/runner/main.cpp").read_text(
+        encoding="utf-8"
+    )
+    windows_flutter_window = (
+        ROOT / "lddc/windows/runner/flutter_window.cpp"
+    ).read_text(encoding="utf-8")
+    # 直接检查析构作用域与 COM 清理的代码顺序，避免把可维护的中文说明误当成
+    # 机器协议。FlutterWindow 必须先离开局部作用域，之后才能释放 COM apartment。
+    windows_lifecycle_pattern = re.compile(
+        r"int exit_code = EXIT_SUCCESS;\s*"
+        r"\{.*?FlutterWindow window\(project, should_show_main_window\);.*?"
+        r"\n\s*\}\s*"
+        r"if \(SUCCEEDED\(com_result\)\) \{\s*"
+        r"::CoUninitialize\(\);",
+        re.DOTALL,
+    )
+    if windows_lifecycle_pattern.search(windows_main) is None:
+        problems.append("Windows runner 必须在 CoUninitialize 前析构主窗口和 Flutter engine")
+    if "return exit_code;" not in windows_main:
+        problems.append("Windows runner 必须保留消息循环退出码")
+    if "FlutterWindow::~FlutterWindow()" not in windows_flutter_window or (
+        "flutter_controller_.reset();" not in windows_flutter_window
+    ):
+        problems.append("Windows 主窗口析构必须先清空 controller 再删除原生 Flutter view")
     performance_workflow = (
         ROOT / ".github/workflows/performance-regression.yml"
     ).read_text(encoding="utf-8")

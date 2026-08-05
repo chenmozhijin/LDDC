@@ -163,19 +163,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
-  FlutterWindow window(project, should_show_main_window);
-  Win32Window::Size preferred_content_size(
-      lddc::kPreferredMainWindowContentWidth,
-      lddc::kPreferredMainWindowContentHeight);
-  if (!window.CreateWithClientArea(L"lddc", preferred_content_size)) {
-    return EXIT_FAILURE;
-  }
-  window.SetQuitOnClose(true);
+  int exit_code = EXIT_SUCCESS;
+  {
+    // desktop_multi_window 会延迟释放已经关闭的子 Flutter engine。主消息循环
+    // 结束后，主窗口、所有子 engine 和插件必须在 COM apartment 仍有效、崩溃
+    // 诊断仍可用时析构。这里的作用是固定依赖释放顺序；本次访问冲突的直接
+    // 原因是 FlutterViewController 析构期间窗口消息重入，具体防护位于
+    // FlutterWindow 析构函数中。
+    FlutterWindow window(project, should_show_main_window);
+    Win32Window::Size preferred_content_size(
+        lddc::kPreferredMainWindowContentWidth,
+        lddc::kPreferredMainWindowContentHeight);
+    if (!window.CreateWithClientArea(L"lddc", preferred_content_size)) {
+      exit_code = EXIT_FAILURE;
+    } else {
+      window.SetQuitOnClose(true);
 
-  ::MSG msg;
-  while (::GetMessage(&msg, nullptr, 0, 0)) {
-    ::TranslateMessage(&msg);
-    ::DispatchMessage(&msg);
+      ::MSG msg;
+      while (::GetMessage(&msg, nullptr, 0, 0)) {
+        ::TranslateMessage(&msg);
+        ::DispatchMessage(&msg);
+      }
+    }
   }
 
   if (SUCCEEDED(com_result)) {
@@ -187,5 +196,5 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   if (crash_symbols_initialized) {
     ::SymCleanup(::GetCurrentProcess());
   }
-  return EXIT_SUCCESS;
+  return exit_code;
 }

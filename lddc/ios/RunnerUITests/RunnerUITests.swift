@@ -176,7 +176,10 @@ final class RunnerUITests: XCTestCase {
     guard let fixtureBase64 = environment["LDDC_FIXTURE_BASE64"],
           !fixtureBase64.isEmpty
     else {
-      throw failure("XCUITest 缺少匿名 fixture base64")
+      // 每个测试方法都有名为 failure 的局部变量，不能把它误当成错误构造函数。
+      // 统一通过 testFailure 创建 NSError，既避免 Swift 名称遮蔽，也让 XCTest
+      // 和结构化 evidence 得到相同的可读错误消息。
+      throw testFailure("XCUITest 缺少匿名 fixture base64")
     }
     let app = XCUIApplication(bundleIdentifier: appBundleIdentifier)
     app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -385,12 +388,16 @@ final class RunnerUITests: XCTestCase {
       // 不能先调用 XCTFail：continueAfterFailure=false 会立即中断测试方法，使 catch、
       // evidence attachment 和资源清理都没有机会执行。直接抛错后由 XCTest 记录
       // thrown error，场景仍能先写出与失败一致的结构化证据。
-      throw NSError(
-        domain: "LDDCPlatformTests",
-        code: 2,
-        userInfo: [NSLocalizedDescriptionKey: message]
-      )
+      throw testFailure(message)
     }
+  }
+
+  private func testFailure(_ message: String) -> NSError {
+    NSError(
+      domain: "LDDCPlatformTests",
+      code: 2,
+      userInfo: [NSLocalizedDescriptionKey: message]
+    )
   }
 
   private func requireHittable(
