@@ -29,6 +29,17 @@ void main() {
       expect(args.hasParseError, isTrue);
     });
 
+    test('AppKit 的 XCTest 宿主参数不参与桌面服务 CLI 解析', () {
+      final DesktopServiceLaunchArguments args =
+          DesktopServiceLaunchArguments.parse(<String>[
+            '-NSTreatUnknownArgumentsAsOpen',
+            '--not-show',
+          ]);
+
+      expect(args.notShow, isTrue);
+      expect(args.parseError, isNull);
+    });
+
     test('无参数时不产生解析错误', () {
       const DesktopServiceLaunchArguments args =
           DesktopServiceLaunchArguments();

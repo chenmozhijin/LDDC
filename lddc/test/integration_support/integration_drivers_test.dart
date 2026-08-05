@@ -104,7 +104,7 @@ void main() {
             return Scaffold(
               body: Align(
                 alignment: Alignment.topCenter,
-                child: Checkbox(
+                child: CheckboxListTile(
                   key: const ValueKey<String>(
                     'local_match_skip_existing_checkbox',
                   ),
@@ -112,6 +112,7 @@ void main() {
                   onChanged: (bool? value) {
                     setState(() => skipExisting = value ?? false);
                   },
+                  title: const Text('跳过已有歌词'),
                 ),
               ),
             );

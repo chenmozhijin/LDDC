@@ -151,6 +151,11 @@ jobs:
         continue-on-error: true
         working-directory: lddc
         run: |
+          host_arch="$(uname -m)"
+          case "$host_arch" in
+            arm64|x86_64) ;;
+            *) echo "Unsupported macOS runner architecture: $host_arch" >&2; exit 1 ;;
+          esac
           result_path='build/integration_reports/macos-native-unit/RunnerTests.xcresult'
           rm -rf "$result_path"
           mkdir -p "$(dirname "$result_path")"
@@ -166,7 +171,7 @@ jobs:
               -workspace macos/Runner.xcworkspace \
               -scheme Runner \
               -configuration Debug \
-              -destination 'platform=macOS' \
+              -destination "platform=macOS,arch=$host_arch" \
               -parallel-testing-enabled NO \
               -resultBundlePath "$result_path"
       - name: Run offline application flows

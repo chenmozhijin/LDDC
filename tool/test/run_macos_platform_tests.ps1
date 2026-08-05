@@ -1,7 +1,9 @@
 param(
   [string]$ReportDir = "build/integration_reports/macos-native",
   [ValidateRange(120, 180)]
-  [int]$ScenarioTimeoutSeconds = 120
+  [int]$ScenarioTimeoutSeconds = 120,
+  [ValidateRange(120, 300)]
+  [int]$FlutterStartupTimeoutSeconds = 180
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,6 +23,10 @@ $fixtureSize = (Get-Item -LiteralPath $fixtureSource).Length
 $fixtureSha256 = (Get-FileHash -LiteralPath $fixtureSource -Algorithm SHA256).Hash.ToLowerInvariant()
 $framework = "integration_test+xcuitest"
 $flutterCommand = (Get-Command flutter -ErrorAction Stop).Source
+$hostArchitecture = (& /usr/bin/uname -m).Trim()
+if ($hostArchitecture -notin @("arm64", "x86_64")) {
+  throw "不支持的 macOS hosted runner 架构: $hostArchitecture"
+}
 if (-not [IO.Path]::IsPathRooted($ReportDir)) {
   $ReportDir = Join-Path $appRoot $ReportDir
 }
@@ -87,84 +93,6 @@ $testRunnerEnvironment = [ordered]@{
   TEST_RUNNER_LDDC_MACOS_HYBRID_SYNC_DIR = $syncDir
 }
 $previousTestRunnerEnvironment = @{}
-$ownedProcessStarts = @{}
-
-function Register-OwnedProcessTree {
-  param([Parameter(Mandatory = $true)][int]$RootProcessId)
-
-  $relations = @()
-  foreach ($line in @(& /bin/ps -axo pid=,ppid= 2>$null)) {
-    $parts = @($line.Trim() -split "\s+")
-    if ($parts.Count -ne 2) {
-      continue
-    }
-    [int]$processId = 0
-    [int]$parentProcessId = 0
-    if ([int]::TryParse($parts[0], [ref]$processId) `
-        -and [int]::TryParse($parts[1], [ref]$parentProcessId)) {
-      $relations += [pscustomobject]@{ ProcessId = $processId; ParentProcessId = $parentProcessId }
-    }
-  }
-
-  $ownedIds = [Collections.Generic.HashSet[int]]::new()
-  [void]$ownedIds.Add($RootProcessId)
-  do {
-    $added = $false
-    foreach ($relation in $relations) {
-      if ($ownedIds.Contains($relation.ParentProcessId) -and $ownedIds.Add($relation.ProcessId)) {
-        $added = $true
-      }
-    }
-  } while ($added)
-
-  foreach ($processId in $ownedIds) {
-    if ($ownedProcessStarts.ContainsKey($processId)) {
-      continue
-    }
-    try {
-      $process = Get-Process -Id $processId -ErrorAction Stop
-      $ownedProcessStarts[$processId] = $process.StartTime.ToUniversalTime().Ticks
-      $process.Dispose()
-    } catch {
-      # 进程可能在 ps 快照后立即退出；短命进程不属于最终残留。
-    }
-  }
-}
-
-function Get-OwnedLiveProcessCount {
-  $count = 0
-  foreach ($entry in $ownedProcessStarts.GetEnumerator()) {
-    try {
-      $process = Get-Process -Id ([int]$entry.Key) -ErrorAction Stop
-      if ($process.StartTime.ToUniversalTime().Ticks -eq [long]$entry.Value) {
-        $count += 1
-      }
-      $process.Dispose()
-    } catch {
-      # 已退出进程不计入最终资源残留。
-    }
-  }
-  return $count
-}
-
-function Wait-ForOwnedProcessBaseline {
-  $deadline = [DateTimeOffset]::UtcNow.AddSeconds(10)
-  $stableSamples = 0
-  $count = Get-OwnedLiveProcessCount
-  do {
-    if ($count -eq 0) {
-      $stableSamples += 1
-      if ($stableSamples -ge 3) {
-        return 0
-      }
-    } else {
-      $stableSamples = 0
-    }
-    Start-Sleep -Milliseconds 100
-    $count = Get-OwnedLiveProcessCount
-  } while ([DateTimeOffset]::UtcNow -lt $deadline)
-  return $count
-}
 
 function Start-SupervisedProcess {
   param(
@@ -215,7 +143,6 @@ function Start-SupervisedProcess {
     $process.Dispose()
     throw "无法启动进程组监督器: $Phase"
   }
-  Register-OwnedProcessTree -RootProcessId $process.Id
   return [pscustomobject]@{
     Phase = $Phase
     Process = $process
@@ -235,7 +162,6 @@ function Stop-SupervisedProcess {
   if ($process.HasExited) {
     return $true
   }
-  Register-OwnedProcessTree -RootProcessId $process.Id
   # 监督器收到 TERM 后会先回收独立 child process group；若监督器自身失去响应，
   # 最多再等待 7 秒后强制结束。两个等待都必须有上限。
   & /bin/kill -TERM $process.Id 2>$null
@@ -301,7 +227,6 @@ function Wait-SupervisedProcess {
 
   $deadline = $Handle.StartedAt.AddSeconds($Handle.TimeoutSeconds + $AdditionalSeconds)
   while (-not $Handle.Process.WaitForExit(1000)) {
-    Register-OwnedProcessTree -RootProcessId $Handle.Process.Id
     if ([DateTimeOffset]::UtcNow -ge $deadline) {
       if (-not (Stop-SupervisedProcess -Handle $Handle)) {
         Write-Error "进程组监督器无法在有界时间内结束: $($Handle.Phase)" -ErrorAction Continue
@@ -365,7 +290,6 @@ function Stop-RawProcessBounded {
   }
   $Process.Refresh()
   if (-not $Process.HasExited) {
-    Register-OwnedProcessTree -RootProcessId $Process.Id
     & /bin/kill -TERM $Process.Id 2>$null
     if (-not $Process.WaitForExit(5000)) {
       & /bin/kill -KILL $Process.Id 2>$null
@@ -374,6 +298,77 @@ function Stop-RawProcessBounded {
       }
     }
   }
+}
+
+function Wait-ForLddcProcessBaseline {
+  $deadline = [DateTimeOffset]::UtcNow.AddSeconds(10)
+  $stableSamples = 0
+  $count = 0
+  do {
+    $count = @(Get-Process -Name "LDDC" -ErrorAction SilentlyContinue).Count
+    if ($count -eq 0) {
+      $stableSamples += 1
+      if ($stableSamples -ge 3) {
+        return 0
+      }
+    } else {
+      $stableSamples = 0
+    }
+    Start-Sleep -Milliseconds 100
+  } while ([DateTimeOffset]::UtcNow -lt $deadline)
+  return $count
+}
+
+function Get-SupervisorResidualCount {
+  param([object[]]$Statuses)
+
+  $count = 0
+  foreach ($status in $Statuses) {
+    if ($null -eq $status) {
+      continue
+    }
+    if ($null -eq $status.FinalProcessCount) {
+      # 已启动的监督器若缺少最终进程计数，资源状态不可证明，必须失败。
+      $count += 1
+      continue
+    }
+    $count += [Math]::Max(0, [int]$status.FinalProcessCount)
+  }
+  return $count
+}
+
+function Wait-ForFlutterTestStart {
+  param(
+    [Parameter(Mandatory = $true)]$FlutterHandle,
+    [Parameter(Mandatory = $true)][string]$JsonlPath,
+    [Parameter(Mandatory = $true)][int]$TimeoutSeconds
+  )
+
+  $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
+  while ([DateTimeOffset]::UtcNow -lt $deadline) {
+    if (Test-Path -LiteralPath $JsonlPath -PathType Leaf) {
+      foreach ($line in @(Get-Content -LiteralPath $JsonlPath -ErrorAction SilentlyContinue)) {
+        if ([string]::IsNullOrWhiteSpace($line)) {
+          continue
+        }
+        try {
+          $event = $line | ConvertFrom-Json
+          if ($event.type -eq "testStart" -and $event.test.hidden -ne $true) {
+            return
+          }
+        } catch {
+          # JSONL 最后一行可能仍在写入；下一轮只重新读取，不把半行当成报告损坏。
+        }
+      }
+    }
+    $FlutterHandle.Process.Refresh()
+    if ($FlutterHandle.Process.HasExited) {
+      $status = Read-SupervisorStatus -Handle $FlutterHandle
+      throw "Flutter integration_test 在实际测试开始前退出，exit=$($status.ExitCode)"
+    }
+    Start-Sleep -Milliseconds 100
+  }
+  throw "Flutter integration_test 未在冷启动预算内进入实际测试"
 }
 
 function Wait-ForHybridState {
@@ -505,7 +500,7 @@ function Start-SupervisedXcodeTest {
     -ArgumentList @(
       "test-without-building",
       "-xctestrun", $XcTestRun,
-      "-destination", "platform=macOS",
+      "-destination", "platform=macOS,arch=$hostArchitecture",
       "-parallel-testing-enabled", "NO",
       "-test-timeouts-enabled", "YES",
       "-maximum-test-execution-time-allowance", "60",
@@ -711,7 +706,7 @@ try {
       "-workspace", $testProject,
       "-scheme", "RunnerPlatformTests",
       "-configuration", "Debug",
-      "-destination", "platform=macOS",
+      "-destination", "platform=macOS,arch=$hostArchitecture",
       "-parallel-testing-enabled", "NO",
       "-derivedDataPath", $derivedData
     ) `
@@ -769,25 +764,38 @@ try {
     $xcodeExitCode = 1
     $nativeSummaryPassed = $false
     $xcodeHandle = $null
+    $xcodeStatus = $null
+    $flutterStatus = $null
+    $runnerFailureMessage = $null
     $scenarioStartedAt = [DateTimeOffset]::UtcNow
-    $scenarioDeadline = $scenarioStartedAt.AddSeconds($ScenarioTimeoutSeconds)
+    $scenarioDeadline = $null
     try {
       Write-Host "Running macOS hybrid scenario: $scenario"
+      # 外层监督器只额外保留进程退出和状态文件落盘余量；实际 Flutter
+      # 冷启动与业务场景仍分别由 180/120 秒边界控制，不能用这里掩盖超时。
       $activeFlutterHandle = Start-SupervisedProcess `
         -Phase "flutter-integration/$scenario" `
         -FilePath $flutterCommand `
         -ArgumentList $flutterArguments `
         -WorkingDirectory $appRoot `
-        -TimeoutSeconds $ScenarioTimeoutSeconds `
+        -TimeoutSeconds ($FlutterStartupTimeoutSeconds + $ScenarioTimeoutSeconds + 15) `
         -StdoutPath (Join-Path $diagnosticsDir "$scenario.flutter.stdout.log") `
         -StderrPath (Join-Path $diagnosticsDir "$scenario.flutter.stderr.log")
+
+      # hosted runner 的首次 flutter test 需要完成 Debug 冷编译。冷启动预算与
+      # 原生面板业务预算分开计算，避免把 80 多秒编译时间误判为 picker 超时，
+      # 同时不延长已经进入实际 testWidgets 后的交互等待。
+      Wait-ForFlutterTestStart `
+        -FlutterHandle $activeFlutterHandle `
+        -JsonlPath $flutterJsonl `
+        -TimeoutSeconds $FlutterStartupTimeoutSeconds
+      $scenarioDeadline = [DateTimeOffset]::UtcNow.AddSeconds($ScenarioTimeoutSeconds)
       $pickerRequestedState = Wait-ForHybridState `
         -FlutterHandle $activeFlutterHandle `
         -StatePath $statePath `
         -Scenario $scenario `
         -ExpectedState "picker_requested" `
-        -TimeoutSeconds 90
-      Register-OwnedProcessTree -RootProcessId ([int]$pickerRequestedState.appPid)
+        -TimeoutSeconds ([Math]::Min(30, $ScenarioTimeoutSeconds))
 
       $remainingScenarioSeconds = [int][Math]::Floor(
         ($scenarioDeadline - [DateTimeOffset]::UtcNow).TotalSeconds
@@ -802,13 +810,9 @@ try {
         -LogPrefix (Join-Path $diagnosticsDir "$scenario.xcodebuild") `
         -TimeoutSeconds ([Math]::Min(60, $remainingScenarioSeconds))
 
-      $xcodeStatus = $null
-      $flutterStatus = $null
       while ([DateTimeOffset]::UtcNow -lt $scenarioDeadline) {
         $activeFlutterHandle.Process.Refresh()
         $xcodeHandle.Process.Refresh()
-        Register-OwnedProcessTree -RootProcessId $activeFlutterHandle.Process.Id
-        Register-OwnedProcessTree -RootProcessId $xcodeHandle.Process.Id
 
         if ($xcodeHandle.Process.HasExited -and $null -eq $xcodeStatus) {
           $xcodeStatus = Wait-SupervisedProcess -Handle $xcodeHandle -AdditionalSeconds 5
@@ -862,29 +866,16 @@ try {
       }
       $flutterExitCode = $flutterStatus.ExitCode
       $xcodeExitCode = $xcodeStatus.ExitCode
-      $summaryReady = Read-XcresultSummary `
-        -ResultBundle $resultBundle `
-        -SummaryPath $summaryPath
-      $nativeSummaryPassed = $summaryReady -and (Test-PassingXcresultSummary -SummaryPath $summaryPath)
-      if (Test-Path -LiteralPath $resultBundle) {
-        $attachmentResult = Invoke-BoundedProcess `
-          -Phase "xcresult-attachments/$scenario" `
-          -FilePath "xcrun" `
-          -ArgumentList @("xcresulttool", "export", "attachments", "--path", $resultBundle, "--output-path", $scenarioAttachments) `
-          -WorkingDirectory $appRoot `
-          -TimeoutSeconds 120 `
-          -StdoutPath (Join-Path $diagnosticsDir "$scenario.attachments.stdout.log") `
-          -StderrPath (Join-Path $diagnosticsDir "$scenario.attachments.stderr.log")
-        if ($attachmentResult.ExitCode -ne 0) {
-          throw "macOS xcresult attachment 导出失败，exit=$($attachmentResult.ExitCode)"
-        }
-      }
     } catch {
-      Write-Warning "$scenario hybrid runner 失败: $($_.Exception.Message)"
+      $runnerFailureMessage = $_.Exception.Message
+      Write-Warning "$scenario hybrid runner 失败: $runnerFailureMessage"
     } finally {
       if ($null -ne $xcodeHandle) {
         if (-not $xcodeHandle.Process.HasExited) {
           [void](Stop-SupervisedProcess -Handle $xcodeHandle)
+        }
+        if ($null -eq $xcodeStatus) {
+          $xcodeStatus = Wait-SupervisedProcess -Handle $xcodeHandle -AdditionalSeconds 5
         }
         $xcodeHandle.Process.Dispose()
         $xcodeHandle = $null
@@ -893,8 +884,35 @@ try {
         if (-not $activeFlutterHandle.Process.HasExited) {
           [void](Stop-SupervisedProcess -Handle $activeFlutterHandle)
         }
+        if ($null -eq $flutterStatus) {
+          $flutterStatus = Wait-SupervisedProcess -Handle $activeFlutterHandle -AdditionalSeconds 5
+        }
         $activeFlutterHandle.Process.Dispose()
         $activeFlutterHandle = $null
+      }
+    }
+    if ($null -ne $flutterStatus) {
+      $flutterExitCode = $flutterStatus.ExitCode
+    }
+    if ($null -ne $xcodeStatus) {
+      $xcodeExitCode = $xcodeStatus.ExitCode
+    }
+    if (Test-Path -LiteralPath $resultBundle) {
+      $summaryReady = Read-XcresultSummary `
+        -ResultBundle $resultBundle `
+        -SummaryPath $summaryPath
+      $nativeSummaryPassed = $summaryReady -and (Test-PassingXcresultSummary -SummaryPath $summaryPath)
+      $attachmentResult = Invoke-BoundedProcess `
+        -Phase "xcresult-attachments/$scenario" `
+        -FilePath "xcrun" `
+        -ArgumentList @("xcresulttool", "export", "attachments", "--path", $resultBundle, "--output-path", $scenarioAttachments) `
+        -WorkingDirectory $appRoot `
+        -TimeoutSeconds 120 `
+        -StdoutPath (Join-Path $diagnosticsDir "$scenario.attachments.stdout.log") `
+        -StderrPath (Join-Path $diagnosticsDir "$scenario.attachments.stderr.log")
+      if ($attachmentResult.ExitCode -ne 0) {
+        $runnerFailureMessage = "macOS xcresult attachment 导出失败，exit=$($attachmentResult.ExitCode)"
+        Write-Warning "$scenario $runnerFailureMessage"
       }
     }
     Write-SanitizedHybridStateDiagnostic `
@@ -902,12 +920,11 @@ try {
       -OutputPath (Join-Path $diagnosticsDir "$scenario.hybrid-state.json") `
       -Scenario $scenario
 
-    $remainingLddc = @(Get-Process -Name "LDDC" -ErrorAction SilentlyContinue)
-    foreach ($process in $remainingLddc) {
-      Register-OwnedProcessTree -RootProcessId $process.Id
+    foreach ($process in @(Get-Process -Name "LDDC" -ErrorAction SilentlyContinue)) {
       Stop-RawProcessBounded -Process $process
       $process.Dispose()
     }
+    $finalLddcCount = Wait-ForLddcProcessBaseline
     $evidencePath = Get-ChildItem -Path $scenarioAttachments -Recurse -File `
       | Where-Object {
           try {
@@ -923,10 +940,21 @@ try {
       Write-FallbackEvidence `
         -Path $fallbackEvidence `
         -Scenario $scenario `
-        -Message "XCUITest 未导出 hybrid evidence attachment"
+        -Message $(if ([string]::IsNullOrWhiteSpace($runnerFailureMessage)) {
+          "XCUITest 未导出 hybrid evidence attachment"
+        } else {
+          $runnerFailureMessage
+        })
       $evidencePath = Get-Item -LiteralPath $fallbackEvidence
     }
-    $ownedFinalCount = Wait-ForOwnedProcessBaseline
+    # 每个受监督命令的 process group 才是 runner 真正拥有的进程边界。
+    # 旧实现按瞬时父子关系永久登记 PID，会把 Xcode 启动后转交给系统管理的
+    # 持久服务误报为 LDDC 泄漏。这里同时核对监督器最终计数与 LDDC 进程名，
+    # 两者任一残留仍会以同一个零阈值阻断。
+    $ownedFinalCount = $finalLddcCount + (Get-SupervisorResidualCount -Statuses @(
+      $flutterStatus,
+      $xcodeStatus
+    ))
     Add-RunnerCleanupEvidence `
       -Path $evidencePath.FullName `
       -FinalChildProcessCount $ownedFinalCount
@@ -938,7 +966,7 @@ try {
       $flutterExitCode -eq 0 `
         -and $xcodeExitCode -eq 0 `
         -and $nativeSummaryPassed `
-        -and $remainingLddc.Count -eq 0 `
+        -and $finalLddcCount -eq 0 `
         -and $ownedFinalCount -eq 0
     ) { 0 } else { 1 }
     # Flutter JSONL 先生成自身 JUnit；随后 normalizer 在报告损坏时可以写入

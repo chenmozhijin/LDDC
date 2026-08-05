@@ -15,6 +15,7 @@ final class RunnerUITests: XCTestCase {
   private let saveTagSucceededIdentifier = "lddc.open_lyrics.notice.saveTagSucceeded"
   private let documentsBundleIdentifier = "com.apple.DocumentsApp"
   private let springBoardBundleIdentifier = "com.apple.springboard"
+  private let documentBrowsingRootPrefix = "DOC.browsingRoot Source: "
   private let platformTestDisplayName = "LDDC Platform Tests"
   private var cleanupVerified = false
   private var cleanupDiagnostics: [String: Any] = [:]
@@ -294,20 +295,30 @@ final class RunnerUITests: XCTestCase {
 
   private func systemPickerContext(app: XCUIApplication) -> SystemPickerContext? {
     // iOS 26 可以把 Document Picker 作为宿主应用内的远程 view
-    // service 暴露，此时 DocumentsApp 不会进入前台。只以 typed
-    // Picker 根节点判断界面存在，不使用进程前台状态或 SpringBoard。
-    let hostedRoot = app.otherElements["Browse View (Picker)"]
-    if hostedRoot.exists {
+    // service 暴露，此时 hosted runner 实际提供的是 DOC.browsingRoot
+    // typed Other，而不是旧系统的 Browse View (Picker)。两者均限定为
+    // 系统文档浏览根节点，不使用通用 .any、进程前台状态或 SpringBoard。
+    if let hostedRoot = typedSystemPickerRoot(in: app) {
       return SystemPickerContext(root: hostedRoot)
     }
     let documents = XCUIApplication(bundleIdentifier: documentsBundleIdentifier)
-    if documents.state != .notRunning {
-      let documentsRoot = documents.otherElements["Browse View (Picker)"]
-      if documentsRoot.exists {
-        return SystemPickerContext(root: documentsRoot)
-      }
+    if documents.state != .notRunning,
+       let documentsRoot = typedSystemPickerRoot(in: documents) {
+      return SystemPickerContext(root: documentsRoot)
     }
     return nil
+  }
+
+  private func typedSystemPickerRoot(in application: XCUIApplication) -> XCUIElement? {
+    let documentBrowsingRoot = application.otherElements.matching(
+      NSPredicate(format: "identifier BEGINSWITH %@", documentBrowsingRootPrefix)
+    ).firstMatch
+    if documentBrowsingRoot.exists {
+      return documentBrowsingRoot
+    }
+
+    let legacyRoot = application.otherElements["Browse View (Picker)"]
+    return legacyRoot.exists ? legacyRoot : nil
   }
 
   private func waitForSystemPicker(
@@ -321,7 +332,7 @@ final class RunnerUITests: XCTestCase {
       }
       Thread.sleep(forTimeInterval: 0.2)
     } while Date() < deadline
-    throw testFailure("系统文件界面没有暴露 typed Browse View (Picker) 根节点")
+    throw testFailure("系统文件界面没有暴露 typed Document Picker 根节点")
   }
 
   private func waitForSystemPickerToClose(

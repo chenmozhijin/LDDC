@@ -279,7 +279,10 @@ def failures() -> list[str]:
         "testDocumentPickerExportCancellationCleansTemporaryFile",
         "testTerminatedExportIsCleanedOnNextLaunch",
         "stale_export_removed_on_next_launch",
-        'app.otherElements["Browse View (Picker)"]',
+        'private let documentBrowsingRootPrefix = "DOC.browsingRoot Source: "',
+        "typedSystemPickerRoot(in: app)",
+        'application.otherElements["Browse View (Picker)"]',
+        'NSPredicate(format: "identifier BEGINSWITH %@", documentBrowsingRootPrefix)',
         "picker.root.buttons.matching(",
         "picker.root.cells.matching(",
         "picker.root.links.matching(",
@@ -718,8 +721,10 @@ def failures() -> list[str]:
         "Invoke-BoundedProcess",
         "Start-SupervisedProcess",
         "process_group_supervisor.py",
-        "Register-OwnedProcessTree",
-        "Wait-ForOwnedProcessBaseline",
+        "Wait-ForFlutterTestStart",
+        "FlutterStartupTimeoutSeconds",
+        "Get-SupervisorResidualCount",
+        "Wait-ForLddcProcessBaseline",
         'ExpectedState "picker_requested"',
         'ExpectedState "flutter_completed"',
         '$payload.resources["final"]["childProcessCount"] = $FinalChildProcessCount',
@@ -728,6 +733,9 @@ def failures() -> list[str]:
             problems.append(f"macOS XCUITest runner 缺少真实运行契约: {marker}")
     if '@("build", "macos", "--debug")' in macos_runner:
         problems.append("macOS hybrid runner 不得在 build-for-testing 前重复完整 Debug 构建")
+    for forbidden in ("Register-OwnedProcessTree", "Wait-ForOwnedProcessBaseline"):
+        if forbidden in macos_runner:
+            problems.append(f"macOS hybrid runner 禁止使用会误算 Xcode 系统服务的 PID 快照: {forbidden}")
     if workflow.count("run_macos_platform_tests.ps1") != 1:
         problems.append("macOS hybrid runner 必须只在独立 system UI job 中执行一次")
     for required in (

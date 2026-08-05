@@ -269,16 +269,6 @@ void main() {
         await runStepWithTimeout(
           () async {
             await search.enterKeyword('');
-            await pumpUntil(
-              tester,
-              () => searchContainer
-                  .read(searchWorkflowControllerProvider)
-                  .keyword
-                  .isEmpty,
-              timeout: const Duration(seconds: 5),
-              reason: '等待空关键词同步到搜索状态',
-            );
-
             final SearchWorkflowController controller = searchContainer.read(
               searchWorkflowControllerInstanceProvider,
             );
@@ -292,9 +282,10 @@ void main() {
                   }
                 });
             try {
-              // states 是 async* 适配器；先完成一次 pump，确保监听已经接到内部
-              // 同步状态流，再点击搜索。否则极快的空关键词分支可能在订阅建立前
-              // 已被页面消费，测试只剩对瞬时 SnackBar 的脆弱等待。
+              // 搜索按钮会先从 TextEditingController 读取当前文本，再同步到
+              // workflow state。歌单详情返回后 UI 文本可能已清空而旧 state 仍保留
+              // 上一次关键词，因此不能把“点击前 state 已为空”当作产品契约。
+              // 先订阅状态流，再点击并验证 emptyKeyword 事件才覆盖真实提交路径。
               await tester.pump();
               await search.submitSearch();
               final SearchWorkflowState emittedState = await noticeEvent.future

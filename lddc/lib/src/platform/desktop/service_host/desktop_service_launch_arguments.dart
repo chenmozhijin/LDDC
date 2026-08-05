@@ -33,6 +33,11 @@ class DesktopServiceLaunchArguments {
           getServicePort = true;
         case '--not-show':
           notShow = true;
+        case '-NSTreatUnknownArgumentsAsOpen':
+          // App-hosted XCTest 会由 AppKit 注入该标准启动参数。它不属于 LDDC
+          // 的桌面服务 CLI，也不应让宿主在 XCTest bundle check-in 前退出。
+          // 这里只接受已确认的精确参数，其他未知参数仍保持严格失败。
+          continue;
         case '':
           continue;
         default:

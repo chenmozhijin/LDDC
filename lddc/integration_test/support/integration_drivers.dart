@@ -70,6 +70,10 @@ class SearchDriver {
     await tapVisible(tester, searchBar, reason: '等待搜索输入框可点击');
     await tester.enterText(input, keyword);
     await pumpForInteraction(tester);
+    final EditableText editable = tester.widget<EditableText>(input);
+    if (editable.controller.text != keyword) {
+      throw StateError('搜索输入框没有保存测试输入');
+    }
   }
 
   Future<void> selectSource(Source source) async {
@@ -349,11 +353,17 @@ class LocalMatchDriver {
   }
 
   Future<void> toggleSkipExisting() async {
-    await tapVisible(
-      tester,
-      find.byKey(const ValueKey<String>('local_match_skip_existing_checkbox')),
-      reason: '等待“跳过已有歌词”复选框可点击',
+    final Finder tile = find.byKey(
+      const ValueKey<String>('local_match_skip_existing_checkbox'),
     );
+    final Finder checkbox = find.descendant(
+      of: tile,
+      matching: find.byType(Checkbox),
+    );
+    // CheckboxListTile 的 key 标记整行布局节点，但严格 hit test 需要命中真正
+    // 注册手势的 Checkbox。窄高桌面在滚动到规则区底部时，外层布局中心未必
+    // 位于 InkWell 的命中路径中；点击 typed 子控件仍是用户可执行的真实动作。
+    await tapVisible(tester, checkbox, reason: '等待“跳过已有歌词”复选框可点击');
   }
 
   Future<void> tapStartOrCancel() async {
