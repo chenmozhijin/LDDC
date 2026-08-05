@@ -268,6 +268,8 @@ def failures() -> list[str]:
         "systemPickerRoots",
         '"On My iPhone"',
         'private let platformTestDisplayName = "LDDC Platform Tests"',
+        "if documents.state != .notRunning",
+        "executionTimeAllowance = 120",
     ):
         if marker not in ios_ui_test:
             problems.append(f"iOS 导出与清理场景缺少: {marker}")
@@ -288,6 +290,12 @@ def failures() -> list[str]:
     ios_runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
         encoding="utf-8"
     )
+    for marker in (
+        '"-test-timeouts-enabled", "YES"',
+        '"-maximum-test-execution-time-allowance", "$ScenarioTimeoutSeconds"',
+    ):
+        if marker not in ios_runner:
+            problems.append(f"iOS XCUITest runner 缺少原生执行超时: {marker}")
     for platform, source, runner, scenarios in (
         (
             "android",
@@ -463,6 +471,7 @@ def failures() -> list[str]:
             (
                 "windows-validation:",
                 "macos-validation:",
+                "macos-system-ui-validation:",
                 "linux-validation:",
                 "android-validation:",
                 "ios-validation:",
@@ -507,14 +516,14 @@ def failures() -> list[str]:
     quality_workflow = (workflow_dir / "code-quality.yml").read_text(
         encoding="utf-8"
     )
-    if workflow.count("tool/test/ci_phase_summary.py") != 5:
-        problems.append("五个平台 job 必须统一使用 CI required phase 汇总器")
+    if workflow.count("tool/test/ci_phase_summary.py") != 6:
+        problems.append("五个平台及独立 macOS 系统 UI job 必须统一使用 CI required phase 汇总器")
     if quality_workflow.count("tool/test/ci_phase_summary.py") != 1:
         problems.append("Code Quality 必须使用统一 CI required phase 汇总器")
     if "validation-failure" in workflow or "Upload failed" in workflow:
         problems.append("平台 artifact 必须使用条件 diagnostics 命名，禁止固定 failure 命名")
-    if workflow.count("steps.required_outcomes.outcome != 'success'") != 5:
-        problems.append("五个平台 diagnostics 必须仅在 required phase 失败时上传")
+    if workflow.count("steps.required_outcomes.outcome != 'success'") != 6:
+        problems.append("五个平台及独立 macOS 系统 UI diagnostics 必须仅在 required phase 失败时上传")
     protocol_pubspec = (
         ROOT / "packages/lddc_desktop_protocol/pubspec.yaml"
     ).read_text(encoding="utf-8")
@@ -600,6 +609,7 @@ def failures() -> list[str]:
     for marker in (
         "windows-validation:",
         "macos-validation:",
+        "macos-system-ui-validation:",
         "linux-validation:",
         "android-validation:",
         "ios-validation:",
@@ -651,9 +661,45 @@ def failures() -> list[str]:
         "test-without-building",
         "macos_open_panel_select",
         "macos_open_panel_cancel",
+        "Invoke-BoundedProcess",
+        "Register-OwnedProcessTree",
+        "Wait-ForOwnedProcessBaseline",
+        '$payload.resources["final"]["childProcessCount"] = $FinalChildProcessCount',
     ):
         if marker not in macos_runner:
             problems.append(f"macOS XCUITest runner 缺少真实运行契约: {marker}")
+    if workflow.count("run_macos_platform_tests.ps1") != 1:
+        problems.append("macOS hybrid runner 必须只在独立 system UI job 中执行一次")
+    for forbidden in (
+        "& flutter build macos",
+        "& xcodebuild build-for-testing",
+        "& xcodebuild test-without-building",
+        "& xcrun xcresulttool",
+    ):
+        if forbidden in macos_runner:
+            problems.append(f"macOS hybrid 外部进程禁止绕过硬超时执行器: {forbidden}")
+    macos_start = workflow.find("  macos-validation:")
+    macos_system_ui_start = workflow.find("  macos-system-ui-validation:")
+    linux_start = workflow.find("  linux-validation:")
+    if 0 <= macos_start < macos_system_ui_start < linux_start:
+        macos_job = workflow[macos_start:macos_system_ui_start]
+        macos_system_ui_job = workflow[macos_system_ui_start:linux_start]
+        if "run_macos_platform_tests.ps1" in macos_job:
+            problems.append("macOS 应用 job 禁止内嵌 system UI runner")
+        for required in (
+            "run_desktop_process_e2e.ps1 -Platform macos",
+            "run_platform_media_resource.ps1 -Platform macos",
+        ):
+            if required not in macos_job:
+                problems.append(f"macOS 应用 job 缺少独立平台证据: {required}")
+        for forbidden in (
+            "run_desktop_process_e2e.ps1",
+            "run_platform_media_resource.ps1",
+        ):
+            if forbidden in macos_system_ui_job:
+                problems.append(f"macOS system UI job 禁止混入应用资源场景: {forbidden}")
+    else:
+        problems.append("macOS 应用与 system UI job 顺序或边界无效")
     macos_ui_tests = (ROOT / "lddc/macos/RunnerUITests/RunnerUITests.swift").read_text(
         encoding="utf-8"
     )
@@ -690,6 +736,8 @@ def failures() -> list[str]:
     for required in (
         "Get-SimulatorMetadata",
         'simulator = $simulatorMetadata',
+        '$simulatorMetadata.configuredLanguage = "en"',
+        '$simulatorMetadata.configuredLocale = "en_US"',
         '"-parallel-testing-enabled", "NO"',
         "Get-PlatformTestContainer",
         "Add-PostconditionFailure",

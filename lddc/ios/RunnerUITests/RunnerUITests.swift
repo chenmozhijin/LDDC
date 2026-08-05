@@ -16,6 +16,9 @@ final class RunnerUITests: XCTestCase {
   override func setUpWithError() throws {
     continueAfterFailure = false
     cleanupVerified = false
+    // XCTest 的 UI 测试默认允许单个用例运行十分钟。系统 Picker 或 accessibility
+    // 查询失去响应时必须在场景边界内失败，避免一个用例耗尽整个平台 job。
+    executionTimeAllowance = 120
   }
 
   func testDocumentPickerSelectsSeededAudio() throws {
@@ -222,11 +225,18 @@ final class RunnerUITests: XCTestCase {
     // iOS 版本不同，UIDocumentPicker 可能作为宿主应用的远程 view service、Files
     // 应用界面或 SpringBoard 管理的系统 sheet 暴露。这里只查询系统实际导出的
     // accessibility tree，不启动、激活或伪造任何系统应用。
-    [
+    let documents = XCUIApplication(bundleIdentifier: documentsBundleIdentifier)
+    var roots: [XCUIElement] = [
       app,
-      XCUIApplication(bundleIdentifier: documentsBundleIdentifier),
       XCUIApplication(bundleIdentifier: springBoardBundleIdentifier),
     ]
+    // 对 notRunning application 发 descendants query 会被 XCTest 自身直接记为
+    // “Failed to resolve query”，无法由 Swift do/catch 收口。iOS 26 的嵌入式
+    // Picker 通常不启动 DocumentsApp，因此只有系统确实运行该应用时才查询它。
+    if documents.state != .notRunning {
+      roots.append(documents)
+    }
+    return roots
   }
 
   private func pickerElement(named labels: [String], in root: XCUIElement) -> XCUIElement? {

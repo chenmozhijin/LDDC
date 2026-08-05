@@ -7,6 +7,9 @@ final class RunnerUITests: XCTestCase {
   override func setUpWithError() throws {
     continueAfterFailure = false
     nativeDialogClosed = false
+    // 系统面板或 accessibility 附着失去响应时，让 XCTest 在单场景边界内失败；
+    // 外层 runner 仍负责终止完整 xcodebuild 进程树并收集诊断。
+    executionTimeAllowance = 120
   }
 
   func testOpenPanelSelectsFixture() throws {

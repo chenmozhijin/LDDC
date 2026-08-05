@@ -155,12 +155,6 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_real_integration.ps1 -Profile platform -Device macos -Platform macos
-      - name: Run macOS file panel automation
-        id: system_ui
-        if: always() && steps.debug_build.outcome == 'success'
-        continue-on-error: true
-        shell: pwsh
-        run: ./tool/test/run_macos_platform_tests.ps1
       - name: Run real desktop process and service tests
         id: desktop_process
         continue-on-error: true
@@ -186,7 +180,6 @@ jobs:
             --phase 'debug_build|Debug build|${{ steps.debug_build.outcome }}' `
             --phase 'offline|Offline application|${{ steps.offline.outcome }}' `
             --phase 'native_channel|Native channels|${{ steps.native_channel.outcome }}' `
-            --phase 'system_ui|NSOpenPanel hybrid|${{ steps.system_ui.outcome }}' `
             --phase 'desktop_process|Desktop process|${{ steps.desktop_process.outcome }}' `
             --phase 'media_resource|Media resources|${{ steps.media_resource.outcome }}'
       - name: Upload macOS diagnostics
@@ -203,6 +196,49 @@ jobs:
         run: |
           if ('${{ steps.required_outcomes.outcome }}' -ne 'success') {
             throw 'macOS required validation failed; see the phase summary and diagnostics artifact'
+          }
+
+  macos-system-ui-validation:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - run: flutter pub get
+      - name: Keep Apple dependency resolution on CocoaPods
+        run: flutter config --no-enable-swift-package-manager
+      - name: Run macOS file panel automation
+        id: system_ui
+        continue-on-error: true
+        shell: pwsh
+        run: ./tool/test/run_macos_platform_tests.ps1
+      - name: Summarize required macOS system UI phase
+        id: required_outcomes
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python tool/test/ci_phase_summary.py `
+            --title 'macOS system UI validation' `
+            --phase 'system_ui|NSOpenPanel hybrid|${{ steps.system_ui.outcome }}'
+      - name: Upload macOS system UI diagnostics
+        if: always() && steps.required_outcomes.outcome != 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-system-ui-diagnostics
+          path: lddc/build/integration_reports/macos-native/**
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Enforce required macOS system UI result
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.required_outcomes.outcome }}' -ne 'success') {
+            throw 'macOS system UI validation failed; see diagnostics artifact'
           }
 
   linux-validation:

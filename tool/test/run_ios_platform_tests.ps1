@@ -23,6 +23,8 @@ $simulatorMetadata = [ordered]@{
   model = "unknown"
   deviceTypeIdentifier = "unknown"
   state = "unknown"
+  configuredLanguage = "unknown"
+  configuredLocale = "unknown"
 }
 if (-not [IO.Path]::IsPathRooted($ReportDir)) {
   $ReportDir = Join-Path $appRoot $ReportDir
@@ -59,6 +61,8 @@ function Invoke-BoundedXcodeTest {
       "-xctestrun", $XcTestRun,
       "-destination", "platform=iOS Simulator,id=$Device",
       "-parallel-testing-enabled", "NO",
+      "-test-timeouts-enabled", "YES",
+      "-maximum-test-execution-time-allowance", "$ScenarioTimeoutSeconds",
       "-only-testing:RunnerUITests/RunnerUITests/$Method",
       "-resultBundlePath", $ResultBundle
     )) {
@@ -365,6 +369,8 @@ try {
   Invoke-RequiredSimctl `
     -Stage "locale/region" `
     -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLocale", "en_US") | Out-Null
+  $simulatorMetadata.configuredLanguage = "en"
+  $simulatorMetadata.configuredLocale = "en_US"
   & xcodebuild build-for-testing `
     -workspace ios/Runner.xcworkspace `
     -scheme RunnerPlatformTests `
