@@ -3,6 +3,11 @@ set -euo pipefail
 
 report_path="${1:-lddc/build/integration_reports/ios-simulator.json}"
 mkdir -p "$(dirname "$report_path")"
+host_arch="$(uname -m)"
+if [[ "$host_arch" != "arm64" && "$host_arch" != "x86_64" ]]; then
+  echo "ERROR: 不支持的 macOS hosted 架构: $host_arch" >&2
+  exit 1
+fi
 
 runtime_json="$(xcrun simctl list runtimes available -j)"
 runtime="$(jq -r '
@@ -51,10 +56,12 @@ jq -n \
   --arg runtime "$runtime" \
   --arg runtimeVersion "$runtime_version" \
   --arg model "$model" \
-  '{udid: $udid, runtime: $runtime, runtimeVersion: $runtimeVersion, model: $model}' \
+  --arg hostArchitecture "$host_arch" \
+  '{udid: $udid, runtime: $runtime, runtimeVersion: $runtimeVersion, model: $model, hostArchitecture: $hostArchitecture}' \
   >"$report_path"
 
 echo "DEVICE_ID=$udid" >>"$GITHUB_ENV"
 echo "IOS_SIMULATOR_RUNTIME=$runtime" >>"$GITHUB_ENV"
 echo "IOS_SIMULATOR_MODEL=$model" >>"$GITHUB_ENV"
+echo "IOS_HOST_ARCH=$host_arch" >>"$GITHUB_ENV"
 echo "Created iOS simulator: $model $runtime_version ($udid)"

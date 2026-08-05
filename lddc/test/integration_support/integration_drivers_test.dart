@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -87,6 +89,113 @@ void main() {
       find.byKey(const ValueKey<String>('horizontal_target')).hitTestable(),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('持续 SnackBar 不阻塞未被遮挡的本地匹配操作', (WidgetTester tester) async {
+    final GlobalKey<ScaffoldMessengerState> messengerKey =
+        GlobalKey<ScaffoldMessengerState>();
+    bool skipExisting = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        scaffoldMessengerKey: messengerKey,
+        home: StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return Scaffold(
+              body: Align(
+                alignment: Alignment.topCenter,
+                child: Checkbox(
+                  key: const ValueKey<String>(
+                    'local_match_skip_existing_checkbox',
+                  ),
+                  value: skipExisting,
+                  onChanged: (bool? value) {
+                    setState(() => skipExisting = value ?? false);
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    messengerKey.currentState!.showSnackBar(
+      const SnackBar(duration: Duration(days: 1), content: Text('持续状态提示')),
+    );
+    await tester.pump();
+
+    await LocalMatchDriver(tester).toggleSkipExisting();
+
+    expect(skipExisting, isTrue);
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapVisible 拒绝点击被真实遮罩层覆盖的控件', (WidgetTester tester) async {
+    bool tapped = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            Center(
+              child: FilledButton(
+                key: const ValueKey<String>('covered_target'),
+                onPressed: () => tapped = true,
+                child: const Text('Target'),
+              ),
+            ),
+            const ModalBarrier(dismissible: false, color: Colors.black26),
+          ],
+        ),
+      ),
+    );
+
+    await expectLater(
+      tapVisible(
+        tester,
+        find.byKey(const ValueKey<String>('covered_target')),
+        timeout: const Duration(milliseconds: 200),
+        reason: '等待被遮挡的目标可点击',
+      ),
+      throwsA(isA<TimeoutException>()),
+    );
+
+    expect(tapped, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tapVisible 拒绝静默选择重复匹配的目标', (WidgetTester tester) async {
+    int tappedCount = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Row(
+          children: <Widget>[
+            for (int index = 0; index < 2; index += 1)
+              FilledButton(
+                key: ValueKey<String>('duplicate_target_$index'),
+                onPressed: () => tappedCount += 1,
+                child: Text('Target $index'),
+              ),
+          ],
+        ),
+      ),
+    );
+
+    Object? failure;
+    try {
+      await tapVisible(
+        tester,
+        find.byType(FilledButton),
+        timeout: const Duration(milliseconds: 200),
+        reason: '等待唯一目标可点击',
+      );
+    } on Object catch (error) {
+      failure = error;
+    }
+
+    expect(failure, isA<TimeoutException>());
+    expect(tappedCount, 0);
     expect(tester.takeException(), isNull);
   });
 }

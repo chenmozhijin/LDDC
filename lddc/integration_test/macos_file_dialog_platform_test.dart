@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -21,8 +20,6 @@ const String _nativeSyncRoot = String.fromEnvironment(
 );
 const String _fixtureSha256 = String.fromEnvironment('LDDC_FIXTURE_SHA256');
 const int _fixtureSize = int.fromEnvironment('LDDC_FIXTURE_SIZE');
-const Duration _nativeReadyTimeout = Duration(seconds: 60);
-const Duration _nativeCompletionTimeout = Duration(seconds: 15);
 
 void main() {
   ensureIntegrationBinding();
@@ -75,35 +72,44 @@ void main() {
       );
 
       await reporter.runStep('open_production_ns_open_panel', () async {
-        await _writeHybridState(
-          runId: runtime.runId,
-          scenario: scenarioName,
-          state: 'app_ready',
-        );
-        await _waitForHybridState(
-          runId: runtime.runId,
-          scenario: scenarioName,
-          expectedState: 'native_ready',
-          timeout: _nativeReadyTimeout,
-        );
-        await _writeHybridState(
-          runId: runtime.runId,
-          scenario: scenarioName,
-          state: 'picker_requested',
-        );
-        await openLyrics.openSongFile();
-        await pumpUntil(
-          tester,
-          () => !container.read(openLyricsPageControllerProvider).isOpening,
-          timeout: const Duration(seconds: 30),
-          reason: '等待 XCUITest 操作真实 NSOpenPanel 并返回 Flutter',
-        );
-        await _waitForHybridState(
-          runId: runtime.runId,
-          scenario: scenarioName,
-          expectedState: 'native_completed',
-          timeout: _nativeCompletionTimeout,
-        );
+        try {
+          // hybrid 状态位于 LDDC App Sandbox 容器内，只能由
+          // Flutter 应用进程写入。XCUITest 只读该状态并操作已经
+          // 打开的系统面板，避免跨沙箱写入导致 EPERM。
+          await _writeHybridState(
+            runId: runtime.runId,
+            scenario: scenarioName,
+            state: 'picker_requested',
+          );
+          await openLyrics.openSongFile();
+          await pumpUntil(
+            tester,
+            () => !container.read(openLyricsPageControllerProvider).isOpening,
+            timeout: const Duration(seconds: 30),
+            reason: '等待 XCUITest 操作真实 NSOpenPanel 并返回 Flutter',
+          );
+          await _writeHybridState(
+            runId: runtime.runId,
+            scenario: scenarioName,
+            state: 'flutter_completed',
+            success: true,
+          );
+        } on Object catch (error, stackTrace) {
+          // 失败状态只保留错误类型；完整异常由 Flutter JSONL
+          // 记录，避免 hybrid diagnostic 泄露容器或 fixture 绝对路径。
+          try {
+            await _writeHybridState(
+              runId: runtime.runId,
+              scenario: scenarioName,
+              state: 'flutter_failed',
+              success: false,
+              error: '${error.runtimeType}: Flutter file picker failed',
+            );
+          } on Object {
+            // 状态记录失败不能覆盖原始业务异常。
+          }
+          Error.throwWithStackTrace(error, stackTrace);
+        }
       });
 
       final OpenLyricsPageState state = container.read(
@@ -163,6 +169,8 @@ Future<void> _writeHybridState({
   required String runId,
   required String scenario,
   required String state,
+  bool? success,
+  String? error,
 }) async {
   final Directory directory = Directory(_nativeSyncRoot);
   await directory.create(recursive: true);
@@ -187,49 +195,12 @@ Future<void> _writeHybridState({
       'appPid': pid,
       'appBundlePath': appBundlePath,
       'action': _dialogAction,
-      'success': null,
-      'error': null,
+      'success': success,
+      'error': error,
     }),
     flush: true,
   );
   await staging.rename(target.path);
-}
-
-Future<Map<String, Object?>> _waitForHybridState({
-  required String runId,
-  required String scenario,
-  required String expectedState,
-  required Duration timeout,
-}) async {
-  final File stateFile = _hybridStateFile(scenario);
-  final DateTime deadline = DateTime.now().add(timeout);
-  while (DateTime.now().isBefore(deadline)) {
-    if (stateFile.existsSync()) {
-      final Object? decoded;
-      try {
-        decoded = jsonDecode(stateFile.readAsStringSync());
-      } on FormatException catch (error) {
-        throw StateError('macOS hybrid 状态文件损坏: $error');
-      }
-      if (decoded is! Map<String, Object?>) {
-        throw StateError('macOS hybrid 状态文件不是 JSON object');
-      }
-      if (decoded['schemaVersion'] != 1 ||
-          decoded['runId'] != runId ||
-          decoded['scenario'] != scenario) {
-        throw StateError('macOS hybrid 状态文件与当前场景不匹配');
-      }
-      final Object? state = decoded['state'];
-      if (state == 'native_failed') {
-        throw StateError('XCUITest 未能操作真实 NSOpenPanel: ${decoded['error']}');
-      }
-      if (state == expectedState) {
-        return decoded;
-      }
-    }
-    await Future<void>.delayed(const Duration(milliseconds: 100));
-  }
-  throw TimeoutException('等待 macOS hybrid 状态 $expectedState 超时', timeout);
 }
 
 File _hybridStateFile(String scenario) {

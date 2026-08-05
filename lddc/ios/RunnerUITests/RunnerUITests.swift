@@ -1,8 +1,13 @@
 import XCTest
 
+private struct SystemPickerContext {
+  let root: XCUIElement
+}
+
 final class RunnerUITests: XCTestCase {
   private let appBundleIdentifier = "com.cmzj.lddc.platformtests"
   private let fixtureName = "audio_sample.mp3"
+  private let fixtureAccessibilityName = "audio_sample, mp3"
   private let navigationIdentifier = "lddc.nav.open_lyrics"
   private let openSongIdentifier = "lddc.open_lyrics.open_song_file"
   private let saveFileIdentifier = "lddc.open_lyrics.save_file"
@@ -67,7 +72,7 @@ final class RunnerUITests: XCTestCase {
     do {
       let launchedApp = try launchApp()
       app = launchedApp
-      try openDocumentPicker(app: launchedApp)
+      _ = try openDocumentPicker(app: launchedApp)
       try cancelSystemPicker(app: launchedApp)
       try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消后 LDDC 没有返回前台")
       let openSong = launchedApp.buttons[openSongIdentifier]
@@ -94,9 +99,10 @@ final class RunnerUITests: XCTestCase {
       let launchedApp = try launchApp()
       app = launchedApp
       try selectSeededAudio(app: launchedApp)
-      try openExportPicker(app: launchedApp)
-      let save = try requireSystemPickerElement(named: ["Save"], app: launchedApp, timeout: 15)
+      let picker = try openExportPicker(app: launchedApp)
+      let save = try requireTypedButton(named: "Save", in: picker, timeout: 15)
       save.tap()
+      try require(waitForSystemPickerToClose(app: launchedApp, timeout: 15), "导出保存后系统文件界面没有关闭")
       try require(launchedApp.wait(for: .runningForeground, timeout: 15), "导出后 LDDC 没有返回前台")
       let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
       try require(waitForHittable(saveFile, timeout: 15), "导出完成后 Flutter 页面没有恢复交互")
@@ -122,7 +128,7 @@ final class RunnerUITests: XCTestCase {
       let launchedApp = try launchApp()
       app = launchedApp
       try selectSeededAudio(app: launchedApp)
-      try openExportPicker(app: launchedApp)
+      _ = try openExportPicker(app: launchedApp)
       try cancelSystemPicker(app: launchedApp)
       try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消导出后 LDDC 没有返回前台")
       let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
@@ -149,7 +155,7 @@ final class RunnerUITests: XCTestCase {
       let launchedApp = try launchApp()
       app = launchedApp
       try selectSeededAudio(app: launchedApp)
-      try openExportPicker(app: launchedApp)
+      _ = try openExportPicker(app: launchedApp)
       launchedApp.terminate()
       try require(launchedApp.wait(for: .notRunning, timeout: 5), "导出中终止时 LDDC 未在超时内关闭")
 
@@ -199,7 +205,7 @@ final class RunnerUITests: XCTestCase {
     app.launch()
   }
 
-  private func openDocumentPicker(app: XCUIApplication) throws {
+  private func openDocumentPicker(app: XCUIApplication) throws -> SystemPickerContext {
     let navigation = app.buttons[navigationIdentifier]
     try require(
       navigation.waitForExistence(timeout: 15),
@@ -209,26 +215,62 @@ final class RunnerUITests: XCTestCase {
     let openSong = app.buttons[openSongIdentifier]
     try require(openSong.waitForExistence(timeout: 15), "Flutter 没有暴露打开歌曲按钮 identifier")
     openSong.tap()
-    try waitForSystemPicker(app: app, expectedLabels: ["Recents", "Shared", "Browse"])
+    return try waitForSystemPicker(app: app, timeout: 15)
   }
 
   private func selectSeededAudio(app: XCUIApplication) throws {
-    try openDocumentPicker(app: app)
-    try tapSystemPickerElement(named: ["Browse"], app: app, timeout: 15)
-    try tapSystemPickerElement(named: ["On My iPhone"], app: app, timeout: 15)
+    var picker = try openDocumentPicker(app: app)
 
-    // 测试 fixture 位于 PlatformTest 应用公开给 Files 的 Documents 中。Recents 只
-    // 记录用户近期打开的文件，在全新 Simulator 上必然可能为空，因此必须显式进入
-    // “On My iPhone -> LDDC Platform Tests”，不能把 Recents 当作测试数据目录。
-    if findSystemPickerElement(named: [fixtureName], app: app) == nil {
-      try tapSystemPickerElement(
-        named: [platformTestDisplayName, "LDDCPlatformTests", "LDDC"],
-        app: app,
-        timeout: 15
-      )
+    // Files 会记住上次的目录。先仅查找 typed file cell，可以处理
+    // 已在 fixture 目录的情况，也不会把 Picker 容器或菜单按钮误当成文件。
+    if let fixture = waitForFixtureCell(in: picker, timeout: 1) {
+      try selectFixture(fixture, app: app)
+      return
     }
-    let fixture = try requireSystemPickerElement(named: [fixtureName], app: app, timeout: 15)
+    if let folder = waitForPlatformTestFolder(in: picker, timeout: 1) {
+      folder.tap()
+      picker = try waitForSystemPicker(app: app, timeout: 5)
+      let fixture = try requireFixtureCell(in: picker, timeout: 15)
+      try selectFixture(fixture, app: app)
+      return
+    }
+
+    let browse = try requireTypedButton(named: "Browse", in: picker, timeout: 15)
+    browse.tap()
+    try require(
+      waitForBrowseDestination(app: app, timeout: 15),
+      "点击 Browse 后没有进入可访问的位置或目录页"
+    )
+    picker = try waitForSystemPicker(app: app, timeout: 5)
+
+    if let fixture = waitForFixtureCell(in: picker, timeout: 1) {
+      try selectFixture(fixture, app: app)
+      return
+    }
+    if let folder = waitForPlatformTestFolder(in: picker, timeout: 1) {
+      folder.tap()
+    } else {
+      // 只允许点击位置页的真实 On My iPhone 按钮。BackButton 即使
+      // 使用相同 label 也必须排除，避免再次把返回动作误当成位置导航。
+      let onMyIPhone = picker.root.buttons.matching(
+        NSPredicate(format: "label ==[c] %@ AND identifier != %@", "On My iPhone", "BackButton")
+      ).firstMatch
+      try require(waitForHittable(onMyIPhone, timeout: 15), "Browse 中没有可点击的 On My iPhone 位置")
+      onMyIPhone.tap()
+      picker = try waitForSystemPicker(app: app, timeout: 5)
+      let folder = try requirePlatformTestFolder(in: picker, timeout: 15)
+      folder.tap()
+    }
+
+    picker = try waitForSystemPicker(app: app, timeout: 5)
+    let fixture = try requireFixtureCell(in: picker, timeout: 15)
+    try selectFixture(fixture, app: app)
+  }
+
+  private func selectFixture(_ fixture: XCUIElement, app: XCUIApplication) throws {
+    try require(fixture.exists && fixture.isHittable, "匿名音频 fixture 不可点击")
     fixture.tap()
+    try require(waitForSystemPickerToClose(app: app, timeout: 15), "选择文件后系统 Picker 没有关闭")
     try require(app.wait(for: .runningForeground, timeout: 15), "选择文件后 LDDC 没有返回前台")
     try require(
       app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", fixtureName))
@@ -243,133 +285,175 @@ final class RunnerUITests: XCTestCase {
     )
   }
 
-  private func openExportPicker(app: XCUIApplication) throws {
+  private func openExportPicker(app: XCUIApplication) throws -> SystemPickerContext {
     let saveFile = app.descendants(matching: .any)[saveFileIdentifier]
     try requireHittable(saveFile, in: app, message: "Flutter 未暴露可点击的歌词导出按钮")
     saveFile.tap()
-    // 不能用通用的 “Save” 判断系统界面已出现：Flutter 页面自己的保存按钮也会
-    // 命中该文本并造成假绿。先等待 Files 导航或取消控件，再单独查找系统 Save。
-    try waitForSystemPicker(
-      app: app,
-      expectedLabels: ["Cancel", "Browse", "Recents", "On My iPhone"]
+    return try waitForSystemPicker(app: app, timeout: 15)
+  }
+
+  private func systemPickerContext(app: XCUIApplication) -> SystemPickerContext? {
+    // iOS 26 可以把 Document Picker 作为宿主应用内的远程 view
+    // service 暴露，此时 DocumentsApp 不会进入前台。只以 typed
+    // Picker 根节点判断界面存在，不使用进程前台状态或 SpringBoard。
+    let hostedRoot = app.otherElements["Browse View (Picker)"]
+    if hostedRoot.exists {
+      return SystemPickerContext(root: hostedRoot)
+    }
+    let documents = XCUIApplication(bundleIdentifier: documentsBundleIdentifier)
+    if documents.state != .notRunning {
+      let documentsRoot = documents.otherElements["Browse View (Picker)"]
+      if documentsRoot.exists {
+        return SystemPickerContext(root: documentsRoot)
+      }
+    }
+    return nil
+  }
+
+  private func waitForSystemPicker(
+    app: XCUIApplication,
+    timeout: TimeInterval
+  ) throws -> SystemPickerContext {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if let picker = systemPickerContext(app: app) {
+        return picker
+      }
+      Thread.sleep(forTimeInterval: 0.2)
+    } while Date() < deadline
+    throw testFailure("系统文件界面没有暴露 typed Browse View (Picker) 根节点")
+  }
+
+  private func waitForSystemPickerToClose(
+    app: XCUIApplication,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if systemPickerContext(app: app) == nil {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.2)
+    } while Date() < deadline
+    return false
+  }
+
+  private func requireTypedButton(
+    named name: String,
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) throws -> XCUIElement {
+    let button = picker.root.buttons.matching(
+      NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", name, name)
+    ).firstMatch
+    try require(waitForHittable(button, timeout: timeout), "系统文件界面没有可点击的 \(name) 按钮")
+    return button
+  }
+
+  private func fixtureCell(in picker: SystemPickerContext) -> XCUIElement {
+    picker.root.cells.matching(
+      NSPredicate(
+        format: "label BEGINSWITH[c] %@ OR identifier BEGINSWITH[c] %@",
+        fixtureAccessibilityName,
+        fixtureAccessibilityName
+      )
+    ).firstMatch
+  }
+
+  private func waitForFixtureCell(
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    let cell = fixtureCell(in: picker)
+    return waitForHittable(cell, timeout: timeout) ? cell : nil
+  }
+
+  private func requireFixtureCell(
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) throws -> XCUIElement {
+    guard let cell = waitForFixtureCell(in: picker, timeout: timeout) else {
+      throw testFailure("系统文件界面没有可点击的 \(fixtureAccessibilityName) 文件单元格")
+    }
+    return cell
+  }
+
+  private func waitForPlatformTestFolder(
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    let predicate = NSPredicate(
+      format: "label BEGINSWITH[c] %@ OR identifier BEGINSWITH[c] %@",
+      "\(platformTestDisplayName),",
+      "\(platformTestDisplayName),"
+    )
+    return waitForFirstHittable(
+      { [picker.root.cells.matching(predicate).firstMatch, picker.root.links.matching(predicate).firstMatch] },
+      timeout: timeout
     )
   }
 
-  private func systemPickerRoots(app: XCUIApplication) -> [XCUIElement] {
-    // iOS 版本不同，UIDocumentPicker 可能作为宿主应用的远程 view service、Files
-    // 应用界面或 SpringBoard 管理的系统 sheet 暴露。这里只查询系统实际导出的
-    // accessibility tree，不启动、激活或伪造任何系统应用。
-    let documents = XCUIApplication(bundleIdentifier: documentsBundleIdentifier)
-    var roots: [XCUIElement] = []
-    if app.state != .notRunning {
-      roots.append(app)
-    }
-    roots.append(XCUIApplication(bundleIdentifier: springBoardBundleIdentifier))
-    // 对 notRunning application 发 descendants query 会被 XCTest 自身直接记为
-    // “Failed to resolve query”，无法由 Swift do/catch 收口。iOS 26 的嵌入式
-    // Picker 通常不启动 DocumentsApp，因此只有系统确实运行该应用时才查询它。
-    if documents.state != .notRunning {
-      roots.append(documents)
-    }
-    return roots
-  }
-
-  private func pickerElement(named labels: [String], in root: XCUIElement) -> XCUIElement? {
-    var firstExisting: XCUIElement?
-    for label in labels {
-      let predicate = NSPredicate(
-        format: "label ==[c] %@ OR identifier ==[c] %@ OR label BEGINSWITH[c] %@ OR label CONTAINS[c] %@ OR identifier CONTAINS[c] %@",
-        label,
-        label,
-        label,
-        label,
-        label
-      )
-      let elements = root.descendants(matching: .any).matching(predicate).allElementsBoundByIndex
-      for element in elements where element.exists {
-        if element.isHittable {
-          return element
-        }
-        firstExisting = firstExisting ?? element
-      }
-    }
-    return firstExisting
-  }
-
-  private func findSystemPickerElement(named labels: [String], app: XCUIApplication) -> XCUIElement? {
-    var firstExisting: XCUIElement?
-    for root in systemPickerRoots(app: app) {
-      if let element = pickerElement(named: labels, in: root) {
-        if element.isHittable {
-          return element
-        }
-        firstExisting = firstExisting ?? element
-      }
-    }
-    return firstExisting
-  }
-
-  private func requireSystemPickerElement(
-    named labels: [String],
-    app: XCUIApplication,
+  private func requirePlatformTestFolder(
+    in picker: SystemPickerContext,
     timeout: TimeInterval
   ) throws -> XCUIElement {
-    if let element = waitForSystemPickerElement(named: labels, app: app, timeout: timeout) {
-      return element
+    guard let folder = waitForPlatformTestFolder(in: picker, timeout: timeout) else {
+      throw testFailure("系统文件界面没有可点击的 \(platformTestDisplayName) 目录单元格")
     }
-    try require(false, "系统文件界面没有可访问的控件：\(labels.joined(separator: " / "))")
-    // require(false, ...) 必然抛出；该返回值只用于满足 Swift 的控制流检查。
-    return app
+    return folder
   }
 
-  private func waitForSystemPickerElement(
-    named labels: [String],
-    app: XCUIApplication,
+  private func waitForBrowseDestination(app: XCUIApplication, timeout: TimeInterval) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if let picker = systemPickerContext(app: app) {
+        let location = picker.root.buttons.matching(
+          NSPredicate(format: "label ==[c] %@ AND identifier != %@", "On My iPhone", "BackButton")
+        ).firstMatch
+        if (location.exists && location.isHittable)
+          || waitForFixtureCell(in: picker, timeout: 0) != nil
+          || waitForPlatformTestFolder(in: picker, timeout: 0) != nil {
+          return true
+        }
+      }
+      Thread.sleep(forTimeInterval: 0.2)
+    } while Date() < deadline
+    return false
+  }
+
+  private func waitForFirstHittable(
+    _ candidates: () -> [XCUIElement],
     timeout: TimeInterval
   ) -> XCUIElement? {
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
-      if let element = findSystemPickerElement(named: labels, app: app), element.isHittable {
+      if let element = candidates().first(where: { $0.exists && $0.isHittable }) {
         return element
       }
-      Thread.sleep(forTimeInterval: 0.2)
+      if timeout == 0 {
+        return nil
+      }
+      Thread.sleep(forTimeInterval: 0.1)
     } while Date() < deadline
     return nil
   }
 
-  private func tapSystemPickerElement(
-    named labels: [String],
-    app: XCUIApplication,
-    timeout: TimeInterval
-  ) throws {
-    let element = try requireSystemPickerElement(named: labels, app: app, timeout: timeout)
-    element.tap()
-  }
-
-  private func waitForSystemPicker(app: XCUIApplication, expectedLabels: [String]) throws {
-    _ = try requireSystemPickerElement(named: expectedLabels, app: app, timeout: 15)
-  }
-
   private func cancelSystemPicker(app: XCUIApplication) throws {
-    if let cancel = waitForSystemPickerElement(
-      named: ["Cancel", "Close", "Dismiss", "xmark", "multiply"],
-      app: app,
-      timeout: 3
-    ) {
+    let picker = try waitForSystemPicker(app: app, timeout: 5)
+    let cancel = picker.root.buttons.matching(
+      NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")
+    ).firstMatch
+    if waitForHittable(cancel, timeout: 3) {
       cancel.tap()
+      try require(waitForSystemPickerToClose(app: app, timeout: 10), "点击 Cancel 后系统 Picker 没有关闭")
       return
     }
 
-    // iOS 26 的紧凑 Document Picker 使用可下拉关闭的系统 sheet，界面中不再固定
-    // 提供 Cancel 按钮。swipeDown 作用于可访问的 sheet 元素本身，不使用屏幕坐标；
-    // 找不到 sheet 时直接失败，禁止退化为坐标脚本或强制激活宿主应用。
-    for root in systemPickerRoots(app: app) {
-      for sheet in root.sheets.allElementsBoundByIndex where sheet.exists && sheet.isHittable {
-        sheet.swipeDown()
-        return
-      }
-    }
-    try require(false, "系统文件界面既没有取消控件，也没有可访问的模态 sheet")
+    // 紧凑 Picker 可能没有 Cancel 按钮。手势只作用于已经通过
+    // typed identifier 找到的 Picker 根节点，不使用屏幕坐标或 sheet fallback。
+    try require(picker.root.exists && picker.root.isHittable, "系统 Picker 根节点不可操作")
+    picker.root.swipeDown()
+    try require(waitForSystemPickerToClose(app: app, timeout: 10), "下拉后系统 Picker 没有关闭")
   }
 
   private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
@@ -469,17 +553,7 @@ final class RunnerUITests: XCTestCase {
   }
 
   private func isSystemPickerVisible(app: XCUIApplication) -> Bool {
-    findSystemPickerElement(
-      named: [
-        "Recents",
-        "Shared",
-        "Browse",
-        "On My iPhone",
-        platformTestDisplayName,
-        "Save",
-      ],
-      app: app
-    ) != nil
+    systemPickerContext(app: app) != nil
   }
 
   private func attachAccessibilityDiagnostics(app: XCUIApplication, scenario: String) {

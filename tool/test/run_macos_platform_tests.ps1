@@ -387,15 +387,15 @@ function Wait-ForHybridState {
 
   $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
   while ($true) {
-    $FlutterHandle.Process.Refresh()
-    if ($FlutterHandle.Process.HasExited) {
-      $status = Read-SupervisorStatus -Handle $FlutterHandle
-      throw "Flutter integration_test 在状态 $ExpectedState 前退出，exit=$($status.ExitCode)"
-    }
     if ([DateTimeOffset]::UtcNow -ge $deadline) {
       throw "Flutter integration_test 未在超时内写入状态 $ExpectedState"
     }
     if (-not (Test-Path -LiteralPath $StatePath -PathType Leaf)) {
+      $FlutterHandle.Process.Refresh()
+      if ($FlutterHandle.Process.HasExited) {
+        $status = Read-SupervisorStatus -Handle $FlutterHandle
+        throw "Flutter integration_test 在状态 $ExpectedState 前退出，exit=$($status.ExitCode)"
+      }
       Start-Sleep -Milliseconds 100
       continue
     }
@@ -409,13 +409,22 @@ function Wait-ForHybridState {
         -or $state.scenario -ne $Scenario) {
       throw "macOS hybrid 状态与当前 schema/runId/scenario 不匹配"
     }
-    if ($state.state -eq "native_failed") {
-      throw "XCUITest hybrid 状态失败: $($state.error)"
+    if ($state.state -eq "flutter_failed") {
+      throw "Flutter hybrid 状态失败: $($state.error)"
     }
     if ($state.state -eq $ExpectedState) {
       break
     }
+    $FlutterHandle.Process.Refresh()
+    if ($FlutterHandle.Process.HasExited) {
+      $status = Read-SupervisorStatus -Handle $FlutterHandle
+      throw "Flutter integration_test 在状态 $ExpectedState 前退出，exit=$($status.ExitCode)"
+    }
     Start-Sleep -Milliseconds 100
+  }
+
+  if ($ExpectedState -ne "picker_requested") {
+    return $state
   }
 
   [long]$applicationPid = 0
@@ -772,13 +781,13 @@ try {
         -TimeoutSeconds $ScenarioTimeoutSeconds `
         -StdoutPath (Join-Path $diagnosticsDir "$scenario.flutter.stdout.log") `
         -StderrPath (Join-Path $diagnosticsDir "$scenario.flutter.stderr.log")
-      $appReadyState = Wait-ForHybridState `
+      $pickerRequestedState = Wait-ForHybridState `
         -FlutterHandle $activeFlutterHandle `
         -StatePath $statePath `
         -Scenario $scenario `
-        -ExpectedState "app_ready" `
+        -ExpectedState "picker_requested" `
         -TimeoutSeconds 90
-      Register-OwnedProcessTree -RootProcessId ([int]$appReadyState.appPid)
+      Register-OwnedProcessTree -RootProcessId ([int]$pickerRequestedState.appPid)
 
       $remainingScenarioSeconds = [int][Math]::Floor(
         ($scenarioDeadline - [DateTimeOffset]::UtcNow).TotalSeconds
@@ -793,12 +802,48 @@ try {
         -LogPrefix (Join-Path $diagnosticsDir "$scenario.xcodebuild") `
         -TimeoutSeconds ([Math]::Min(60, $remainingScenarioSeconds))
 
+      $xcodeStatus = $null
+      $flutterStatus = $null
       while ([DateTimeOffset]::UtcNow -lt $scenarioDeadline) {
         $activeFlutterHandle.Process.Refresh()
         $xcodeHandle.Process.Refresh()
         Register-OwnedProcessTree -RootProcessId $activeFlutterHandle.Process.Id
         Register-OwnedProcessTree -RootProcessId $xcodeHandle.Process.Id
-        if ($activeFlutterHandle.Process.HasExited -and $xcodeHandle.Process.HasExited) {
+
+        if ($xcodeHandle.Process.HasExited -and $null -eq $xcodeStatus) {
+          $xcodeStatus = Wait-SupervisedProcess -Handle $xcodeHandle -AdditionalSeconds 5
+          $xcodeExitCode = $xcodeStatus.ExitCode
+          if ($xcodeExitCode -ne 0) {
+            # 原生 runner 已经失败时，Flutter 仍会阻塞在系统面板。
+            # 立即结束所有的进程组，不等待完整场景 deadline。
+            if (-not $activeFlutterHandle.Process.HasExited) {
+              [void](Stop-SupervisedProcess -Handle $activeFlutterHandle)
+            }
+            break
+          }
+          $remainingCompletionSeconds = [int][Math]::Floor(
+            ($scenarioDeadline - [DateTimeOffset]::UtcNow).TotalSeconds
+          )
+          $flutterCompletionState = Wait-ForHybridState `
+            -FlutterHandle $activeFlutterHandle `
+            -StatePath $statePath `
+            -Scenario $scenario `
+            -ExpectedState "flutter_completed" `
+            -TimeoutSeconds ([Math]::Max(1, $remainingCompletionSeconds))
+          if ($flutterCompletionState.success -ne $true) {
+            throw "Flutter hybrid 完成状态缺少成功标记"
+          }
+        }
+
+        if ($activeFlutterHandle.Process.HasExited -and $null -eq $flutterStatus) {
+          $flutterStatus = Wait-SupervisedProcess -Handle $activeFlutterHandle -AdditionalSeconds 5
+          $flutterExitCode = $flutterStatus.ExitCode
+          if ($flutterExitCode -ne 0 -and -not $xcodeHandle.Process.HasExited) {
+            [void](Stop-SupervisedProcess -Handle $xcodeHandle)
+            break
+          }
+        }
+        if ($null -ne $flutterStatus -and $null -ne $xcodeStatus) {
           break
         }
         Start-Sleep -Milliseconds 200
@@ -809,8 +854,12 @@ try {
       if (-not $xcodeHandle.Process.HasExited) {
         [void](Stop-SupervisedProcess -Handle $xcodeHandle)
       }
-      $flutterStatus = Wait-SupervisedProcess -Handle $activeFlutterHandle -AdditionalSeconds 5
-      $xcodeStatus = Wait-SupervisedProcess -Handle $xcodeHandle -AdditionalSeconds 5
+      if ($null -eq $flutterStatus) {
+        $flutterStatus = Wait-SupervisedProcess -Handle $activeFlutterHandle -AdditionalSeconds 5
+      }
+      if ($null -eq $xcodeStatus) {
+        $xcodeStatus = Wait-SupervisedProcess -Handle $xcodeHandle -AdditionalSeconds 5
+      }
       $flutterExitCode = $flutterStatus.ExitCode
       $xcodeExitCode = $xcodeStatus.ExitCode
       $summaryReady = Read-XcresultSummary `

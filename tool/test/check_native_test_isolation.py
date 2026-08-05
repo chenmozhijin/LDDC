@@ -279,7 +279,13 @@ def failures() -> list[str]:
         "testDocumentPickerExportCancellationCleansTemporaryFile",
         "testTerminatedExportIsCleanedOnNextLaunch",
         "stale_export_removed_on_next_launch",
-        "systemPickerRoots",
+        'app.otherElements["Browse View (Picker)"]',
+        "picker.root.buttons.matching(",
+        "picker.root.cells.matching(",
+        "picker.root.links.matching(",
+        'private let fixtureAccessibilityName = "audio_sample, mp3"',
+        'requireTypedButton(named: "Save"',
+        'NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")',
         '"On My iPhone"',
         'private let platformTestDisplayName = "LDDC Platform Tests"',
         "if documents.state != .notRunning",
@@ -289,6 +295,20 @@ def failures() -> list[str]:
             problems.append(f"iOS 导出与清理场景缺少: {marker}")
     if "documents.wait(for: .runningForeground" in ios_ui_test:
         problems.append("iOS Document Picker 禁止依赖 DocumentsApp 前台进程状态")
+    for forbidden in (
+        "systemPickerRoots",
+        "pickerElement(",
+        "findSystemPickerElement",
+        "requireSystemPickerElement",
+        "allElementsBoundByIndex",
+        ".sheets",
+        "let backButton =",
+        "backButton.tap()",
+        "label CONTAINS[c]",
+        "identifier CONTAINS[c]",
+    ):
+        if forbidden in ios_ui_test:
+            problems.append(f"iOS Document Picker 禁止宽泛选择或 sheet fallback: {forbidden}")
 
     capability_matrix = json.loads(
         (ROOT / "tool/test/platform_capability_matrix.json").read_text(encoding="utf-8")
@@ -394,6 +414,8 @@ def failures() -> list[str]:
         problems.append("macOS RunnerTests 禁止导入旧模板模块 Runner")
     if "testHiddenDesktopServiceSurvivesLastWindowBeingHidden" not in macos_unit_tests:
         problems.append("macOS RunnerTests 缺少隐藏服务生命周期断言")
+    if "PropertyListSerialization.propertyList(\n      from: data,\n      options: [],\n      format: nil\n    )" not in macos_unit_tests:
+        problems.append("macOS RunnerTests 必须使用当前 SDK 的完整 plist 读取签名")
 
     windows_project = (
         ROOT / "lddc/windows/RunnerPlatformTests/RunnerPlatformTests.csproj"
@@ -698,7 +720,8 @@ def failures() -> list[str]:
         "process_group_supervisor.py",
         "Register-OwnedProcessTree",
         "Wait-ForOwnedProcessBaseline",
-        'ExpectedState "app_ready"',
+        'ExpectedState "picker_requested"',
+        'ExpectedState "flutter_completed"',
         '$payload.resources["final"]["childProcessCount"] = $FinalChildProcessCount',
     ):
         if marker not in macos_runner:
@@ -755,22 +778,51 @@ def failures() -> list[str]:
     macos_ui_tests = (ROOT / "lddc/macos/RunnerUITests/RunnerUITests.swift").read_text(
         encoding="utf-8"
     )
+    macos_flutter_test = (
+        ROOT / "lddc/integration_test/macos_file_dialog_platform_test.dart"
+    ).read_text(encoding="utf-8")
+    for required in (
+        "state: 'picker_requested'",
+        "state: 'flutter_completed'",
+        "state: 'flutter_failed'",
+        "Error.throwWithStackTrace(error, stackTrace)",
+    ):
+        if required not in macos_flutter_test:
+            problems.append(f"macOS hybrid Flutter 单写状态机缺少: {required}")
+    for forbidden in (
+        "state: 'app_ready'",
+        "state: 'native_ready'",
+        "state: 'native_completed'",
+        "state: 'native_failed'",
+    ):
+        if forbidden in macos_flutter_test:
+            problems.append(f"macOS hybrid Flutter 禁止旧双向握手状态: {forbidden}")
     for required in (
         "XCUIApplication(url:",
-        "app.activate()",
-        "isOriginalApplicationStillRunning",
+        'private let appBundleIdentifier = "com.cmzj.lddc"',
+        "Bundle(url: bundleURL)?.bundleIdentifier == appBundleIdentifier",
+        "runningApplication.bundleIdentifier == appBundleIdentifier",
         "waitForRunningApplication",
         "NSWorkspace.shared.runningApplications",
         "currentPanelServices",
-        'state: "native_ready"',
-        'state: "native_completed"',
+        'expectedState: "picker_requested"',
+        'expectedState: "flutter_completed"',
+        'state.state == "flutter_failed"',
         "attachedToExistingApplication",
         "usedExactApplicationURL",
+        '"changedApplicationActivationState": false',
     ):
         if required not in macos_ui_tests:
             problems.append(f"macOS hybrid XCUITest 缺少附着运行中应用契约: {required}")
     for forbidden in (
         ".launch()",
+        ".activate()",
+        "writeSyncState",
+        "writeFailureState",
+        '"app_ready"',
+        '"native_ready"',
+        '"native_completed"',
+        '"native_failed"',
         "--lddc-enable-accessibility-for-ui-test",
         "lddc-open-lyrics",
     ):
@@ -787,6 +839,7 @@ def failures() -> list[str]:
         "TEST_RUNNER_LDDC_IT_RUN_ID",
         "TEST_RUNNER_LDDC_FIXTURE_PATH",
         "TEST_RUNNER_LDDC_MACOS_HYBRID_SYNC_DIR",
+        "if ($xcodeExitCode -ne 0)",
     ):
         if required not in macos_runner:
             problems.append(f"macOS hybrid runner 缺少协同或失败报告契约: {required}")
@@ -812,6 +865,13 @@ def failures() -> list[str]:
         'Phase "ios-xcresult-summary-$scenario"',
         'Phase "ios-xcresult-attachments-$scenario"',
         "$reportingErrors.Count -gt 0",
+        "Add-RunnerEvidence",
+        "postconditionStatus",
+        "runner-fallback.json",
+        "无法增补 Simulator evidence",
+        "无法写入 runner evidence",
+        "hostArchitecture",
+        "arch=$hostArchitecture",
     ):
         if required not in ios_runner:
             problems.append(f"iOS runner 缺少 Simulator 证据或串行测试契约: {required}")
@@ -824,6 +884,26 @@ def failures() -> list[str]:
             problems.append(f"iOS 外部 Xcode/报告进程禁止绕过硬超时执行器: {forbidden}")
     if "-parallel-testing-enabled NO" not in workflow:
         problems.append("iOS native XCTest 必须禁用并行执行")
+    simulator_creator = (ROOT / "tool/test/create_ios_simulator.sh").read_text(
+        encoding="utf-8"
+    )
+    for marker in (
+        'host_arch="$(uname -m)"',
+        'echo "IOS_HOST_ARCH=$host_arch"',
+        "hostArchitecture",
+    ):
+        if marker not in simulator_creator:
+            problems.append(f"iOS Simulator 创建器缺少宿主架构证据: {marker}")
+    for marker in (
+        'state="$(xcrun simctl list devices --json',
+        'Shutdown) xcrun simctl boot "$DEVICE_ID"',
+        'Booting|Booted)',
+        'arch=$IOS_HOST_ARCH',
+    ):
+        if marker not in workflow:
+            problems.append(f"iOS native unit 测试缺少状态感知启动契约: {marker}")
+    if 'simctl boot "$DEVICE_ID" || true' in workflow:
+        problems.append("iOS Simulator 启动错误不得通过 || true 吞掉")
     for manual_linux_asset in (
         ROOT / "tool/test/run_linux_platform_tests.sh",
         ROOT / "tool/test/requirements-linux-platform.txt",
@@ -833,6 +913,29 @@ def failures() -> list[str]:
     integration_runner = (ROOT / "tool/test/run_real_integration.ps1").read_text(
         encoding="utf-8"
     )
+    integration_drivers = (
+        ROOT / "lddc/integration_test/support/integration_drivers.dart"
+    ).read_text(encoding="utf-8")
+    integration_driver_tests = (
+        ROOT / "lddc/test/integration_support/integration_drivers_test.dart"
+    ).read_text(encoding="utf-8")
+    if "_waitTransientOverlaysToSettle" in integration_drivers or (
+        re.search(r"\u7b49\u5f85.*SnackBar.*\u6d88\u5931", integration_drivers) is not None
+    ):
+        problems.append("Flutter 集成驱动禁止把全局 SnackBar 消失当作点击前置条件")
+    integration_sources = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (ROOT / "lddc/integration_test").rglob("*.dart")
+    )
+    if re.search(r"warnIfMissed\s*:\s*false", integration_sources):
+        problems.append("Flutter 集成测试禁止吞掉 tap hit-test 失败")
+    for marker in (
+        "持续 SnackBar 不阻塞未被遮挡的本地匹配操作",
+        "tapVisible 拒绝点击被真实遮罩层覆盖的控件",
+        "tapVisible 拒绝静默选择重复匹配的目标",
+    ):
+        if marker not in integration_driver_tests:
+            problems.append(f"Flutter 点击驱动缺少严格行为回归: {marker}")
     for marker in (
         "[int]$StartupTimeoutSeconds = 300",
         "[int]$TargetTimeoutSeconds = 1200",

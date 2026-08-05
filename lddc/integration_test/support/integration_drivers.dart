@@ -124,7 +124,6 @@ class SearchDriver {
     final Finder target = find.byKey(
       const ValueKey<String>('search_preview_save_directory_button'),
     );
-    await _waitTransientOverlaysToSettle();
     await _ensurePreviewActionsVisible(target);
     await tapVisible(tester, target, reason: '等待搜索保存目录按钮可点击');
   }
@@ -133,7 +132,6 @@ class SearchDriver {
     final Finder target = find.byKey(
       const ValueKey<String>('search_preview_translate_button'),
     );
-    await _waitTransientOverlaysToSettle();
     await _ensurePreviewActionsVisible(target);
     await tapVisible(tester, target, reason: '等待搜索翻译按钮可点击');
   }
@@ -142,7 +140,6 @@ class SearchDriver {
     final Finder target = find.byKey(
       const ValueKey<String>('search_preview_save_file_button'),
     );
-    await _waitTransientOverlaysToSettle();
     await _ensurePreviewActionsVisible(target);
     await tapVisible(tester, target, reason: '等待搜索保存文件按钮可点击');
   }
@@ -151,7 +148,6 @@ class SearchDriver {
     final Finder target = find.byKey(
       const ValueKey<String>('search_preview_save_tag_button'),
     );
-    await _waitTransientOverlaysToSettle();
     await _ensurePreviewActionsVisible(target);
     await tapVisible(tester, target, reason: '等待搜索写入标签按钮可点击');
   }
@@ -181,17 +177,7 @@ class SearchDriver {
     final Finder target = find.byKey(
       const ValueKey<String>('search_result_batch_save_button'),
     );
-    await _waitTransientOverlaysToSettle();
     await tapVisible(tester, target, reason: '等待搜索批量保存按钮可点击');
-  }
-
-  Future<void> _waitTransientOverlaysToSettle() async {
-    await pumpUntilGone(
-      tester,
-      find.byType(SnackBar),
-      timeout: const Duration(seconds: 5),
-      reason: '等待搜索页 SnackBar 消失',
-    );
   }
 
   Future<void> _ensurePreviewActionsVisible(Finder target) async {
@@ -264,7 +250,6 @@ class OpenLyricsDriver {
     final Finder target = find.byKey(
       const ValueKey<String>('open_lyrics_convert_button'),
     );
-    await _waitTransientOverlaysToSettle();
     await tapVisible(tester, target, reason: '等待打开歌词转换按钮可点击');
   }
 
@@ -272,7 +257,6 @@ class OpenLyricsDriver {
     final Finder target = find.byKey(
       const ValueKey<String>('open_lyrics_translate_button'),
     );
-    await _waitTransientOverlaysToSettle();
     await tapVisible(tester, target, reason: '等待打开歌词翻译按钮可点击');
   }
 
@@ -280,7 +264,6 @@ class OpenLyricsDriver {
     final Finder target = find.byKey(
       const ValueKey<String>('open_lyrics_save_button'),
     );
-    await _waitTransientOverlaysToSettle();
     await tapVisible(tester, target, reason: '等待打开歌词保存文件按钮可点击');
   }
 
@@ -288,12 +271,10 @@ class OpenLyricsDriver {
     final Finder target = find.byKey(
       const ValueKey<String>('open_lyrics_save_to_tag_button'),
     );
-    await _waitTransientOverlaysToSettle();
     await tapVisible(tester, target, reason: '等待打开歌词写入标签按钮可点击');
   }
 
   Future<void> selectLyricsFormat(LyricsFormat format) async {
-    await _waitTransientOverlaysToSettle();
     final Finder target = find
         .byKey(const ValueKey<String>('open_lyrics_format_dropdown'))
         .last;
@@ -314,15 +295,6 @@ class OpenLyricsDriver {
     );
     await pumpForInteraction(tester);
   }
-
-  Future<void> _waitTransientOverlaysToSettle() async {
-    await pumpUntilGone(
-      tester,
-      find.byType(SnackBar),
-      timeout: const Duration(seconds: 5),
-      reason: '等待打开歌词页 SnackBar 消失',
-    );
-  }
 }
 
 class LocalMatchDriver {
@@ -339,7 +311,6 @@ class LocalMatchDriver {
   }
 
   Future<void> selectSaveToTagMode(LocalMatchSaveToTagMode mode) async {
-    await _waitTransientOverlaysToSettle();
     final Finder target = find.byKey(
       const ValueKey<String>('local_match_save_to_tag_mode'),
     );
@@ -378,7 +349,6 @@ class LocalMatchDriver {
   }
 
   Future<void> toggleSkipExisting() async {
-    await _waitTransientOverlaysToSettle();
     await tapVisible(
       tester,
       find.byKey(const ValueKey<String>('local_match_skip_existing_checkbox')),
@@ -394,16 +364,6 @@ class LocalMatchDriver {
             .isNotEmpty
         ? find.byKey(const ValueKey<String>('local_match_header_start'))
         : find.byKey(const ValueKey<String>('local_match_start_or_cancel'));
-    await _waitTransientOverlaysToSettle();
     await tapVisible(tester, target, reason: '等待本地匹配开始或取消按钮可点击');
-  }
-
-  Future<void> _waitTransientOverlaysToSettle() async {
-    await pumpUntilGone(
-      tester,
-      find.byType(SnackBar),
-      timeout: const Duration(seconds: 5),
-      reason: '等待本地匹配页 SnackBar 消失',
-    );
   }
 }

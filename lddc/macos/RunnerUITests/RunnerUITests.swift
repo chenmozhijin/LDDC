@@ -5,13 +5,13 @@ private struct HybridSyncState: Codable {
   let schemaVersion: Int
   let runId: String
   let scenario: String
-  var state: String
-  var timestamp: String
+  let state: String
+  let timestamp: String
   let appPid: Int32
   let appBundlePath: String
   let action: String
-  var success: Bool?
-  var error: String?
+  let success: Bool?
+  let error: String?
 }
 
 private struct PanelHandle {
@@ -22,15 +22,14 @@ private struct PanelHandle {
 }
 
 final class RunnerUITests: XCTestCase {
+  private let appBundleIdentifier = "com.cmzj.lddc"
   private var nativeDialogClosed = false
-  private var activatedExistingApplication = false
   private var panelOwnerIdentifier = "unresolved"
   private var panelUsedNewProcess = false
 
   override func setUpWithError() throws {
     continueAfterFailure = false
     nativeDialogClosed = false
-    activatedExistingApplication = false
     panelOwnerIdentifier = "unresolved"
     panelUsedNewProcess = false
     // 单场景只允许 60 秒。外层进程组监督器还会在 120 秒场景总预算内
@@ -42,11 +41,11 @@ final class RunnerUITests: XCTestCase {
     try runScenario(
       scenario: "macos_open_panel_select",
       action: "ns_open_panel_select_audio"
-    ) { app, panel in
+    ) { panel in
       guard let fixturePath = ProcessInfo.processInfo.environment["LDDC_FIXTURE_PATH"] else {
         throw failure("缺少 fixture path")
       }
-      app.typeKey("g", modifierFlags: [.command, .shift])
+      panel.application.typeKey("g", modifierFlags: [.command, .shift])
       // “前往文件夹”是系统面板内的第二层原生 sheet。优先在实际面板拥有者中
       // 查询，再检查其 sheet；不使用屏幕坐标或图像识别兜底。
       let comboBox = panel.application.sheets.comboBoxes.firstMatch
@@ -58,7 +57,7 @@ final class RunnerUITests: XCTestCase {
         throw failure("NSOpenPanel 没有打开可访问的前往文件夹输入框")
       }
       pathField.typeText(fixturePath)
-      app.typeKey(.enter, modifierFlags: [])
+      panel.application.typeKey(.enter, modifierFlags: [])
       let openButton = panel.root.buttons["Open"]
       try require(openButton.waitForExistence(timeout: 10), "NSOpenPanel 没有可访问的打开按钮")
       openButton.click()
@@ -69,7 +68,7 @@ final class RunnerUITests: XCTestCase {
     try runScenario(
       scenario: "macos_open_panel_cancel",
       action: "ns_open_panel_cancel"
-    ) { _, panel in
+    ) { panel in
       let cancelButton = panel.root.buttons["Cancel"]
       try require(cancelButton.waitForExistence(timeout: 10), "NSOpenPanel 没有可访问的取消按钮")
       cancelButton.click()
@@ -79,54 +78,42 @@ final class RunnerUITests: XCTestCase {
   private func runScenario(
     scenario: String,
     action: String,
-    operation: (XCUIApplication, PanelHandle) throws -> Void
+    operation: (PanelHandle) throws -> Void
   ) throws {
     var actions: [String: [[String: Any]]] = [:]
     var failureValue: Error?
     var hostApplication: XCUIApplication?
+    var activePanel: PanelHandle?
     do {
-      var syncState = try waitForSyncState(
+      let syncState = try waitForSyncState(
         scenario: scenario,
-        expectedState: "app_ready",
-        timeout: 15
+        expectedState: "picker_requested",
+        timeout: 30
       )
       try require(syncState.action == expectedDialogAction(for: scenario), "hybrid action 与场景不匹配")
       let app = try exactRunningApplication(from: syncState)
       hostApplication = app
       let panelServicesBefore = currentPanelServicePids()
-
-      // activate() 只把已经运行的精确 app 代理带到前台；它不会像 launch()
-      // 那样终止并重启 Flutter integration_test 所拥有的生产应用。
-      app.activate()
-      try require(waitForForegroundApplication(app, timeout: 10), "无法激活 Flutter integration_test 应用")
-      try require(
-        isOriginalApplicationStillRunning(syncState),
-        "activate() 后原 Flutter integration_test 应用 PID 已变化"
-      )
-      activatedExistingApplication = true
-      syncState = try writeSyncState(syncState, state: "native_ready", success: nil, error: nil)
-
-      syncState = try waitForSyncState(
-        scenario: scenario,
-        expectedState: "picker_requested",
-        timeout: 15
-      )
       let panel = try waitForOpenPanel(
         hostApplication: app,
         baselineServicePids: panelServicesBefore,
         timeout: 15
       )
+      activePanel = panel
       panelOwnerIdentifier = panel.ownerIdentifier
       panelUsedNewProcess = panel.wasNewProcess
-      try operation(app, panel)
+      try operation(panel)
       try require(waitForPanelToClose(panel, timeout: 15), "NSOpenPanel 操作后没有关闭")
       nativeDialogClosed = true
-      _ = try writeSyncState(syncState, state: "native_completed", success: true, error: nil)
+      _ = try waitForSyncState(
+        scenario: scenario,
+        expectedState: "flutter_completed",
+        timeout: 15
+      )
       addAction(&actions, capability: "filePicker", action: action)
       addAction(&actions, capability: "resourceCleanup", action: "native_file_panel_closed")
     } catch let error {
       failureValue = error
-      try? writeFailureState(scenario: scenario, error: error)
       let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
       screenshot.name = "lddc-macos-hybrid-failure.png"
       screenshot.lifetime = .keepAlways
@@ -136,6 +123,13 @@ final class RunnerUITests: XCTestCase {
         application: hostApplication
       )
       attachPanelServiceHierarchies()
+      if let panel = activePanel, hasOpenPanelControls(panel.root) {
+        let cancelButton = panel.root.buttons["Cancel"]
+        if cancelButton.exists && cancelButton.isHittable {
+          cancelButton.click()
+          nativeDialogClosed = waitForPanelToClose(panel, timeout: 5)
+        }
+      }
     }
     attachEvidence(scenario: scenario, actions: actions, failure: failureValue)
     if let failureValue {
@@ -150,6 +144,10 @@ final class RunnerUITests: XCTestCase {
     let bundleURL = URL(fileURLWithPath: state.appBundlePath, isDirectory: true)
       .resolvingSymlinksInPath().standardizedFileURL
     try require(bundleURL.pathExtension.lowercased() == "app", "hybrid marker 的 app bundle 路径无效")
+    try require(
+      Bundle(url: bundleURL)?.bundleIdentifier == appBundleIdentifier,
+      "hybrid marker 的 app bundle identifier 不匹配"
+    )
     var isDirectory: ObjCBool = false
     try require(
       FileManager.default.fileExists(atPath: bundleURL.path, isDirectory: &isDirectory) && isDirectory.boolValue,
@@ -162,22 +160,14 @@ final class RunnerUITests: XCTestCase {
       throw failure("hybrid marker 指向的应用 PID 已退出")
     }
     try require(runningBundleURL == bundleURL, "应用 PID 与 app bundle 路径不匹配")
+    try require(
+      runningApplication.bundleIdentifier == appBundleIdentifier,
+      "应用 PID 与 LDDC bundle identifier 不匹配"
+    )
 
     let app = XCUIApplication(url: bundleURL)
     try require(waitForRunningApplication(app, timeout: 5), "精确 app URL 没有绑定到运行中的 Flutter 应用")
     return app
-  }
-
-  private func isOriginalApplicationStillRunning(_ state: HybridSyncState) -> Bool {
-    guard let application = NSRunningApplication(processIdentifier: state.appPid),
-          !application.isTerminated,
-          let bundleURL = application.bundleURL?.resolvingSymlinksInPath().standardizedFileURL
-    else {
-      return false
-    }
-    let expectedURL = URL(fileURLWithPath: state.appBundlePath, isDirectory: true)
-      .resolvingSymlinksInPath().standardizedFileURL
-    return bundleURL == expectedURL
   }
 
   private func waitForOpenPanel(
@@ -298,17 +288,6 @@ final class RunnerUITests: XCTestCase {
     return false
   }
 
-  private func waitForForegroundApplication(_ app: XCUIApplication, timeout: TimeInterval) -> Bool {
-    let deadline = Date().addingTimeInterval(timeout)
-    repeat {
-      if app.state == .runningForeground {
-        return true
-      }
-      Thread.sleep(forTimeInterval: 0.2)
-    } while Date() < deadline
-    return false
-  }
-
   private func waitForSyncState(
     scenario: String,
     expectedState: String,
@@ -318,7 +297,7 @@ final class RunnerUITests: XCTestCase {
     repeat {
       if let state = try readSyncState(scenario: scenario) {
         try validateSyncState(state, scenario: scenario)
-        if state.state == "native_failed" {
+        if state.state == "flutter_failed" {
           throw failure("Flutter hybrid 状态已经失败: \(state.error ?? "unknown")")
         }
         if state.state == expectedState {
@@ -340,35 +319,6 @@ final class RunnerUITests: XCTestCase {
     } catch {
       throw failure("macOS hybrid 状态文件损坏: \(error)")
     }
-  }
-
-  @discardableResult
-  private func writeSyncState(
-    _ state: HybridSyncState,
-    state nextState: String,
-    success: Bool?,
-    error: String?
-  ) throws -> HybridSyncState {
-    var updated = state
-    updated.state = nextState
-    updated.timestamp = ISO8601DateFormatter().string(from: Date())
-    updated.success = success
-    updated.error = error
-    let data = try JSONEncoder().encode(updated)
-    try data.write(to: try syncStateURL(scenario: state.scenario), options: .atomic)
-    return updated
-  }
-
-  private func writeFailureState(scenario: String, error: Error) throws {
-    guard let state = try readSyncState(scenario: scenario) else {
-      return
-    }
-    _ = try writeSyncState(
-      state,
-      state: "native_failed",
-      success: false,
-      error: String(describing: error)
-    )
   }
 
   private func syncStateURL(scenario: String) throws -> URL {
@@ -432,8 +382,8 @@ final class RunnerUITests: XCTestCase {
   private func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     guard condition() else {
       // continueAfterFailure=false 时先调用 XCTFail 会立即中断当前方法，使外层
-      // catch 无法写回 native_failed、截图和 evidence。直接抛错后由 XCTest 记录
-      // thrown error，仍保留完整的 hybrid 失败清理与诊断链路。
+      // catch 需要继续保存截图、evidence 和清理面板。直接抛错后
+      // 由 XCTest 记录 thrown error，不会跳过完整的 hybrid 诊断链路。
       throw failure(message)
     }
   }
@@ -482,7 +432,7 @@ final class RunnerUITests: XCTestCase {
       "extra": [
         "attachedToExistingApplication": true,
         "usedExactApplicationURL": true,
-        "activatedExistingApplication": activatedExistingApplication,
+        "changedApplicationActivationState": false,
         "panelOwnerIdentifier": panelOwnerIdentifier,
         "panelUsedNewProcess": panelUsedNewProcess,
       ],

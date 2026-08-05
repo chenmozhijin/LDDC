@@ -19,12 +19,17 @@ $fixture = Join-Path $appRoot "integration_test/fixtures/media/audio_sample.mp3"
 $fixtureSize = (Get-Item -LiteralPath $fixture).Length
 $fixtureSha256 = (Get-FileHash -LiteralPath $fixture -Algorithm SHA256).Hash.ToLowerInvariant()
 $fixtureBase64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($fixture))
+$hostArchitecture = ((& uname -m 2>$null) -join "").Trim()
+if ($LASTEXITCODE -ne 0 -or $hostArchitecture -notin @("arm64", "x86_64")) {
+  throw "无法确定 iOS hosted 宿主架构: $hostArchitecture"
+}
 $simulatorMetadata = [ordered]@{
   udid = $Device
   runtime = "unknown"
   model = "unknown"
   deviceTypeIdentifier = "unknown"
   state = "unknown"
+  hostArchitecture = $hostArchitecture
   configuredLanguage = "unknown"
   configuredLocale = "unknown"
 }
@@ -103,7 +108,7 @@ function Invoke-BoundedXcodeTest {
   $arguments = @(
       "test-without-building",
       "-xctestrun", $XcTestRun,
-      "-destination", "platform=iOS Simulator,id=$Device",
+      "-destination", "platform=iOS Simulator,id=$Device,arch=$hostArchitecture",
       "-parallel-testing-enabled", "NO",
       "-test-timeouts-enabled", "YES",
       "-maximum-test-execution-time-allowance", "$ScenarioTimeoutSeconds",
@@ -150,6 +155,7 @@ function Get-SimulatorMetadata {
           model = [string]$deviceInfo.name
           deviceTypeIdentifier = [string]$deviceInfo.deviceTypeIdentifier
           state = [string]$deviceInfo.state
+          hostArchitecture = $hostArchitecture
         }
       }
     }
@@ -321,6 +327,40 @@ function Add-SimulatorEvidence {
   )
 }
 
+function Add-RunnerEvidence {
+  param(
+    [Parameter(Mandatory = $true)][string]$EvidencePath,
+    [Parameter(Mandatory = $true)][DateTimeOffset]$StartedAt,
+    [Parameter(Mandatory = $true)][DateTimeOffset]$EndedAt,
+    [Parameter(Mandatory = $true)][int]$XcTestExitCode,
+    [Parameter(Mandatory = $true)][int]$EffectiveExitCode,
+    [Parameter(Mandatory = $true)][bool]$TestStarted,
+    [Parameter(Mandatory = $true)][string]$PostconditionStatus
+  )
+
+  $payload = Get-Content -LiteralPath $EvidencePath -Raw | ConvertFrom-Json -AsHashtable
+  if (-not $payload.ContainsKey("extra") -or $null -eq $payload.extra) {
+    $payload["extra"] = @{}
+  }
+  $payload.extra["runner"] = [ordered]@{
+    startedAt = $StartedAt.ToString("O")
+    endedAt = $EndedAt.ToString("O")
+    durationMilliseconds = [Math]::Max(
+      0,
+      [int64]($EndedAt - $StartedAt).TotalMilliseconds
+    )
+    testStarted = $TestStarted
+    xctestExitCode = $XcTestExitCode
+    effectiveExitCode = $EffectiveExitCode
+    postconditionStatus = $PostconditionStatus
+  }
+  [IO.File]::WriteAllText(
+    $EvidencePath,
+    ($payload | ConvertTo-Json -Depth 20),
+    [Text.UTF8Encoding]::new($false)
+  )
+}
+
 function Write-FallbackSummary {
   param(
     [Parameter(Mandatory = $true)][string]$Path,
@@ -443,7 +483,7 @@ try {
       "-workspace", "ios/Runner.xcworkspace",
       "-scheme", "RunnerPlatformTests",
       "-configuration", "PlatformTest",
-      "-destination", "platform=iOS Simulator,id=$Device",
+      "-destination", "platform=iOS Simulator,id=$Device,arch=$hostArchitecture",
       "-parallel-testing-enabled", "NO",
       "-derivedDataPath", $derivedData,
       "CODE_SIGNING_ALLOWED=NO"
@@ -469,6 +509,7 @@ try {
   foreach ($entry in $scenarios) {
     $scenario = $entry.Name
     $method = $entry.Method
+    $scenarioStartedAt = [DateTimeOffset]::UtcNow
     $resultBundle = Join-Path $rawDir "$scenario.xcresult"
     $retryCheckSummaryPath = Join-Path $rawDir "$scenario.retry-check.summary.json"
     $retryPerformed = $false
@@ -552,6 +593,13 @@ try {
       Write-FallbackSummary -Path $summaryPath -Message $summaryMessage
       $summaryRecordedErrorCount = $reportingErrors.Count
     }
+    $testActuallyStarted = $false
+    try {
+      $startedSummary = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
+      $testActuallyStarted = [int]$startedSummary.totalTestCount -gt 0
+    } catch {
+      $testActuallyStarted = $false
+    }
     $scenarioAttachments = Join-Path $attachmentsDir $scenario
     Remove-Item -LiteralPath $scenarioAttachments -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $scenarioAttachments | Out-Null
@@ -596,6 +644,17 @@ try {
         -EvidencePath $evidencePath.FullName `
         -Message ($reportingErrors -join "; ")
     }
+    try {
+      Add-SimulatorEvidence -EvidencePath $evidencePath.FullName
+    } catch {
+      # 单个场景的 attachment 损坏不能阻断后续四个独立场景。改用受控失败
+      # evidence，并保留原始 XCTest summary 作为该场景的第一手错误证据。
+      $message = "iOS 场景 $scenario 无法增补 Simulator evidence: $($_.Exception.Message)"
+      $reportingErrors += $message
+      $fallbackEvidence = Join-Path $scenarioAttachments "lddc-evidence-$scenario.runner-fallback.json"
+      Write-FallbackEvidence -Path $fallbackEvidence -Scenario $scenario -Message $message
+      $evidencePath = Get-Item -LiteralPath $fallbackEvidence
+    }
     if ($reportingErrors.Count -gt $summaryRecordedErrorCount) {
       $newSummaryErrors = $reportingErrors[
         $summaryRecordedErrorCount..($reportingErrors.Count - 1)
@@ -604,8 +663,8 @@ try {
         -SummaryPath $summaryPath `
         -Message $newSummaryErrors
     }
-    Add-SimulatorEvidence -EvidencePath $evidencePath.FullName
     $effectiveExitCode = $testExitCode
+    $postconditionStatus = if ($testExitCode -eq 0) { "passed" } else { "not_run" }
     if ($reportingErrors.Count -gt 0) {
       $effectiveExitCode = 1
     }
@@ -623,6 +682,7 @@ try {
             $message = "iOS 写入后 fixture 不存在"
             Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
             $effectiveExitCode = 1
+            $postconditionStatus = "failed"
           } else {
             $evidencePayload = Get-Content -LiteralPath $evidencePath.FullName -Raw | ConvertFrom-Json
             $evidencePayload.artifacts = @(
@@ -647,18 +707,21 @@ try {
             $message = "iOS 导出场景应生成且只生成一个 LRC，实际为 $($exportedFiles.Count)"
             Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
             $effectiveExitCode = 1
+            $postconditionStatus = "failed"
           } else {
             $exportedFile = $exportedFiles[0]
             if ($exportedFile.Name -match '^[0-9a-fA-F-]{36}-') {
               $message = "iOS 导出文件名泄露了内部临时 UUID"
               Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
               $effectiveExitCode = 1
+              $postconditionStatus = "failed"
             }
             $exportedText = Get-Content -LiteralPath $exportedFile.FullName -Raw
             if (-not $exportedText.Contains("Hello LDDC", [StringComparison]::Ordinal)) {
               $message = "iOS 导出文件缺少预期歌词正文"
               Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
               $effectiveExitCode = 1
+              $postconditionStatus = "failed"
             }
             $evidencePayload = Get-Content -LiteralPath $evidencePath.FullName -Raw | ConvertFrom-Json
             $evidencePayload.artifacts = @(
@@ -685,6 +748,7 @@ try {
             $message = "iOS 取消或终止导出后残留了用户输出文件"
             Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
             $effectiveExitCode = 1
+            $postconditionStatus = "failed"
           }
         }
         $temporaryExportRoot = Join-Path $postTestContainer "tmp/lddc_search_exports"
@@ -694,6 +758,7 @@ try {
             $message = "iOS 场景 $scenario 结束后仍残留临时导出资源"
             Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
             $effectiveExitCode = 1
+            $postconditionStatus = "failed"
           }
         }
       } catch {
@@ -701,7 +766,35 @@ try {
         $message = "iOS 场景 $scenario 后验检查失败: $($_.Exception.Message)"
         Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
         $effectiveExitCode = 1
+        $postconditionStatus = "failed"
       }
+    }
+    try {
+      Add-RunnerEvidence `
+        -EvidencePath $evidencePath.FullName `
+        -StartedAt $scenarioStartedAt `
+        -EndedAt ([DateTimeOffset]::UtcNow) `
+        -XcTestExitCode $testExitCode `
+        -EffectiveExitCode $effectiveExitCode `
+        -TestStarted $testActuallyStarted `
+        -PostconditionStatus $postconditionStatus
+    } catch {
+      # runner 元数据失败属于当前场景的报告失败，不能覆盖 XCTest 结论，
+      # 更不能跳出 foreach 让后续系统 Picker 场景失去诊断。
+      $message = "iOS 场景 $scenario 无法写入 runner evidence: $($_.Exception.Message)"
+      Add-SummaryFailure -SummaryPath $summaryPath -Message $message
+      $effectiveExitCode = 1
+      $fallbackEvidence = Join-Path $scenarioAttachments "lddc-evidence-$scenario.runner-fallback.json"
+      Write-FallbackEvidence -Path $fallbackEvidence -Scenario $scenario -Message $message
+      Add-RunnerEvidence `
+        -EvidencePath $fallbackEvidence `
+        -StartedAt $scenarioStartedAt `
+        -EndedAt ([DateTimeOffset]::UtcNow) `
+        -XcTestExitCode $testExitCode `
+        -EffectiveExitCode $effectiveExitCode `
+        -TestStarted $testActuallyStarted `
+        -PostconditionStatus $postconditionStatus
+      $evidencePath = Get-Item -LiteralPath $fallbackEvidence
     }
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
     & python $normalizer `

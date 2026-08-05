@@ -500,9 +500,16 @@ jobs:
         continue-on-error: true
         working-directory: lddc
         run: |
-          # Flutter integration 结束后 Simulator 可能已关机；已启动时 boot 的
-          # 非零结果可以忽略，但 bootstatus 和 XCTest 都必须成功。
-          xcrun simctl boot "$DEVICE_ID" || true
+          # Flutter integration 可能关闭 Simulator。只对 Shutdown 设备执行
+          # boot，已在 Booting/Booted 的设备直接等待；其他状态不得吞掉。
+          state="$(xcrun simctl list devices --json | jq -r --arg udid "$DEVICE_ID" '
+            [.devices[][] | select(.udid == $udid)] | first | .state // empty
+          ')"
+          case "$state" in
+            Shutdown) xcrun simctl boot "$DEVICE_ID" ;;
+            Booting|Booted) ;;
+            *) echo "Unsupported or missing simulator state: ${state:-missing}" >&2; exit 1 ;;
+          esac
           xcrun simctl bootstatus "$DEVICE_ID" -b
           result_path='build/integration_reports/ios-native-unit/RunnerTests.xcresult'
           rm -rf "$result_path"
@@ -518,7 +525,7 @@ jobs:
             -- xcodebuild test \
               -workspace ios/Runner.xcworkspace \
               -scheme Runner \
-              -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+              -destination "platform=iOS Simulator,id=$DEVICE_ID,arch=$IOS_HOST_ARCH" \
               -parallel-testing-enabled NO \
               -resultBundlePath "$result_path" \
               CODE_SIGNING_ALLOWED=NO

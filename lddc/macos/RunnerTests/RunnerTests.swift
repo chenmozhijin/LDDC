@@ -35,7 +35,11 @@ final class RunnerTests: XCTestCase {
       .deletingLastPathComponent()
       .appendingPathComponent("Runner/Release.entitlements")
     let data = try Data(contentsOf: entitlementsURL)
-    let plist = try PropertyListSerialization.propertyList(from: data) as? [String: Bool]
+    let plist = try PropertyListSerialization.propertyList(
+      from: data,
+      options: [],
+      format: nil
+    ) as? [String: Bool]
 
     // 桌面歌词插件通过 loopback 连接 LDDC，因此 Release 必须同时允许客户端连接和服务端监听。
     // JIT 仍只属于 DebugProfile，不能因为原生测试而进入正式构建。
