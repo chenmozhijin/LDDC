@@ -19,13 +19,6 @@
             <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="B10000000000000000000001" BuildableName="RunnerUITests.xctest" BlueprintName="RunnerUITests" ReferencedContainer="container:Runner.xcodeproj" />
          </TestableReference>
       </Testables>
-      <EnvironmentVariables>
-         <EnvironmentVariable key="LDDC_IT_RUN_ID" value="$(LDDC_IT_RUN_ID)" isEnabled="YES" />
-         <EnvironmentVariable key="LDDC_FIXTURE_PATH" value="$(LDDC_FIXTURE_PATH)" isEnabled="YES" />
-         <EnvironmentVariable key="LDDC_FIXTURE_SIZE" value="$(LDDC_FIXTURE_SIZE)" isEnabled="YES" />
-         <EnvironmentVariable key="LDDC_FIXTURE_SHA256" value="$(LDDC_FIXTURE_SHA256)" isEnabled="YES" />
-         <EnvironmentVariable key="LDDC_MACOS_HYBRID_SYNC_DIR" value="$(LDDC_MACOS_HYBRID_SYNC_DIR)" isEnabled="YES" />
-      </EnvironmentVariables>
    </TestAction>
    <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES">
       <BuildableProductRunnable runnableDebuggingMode="0">

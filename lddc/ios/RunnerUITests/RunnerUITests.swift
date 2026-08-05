@@ -12,10 +12,12 @@ final class RunnerUITests: XCTestCase {
   private let springBoardBundleIdentifier = "com.apple.springboard"
   private let platformTestDisplayName = "LDDC Platform Tests"
   private var cleanupVerified = false
+  private var cleanupDiagnostics: [String: Any] = [:]
 
   override func setUpWithError() throws {
     continueAfterFailure = false
     cleanupVerified = false
+    cleanupDiagnostics = [:]
     // XCTest 的 UI 测试默认允许单个用例运行十分钟。系统 Picker 或 accessibility
     // 查询失去响应时必须在场景边界内失败，避免一个用例耗尽整个平台 job。
     executionTimeAllowance = 120
@@ -24,32 +26,34 @@ final class RunnerUITests: XCTestCase {
   func testDocumentPickerSelectsSeededAudio() throws {
     var actions: [String: [[String: Any]]] = [:]
     var failure: Error?
+    var app: XCUIApplication?
     do {
-      let app = launchApp()
-      defer { app.terminate() }
-      try selectSeededAudio(app: app)
+      let launchedApp = try launchApp()
+      app = launchedApp
+      try selectSeededAudio(app: launchedApp)
       addAction(&actions, capability: "filePicker", action: "document_picker_select_audio")
       addAction(&actions, capability: "nativeChannels", action: "flutter_picker_round_trip")
       addAction(&actions, capability: "media", action: "security_scoped_fd_read_embedded_lyrics")
 
-      let saveTag = app.descendants(matching: .any)[saveTagIdentifier]
-      try requireHittable(saveTag, in: app, message: "Flutter 未暴露可点击的写入歌曲标签按钮")
+      let saveTag = launchedApp.descendants(matching: .any)[saveTagIdentifier]
+      try requireHittable(saveTag, in: launchedApp, message: "Flutter 未暴露可点击的写入歌曲标签按钮")
       saveTag.tap()
-      let saveSucceeded = app.descendants(matching: .any)[saveTagSucceededIdentifier]
+      let saveSucceeded = launchedApp.descendants(matching: .any)[saveTagSucceededIdentifier]
       try require(saveSucceeded.waitForExistence(timeout: 20), "读写 fd 升级后没有成功保存歌词标签")
       addAction(&actions, capability: "media", action: "read_write_fd_tag_saved")
 
       // 终止应用会触发 fd registry 与 security-scoped 资源清理；重新启动并再次
       // 经系统 Picker 回读，才能证明写入不是同一 TagLib 会话缓存造成的假绿。
-      try terminateAndVerify(app)
-      app.launch()
-      try selectSeededAudio(app: app)
+      try terminateAndVerify(launchedApp)
+      relaunchPreservingFixture(launchedApp)
+      try selectSeededAudio(app: launchedApp)
       addAction(&actions, capability: "media", action: "saved_tag_reopened_after_app_restart")
-      try terminateAndVerify(app)
+      try terminateAndVerify(launchedApp)
       addAction(&actions, capability: "resourceCleanup", action: "application_and_picker_closed")
     } catch let error {
       failure = error
     }
+    captureFailureAndCleanup(app: app, scenario: "ios_document_picker_select", failure: failure)
     attachEvidence(scenario: "ios_document_picker_select", actions: actions, failure: failure)
     if let failure {
       throw failure
@@ -59,21 +63,23 @@ final class RunnerUITests: XCTestCase {
   func testDocumentPickerCancellationReturnsToFlutter() throws {
     var actions: [String: [[String: Any]]] = [:]
     var failure: Error?
+    var app: XCUIApplication?
     do {
-      let app = launchApp()
-      defer { app.terminate() }
-      try openDocumentPicker(app: app)
-      try cancelSystemPicker(app: app)
-      try require(app.wait(for: .runningForeground, timeout: 15), "取消后 LDDC 没有返回前台")
-      let openSong = app.buttons[openSongIdentifier]
+      let launchedApp = try launchApp()
+      app = launchedApp
+      try openDocumentPicker(app: launchedApp)
+      try cancelSystemPicker(app: launchedApp)
+      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消后 LDDC 没有返回前台")
+      let openSong = launchedApp.buttons[openSongIdentifier]
       try require(waitForHittable(openSong, timeout: 15), "取消后 Flutter 打开歌曲动作不可再次操作")
       addAction(&actions, capability: "filePicker", action: "document_picker_cancel")
       addAction(&actions, capability: "nativeChannels", action: "flutter_picker_cancel_round_trip")
-      try terminateAndVerify(app)
+      try terminateAndVerify(launchedApp)
       addAction(&actions, capability: "resourceCleanup", action: "application_and_picker_closed")
     } catch let error {
       failure = error
     }
+    captureFailureAndCleanup(app: app, scenario: "ios_document_picker_cancel", failure: failure)
     attachEvidence(scenario: "ios_document_picker_cancel", actions: actions, failure: failure)
     if let failure {
       throw failure
@@ -83,23 +89,25 @@ final class RunnerUITests: XCTestCase {
   func testDocumentPickerExportsLyricsFile() throws {
     var actions: [String: [[String: Any]]] = [:]
     var failure: Error?
+    var app: XCUIApplication?
     do {
-      let app = launchApp()
-      defer { app.terminate() }
-      try selectSeededAudio(app: app)
-      try openExportPicker(app: app)
-      let save = try requireSystemPickerElement(named: ["Save"], app: app, timeout: 15)
+      let launchedApp = try launchApp()
+      app = launchedApp
+      try selectSeededAudio(app: launchedApp)
+      try openExportPicker(app: launchedApp)
+      let save = try requireSystemPickerElement(named: ["Save"], app: launchedApp, timeout: 15)
       save.tap()
-      try require(app.wait(for: .runningForeground, timeout: 15), "导出后 LDDC 没有返回前台")
-      let saveFile = app.descendants(matching: .any)[saveFileIdentifier]
+      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "导出后 LDDC 没有返回前台")
+      let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
       try require(waitForHittable(saveFile, timeout: 15), "导出完成后 Flutter 页面没有恢复交互")
       addAction(&actions, capability: "filePicker", action: "document_picker_export_lyrics")
       addAction(&actions, capability: "nativeChannels", action: "flutter_export_round_trip")
-      try terminateAndVerify(app)
+      try terminateAndVerify(launchedApp)
       addAction(&actions, capability: "resourceCleanup", action: "export_source_and_picker_closed")
     } catch let error {
       failure = error
     }
+    captureFailureAndCleanup(app: app, scenario: "ios_document_picker_export", failure: failure)
     attachEvidence(scenario: "ios_document_picker_export", actions: actions, failure: failure)
     if let failure {
       throw failure
@@ -109,22 +117,24 @@ final class RunnerUITests: XCTestCase {
   func testDocumentPickerExportCancellationCleansTemporaryFile() throws {
     var actions: [String: [[String: Any]]] = [:]
     var failure: Error?
+    var app: XCUIApplication?
     do {
-      let app = launchApp()
-      defer { app.terminate() }
-      try selectSeededAudio(app: app)
-      try openExportPicker(app: app)
-      try cancelSystemPicker(app: app)
-      try require(app.wait(for: .runningForeground, timeout: 15), "取消导出后 LDDC 没有返回前台")
-      let saveFile = app.descendants(matching: .any)[saveFileIdentifier]
+      let launchedApp = try launchApp()
+      app = launchedApp
+      try selectSeededAudio(app: launchedApp)
+      try openExportPicker(app: launchedApp)
+      try cancelSystemPicker(app: launchedApp)
+      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消导出后 LDDC 没有返回前台")
+      let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
       try require(waitForHittable(saveFile, timeout: 15), "取消导出后 Flutter 页面没有恢复交互")
       addAction(&actions, capability: "filePicker", action: "document_picker_export_cancel")
       addAction(&actions, capability: "nativeChannels", action: "flutter_export_cancel_round_trip")
-      try terminateAndVerify(app)
+      try terminateAndVerify(launchedApp)
       addAction(&actions, capability: "resourceCleanup", action: "cancelled_export_source_removed")
     } catch let error {
       failure = error
     }
+    captureFailureAndCleanup(app: app, scenario: "ios_document_picker_export_cancel", failure: failure)
     attachEvidence(scenario: "ios_document_picker_export_cancel", actions: actions, failure: failure)
     if let failure {
       throw failure
@@ -134,48 +144,64 @@ final class RunnerUITests: XCTestCase {
   func testTerminatedExportIsCleanedOnNextLaunch() throws {
     var actions: [String: [[String: Any]]] = [:]
     var failure: Error?
+    var app: XCUIApplication?
     do {
-      let app = launchApp()
-      defer { app.terminate() }
-      try selectSeededAudio(app: app)
-      try openExportPicker(app: app)
-      app.terminate()
-      try require(app.wait(for: .notRunning, timeout: 5), "导出中终止时 LDDC 未在超时内关闭")
+      let launchedApp = try launchApp()
+      app = launchedApp
+      try selectSeededAudio(app: launchedApp)
+      try openExportPicker(app: launchedApp)
+      launchedApp.terminate()
+      try require(launchedApp.wait(for: .notRunning, timeout: 5), "导出中终止时 LDDC 未在超时内关闭")
 
       // 强制终止不保证 iOS 发送生命周期回调；下一次插件初始化必须删除上次
       // 遗留的临时导出目录，runner 会从 Simulator 容器进行最终空目录断言。
-      app.launch()
-      try require(app.wait(for: .runningForeground, timeout: 15), "导出中终止后 LDDC 无法重新启动")
+      relaunchPreservingFixture(launchedApp)
+      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "导出中终止后 LDDC 无法重新启动")
       addAction(&actions, capability: "filePicker", action: "document_picker_export_interrupted")
       addAction(&actions, capability: "nativeChannels", action: "save_text_request_interrupted_and_plugin_reinitialized")
       addAction(&actions, capability: "resourceCleanup", action: "stale_export_removed_on_next_launch")
-      try terminateAndVerify(app)
+      try terminateAndVerify(launchedApp)
     } catch let error {
       failure = error
     }
+    captureFailureAndCleanup(app: app, scenario: "ios_document_picker_export_termination", failure: failure)
     attachEvidence(scenario: "ios_document_picker_export_termination", actions: actions, failure: failure)
     if let failure {
       throw failure
     }
   }
 
-  private func launchApp() -> XCUIApplication {
+  private func launchApp() throws -> XCUIApplication {
+    let environment = ProcessInfo.processInfo.environment
+    guard let fixtureBase64 = environment["LDDC_FIXTURE_BASE64"],
+          !fixtureBase64.isEmpty
+    else {
+      throw failure("XCUITest 缺少匿名 fixture base64")
+    }
     let app = XCUIApplication(bundleIdentifier: appBundleIdentifier)
     app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+    // PlatformTest app 可能由 xcodebuild 在测试开始前重新安装。通过仅限测试配置
+    // 的 launch environment 在应用实际启动时写入 Documents，避免依赖旧容器路径。
+    app.launchEnvironment["LDDC_PLATFORM_TEST_FIXTURE_NAME"] = fixtureName
+    app.launchEnvironment["LDDC_PLATFORM_TEST_FIXTURE_BASE64"] = fixtureBase64
+    app.launchEnvironment["LDDC_PLATFORM_TEST_RESET_FIXTURES"] = "1"
     app.launch()
     return app
   }
 
+  private func relaunchPreservingFixture(_ app: XCUIApplication) {
+    // 同一场景内重启必须保留刚写入的标签或待清理的临时导出目录，不能再次
+    // 执行场景级 reset；下一个独立 XCTest 会创建新的 app 代理并重新置为 1。
+    app.launchEnvironment["LDDC_PLATFORM_TEST_RESET_FIXTURES"] = "0"
+    app.launch()
+  }
+
   private func openDocumentPicker(app: XCUIApplication) throws {
     let navigation = app.buttons[navigationIdentifier]
-    guard navigation.waitForExistence(timeout: 15) else {
-      XCTFail("Flutter 没有向 XCUITest 暴露打开歌词导航 identifier")
-      throw NSError(
-        domain: "LDDCPlatformTests",
-        code: 1,
-        userInfo: [NSLocalizedDescriptionKey: "缺少打开歌词导航 identifier"]
-      )
-    }
+    try require(
+      navigation.waitForExistence(timeout: 15),
+      "Flutter 没有向 XCUITest 暴露打开歌词导航 identifier"
+    )
     navigation.tap()
     let openSong = app.buttons[openSongIdentifier]
     try require(openSong.waitForExistence(timeout: 15), "Flutter 没有暴露打开歌曲按钮 identifier")
@@ -218,7 +244,12 @@ final class RunnerUITests: XCTestCase {
     let saveFile = app.descendants(matching: .any)[saveFileIdentifier]
     try requireHittable(saveFile, in: app, message: "Flutter 未暴露可点击的歌词导出按钮")
     saveFile.tap()
-    try waitForSystemPicker(app: app, expectedLabels: ["Save", "Cancel", "Browse", "Recents"])
+    // 不能用通用的 “Save” 判断系统界面已出现：Flutter 页面自己的保存按钮也会
+    // 命中该文本并造成假绿。先等待 Files 导航或取消控件，再单独查找系统 Save。
+    try waitForSystemPicker(
+      app: app,
+      expectedLabels: ["Cancel", "Browse", "Recents", "On My iPhone"]
+    )
   }
 
   private func systemPickerRoots(app: XCUIApplication) -> [XCUIElement] {
@@ -226,10 +257,11 @@ final class RunnerUITests: XCTestCase {
     // 应用界面或 SpringBoard 管理的系统 sheet 暴露。这里只查询系统实际导出的
     // accessibility tree，不启动、激活或伪造任何系统应用。
     let documents = XCUIApplication(bundleIdentifier: documentsBundleIdentifier)
-    var roots: [XCUIElement] = [
-      app,
-      XCUIApplication(bundleIdentifier: springBoardBundleIdentifier),
-    ]
+    var roots: [XCUIElement] = []
+    if app.state != .notRunning {
+      roots.append(app)
+    }
+    roots.append(XCUIApplication(bundleIdentifier: springBoardBundleIdentifier))
     // 对 notRunning application 发 descendants query 会被 XCTest 自身直接记为
     // “Failed to resolve query”，无法由 Swift do/catch 收口。iOS 26 的嵌入式
     // Picker 通常不启动 DocumentsApp，因此只有系统确实运行该应用时才查询它。
@@ -243,7 +275,9 @@ final class RunnerUITests: XCTestCase {
     var firstExisting: XCUIElement?
     for label in labels {
       let predicate = NSPredicate(
-        format: "label == %@ OR identifier == %@ OR label BEGINSWITH %@",
+        format: "label ==[c] %@ OR identifier ==[c] %@ OR label BEGINSWITH[c] %@ OR label CONTAINS[c] %@ OR identifier CONTAINS[c] %@",
+        label,
+        label,
         label,
         label,
         label
@@ -315,7 +349,7 @@ final class RunnerUITests: XCTestCase {
 
   private func cancelSystemPicker(app: XCUIApplication) throws {
     if let cancel = waitForSystemPickerElement(
-      named: ["Cancel", "Close", "Dismiss"],
+      named: ["Cancel", "Close", "Dismiss", "xmark", "multiply"],
       app: app,
       timeout: 3
     ) {
@@ -348,8 +382,9 @@ final class RunnerUITests: XCTestCase {
 
   private func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     guard condition() else {
-      // XCTest 断言本身不会抛异常；同时抛出可让 evidence 与原始 xcresult 保持一致。
-      XCTFail(message)
+      // 不能先调用 XCTFail：continueAfterFailure=false 会立即中断测试方法，使 catch、
+      // evidence attachment 和资源清理都没有机会执行。直接抛错后由 XCTest 记录
+      // thrown error，场景仍能先写出与失败一致的结构化证据。
       throw NSError(
         domain: "LDDCPlatformTests",
         code: 2,
@@ -384,6 +419,82 @@ final class RunnerUITests: XCTestCase {
     // 既不能证明 picker session 已释放，也可能干扰后续场景。应用进程退出和 runner
     // 对 fd、临时导出目录的最终检查共同构成资源释放证据。
     cleanupVerified = true
+  }
+
+  private func captureFailureAndCleanup(
+    app: XCUIApplication?,
+    scenario: String,
+    failure: Error?
+  ) {
+    guard let failure else {
+      return
+    }
+    cleanupDiagnostics["originalFailure"] = String(describing: failure)
+    guard let app else {
+      cleanupDiagnostics["appCreated"] = false
+      cleanupVerified = false
+      return
+    }
+
+    // 先保存 accessibility tree，再执行取消或终止。这样 hosted CI 即使再次遇到
+    // 新系统控件名称，也能从原始层级修正 selector，而不是根据截图猜测。
+    attachAccessibilityDiagnostics(app: app, scenario: scenario)
+    var pickerDismissed = false
+    var pickerDismissError: String?
+    if app.state != .notRunning, isSystemPickerVisible(app: app) {
+      do {
+        try cancelSystemPicker(app: app)
+        pickerDismissed = app.wait(for: .runningForeground, timeout: 5)
+      } catch {
+        pickerDismissError = String(describing: error)
+      }
+    }
+    if app.state != .notRunning {
+      app.terminate()
+    }
+    let appStopped = app.wait(for: .notRunning, timeout: 5)
+    cleanupVerified = appStopped
+    cleanupDiagnostics["pickerDismissedBeforeTermination"] = pickerDismissed
+    cleanupDiagnostics["appStoppedAfterFailure"] = appStopped
+    if let pickerDismissError {
+      cleanupDiagnostics["pickerDismissError"] = pickerDismissError
+    }
+  }
+
+  private func isSystemPickerVisible(app: XCUIApplication) -> Bool {
+    findSystemPickerElement(
+      named: [
+        "Recents",
+        "Shared",
+        "Browse",
+        "On My iPhone",
+        platformTestDisplayName,
+        "Save",
+      ],
+      app: app
+    ) != nil
+  }
+
+  private func attachAccessibilityDiagnostics(app: XCUIApplication, scenario: String) {
+    var sections: [String] = []
+    if app.state != .notRunning {
+      sections.append("=== app ===\n\(app.debugDescription)")
+    }
+    let springBoard = XCUIApplication(bundleIdentifier: springBoardBundleIdentifier)
+    if springBoard.state != .notRunning {
+      sections.append("=== springboard ===\n\(springBoard.debugDescription)")
+    }
+    let documents = XCUIApplication(bundleIdentifier: documentsBundleIdentifier)
+    if documents.state != .notRunning {
+      sections.append("=== documents ===\n\(documents.debugDescription)")
+    }
+    // accessibility tree 可能很大。保留足以定位控件的前 128 KiB，避免单次失败
+    // 生成不可控 artifact，同时不写入 Simulator 容器绝对路径。
+    let text = String(sections.joined(separator: "\n\n").prefix(128 * 1024))
+    let attachment = XCTAttachment(string: text)
+    attachment.name = "lddc-accessibility-\(scenario).txt"
+    attachment.lifetime = .keepAlways
+    add(attachment)
   }
 
   private func addAction(
@@ -431,7 +542,7 @@ final class RunnerUITests: XCTestCase {
         "thresholds": ["nativeWindowCount": 0],
       ],
       "artifacts": artifact,
-      "extra": [:],
+      "extra": cleanupDiagnostics,
     ]
     do {
       let data = try JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys])

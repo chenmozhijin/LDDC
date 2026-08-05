@@ -14,9 +14,11 @@ $normalizer = Join-Path $repoRoot "tool/test/normalize_integration_report.py"
 $junitConverter = Join-Path $repoRoot "tool/test/xcresult_summary_to_junit.py"
 $verifier = Join-Path $repoRoot "tool/test/verify_integration_reports.py"
 $matrix = Join-Path $repoRoot "tool/test/platform_capability_matrix.json"
+$processSupervisor = Join-Path $repoRoot "tool/test/process_group_supervisor.py"
 $fixture = Join-Path $appRoot "integration_test/fixtures/media/audio_sample.mp3"
 $fixtureSize = (Get-Item -LiteralPath $fixture).Length
 $fixtureSha256 = (Get-FileHash -LiteralPath $fixture -Algorithm SHA256).Hash.ToLowerInvariant()
+$fixtureBase64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($fixture))
 $simulatorMetadata = [ordered]@{
   udid = $Device
   runtime = "unknown"
@@ -33,6 +35,13 @@ if (-not [IO.Path]::IsPathRooted($ReportDir)) {
 $runId = "platform-ios-{0}-{1}" -f `
   [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds(), `
   ([Guid]::NewGuid().ToString("N").Substring(0, 8))
+$testRunnerEnvironment = [ordered]@{
+  TEST_RUNNER_LDDC_IT_RUN_ID = $runId
+  TEST_RUNNER_LDDC_FIXTURE_SIZE = [string]$fixtureSize
+  TEST_RUNNER_LDDC_FIXTURE_SHA256 = $fixtureSha256
+  TEST_RUNNER_LDDC_FIXTURE_BASE64 = $fixtureBase64
+}
+$previousTestRunnerEnvironment = @{}
 $runRoot = Join-Path $ReportDir $runId
 $derivedData = Join-Path $appRoot "build/native_test_derived_data/$runId"
 $scenarioDir = Join-Path $runRoot "scenarios"
@@ -43,6 +52,43 @@ foreach ($directory in @($scenarioDir, $rawDir, $junitDir, $attachmentsDir)) {
   New-Item -ItemType Directory -Force -Path $directory | Out-Null
 }
 
+function Invoke-BoundedNativeCommand {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Phase,
+    [Parameter(Mandatory = $true)]
+    [string]$FilePath,
+    [Parameter(Mandatory = $true)]
+    [string[]]$Arguments,
+    [Parameter(Mandatory = $true)]
+    [int]$TimeoutSeconds,
+    [Parameter(Mandatory = $true)]
+    [string]$StdoutPath,
+    [Parameter(Mandatory = $true)]
+    [string]$StderrPath
+  )
+
+  $safePhase = $Phase -replace '[^A-Za-z0-9._-]', '-'
+  $statusPath = Join-Path $rawDir "$safePhase.supervisor.json"
+  foreach ($path in @($statusPath, $StdoutPath, $StderrPath)) {
+    Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+  }
+  # Xcode 与 xcresulttool 都可能派生辅助进程。统一交给 POSIX 进程组监督器，
+  # 超时后同时回收 leader 和后代，避免报告提取卡住并污染后续独立场景。
+  & python $processSupervisor `
+    --phase $Phase `
+    --timeout $TimeoutSeconds `
+    --grace 5 `
+    --cwd $appRoot `
+    --status $statusPath `
+    --stdout $StdoutPath `
+    --stderr $StderrPath `
+    -- $FilePath @Arguments `
+    | ForEach-Object { Write-Host $_ }
+  $exitCode = $LASTEXITCODE
+  return $exitCode
+}
+
 function Invoke-BoundedXcodeTest {
   param(
     [Parameter(Mandatory = $true)]
@@ -50,13 +96,11 @@ function Invoke-BoundedXcodeTest {
     [Parameter(Mandatory = $true)]
     [string]$Method,
     [Parameter(Mandatory = $true)]
-    [string]$ResultBundle
+    [string]$ResultBundle,
+    [string]$Attempt = "attempt1"
   )
 
-  $startInfo = [Diagnostics.ProcessStartInfo]::new()
-  $startInfo.FileName = "xcodebuild"
-  $startInfo.UseShellExecute = $false
-  foreach ($argument in @(
+  $arguments = @(
       "test-without-building",
       "-xctestrun", $XcTestRun,
       "-destination", "platform=iOS Simulator,id=$Device",
@@ -65,21 +109,14 @@ function Invoke-BoundedXcodeTest {
       "-maximum-test-execution-time-allowance", "$ScenarioTimeoutSeconds",
       "-only-testing:RunnerUITests/RunnerUITests/$Method",
       "-resultBundlePath", $ResultBundle
-    )) {
-    [void]$startInfo.ArgumentList.Add($argument)
-  }
-  $process = [Diagnostics.Process]::Start($startInfo)
-  try {
-    if (-not $process.WaitForExit($ScenarioTimeoutSeconds * 1000)) {
-      # XCUITest runner 无响应时终止其整个进程树，随后由外层 finally 清理 Simulator 应用。
-      $process.Kill($true)
-      $process.WaitForExit()
-      return 124
-    }
-    return $process.ExitCode
-  } finally {
-    $process.Dispose()
-  }
+  )
+  return Invoke-BoundedNativeCommand `
+    -Phase "ios-xcuitest-$Method-$Attempt" `
+    -FilePath "xcodebuild" `
+    -Arguments $arguments `
+    -TimeoutSeconds $ScenarioTimeoutSeconds `
+    -StdoutPath (Join-Path $rawDir "$Method.$Attempt.xcodebuild.stdout.log") `
+    -StderrPath (Join-Path $rawDir "$Method.$Attempt.xcodebuild.stderr.log")
 }
 
 function Get-SimulatorState {
@@ -160,18 +197,33 @@ function Ensure-SimulatorBooted {
 }
 
 function Get-XcresultStartedTestCount {
-  param([Parameter(Mandatory = $true)][string]$ResultBundle)
+  param(
+    [Parameter(Mandatory = $true)][string]$ResultBundle,
+    [Parameter(Mandatory = $true)][string]$Scenario
+  )
 
   if (-not (Test-Path -LiteralPath $ResultBundle)) {
     return $null
   }
-  $summary = & xcrun xcresulttool get test-results summary `
-    --path $ResultBundle --format json 2>$null
-  if ($LASTEXITCODE -ne 0 -or $summary.Count -eq 0) {
+  $summaryPath = Join-Path $rawDir "$Scenario.retry-check.summary.json"
+  $stderrPath = Join-Path $rawDir "$Scenario.retry-check.stderr.log"
+  $exitCode = Invoke-BoundedNativeCommand `
+    -Phase "ios-xcresult-retry-check-$Scenario" `
+    -FilePath "xcrun" `
+    -Arguments @(
+      "xcresulttool", "get", "test-results", "summary",
+      "--path", $ResultBundle, "--format", "json"
+    ) `
+    -TimeoutSeconds 120 `
+    -StdoutPath $summaryPath `
+    -StderrPath $stderrPath
+  if ($exitCode -ne 0 `
+      -or -not (Test-Path -LiteralPath $summaryPath -PathType Leaf) `
+      -or (Get-Item -LiteralPath $summaryPath).Length -eq 0) {
     return $null
   }
   try {
-    $payload = ($summary -join [Environment]::NewLine) | ConvertFrom-Json
+    $payload = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
     return [int]$payload.totalTestCount
   } catch {
     return $null
@@ -361,6 +413,18 @@ $overallExitCode = 0
 
 Push-Location $appRoot
 try {
+  foreach ($entry in $testRunnerEnvironment.GetEnumerator()) {
+    $environmentName = [string]$entry.Key
+    $previousTestRunnerEnvironment[$environmentName] =
+      [Environment]::GetEnvironmentVariable($environmentName, "Process")
+    # test-without-building 使用 Apple 约定的 TEST_RUNNER_ 前缀向 XCTest
+    # 进程传值，避免依赖 scheme 中不会在 hosted runner 展开的 $(...) 宏。
+    [Environment]::SetEnvironmentVariable(
+      $environmentName,
+      [string]$entry.Value,
+      "Process"
+    )
+  }
   Ensure-SimulatorBooted -Stage "runner-entry"
   $simulatorMetadata = Get-SimulatorMetadata
   Invoke-RequiredSimctl `
@@ -371,19 +435,24 @@ try {
     -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLocale", "en_US") | Out-Null
   $simulatorMetadata.configuredLanguage = "en"
   $simulatorMetadata.configuredLocale = "en_US"
-  & xcodebuild build-for-testing `
-    -workspace ios/Runner.xcworkspace `
-    -scheme RunnerPlatformTests `
-    -configuration PlatformTest `
-    -destination "platform=iOS Simulator,id=$Device" `
-    -parallel-testing-enabled NO `
-    -derivedDataPath $derivedData `
-    CODE_SIGNING_ALLOWED=NO `
-    "LDDC_IT_RUN_ID=$runId" `
-    "LDDC_FIXTURE_SIZE=$fixtureSize" `
-    "LDDC_FIXTURE_SHA256=$fixtureSha256"
-  if ($LASTEXITCODE -ne 0) {
-    throw "iOS build-for-testing 失败，exit=$LASTEXITCODE"
+  $buildExitCode = Invoke-BoundedNativeCommand `
+    -Phase "ios-xcuitest-build-for-testing" `
+    -FilePath "xcodebuild" `
+    -Arguments @(
+      "build-for-testing",
+      "-workspace", "ios/Runner.xcworkspace",
+      "-scheme", "RunnerPlatformTests",
+      "-configuration", "PlatformTest",
+      "-destination", "platform=iOS Simulator,id=$Device",
+      "-parallel-testing-enabled", "NO",
+      "-derivedDataPath", $derivedData,
+      "CODE_SIGNING_ALLOWED=NO"
+    ) `
+    -TimeoutSeconds 900 `
+    -StdoutPath (Join-Path $rawDir "build-for-testing.stdout.log") `
+    -StderrPath (Join-Path $rawDir "build-for-testing.stderr.log")
+  if ($buildExitCode -ne 0) {
+    throw "iOS build-for-testing 失败，exit=$buildExitCode"
   }
 
   $appBundle = Get-ChildItem -Path (Join-Path $derivedData "Build/Products") `
@@ -397,22 +466,21 @@ try {
   Invoke-RequiredSimctl `
     -Stage "install-platform-test-app" `
     -CommandArguments @("install", $Device, $appBundle.FullName) | Out-Null
-  $container = Get-PlatformTestContainer
-  $documents = Join-Path $container "Documents"
-  New-Item -ItemType Directory -Force -Path $documents | Out-Null
-  Copy-Item -LiteralPath $fixture -Destination (Join-Path $documents "audio_sample.mp3") -Force
-
   foreach ($entry in $scenarios) {
     $scenario = $entry.Name
     $method = $entry.Method
     $resultBundle = Join-Path $rawDir "$scenario.xcresult"
+    $retryCheckSummaryPath = Join-Path $rawDir "$scenario.retry-check.summary.json"
+    $retryPerformed = $false
     Ensure-SimulatorBooted -Stage "before-$scenario"
     $testExitCode = Invoke-BoundedXcodeTest `
       -XcTestRun $xctestrun.FullName `
       -Method $method `
       -ResultBundle $resultBundle
     if ($testExitCode -ne 0) {
-      $startedTestCount = Get-XcresultStartedTestCount -ResultBundle $resultBundle
+      $startedTestCount = Get-XcresultStartedTestCount `
+        -ResultBundle $resultBundle `
+        -Scenario $scenario
       $simulatorState = Get-SimulatorState
       if ($startedTestCount -eq 0 -and $simulatorState -eq "Shutdown") {
         # 只允许在 XCTest 尚未开始且设备意外关机时恢复一次。真实用例失败、
@@ -423,33 +491,87 @@ try {
         $testExitCode = Invoke-BoundedXcodeTest `
           -XcTestRun $xctestrun.FullName `
           -Method $method `
-          -ResultBundle $resultBundle
+          -ResultBundle $resultBundle `
+          -Attempt "attempt2"
+        $retryPerformed = $true
       }
     }
 
     $summaryPath = Join-Path $rawDir "$scenario.summary.json"
     $summaryReady = $false
-    if (Test-Path -LiteralPath $resultBundle) {
-      $summaryLines = & xcrun xcresulttool get test-results summary `
-        --path $resultBundle --format json
-      if ($LASTEXITCODE -eq 0 -and $summaryLines.Count -gt 0) {
-        [IO.File]::WriteAllText(
-          $summaryPath,
-          ($summaryLines -join [Environment]::NewLine),
-          [Text.UTF8Encoding]::new($false)
-        )
-        $summaryReady = $true
+    $reportingErrors = @()
+    $summaryRecordedErrorCount = 0
+    if (-not $retryPerformed `
+        -and $testExitCode -ne 0 `
+        -and (Test-Path -LiteralPath $retryCheckSummaryPath -PathType Leaf)) {
+      try {
+        $retrySummary = Get-Content -LiteralPath $retryCheckSummaryPath -Raw `
+          | ConvertFrom-Json
+        if ($null -ne $retrySummary.totalTestCount) {
+          Copy-Item -LiteralPath $retryCheckSummaryPath -Destination $summaryPath -Force
+          $summaryReady = $true
+        }
+      } catch {
+        $summaryReady = $false
       }
     }
+    if (-not $summaryReady -and (Test-Path -LiteralPath $resultBundle)) {
+      $summaryStderr = Join-Path $rawDir "$scenario.summary.stderr.log"
+      $summaryExitCode = Invoke-BoundedNativeCommand `
+        -Phase "ios-xcresult-summary-$scenario" `
+        -FilePath "xcrun" `
+        -Arguments @(
+          "xcresulttool", "get", "test-results", "summary",
+          "--path", $resultBundle, "--format", "json"
+        ) `
+        -TimeoutSeconds 120 `
+        -StdoutPath $summaryPath `
+        -StderrPath $summaryStderr
+      if ($summaryExitCode -eq 0 `
+          -and (Test-Path -LiteralPath $summaryPath -PathType Leaf) `
+          -and (Get-Item -LiteralPath $summaryPath).Length -gt 0) {
+        try {
+          $summaryPayload = Get-Content -LiteralPath $summaryPath -Raw | ConvertFrom-Json
+          $summaryReady = $null -ne $summaryPayload.totalTestCount
+        } catch {
+          $summaryReady = $false
+        }
+      }
+      if (-not $summaryReady) {
+        $reportingErrors += "xcresult summary 无法读取，exit=$summaryExitCode，诊断=$([IO.Path]::GetFileName($summaryStderr))"
+      }
+    } elseif (-not $summaryReady) {
+      $reportingErrors += "XCUITest 未生成 xcresult bundle"
+    }
     if (-not $summaryReady) {
-      Write-FallbackSummary -Path $summaryPath -Message "XCUITest 未生成可读取的 xcresult summary"
+      $summaryMessage = if ($reportingErrors.Count -gt 0) {
+        $reportingErrors -join "; "
+      } else {
+        "XCUITest 未生成可读取的 xcresult summary"
+      }
+      Write-FallbackSummary -Path $summaryPath -Message $summaryMessage
+      $summaryRecordedErrorCount = $reportingErrors.Count
     }
     $scenarioAttachments = Join-Path $attachmentsDir $scenario
+    Remove-Item -LiteralPath $scenarioAttachments -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $scenarioAttachments | Out-Null
     if (Test-Path -LiteralPath $resultBundle) {
-      & xcrun xcresulttool export attachments `
-        --path $resultBundle `
-        --output-path $scenarioAttachments
+      $attachmentStdout = Join-Path $rawDir "$scenario.attachments.stdout.log"
+      $attachmentStderr = Join-Path $rawDir "$scenario.attachments.stderr.log"
+      $attachmentExitCode = Invoke-BoundedNativeCommand `
+        -Phase "ios-xcresult-attachments-$scenario" `
+        -FilePath "xcrun" `
+        -Arguments @(
+          "xcresulttool", "export", "attachments",
+          "--path", $resultBundle,
+          "--output-path", $scenarioAttachments
+        ) `
+        -TimeoutSeconds 120 `
+        -StdoutPath $attachmentStdout `
+        -StderrPath $attachmentStderr
+      if ($attachmentExitCode -ne 0) {
+        $reportingErrors += "xcresult attachment 导出失败，exit=$attachmentExitCode，诊断=$([IO.Path]::GetFileName($attachmentStderr))"
+      }
     }
     $evidencePath = Get-ChildItem -Path $scenarioAttachments -Recurse -File `
       | Where-Object {
@@ -462,12 +584,31 @@ try {
         } `
       | Select-Object -First 1
     if ($null -eq $evidencePath) {
+      $reportingErrors += "XCUITest 未导出 evidence attachment"
       $fallbackEvidence = Join-Path $scenarioAttachments "lddc-evidence-$scenario.json"
-      Write-FallbackEvidence -Path $fallbackEvidence -Scenario $scenario -Message "XCUITest 未导出 evidence attachment"
+      Write-FallbackEvidence `
+        -Path $fallbackEvidence `
+        -Scenario $scenario `
+        -Message ($reportingErrors -join "; ")
       $evidencePath = Get-Item -LiteralPath $fallbackEvidence
+    } elseif ($reportingErrors.Count -gt 0) {
+      Add-EvidenceFailure `
+        -EvidencePath $evidencePath.FullName `
+        -Message ($reportingErrors -join "; ")
+    }
+    if ($reportingErrors.Count -gt $summaryRecordedErrorCount) {
+      $newSummaryErrors = $reportingErrors[
+        $summaryRecordedErrorCount..($reportingErrors.Count - 1)
+      ] -join "; "
+      Add-SummaryFailure `
+        -SummaryPath $summaryPath `
+        -Message $newSummaryErrors
     }
     Add-SimulatorEvidence -EvidencePath $evidencePath.FullName
     $effectiveExitCode = $testExitCode
+    if ($reportingErrors.Count -gt 0) {
+      $effectiveExitCode = 1
+    }
     if ($testExitCode -eq 0) {
       try {
         # Xcode 可能在 UI 测试安装阶段更换 Simulator data container。后验检查必须
@@ -591,6 +732,13 @@ try {
   & xcrun simctl terminate $Device com.cmzj.lddc.platformtests 2>$null
   & xcrun simctl terminate $Device com.apple.DocumentsApp 2>$null
   & xcrun simctl uninstall $Device com.cmzj.lddc.platformtests 2>$null
+  foreach ($environmentName in $previousTestRunnerEnvironment.Keys) {
+    [Environment]::SetEnvironmentVariable(
+      $environmentName,
+      $previousTestRunnerEnvironment[$environmentName],
+      "Process"
+    )
+  }
   Pop-Location
 }
 

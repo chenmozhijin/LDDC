@@ -67,7 +67,7 @@ void main() {
       await tester.pump();
 
       expect(calls, contains('hide'));
-      expect(calls, isNot(contains('close')));
+      expect(calls, isNot(contains('destroy')));
       expect(trayFactory.createdPorts, hasLength(1));
       expect(trayFactory.lastPort.initializeCalls, 1);
     });
@@ -119,7 +119,8 @@ void main() {
         calls.any((String call) => call.contains('setPreventClose')),
         isTrue,
       );
-      expect(calls, contains('close'));
+      expect(bootstrap.disposeCalls, 1);
+      expect(calls, contains('destroy'));
       expect(trayFactory.createdPorts, hasLength(1));
       expect(trayFactory.lastPort.initializeCalls, 1);
       expect(trayFactory.lastPort.disposeCalls, 1);
@@ -181,7 +182,7 @@ void main() {
       await tester.pump();
 
       expect(removeFinished, isFalse);
-      expect(calls, isNot(contains('close')));
+      expect(calls, isNot(contains('destroy')));
 
       floatingHost.completeDestroy(instanceId: 5);
       await removeFuture;
@@ -189,7 +190,8 @@ void main() {
       await tester.pump();
 
       expect(removeFinished, isTrue);
-      expect(calls, contains('close'));
+      expect(bootstrap.disposeCalls, 1);
+      expect(calls, contains('destroy'));
       expect(trayFactory.lastPort.disposeCalls, 1);
     });
 
@@ -555,6 +557,7 @@ void _installWindowManagerMock(
         return null;
       case 'hide':
       case 'close':
+      case 'destroy':
       case 'show':
       case 'focus':
         calls.add(call.method);
@@ -581,6 +584,7 @@ class _FakeBootstrap extends DesktopServiceBootstrap {
     this.shouldStartHidden = false,
   });
   Future<void> Function()? attachedShowHandler;
+  int disposeCalls = 0;
 
   @override
   final bool isPrimaryInstance;
@@ -596,6 +600,11 @@ class _FakeBootstrap extends DesktopServiceBootstrap {
   @override
   void detachShowHandler() {
     attachedShowHandler = null;
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposeCalls += 1;
   }
 }
 

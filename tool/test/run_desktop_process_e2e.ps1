@@ -13,6 +13,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $appRoot = Join-Path $repoRoot "lddc"
 $testRoot = Join-Path $repoRoot "packages/lddc_desktop_protocol"
+$processSupervisor = Join-Path $repoRoot "tool/test/process_group_supervisor.py"
 if ([string]::IsNullOrWhiteSpace($AppExe)) {
   $AppExe = switch ($Platform) {
     # Flutter 会在不同 target 之间复用桌面构建目录，Debug 和 Release 都可能
@@ -146,14 +147,29 @@ $junitPath = Join-Path $junitDir "desktop_real_process.xml"
 
 function Invoke-BoundedDartTest {
   $dartCommand = (Get-Command dart).Source
-  $startInfo = [Diagnostics.ProcessStartInfo]::new()
-  $startInfo.UseShellExecute = $false
-  $startInfo.WorkingDirectory = $testRoot
   $arguments = @(
     "test",
     "platform_test/desktop_real_process_e2e_test.dart",
     "--file-reporter=json:$rawPath"
   )
+  if (-not $IsWindows) {
+    # macOS/Linux 的 Dart test 会派生真实应用和端口 CLI。POSIX supervisor 统一
+    # 管理整个进程组，超时后有界发送 TERM/KILL，并把最终残留数写入诊断。
+    & python $processSupervisor `
+      --phase "desktop-process-$Platform" `
+      --timeout $ScenarioTimeoutSeconds `
+      --grace 5 `
+      --cwd $testRoot `
+      --status (Join-Path $rawDir "desktop_process.supervisor.json") `
+      -- $dartCommand @arguments `
+      | ForEach-Object { Write-Host $_ }
+    $exitCode = $LASTEXITCODE
+    return $exitCode
+  }
+
+  $startInfo = [Diagnostics.ProcessStartInfo]::new()
+  $startInfo.UseShellExecute = $false
+  $startInfo.WorkingDirectory = $testRoot
   if ($IsWindows -and $dartCommand.EndsWith(".bat")) {
     $startInfo.FileName = "cmd.exe"
     foreach ($argument in @("/d", "/c", $dartCommand) + $arguments) {
@@ -170,7 +186,9 @@ function Invoke-BoundedDartTest {
     if (-not $process.WaitForExit($ScenarioTimeoutSeconds * 1000)) {
       # 测试框架失去响应时终止 Dart test 与其子进程，PID 文件用于补充清理已脱离的服务进程。
       $process.Kill($true)
-      $process.WaitForExit()
+      if (-not $process.WaitForExit(5000)) {
+        return 125
+      }
       return 124
     }
     return $process.ExitCode

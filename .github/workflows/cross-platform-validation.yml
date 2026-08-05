@@ -145,6 +145,30 @@ jobs:
         continue-on-error: true
         working-directory: lddc
         run: flutter build macos --debug
+      - name: Run macOS native unit tests
+        id: native_unit
+        if: always() && steps.debug_build.outcome == 'success'
+        continue-on-error: true
+        working-directory: lddc
+        run: |
+          result_path='build/integration_reports/macos-native-unit/RunnerTests.xcresult'
+          rm -rf "$result_path"
+          mkdir -p "$(dirname "$result_path")"
+          python ../tool/test/process_group_supervisor.py \
+            --phase macos-native-unit \
+            --timeout 600 \
+            --grace 5 \
+            --cwd "$PWD" \
+            --status build/integration_reports/macos-native-unit/supervisor.json \
+            --stdout build/integration_reports/macos-native-unit/xcodebuild.stdout.log \
+            --stderr build/integration_reports/macos-native-unit/xcodebuild.stderr.log \
+            -- xcodebuild test \
+              -workspace macos/Runner.xcworkspace \
+              -scheme Runner \
+              -configuration Debug \
+              -destination 'platform=macOS' \
+              -parallel-testing-enabled NO \
+              -resultBundlePath "$result_path"
       - name: Run offline application flows
         id: offline
         continue-on-error: true
@@ -178,6 +202,7 @@ jobs:
             --phase 'release_build|Release build|${{ steps.release_build.outcome }}' `
             --phase 'production_e2e_artifact|Production snapshot|${{ steps.production_e2e_artifact.outcome }}' `
             --phase 'debug_build|Debug build|${{ steps.debug_build.outcome }}' `
+            --phase 'native_unit|Native unit tests|${{ steps.native_unit.outcome }}' `
             --phase 'offline|Offline application|${{ steps.offline.outcome }}' `
             --phase 'native_channel|Native channels|${{ steps.native_channel.outcome }}' `
             --phase 'desktop_process|Desktop process|${{ steps.desktop_process.outcome }}' `
@@ -218,7 +243,7 @@ jobs:
         run: |
           python tool/test/process_group_supervisor.py `
             --phase macos-system-ui-workflow `
-            --timeout 600 `
+            --timeout 900 `
             --grace 5 `
             --cwd $PWD.Path `
             --status lddc/build/integration_reports/macos-native/workflow-watchdog.json `
@@ -469,12 +494,24 @@ jobs:
           # 非零结果可以忽略，但 bootstatus 和 XCTest 都必须成功。
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
-          xcodebuild test \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
-            -parallel-testing-enabled NO \
-            CODE_SIGNING_ALLOWED=NO
+          result_path='build/integration_reports/ios-native-unit/RunnerTests.xcresult'
+          rm -rf "$result_path"
+          mkdir -p "$(dirname "$result_path")"
+          python ../tool/test/process_group_supervisor.py \
+            --phase ios-native-unit \
+            --timeout 600 \
+            --grace 5 \
+            --cwd "$PWD" \
+            --status build/integration_reports/ios-native-unit/supervisor.json \
+            --stdout build/integration_reports/ios-native-unit/xcodebuild.stdout.log \
+            --stderr build/integration_reports/ios-native-unit/xcodebuild.stderr.log \
+            -- xcodebuild test \
+              -workspace ios/Runner.xcworkspace \
+              -scheme Runner \
+              -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+              -parallel-testing-enabled NO \
+              -resultBundlePath "$result_path" \
+              CODE_SIGNING_ALLOWED=NO
       - name: Run iOS Document Picker automation
         id: system_ui
         if: always() && steps.debug_rebuild.outcome == 'success'

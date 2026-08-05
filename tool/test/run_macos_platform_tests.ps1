@@ -79,6 +79,14 @@ $scenarios = @(
     Method = "testOpenPanelCancellationReturnsToFlutter"
   }
 )
+$testRunnerEnvironment = [ordered]@{
+  TEST_RUNNER_LDDC_IT_RUN_ID = $runId
+  TEST_RUNNER_LDDC_FIXTURE_PATH = $fixture
+  TEST_RUNNER_LDDC_FIXTURE_SIZE = [string]$fixtureSize
+  TEST_RUNNER_LDDC_FIXTURE_SHA256 = $fixtureSha256
+  TEST_RUNNER_LDDC_MACOS_HYBRID_SYNC_DIR = $syncDir
+}
+$previousTestRunnerEnvironment = @{}
 $ownedProcessStarts = @{}
 
 function Register-OwnedProcessTree {
@@ -641,22 +649,36 @@ $overallExitCode = 0
 $activeFlutterHandle = $null
 Push-Location $appRoot
 try {
+  foreach ($entry in $testRunnerEnvironment.GetEnumerator()) {
+    $environmentName = [string]$entry.Key
+    $previousTestRunnerEnvironment[$environmentName] =
+      [Environment]::GetEnvironmentVariable($environmentName, "Process")
+    # xcodebuild test-without-building 只保证把 TEST_RUNNER_ 前缀变量传给
+    # 测试进程。scheme 中的 $(...) build setting 在 hosted runner 没有进入
+    # RunnerUITests，曾导致 runId 与同步目录同时缺失。
+    [Environment]::SetEnvironmentVariable(
+      $environmentName,
+      [string]$entry.Value,
+      "Process"
+    )
+  }
   $existingLddc = @(Get-Process -Name "LDDC" -ErrorAction SilentlyContinue)
   if ($existingLddc.Count -gt 0) {
     throw "macOS hybrid 测试要求启动前不存在 LDDC 进程，当前 PID: $($existingLddc.Id -join ', ')"
   }
-  # 先构建稳定 main.dart 与 UI test bundle；随后 flutter test 可以使用临时 listener，
-  # XCUITest 只附着其已运行的 bundle id，不启动 build-for-testing 产物。
-  $debugBuildResult = Invoke-BoundedProcess `
-    -Phase "flutter-debug-build" `
-    -FilePath $flutterCommand `
-    -ArgumentList @("build", "macos", "--debug") `
+  # build-for-testing 会自行构建 Runner 与 UI test bundle。这里只解析 CocoaPods，
+  # 避免在独立 DerivedData 构建前重复完整编译一次 macOS 应用；Flutter 场景仍会
+  # 启动它自己的真实 Debug 应用，XCUITest 只附着该现有进程。
+  $podInstallResult = Invoke-BoundedProcess `
+    -Phase "pod-install" `
+    -FilePath "pod" `
+    -ArgumentList @("install", "--project-directory=macos") `
     -WorkingDirectory $appRoot `
-    -TimeoutSeconds 600 `
-    -StdoutPath (Join-Path $diagnosticsDir "flutter-debug-build.stdout.log") `
-    -StderrPath (Join-Path $diagnosticsDir "flutter-debug-build.stderr.log")
-  if ($debugBuildResult.ExitCode -ne 0) {
-    throw "macOS Debug build 失败，exit=$($debugBuildResult.ExitCode)"
+    -TimeoutSeconds 180 `
+    -StdoutPath (Join-Path $diagnosticsDir "pod-install.stdout.log") `
+    -StderrPath (Join-Path $diagnosticsDir "pod-install.stderr.log")
+  if ($podInstallResult.ExitCode -ne 0) {
+    throw "macOS CocoaPods 解析失败，exit=$($podInstallResult.ExitCode)"
   }
   New-Item -ItemType Directory -Force `
     -Path $syncDir, (Split-Path -Parent $fixture), $containerReportDir | Out-Null
@@ -671,12 +693,7 @@ try {
       "-configuration", "Debug",
       "-destination", "platform=macOS",
       "-parallel-testing-enabled", "NO",
-      "-derivedDataPath", $derivedData,
-      "LDDC_IT_RUN_ID=$runId",
-      "LDDC_FIXTURE_PATH=$fixture",
-      "LDDC_FIXTURE_SIZE=$fixtureSize",
-      "LDDC_FIXTURE_SHA256=$fixtureSha256",
-      "LDDC_MACOS_HYBRID_SYNC_DIR=$syncDir"
+      "-derivedDataPath", $derivedData
     ) `
     -WorkingDirectory $appRoot `
     -TimeoutSeconds 600 `
@@ -916,6 +933,13 @@ try {
     $message = "macOS hybrid cleanup failure: $($_.Exception.Message)"
     Write-Error $message -ErrorAction Continue
     Write-InfrastructureFailureReports -Message $message -Overwrite
+  }
+  foreach ($environmentName in $previousTestRunnerEnvironment.Keys) {
+    [Environment]::SetEnvironmentVariable(
+      $environmentName,
+      $previousTestRunnerEnvironment[$environmentName],
+      "Process"
+    )
   }
 }
 

@@ -188,6 +188,8 @@ def failures() -> list[str]:
         testable = scheme.getroot().find(".//TestableReference")
         if testable is None or testable.get("parallelizable") != "NO":
             problems.append("iOS UI tests 必须禁用并行执行")
+        if scheme.getroot().find(".//EnvironmentVariables") is not None:
+            problems.append("iOS UI scheme 禁止保留未生效的 build-setting 环境映射")
     except ET.ParseError as error:
         problems.append(f"iOS plist/scheme XML 无效: {error}")
 
@@ -231,11 +233,20 @@ def failures() -> list[str]:
             problems.append(f"iOS XCUITest evidence JSON 缺少稳定类型处理: {marker}")
     if '"error": failure.map' in ios_ui_test:
         problems.append("iOS XCUITest 禁止让 Swift 推断 String/NSNull 混合表达式")
+    if "#if LDDC_PLATFORM_TEST" not in ios_app_delegate:
+        problems.append("iOS 匿名 fixture 写入器必须只编译进 PlatformTest app")
+    platform_test_flag = (
+        'SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG LDDC_PLATFORM_TEST";'
+    )
+    if project.count(platform_test_flag) != 1:
+        problems.append("iOS PlatformTest Swift 编译条件必须只出现在测试 app 配置一次")
     for marker in (
         "security_scoped_fd_read_embedded_lyrics",
         "read_write_fd_tag_saved",
         "saved_tag_reopened_after_app_restart",
         "openLyricsSaveTagSucceeded",
+        "LDDC_PLATFORM_TEST_FIXTURE_BASE64",
+        "LDDC_PLATFORM_TEST_RESET_FIXTURES",
     ):
         if marker not in ios_ui_test and marker not in (
             ROOT / "lddc/lib/src/core/accessibility/app_action_semantics.dart"
@@ -360,24 +371,8 @@ def failures() -> list[str]:
         testable = macos_scheme.getroot().find(".//TestableReference")
         if testable is None or testable.get("parallelizable") != "NO":
             problems.append("macOS UI tests 必须禁用并行执行")
-        fixture_environment = macos_scheme.getroot().find(
-            ".//EnvironmentVariable[@key='LDDC_FIXTURE_PATH']"
-        )
-        if (
-            fixture_environment is None
-            or fixture_environment.get("value") != "$(LDDC_FIXTURE_PATH)"
-            or fixture_environment.get("isEnabled") != "YES"
-        ):
-            problems.append("macOS hybrid UI tests 缺少 fixture path 环境映射")
-        sync_environment = macos_scheme.getroot().find(
-            ".//EnvironmentVariable[@key='LDDC_MACOS_HYBRID_SYNC_DIR']"
-        )
-        if (
-            sync_environment is None
-            or sync_environment.get("value") != "$(LDDC_MACOS_HYBRID_SYNC_DIR)"
-            or sync_environment.get("isEnabled") != "YES"
-        ):
-            problems.append("macOS hybrid UI tests 缺少双向同步目录环境映射")
+        if macos_scheme.getroot().find(".//EnvironmentVariables") is not None:
+            problems.append("macOS UI scheme 禁止保留未生效的 build-setting 环境映射")
     except ET.ParseError as error:
         problems.append(f"macOS UI scheme XML 无效: {error}")
     macos_release_entitlements = (
@@ -387,6 +382,11 @@ def failures() -> list[str]:
         problems.append("macOS Release 缺少桌面歌词 loopback 服务监听权限")
     if "com.apple.security.cs.allow-jit" in macos_release_entitlements:
         problems.append("macOS Release 禁止携带 Debug JIT 权限")
+    macos_unit_tests = (ROOT / "lddc/macos/RunnerTests/RunnerTests.swift").read_text(
+        encoding="utf-8"
+    )
+    if "testHiddenDesktopServiceSurvivesLastWindowBeingHidden" not in macos_unit_tests:
+        problems.append("macOS RunnerTests 缺少隐藏服务生命周期断言")
 
     windows_project = (
         ROOT / "lddc/windows/RunnerPlatformTests/RunnerPlatformTests.csproj"
@@ -544,6 +544,17 @@ def failures() -> list[str]:
     )
     if not protocol_test.is_file():
         problems.append("桌面 IPC 协议包缺少真实进程 E2E")
+    else:
+        protocol_test_source = protocol_test.read_text(encoding="utf-8")
+        if len(re.findall(r"(?m)^\s*test\(", protocol_test_source)) != 1:
+            problems.append("桌面真实进程文件必须只包含一个会生成 evidence 的业务场景")
+        if "probeMacOsControlEndpoint(controlFile)" not in protocol_test_source:
+            problems.append("macOS 真实进程 E2E 缺少 control endpoint 直接探针")
+    control_probe_test = ROOT / (
+        "packages/lddc_desktop_protocol/test/macos_control_probe_test.dart"
+    )
+    if not control_probe_test.is_file():
+        problems.append("桌面协议普通测试缺少 macOS control 端口语义回归")
     media_test = ROOT / (
         "packages/lddc_lyrics_runtime/platform_test/"
         "platform_media_resource_test.dart"
@@ -637,6 +648,7 @@ def failures() -> list[str]:
         "multi-window runtime remains a manual known issue and is not reported as passed",
         "run_platform_media_resource.ps1",
         "Run iOS native unit tests",
+        "--phase ios-native-unit",
         "Restore iOS debug application after Flutter integration",
         "flutter build ios --debug --simulator",
         "-scheme Runner",
@@ -685,7 +697,7 @@ def failures() -> list[str]:
     for required in (
         "process_group_supervisor.py",
         "--phase macos-system-ui-workflow",
-        "--timeout 600",
+        "--timeout 900",
         "workflow-watchdog.json",
         "finalize_macos_system_ui_reports.py",
         "steps.report_finalize.outcome",
@@ -713,6 +725,9 @@ def failures() -> list[str]:
         for required in (
             "run_desktop_process_e2e.ps1 -Platform macos",
             "run_platform_media_resource.ps1 -Platform macos",
+            "Run macOS native unit tests",
+            "--phase macos-native-unit",
+            "steps.native_unit.outcome",
         ):
             if required not in macos_job:
                 problems.append(f"macOS 应用 job 缺少独立平台证据: {required}")
@@ -756,6 +771,9 @@ def failures() -> list[str]:
         "state.scenario -ne $Scenario",
         "Copy-Item -LiteralPath $fixtureSource -Destination $fixture",
         "Write-InfrastructureFailureReports",
+        "TEST_RUNNER_LDDC_IT_RUN_ID",
+        "TEST_RUNNER_LDDC_FIXTURE_PATH",
+        "TEST_RUNNER_LDDC_MACOS_HYBRID_SYNC_DIR",
     ):
         if required not in macos_runner:
             problems.append(f"macOS hybrid runner 缺少协同或失败报告契约: {required}")
@@ -772,9 +790,25 @@ def failures() -> list[str]:
         "Add-PostconditionFailure",
         "if ($testExitCode -eq 0)",
         "--exit-code $effectiveExitCode",
+        "TEST_RUNNER_LDDC_IT_RUN_ID",
+        "TEST_RUNNER_LDDC_FIXTURE_SIZE",
+        "TEST_RUNNER_LDDC_FIXTURE_SHA256",
+        "TEST_RUNNER_LDDC_FIXTURE_BASE64",
+        "Invoke-BoundedNativeCommand",
+        'Phase "ios-xcuitest-build-for-testing"',
+        'Phase "ios-xcresult-summary-$scenario"',
+        'Phase "ios-xcresult-attachments-$scenario"',
+        "$reportingErrors.Count -gt 0",
     ):
         if required not in ios_runner:
             problems.append(f"iOS runner 缺少 Simulator 证据或串行测试契约: {required}")
+    for forbidden in (
+        "& xcodebuild build-for-testing",
+        "& xcodebuild test-without-building",
+        "& xcrun xcresulttool",
+    ):
+        if forbidden in ios_runner:
+            problems.append(f"iOS 外部 Xcode/报告进程禁止绕过硬超时执行器: {forbidden}")
     if "-parallel-testing-enabled NO" not in workflow:
         problems.append("iOS native XCTest 必须禁用并行执行")
     for manual_linux_asset in (

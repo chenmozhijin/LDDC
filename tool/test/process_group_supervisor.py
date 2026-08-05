@@ -174,7 +174,7 @@ def run_supervised(args: argparse.Namespace) -> int:
             if now >= next_heartbeat:
                 elapsed = round(now - started_monotonic, 1)
                 print(
-                    "macOS process supervisor heartbeat: "
+                    "POSIX bounded process heartbeat: "
                     f"phase={args.phase} elapsed={elapsed}s pid={process.pid} "
                     f"pgid={process_group_id} peakProcesses={peak_process_count} "
                     f"peakRss={peak_rss_bytes}",

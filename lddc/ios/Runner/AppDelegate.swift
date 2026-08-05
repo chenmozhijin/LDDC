@@ -9,6 +9,16 @@ import UniformTypeIdentifiers
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    #if LDDC_PLATFORM_TEST
+    do {
+      try IOSPlatformTestFixtureSeeder.seedIfRequested()
+    } catch {
+      // PlatformTest app 若无法准备匿名 fixture，继续启动只会让 Files 选择场景
+      // 以“找不到文件”失败并掩盖真实基础设施原因，因此在测试配置中直接拒绝启动。
+      NSLog("LDDC PlatformTest fixture seed failed: \(error)")
+      return false
+    }
+    #endif
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
@@ -21,6 +31,76 @@ import UniformTypeIdentifiers
     }
   }
 }
+
+#if LDDC_PLATFORM_TEST
+/// 仅编译进 PlatformTest app 的匿名 fixture 写入器。
+///
+/// `xcodebuild test-without-building` 可能在每个 XCUITest 前重新安装应用并更换
+/// Simulator container，宿主脚本提前复制到 Documents 的文件因此不可靠。测试进程
+/// 通过 launch environment 传入仓库内匿名 fixture，应用仍把它写入真实 Documents，
+/// 后续 UIDocumentPicker、security-scoped fd 与 TagLib 全部继续走生产实现。
+private enum IOSPlatformTestFixtureSeeder {
+  private static let fixtureNameKey = "LDDC_PLATFORM_TEST_FIXTURE_NAME"
+  private static let fixtureBase64Key = "LDDC_PLATFORM_TEST_FIXTURE_BASE64"
+  private static let resetKey = "LDDC_PLATFORM_TEST_RESET_FIXTURES"
+
+  static func seedIfRequested(
+    environment: [String: String] = ProcessInfo.processInfo.environment,
+    fileManager: FileManager = .default
+  ) throws {
+    guard let rawName = environment[fixtureNameKey],
+          !rawName.isEmpty,
+          URL(fileURLWithPath: rawName).lastPathComponent == rawName,
+          !rawName.contains("/"),
+          !rawName.contains("\\")
+    else {
+      throw seedError("fixture name 缺失或不是单一文件名")
+    }
+    guard let rawBase64 = environment[fixtureBase64Key],
+          let bytes = Data(base64Encoded: rawBase64),
+          !bytes.isEmpty
+    else {
+      throw seedError("fixture base64 缺失或无效")
+    }
+    guard let documents = fileManager.urls(
+      for: .documentDirectory,
+      in: .userDomainMask
+    ).first else {
+      throw seedError("无法解析 PlatformTest Documents 目录")
+    }
+    try fileManager.createDirectory(
+      at: documents,
+      withIntermediateDirectories: true,
+      attributes: nil
+    )
+
+    let shouldReset = environment[resetKey] == "1"
+    if shouldReset {
+      // PlatformTest 使用独立 bundle id 和独立容器。每个 XCTest 首次启动只清理
+      // 该测试容器，避免前一场景的导出物或已写标签音频污染下一场景。
+      for entry in try fileManager.contentsOfDirectory(
+        at: documents,
+        includingPropertiesForKeys: nil
+      ) {
+        try fileManager.removeItem(at: entry)
+      }
+    }
+
+    let fixtureURL = documents.appendingPathComponent(rawName, isDirectory: false)
+    if shouldReset || !fileManager.fileExists(atPath: fixtureURL.path) {
+      try bytes.write(to: fixtureURL, options: .atomic)
+    }
+  }
+
+  private static func seedError(_ message: String) -> NSError {
+    NSError(
+      domain: "LDDCPlatformTestFixtureSeeder",
+      code: 1,
+      userInfo: [NSLocalizedDescriptionKey: message]
+    )
+  }
+}
+#endif
 
 private struct IOSOpenedAudioFileHandle {
   let url: URL
@@ -420,6 +500,11 @@ private final class IOSSearchAudioTagPlugin: NSObject,
       )
     }
 
+    // Files 默认可能隐藏扩展名，用户会看不到同名不同格式的区别，XCUITest 也无法
+    // 用真实文件名确认选择产物。显式显示扩展名属于用户可见的文件选择修复，不是
+    // 测试专用分支，且不会改变返回 URL 或 security-scoped 访问语义。
+    picker.shouldShowFileExtensions = true
+
     if #available(iOS 13.0, *),
       let initialDirectoryURL = resolveInitialDirectoryURL(arguments?["initialDirectory"])
     {
@@ -441,6 +526,10 @@ private final class IOSSearchAudioTagPlugin: NSObject,
         in: .exportToService
       )
     }
+
+    // 导出界面同样保留扩展名，避免用户误判最终格式，并让宿主后验检查与系统界面
+    // 显示使用同一个文件名契约。
+    picker.shouldShowFileExtensions = true
 
     if #available(iOS 13.0, *),
       let initialDirectoryURL = resolveInitialDirectoryURL(arguments["initialDirectory"])

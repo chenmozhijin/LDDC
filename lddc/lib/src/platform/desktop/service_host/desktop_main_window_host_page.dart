@@ -305,13 +305,17 @@ class _DesktopMainWindowHostPageState
       _mainWindowLogger.info(
         'forceCloseApplication setPreventClose(false) done',
       );
-      await windowManager.close();
+      // macOS 需要允许隐藏主窗口长期承载桌面歌词服务，因此 AppDelegate 不再依赖
+      // “最后窗口关闭后自动退出”。bootstrap.dispose() 会幂等撤销 endpoint、关闭
+      // singleton 控制端并释放锁；完成后再显式销毁应用，避免新客户端连接退出中的服务。
+      await _bootstrap?.dispose();
+      await windowManager.destroy();
       _lifecycleRegistry.markClosed(
         lifecycleRef,
-        reason: 'main-window-close-returned',
+        reason: 'main-window-destroy-returned',
       );
       _mainWindowLogger.info(
-        'forceCloseApplication windowManager.close() returned',
+        'forceCloseApplication windowManager.destroy() returned',
       );
     } finally {
       _forceCloseInFlight = false;

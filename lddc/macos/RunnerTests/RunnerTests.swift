@@ -4,6 +4,14 @@ import XCTest
 @testable import Runner
 
 final class RunnerTests: XCTestCase {
+  func testHiddenDesktopServiceSurvivesLastWindowBeingHidden() {
+    let delegate = AppDelegate()
+
+    // 后台桌面歌词服务会把主窗口移出屏幕但继续监听 loopback。最后窗口不可见时
+    // 不能由 AppKit 自动结束进程，真正退出统一经过 Dart 退出守卫完成资源回收。
+    XCTAssertFalse(delegate.applicationShouldTerminateAfterLastWindowClosed(NSApplication.shared))
+  }
+
   func testReleaseMetadataMatchesBundle() {
     let info = Bundle.main.infoDictionary
 

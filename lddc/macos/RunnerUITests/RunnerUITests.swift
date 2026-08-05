@@ -431,7 +431,9 @@ final class RunnerUITests: XCTestCase {
 
   private func require(_ condition: @autoclosure () -> Bool, _ message: String) throws {
     guard condition() else {
-      XCTFail(message)
+      // continueAfterFailure=false 时先调用 XCTFail 会立即中断当前方法，使外层
+      // catch 无法写回 native_failed、截图和 evidence。直接抛错后由 XCTest 记录
+      // thrown error，仍保留完整的 hybrid 失败清理与诊断链路。
       throw failure(message)
     }
   }

@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:lddc_desktop_protocol/lddc_desktop_protocol.dart';
 import 'package:test/test.dart';
+
+import 'support/macos_control_probe.dart';
 
 void main() {
   test('真实桌面进程完成单实例、IPC 创建更新删除和自动退出', () async {
@@ -14,10 +15,12 @@ void main() {
     final List<Process> primaryProcesses = <Process>[];
     final List<Future<void>> logDrains = <Future<void>>[];
     Socket? socket;
-    _SocketFrameReader? reader;
+    TestSocketFrameReader? reader;
     Object? failure;
     StackTrace? failureStack;
     int finalChildProcessCount = 0;
+    int finalControlFileCount = 0;
+    int finalControlLockHeldCount = 0;
     try {
       final Process hiddenPrimary = await Process.start(
         environment.executable,
@@ -63,7 +66,7 @@ void main() {
         if (!primaryAlive) {
           throw StateError('macOS 隐藏主进程在 control endpoint 探测前退出');
         }
-        directlyProbedPort = await _probeMacOsControlEndpoint(controlFile);
+        directlyProbedPort = await probeMacOsControlEndpoint(controlFile);
         evidence
           ..diagnostic('directControlProbeSucceeded', true)
           ..add(
@@ -96,7 +99,7 @@ void main() {
         port,
         timeout: const Duration(seconds: 5),
       );
-      reader = _SocketFrameReader(socket);
+      reader = TestSocketFrameReader(socket);
       const DesktopIpcFramer framer = DesktopIpcFramer();
       socket.add(
         framer.encodeJson(
@@ -162,6 +165,18 @@ void main() {
         const Duration(seconds: 15),
       );
       expect(hiddenPrimaryExitCode, 0);
+      if (controlFile != null) {
+        await _waitForMacOsControlResourcesReleased(controlFile);
+        evidence
+          ..add(
+            'resourceCleanup',
+            'macos_control_endpoint_unpublished_after_graceful_exit',
+          )
+          ..add(
+            'resourceCleanup',
+            'macos_control_lock_released_after_graceful_exit',
+          );
+      }
       evidence.add('nativeChannels', 'instance_deleted');
       evidence.add(
         'desktopProcess',
@@ -261,9 +276,7 @@ void main() {
           finalChildProcessCount += 1;
         }
       }
-      if (finalChildProcessCount == 0) {
-        evidence.add('resourceCleanup', 'process_socket_and_instance_released');
-      } else {
+      if (finalChildProcessCount != 0) {
         failure ??= StateError('桌面进程 E2E 清理后仍有子进程存活');
         failureStack ??= StackTrace.current;
       }
@@ -272,12 +285,45 @@ void main() {
       }
       final File? controlFile = environment.controlFile;
       if (controlFile != null) {
+        bool removedByHarness = false;
+        if (await controlFile.exists()) {
+          // forwarding primary 需要保留可见窗口来证明第二实例转发，测试末尾只能由
+          // harness 强制结束它。若强制结束留下 endpoint，必须明确记录并删除，不能
+          // 把 harness 清理伪装成生产代码的正常退出证据。
+          await controlFile.delete();
+          removedByHarness = true;
+        }
+        finalControlFileCount = await controlFile.exists() ? 1 : 0;
+        final File controlLockFile = File(
+          '${controlFile.parent.path}${Platform.pathSeparator}control.lock',
+        );
+        finalControlLockHeldCount =
+            await _isMacOsControlLockReleased(controlLockFile) ? 0 : 1;
         evidence.diagnostic(
           'controlFileExistsAfterProcessCleanup',
-          await controlFile.exists(),
+          finalControlFileCount != 0,
         );
+        evidence
+          ..diagnostic('controlFileRemovedByHarness', removedByHarness)
+          ..diagnostic(
+            'controlLockHeldAfterProcessCleanup',
+            finalControlLockHeldCount != 0,
+          );
       }
-      await evidence.write(failure, finalChildProcessCount);
+      if (finalChildProcessCount == 0 &&
+          finalControlFileCount == 0 &&
+          finalControlLockHeldCount == 0) {
+        evidence.add('resourceCleanup', 'process_socket_and_instance_released');
+      } else {
+        failure ??= StateError('桌面进程 E2E 最终资源没有回到基线');
+        failureStack ??= StackTrace.current;
+      }
+      await evidence.write(
+        failure,
+        finalChildProcessCount,
+        finalControlFileCount,
+        finalControlLockHeldCount,
+      );
     }
     if (failure != null) {
       Error.throwWithStackTrace(failure, failureStack ?? StackTrace.current);
@@ -377,7 +423,12 @@ final class _ProcessEvidence {
     _diagnostics[name] = value;
   }
 
-  Future<void> write(Object? failure, int finalChildProcessCount) async {
+  Future<void> write(
+    Object? failure,
+    int finalChildProcessCount,
+    int finalControlFileCount,
+    int finalControlLockHeldCount,
+  ) async {
     final Map<String, Object?> payload = <String, Object?>{
       'runId': environment.runId,
       'scenario': 'desktop_real_process',
@@ -393,9 +444,21 @@ final class _ProcessEvidence {
       ],
       'capabilityEvidence': _actions,
       'resources': <String, Object?>{
-        'baseline': <String, Object?>{'childProcessCount': 0},
-        'final': <String, Object?>{'childProcessCount': finalChildProcessCount},
-        'thresholds': <String, Object?>{'childProcessCount': 0},
+        'baseline': <String, Object?>{
+          'childProcessCount': 0,
+          'controlFileCount': 0,
+          'controlLockHeldCount': 0,
+        },
+        'final': <String, Object?>{
+          'childProcessCount': finalChildProcessCount,
+          'controlFileCount': finalControlFileCount,
+          'controlLockHeldCount': finalControlLockHeldCount,
+        },
+        'thresholds': <String, Object?>{
+          'childProcessCount': 0,
+          'controlFileCount': 0,
+          'controlLockHeldCount': 0,
+        },
       },
       'artifacts': <Object?>[],
       // 诊断只保存结果级布尔值、退出码和端口；绝不复制 endpoint 路径或 token。
@@ -410,56 +473,6 @@ final class _ProcessEvidence {
       environment.evidenceFile.deleteSync();
     }
     await temporary.rename(environment.evidenceFile.path);
-  }
-}
-
-final class _SocketFrameReader {
-  _SocketFrameReader(this._socket) : _subscription = _socket.listen(null) {
-    _subscription
-      ..onData(_handleChunk)
-      ..onDone(_closePending)
-      ..onError((Object _, StackTrace _) => _closePending());
-  }
-
-  final DesktopIpcFrameBuffer _buffer = DesktopIpcFrameBuffer();
-  final Socket _socket;
-  final List<Map<String, Object?>> _pending = <Map<String, Object?>>[];
-  final List<Completer<Map<String, Object?>>> _waiters =
-      <Completer<Map<String, Object?>>>[];
-  final StreamSubscription<List<int>> _subscription;
-
-  void _handleChunk(List<int> chunk) {
-    for (final Uint8List frame in _buffer.addChunk(chunk)) {
-      final Map<String, Object?> payload = Map<String, Object?>.from(
-        jsonDecode(utf8.decode(frame))! as Map<Object?, Object?>,
-      );
-      if (_waiters.isEmpty) {
-        _pending.add(payload);
-      } else {
-        _waiters.removeAt(0).complete(payload);
-      }
-    }
-  }
-
-  void _closePending() {
-    while (_waiters.isNotEmpty) {
-      _waiters.removeAt(0).completeError(StateError('服务在返回 IPC 帧前关闭连接'));
-    }
-  }
-
-  Future<Map<String, Object?>> nextFrame() {
-    if (_pending.isNotEmpty) {
-      return Future<Map<String, Object?>>.value(_pending.removeAt(0));
-    }
-    final Completer<Map<String, Object?>> completer =
-        Completer<Map<String, Object?>>();
-    _waiters.add(completer);
-    return completer.future;
-  }
-
-  Future<void> dispose() async {
-    await _subscription.cancel();
-    _socket.destroy();
   }
 }
 
@@ -561,55 +574,40 @@ Future<void> _waitForPrimaryBootstrap(
   );
 }
 
-Future<int> _probeMacOsControlEndpoint(File controlFile) async {
-  final Object? decoded = jsonDecode(await controlFile.readAsString());
-  if (decoded is! Map<Object?, Object?>) {
-    throw const FormatException('macOS control.json 必须是 JSON 对象');
-  }
-  final Map<String, Object?> endpoint = <String, Object?>{
-    for (final MapEntry<Object?, Object?> entry in decoded.entries)
-      entry.key.toString(): entry.value,
-  };
-  expect(endpoint.keys.toSet(), <String>{
-    'schema',
-    'port',
-    'token',
-  }, reason: 'control.json 必须保持现有 v1 三字段契约');
-  expect(endpoint['schema'], 'lddc.macos_singleton_control');
-  final Object? rawPort = endpoint['port'];
-  final Object? rawToken = endpoint['token'];
-  if (rawPort is! int || rawPort <= 0 || rawPort > 65535) {
-    throw const FormatException('macOS control.json 端口无效');
-  }
-  if (rawToken is! String || !RegExp(r'^[0-9a-f]{64}$').hasMatch(rawToken)) {
-    throw const FormatException('macOS control.json token 无效');
-  }
-
-  final Socket socket = await Socket.connect(
-    InternetAddress.loopbackIPv4,
-    rawPort,
-    timeout: const Duration(seconds: 5),
+Future<void> _waitForMacOsControlResourcesReleased(File controlFile) async {
+  final File controlLockFile = File(
+    '${controlFile.parent.path}${Platform.pathSeparator}control.lock',
   );
-  final _SocketFrameReader reader = _SocketFrameReader(socket);
-  try {
-    const DesktopIpcFramer framer = DesktopIpcFramer();
-    final Uint8List request = framer.encodeJson(<String, Object?>{
-      '_lddcControl': 1,
-      'token': rawToken,
-      'command': 'get_service_port',
-    });
-    expect(request.length, lessThanOrEqualTo(4 * 1024 + 4));
-    socket.add(request);
-    await socket.flush();
-    final Map<String, Object?> response = await reader.nextFrame().timeout(
-      const Duration(seconds: 5),
+  final DateTime deadline = DateTime.now().add(const Duration(seconds: 5));
+  while (DateTime.now().isBefore(deadline)) {
+    final bool endpointRemoved = !await controlFile.exists();
+    final bool lockReleased = await _isMacOsControlLockReleased(
+      controlLockFile,
     );
-    expect(response['_lddcControl'], 1);
-    expect(response['ok'], isTrue);
-    expect(response['port'], rawPort);
-    return rawPort;
+    if (endpointRemoved && lockReleased) {
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+  }
+  throw StateError('macOS 隐藏主进程正常退出后未撤销 control endpoint 或释放锁');
+}
+
+Future<bool> _isMacOsControlLockReleased(File lockFile) async {
+  final Directory parent = lockFile.parent;
+  if (!await parent.exists()) {
+    return true;
+  }
+  final RandomAccessFile probe = await lockFile.open(mode: FileMode.append);
+  try {
+    try {
+      await probe.lock(FileLock.exclusive);
+    } on FileSystemException {
+      return false;
+    }
+    await probe.unlock();
+    return true;
   } finally {
-    await reader.dispose();
+    await probe.close();
   }
 }
 
