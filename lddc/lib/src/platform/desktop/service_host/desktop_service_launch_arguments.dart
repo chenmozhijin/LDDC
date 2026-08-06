@@ -26,17 +26,25 @@ class DesktopServiceLaunchArguments {
     bool notShow = false;
     String? parseError;
 
-    for (final String rawArg in args) {
-      final String arg = rawArg.trim();
+    for (int index = 0; index < args.length; index += 1) {
+      final String arg = args[index].trim();
       switch (arg) {
         case '--get-service-port':
           getServicePort = true;
         case '--not-show':
           notShow = true;
         case '-NSTreatUnknownArgumentsAsOpen':
-          // App-hosted XCTest 会由 AppKit 注入该标准启动参数。它不属于 LDDC
-          // 的桌面服务 CLI，也不应让宿主在 XCTest bundle check-in 前退出。
-          // 这里只接受已确认的精确参数，其他未知参数仍保持严格失败。
+          // App-hosted XCTest 会由 AppKit 注入这个标准参数，并在
+          // 后面跟随单独的 YES/NO 值。两者都不属于 LDDC 桌面服务
+          // CLI；如果只忽略标志而留下 NO，应用会在 XCTest runner check-in
+          // 之前因“未知参数”退出。这里只消耗精确的 YES/NO；其他
+          // 跟随值依旧作为未知参数报错，不放宽公共 CLI。
+          if (index + 1 < args.length) {
+            final String value = args[index + 1].trim();
+            if (value == 'YES' || value == 'NO') {
+              index += 1;
+            }
+          }
           continue;
         case '':
           continue;

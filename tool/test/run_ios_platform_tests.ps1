@@ -8,6 +8,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# XCTest 内部仍使用 ScenarioTimeoutSeconds 作为真实测试动作的硬上限。
+# xcodebuild 在测试已结束后还需要有界写入 xcresult 的 Info.plist、
+# attachments 和 summary。外层多留 90 秒只用于报告收尾，不延长
+# Document Picker 操作、断言或业务等待；超过该边界仍会回收整个进程组。
+$xcodeResultFinalizationTimeoutSeconds = $ScenarioTimeoutSeconds + 90
+
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $appRoot = Join-Path $repoRoot "lddc"
 $normalizer = Join-Path $repoRoot "tool/test/normalize_integration_report.py"
@@ -130,7 +136,7 @@ function Invoke-BoundedXcodeTest {
     -Phase "ios-xcuitest-$Method-$Attempt" `
     -FilePath "xcodebuild" `
     -Arguments $arguments `
-    -TimeoutSeconds $ScenarioTimeoutSeconds `
+    -TimeoutSeconds $xcodeResultFinalizationTimeoutSeconds `
     -StdoutPath (Join-Path $rawDir "$Method.$Attempt.xcodebuild.stdout.log") `
     -StderrPath (Join-Path $rawDir "$Method.$Attempt.xcodebuild.stderr.log")
 }

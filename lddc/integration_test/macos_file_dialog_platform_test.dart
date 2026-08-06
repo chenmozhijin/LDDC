@@ -84,10 +84,30 @@ void main() {
           await openLyrics.openSongFile();
           await pumpUntil(
             tester,
-            () => !container.read(openLyricsPageControllerProvider).isOpening,
+            () {
+              final OpenLyricsPageState state = container.read(
+                openLyricsPageControllerProvider,
+              );
+              if (_dialogAction == 'select') {
+                return !state.isOpening &&
+                    state.inputType == OpenLyricsInputType.songFile &&
+                    state.inputName == 'audio_sample.mp3' &&
+                    state.inputPath != null &&
+                    state.rawText.contains('Hello LDDC');
+              }
+              return !state.isOpening &&
+                  state.inputType == null &&
+                  state.inputName.isEmpty &&
+                  state.audioFileHandle == null;
+            },
             timeout: const Duration(seconds: 30),
-            reason: '等待 XCUITest 操作真实 NSOpenPanel 并返回 Flutter',
+            reason: _dialogAction == 'select'
+                ? '等待 NSOpenPanel 选择结果和嵌入歌词返回 Flutter'
+                : '等待 NSOpenPanel 取消且 Flutter 保持空输入',
           );
+          // 只有业务结果已经收敛才发布 completed。面板关闭但
+          // 没有返回文件的情况会在上方有界等待中失败，并写入
+          // flutter_failed，避免 XCUITest 把“关闭”误报为“选择成功”。
           await _writeHybridState(
             runId: runtime.runId,
             scenario: scenarioName,

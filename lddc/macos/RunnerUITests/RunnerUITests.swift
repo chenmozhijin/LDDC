@@ -45,6 +45,9 @@ final class RunnerUITests: XCTestCase {
       guard let fixturePath = ProcessInfo.processInfo.environment["LDDC_FIXTURE_PATH"] else {
         throw failure("缺少 fixture path")
       }
+      let fixtureURL = URL(fileURLWithPath: fixturePath, isDirectory: false)
+      let fixtureDirectory = fixtureURL.deletingLastPathComponent().path
+      let fixtureName = fixtureURL.lastPathComponent
       panel.application.typeKey("g", modifierFlags: [.command, .shift])
       // “前往文件夹”是系统面板内的第二层原生 sheet。优先在实际面板拥有者中
       // 查询，再检查其 sheet；不使用屏幕坐标或图像识别兜底。
@@ -56,10 +59,29 @@ final class RunnerUITests: XCTestCase {
       guard let pathField = firstExistingElement(pathFields, timeout: 10) else {
         throw failure("NSOpenPanel 没有打开可访问的前往文件夹输入框")
       }
-      pathField.typeText(fixturePath)
+      // “前往文件夹”只输入 fixture 的父目录。把完整文件路径
+      // 交给该 sheet 只能证明面板关闭，不能证明列表中的文件真正
+      // 被选中。进入父目录后再精确点击文件名，使原生动作与
+      // Flutter 最终收到的选择结果形成同一条证据链。
+      pathField.typeText(fixtureDirectory)
       panel.application.typeKey(.enter, modifierFlags: [])
+      try require(
+        waitForElementToDisappear(pathField, timeout: 10),
+        "NSOpenPanel 的前往文件夹 sheet 没有关闭"
+      )
+      let fixtureCandidates = [
+        panel.root.staticTexts[fixtureName],
+        panel.root.cells[fixtureName],
+      ]
+      guard let fixture = firstHittableElement(fixtureCandidates, timeout: 10) else {
+        throw failure("NSOpenPanel 没有暴露可点击的精确 fixture 文件名")
+      }
+      fixture.click()
       let openButton = panel.root.buttons["Open"]
-      try require(openButton.waitForExistence(timeout: 10), "NSOpenPanel 没有可访问的打开按钮")
+      try require(
+        waitForHittableElement(openButton, timeout: 10),
+        "选中精确 fixture 后 NSOpenPanel 的打开按钮不可点击"
+      )
       openButton.click()
     }
   }
@@ -275,6 +297,41 @@ final class RunnerUITests: XCTestCase {
       Thread.sleep(forTimeInterval: 0.1)
     } while Date() < deadline
     return nil
+  }
+
+  private func firstHittableElement(
+    _ candidates: [XCUIElement],
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if let element = candidates.first(where: { $0.exists && $0.isHittable }) {
+        return element
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return nil
+  }
+
+  private func waitForHittableElement(
+    _ element: XCUIElement,
+    timeout: TimeInterval
+  ) -> Bool {
+    firstHittableElement([element], timeout: timeout) != nil
+  }
+
+  private func waitForElementToDisappear(
+    _ element: XCUIElement,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if !element.exists {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return false
   }
 
   private func waitForRunningApplication(_ app: XCUIApplication, timeout: TimeInterval) -> Bool {

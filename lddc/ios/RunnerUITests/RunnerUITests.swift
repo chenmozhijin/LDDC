@@ -236,7 +236,7 @@ final class RunnerUITests: XCTestCase {
       return
     }
 
-    let browse = try requireTypedButton(named: "Browse", in: picker, timeout: 15)
+    let browse = try requireBrowseButton(in: picker, timeout: 15)
     browse.tap()
     try require(
       waitForBrowseDestination(app: app, timeout: 15),
@@ -354,11 +354,30 @@ final class RunnerUITests: XCTestCase {
     in picker: SystemPickerContext,
     timeout: TimeInterval
   ) throws -> XCUIElement {
-    let button = picker.root.buttons.matching(
-      NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", name, name)
-    ).firstMatch
+    // iOS 26 的远程 Document Picker 会在 hierarchy 中暴露精确的
+    // typed Button，但对同一子树使用 NSPredicate + firstMatch 会得到
+    // 不可点击的查询代理。使用 XCUITest 原生精确下标同时限定
+    // 了控件类型和名称，不依赖坐标、contains 或系统进程前台状态。
+    let button = picker.root.buttons[name]
     try require(waitForHittable(button, timeout: timeout), "系统文件界面没有可点击的 \(name) 按钮")
     return button
+  }
+
+  private func requireBrowseButton(
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) throws -> XCUIElement {
+    // iOS 26.5 的 Browse 位于固定的 typed TabBar 中。直接从该容器查询可以
+    // 避免远程 Picker 根节点对 buttons 查询返回不可命中的代理，同时仍然只
+    // 接受精确 identifier 和精确 Button label，不回退到 .any 或坐标。
+    let modeTabBar = picker.root.tabBars["DOC.browsingModeTabBar"]
+    try require(
+      waitForHittable(modeTabBar, timeout: timeout),
+      "系统文件界面没有暴露可操作的浏览模式 TabBar"
+    )
+    let browse = modeTabBar.buttons["Browse"]
+    try require(waitForHittable(browse, timeout: timeout), "系统文件界面没有可点击的 Browse 按钮")
+    return browse
   }
 
   private func fixtureCell(in picker: SystemPickerContext) -> XCUIElement {
@@ -451,9 +470,7 @@ final class RunnerUITests: XCTestCase {
 
   private func cancelSystemPicker(app: XCUIApplication) throws {
     let picker = try waitForSystemPicker(app: app, timeout: 5)
-    let cancel = picker.root.buttons.matching(
-      NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")
-    ).firstMatch
+    let cancel = picker.root.buttons["Cancel"]
     if cancel.exists {
       try require(waitForHittable(cancel, timeout: 3), "系统 Picker 的 typed Cancel 按钮存在但不可点击")
       cancel.tap()

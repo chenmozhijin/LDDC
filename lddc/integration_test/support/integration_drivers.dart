@@ -70,10 +70,21 @@ class SearchDriver {
     await tapVisible(tester, searchBar, reason: '等待搜索输入框可点击');
     await tester.enterText(input, keyword);
     await pumpForInteraction(tester);
-    final EditableText editable = tester.widget<EditableText>(input);
-    if (editable.controller.text != keyword) {
-      throw StateError('搜索输入框没有保存测试输入');
-    }
+    // 窄屏预览弹层关闭时，SearchWorkspace 可能还有一个携带旧关键词的
+    // post-frame 同步任务。单帧后立即读取 controller 会把正常的下一帧回写误判
+    // 为输入失败。这里只有界地等待当前唯一 EditableText 收敛到用户输入，
+    // 不放宽业务超时，也不接受旧值或重复输入框。
+    await pumpUntil(
+      tester,
+      () {
+        if (input.evaluate().length != 1) {
+          return false;
+        }
+        return tester.widget<EditableText>(input).controller.text == keyword;
+      },
+      timeout: const Duration(seconds: 5),
+      reason: '搜索输入框没有收敛到测试输入',
+    );
   }
 
   Future<void> selectSource(Source source) async {
@@ -356,11 +367,15 @@ class LocalMatchDriver {
     final Finder tile = find.byKey(
       const ValueKey<String>('local_match_skip_existing_checkbox'),
     );
-    // 该 key 标记的是用户实际点击的 CheckboxListTile。Linux 的 Flutter
-    // desktop hit-test 树不保证内部 Checkbox 代理节点单独可命中；使用子
-    // Checkbox 会让驱动在目标可见时仍然超时。保持整行目标，既覆盖真实
-    // onTap，也让三桌面复用同一套严格的可见性和遮挡检查。
-    await tapVisible(tester, tile, reason: '等待“跳过已有歌词”复选框可点击');
+    final CheckboxListTile tileWidget = tester.widget<CheckboxListTile>(tile);
+    final Widget title =
+        tileWidget.title ?? (throw StateError('“跳过已有歌词”选项缺少可点击标题'));
+    // key 继续标记整个 CheckboxListTile，用于确认业务控件唯一。
+    // Linux 的 RenderObject 命中树中，整行 Element 本身不一定是指针命中
+    // 节点，但用户看到的 title 位于真实 ListTile 手势区内。从当前
+    // CheckboxListTile 实例取出该 title 并严格检查 hit-test，不使用坐标，
+    // 也不绕过遮挡检查。
+    await tapVisible(tester, find.byWidget(title), reason: '等待“跳过已有歌词”选项行可点击');
   }
 
   Future<void> tapStartOrCancel() async {

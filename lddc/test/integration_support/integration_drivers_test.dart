@@ -92,6 +92,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('SearchDriver 等待弹层关闭后的输入控制器最终收敛', (WidgetTester tester) async {
+    final GlobalKey<_DelayedSearchControllerProbeState> probeKey =
+        GlobalKey<_DelayedSearchControllerProbeState>();
+    await tester.pumpWidget(
+      MaterialApp(home: _DelayedSearchControllerProbe(key: probeKey)),
+    );
+
+    await SearchDriver(tester).enterKeyword('song-id-42');
+
+    expect(probeKey.currentState!.controller.text, 'song-id-42');
+    expect(probeKey.currentState!.staleWriteExecuted, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('持续 SnackBar 不阻塞未被遮挡的本地匹配操作', (WidgetTester tester) async {
     final GlobalKey<ScaffoldMessengerState> messengerKey =
         GlobalKey<ScaffoldMessengerState>();
@@ -199,4 +213,54 @@ void main() {
     expect(tappedCount, 0);
     expect(tester.takeException(), isNull);
   });
+}
+
+class _DelayedSearchControllerProbe extends StatefulWidget {
+  const _DelayedSearchControllerProbe({super.key});
+
+  @override
+  State<_DelayedSearchControllerProbe> createState() =>
+      _DelayedSearchControllerProbeState();
+}
+
+class _DelayedSearchControllerProbeState
+    extends State<_DelayedSearchControllerProbe> {
+  final TextEditingController controller = TextEditingController(
+    text: 'previous-keyword',
+  );
+  bool staleWriteExecuted = false;
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SearchBar(
+        key: const ValueKey<String>('search_toolbar_search_bar'),
+        controller: controller,
+        onChanged: (String value) {
+          // 模拟紧凑布局关闭预览弹层时已排队的旧状态回写：
+          // 第一个 post-frame 先短暂恢复旧值，下一帧再由最新业务状态
+          // 重建为用户输入。测试驱动必须等待第二步，不能把瞬时旧值
+          // 误判为业务失败。
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) {
+              return;
+            }
+            staleWriteExecuted = true;
+            controller.text = 'previous-keyword';
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                controller.text = value;
+              }
+            });
+          });
+        },
+      ),
+    );
+  }
 }

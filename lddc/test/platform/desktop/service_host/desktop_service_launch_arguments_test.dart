@@ -29,7 +29,31 @@ void main() {
       expect(args.hasParseError, isTrue);
     });
 
-    test('AppKit 的 XCTest 宿主参数不参与桌面服务 CLI 解析', () {
+    test('AppKit 的 XCTest 宿主参数和 NO 值不参与 CLI 解析', () {
+      final DesktopServiceLaunchArguments args =
+          DesktopServiceLaunchArguments.parse(<String>[
+            '-NSTreatUnknownArgumentsAsOpen',
+            'NO',
+            '--not-show',
+          ]);
+
+      expect(args.notShow, isTrue);
+      expect(args.parseError, isNull);
+    });
+
+    test('AppKit 的 XCTest 宿主参数接受 YES 值', () {
+      final DesktopServiceLaunchArguments args =
+          DesktopServiceLaunchArguments.parse(<String>[
+            '-NSTreatUnknownArgumentsAsOpen',
+            'YES',
+            '--get-service-port',
+          ]);
+
+      expect(args.getServicePort, isTrue);
+      expect(args.parseError, isNull);
+    });
+
+    test('AppKit 宿主参数缺少值时不吞掉后续 LDDC 参数', () {
       final DesktopServiceLaunchArguments args =
           DesktopServiceLaunchArguments.parse(<String>[
             '-NSTreatUnknownArgumentsAsOpen',
@@ -38,6 +62,18 @@ void main() {
 
       expect(args.notShow, isTrue);
       expect(args.parseError, isNull);
+    });
+
+    test('AppKit 宿主参数后的非布尔值仍严格报错', () {
+      final DesktopServiceLaunchArguments args =
+          DesktopServiceLaunchArguments.parse(<String>[
+            '-NSTreatUnknownArgumentsAsOpen',
+            'MAYBE',
+            '--not-show',
+          ]);
+
+      expect(args.notShow, isTrue);
+      expect(args.parseError, '未知桌面服务参数：MAYBE');
     });
 
     test('无参数时不产生解析错误', () {

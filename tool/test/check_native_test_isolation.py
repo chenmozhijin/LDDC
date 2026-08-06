@@ -289,12 +289,14 @@ def failures() -> list[str]:
         "typedSystemPickerRoot(in: app)",
         'application.otherElements["Browse View (Picker)"]',
         'NSPredicate(format: "identifier BEGINSWITH %@", documentBrowsingRootPrefix)',
-        "picker.root.buttons.matching(",
+        "picker.root.buttons[name]",
+        'picker.root.buttons["Cancel"]',
+        'picker.root.tabBars["DOC.browsingModeTabBar"]',
+        'modeTabBar.buttons["Browse"]',
         "picker.root.cells.matching(",
         "picker.root.links.matching(",
         'private let fixtureAccessibilityName = "audio_sample, mp3"',
         'requireTypedButton(named: "Save"',
-        'NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")',
         '"On My iPhone"',
         'private let platformTestDisplayName = "LDDC Platform Tests"',
         "if documents.state != .notRunning",
@@ -350,6 +352,8 @@ def failures() -> list[str]:
     for marker in (
         '"-test-timeouts-enabled", "YES"',
         '"-maximum-test-execution-time-allowance", "$ScenarioTimeoutSeconds"',
+        "$xcodeResultFinalizationTimeoutSeconds = $ScenarioTimeoutSeconds + 90",
+        "-TimeoutSeconds $xcodeResultFinalizationTimeoutSeconds",
     ):
         if marker not in ios_runner:
             problems.append(f"iOS XCUITest runner 缺少原生执行超时: {marker}")
@@ -830,6 +834,9 @@ def failures() -> list[str]:
         "state: 'picker_requested'",
         "state: 'flutter_completed'",
         "state: 'flutter_failed'",
+        "state.inputType == OpenLyricsInputType.songFile",
+        "state.inputName == 'audio_sample.mp3'",
+        "state.rawText.contains('Hello LDDC')",
         "Error.throwWithStackTrace(error, stackTrace)",
     ):
         if required not in macos_flutter_test:
@@ -850,6 +857,10 @@ def failures() -> list[str]:
         "waitForRunningApplication",
         "NSWorkspace.shared.runningApplications",
         "currentPanelServices",
+        "fixtureURL.deletingLastPathComponent().path",
+        "panel.root.staticTexts[fixtureName]",
+        "panel.root.cells[fixtureName]",
+        "firstHittableElement(fixtureCandidates",
         'expectedState: "picker_requested"',
         'expectedState: "flutter_completed"',
         'state.state == "flutter_failed"',
@@ -870,6 +881,7 @@ def failures() -> list[str]:
         '"native_failed"',
         "--lddc-enable-accessibility-for-ui-test",
         "lddc-open-lyrics",
+        "pathField.typeText(fixturePath)",
     ):
         if forbidden in macos_ui_tests:
             problems.append(f"macOS hybrid XCUITest 禁止启动应用或查询 Flutter 控件: {forbidden}")
