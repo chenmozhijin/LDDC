@@ -35,7 +35,7 @@ class DesktopServiceLaunchArguments {
           notShow = true;
         case '-NSTreatUnknownArgumentsAsOpen':
           // App-hosted XCTest 会由 AppKit 注入这个标准参数，并在
-          // 后面跟随单独的 YES/NO 值。两者都不属于 LDDC 桌面服务
+          // 后面跟随单独的 YES/NO 值。该参数不属于 LDDC 桌面服务
           // CLI；如果只忽略标志而留下 NO，应用会在 XCTest runner check-in
           // 之前因“未知参数”退出。这里只消耗精确的 YES/NO；其他
           // 跟随值依旧作为未知参数报错，不放宽公共 CLI。
@@ -44,6 +44,21 @@ class DesktopServiceLaunchArguments {
             if (value == 'YES' || value == 'NO') {
               index += 1;
             }
+          }
+          continue;
+        case '-ApplePersistenceIgnoreState':
+          // 新版 AppKit 会在 XCTest 宿主启动时注入这个参数。与历史参数
+          // 保持同样的 YES/NO 消费规则，但缺失或非法值必须把参数本身
+          // 记录为错误，避免把后续 LDDC 参数吞掉或误判为成功启动。
+          if (index + 1 < args.length) {
+            final String value = args[index + 1].trim();
+            if (value == 'YES' || value == 'NO') {
+              index += 1;
+            } else {
+              parseError ??= '未知桌面服务参数：$arg';
+            }
+          } else {
+            parseError ??= '未知桌面服务参数：$arg';
           }
           continue;
         case '':

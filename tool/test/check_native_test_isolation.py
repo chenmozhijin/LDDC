@@ -291,8 +291,7 @@ def failures() -> list[str]:
         'NSPredicate(format: "identifier BEGINSWITH %@", documentBrowsingRootPrefix)',
         "picker.root.buttons[name]",
         'picker.root.buttons["Cancel"]',
-        'picker.root.tabBars["DOC.browsingModeTabBar"]',
-        'modeTabBar.buttons["Browse"]',
+        'picker.root.buttons["Browse"]',
         "picker.root.cells.matching(",
         "picker.root.links.matching(",
         'private let fixtureAccessibilityName = "audio_sample, mp3"',
@@ -306,6 +305,8 @@ def failures() -> list[str]:
             problems.append(f"iOS 导出与清理场景缺少: {marker}")
     if "documents.wait(for: .runningForeground" in ios_ui_test:
         problems.append("iOS Document Picker 禁止依赖 DocumentsApp 前台进程状态")
+    if "modeTabBar.isHittable" in ios_ui_test or "waitForHittable(modeTabBar" in ios_ui_test:
+        problems.append("iOS Document Picker 禁止要求 TabBar 父代理自身可命中")
     for forbidden in (
         "systemPickerRoots",
         "pickerElement(",
@@ -858,9 +859,12 @@ def failures() -> list[str]:
         "NSWorkspace.shared.runningApplications",
         "currentPanelServices",
         "fixtureURL.deletingLastPathComponent().path",
+        "panel.root.outlineRows[fixtureName]",
         "panel.root.staticTexts[fixtureName]",
         "panel.root.cells[fixtureName]",
-        "firstHittableElement(fixtureCandidates",
+        "waitForExactlyOneHittableElement",
+        "waitForSelectedElement(fixture",
+        "openButton.isEnabled",
         'expectedState: "picker_requested"',
         'expectedState: "flutter_completed"',
         'state.state == "flutter_failed"',
@@ -882,6 +886,7 @@ def failures() -> list[str]:
         "--lddc-enable-accessibility-for-ui-test",
         "lddc-open-lyrics",
         "pathField.typeText(fixturePath)",
+        "panel.root.outlineRows.firstMatch",
     ):
         if forbidden in macos_ui_tests:
             problems.append(f"macOS hybrid XCUITest 禁止启动应用或查询 Flutter 控件: {forbidden}")
@@ -1086,6 +1091,28 @@ def failures() -> list[str]:
         not in performance_workflow
     ):
         problems.append("性能回归 workflow 缺少三桌面媒体 20 轮资源测试")
+    pre_submit = (ROOT / "tool/test/run_pre_submit_checks.ps1").read_text(
+        encoding="utf-8"
+    )
+    for marker in (
+        "dart-format",
+        "dart-analyze",
+        "python-quality-tests",
+        "python-compileall",
+        "native-test-isolation",
+        "powershell-ast",
+        "workflow-yaml",
+        "git-diff-check",
+        "git-hygiene",
+        "windows-local-match-integration",
+        "apple-native-ui",
+        "linux-dogtail-ui",
+        "status = \"hosted-only\"",
+        "$overallExitCode = 1",
+        "manifest.json",
+    ):
+        if marker not in pre_submit:
+            problems.append(f"pre-submit runner 缺少严格门禁契约: {marker}")
     return problems
 
 

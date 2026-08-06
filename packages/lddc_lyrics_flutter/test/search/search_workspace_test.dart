@@ -122,6 +122,105 @@ void main() {
     expect(find.text('保存到文件'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('SearchWorkspace 不会用旧 post-frame 状态覆盖用户清空的输入', (
+    WidgetTester tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(600, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final SearchWorkflowController controller =
+        createIdleSearchWorkflowController();
+    final TextEditingController keywordController = TextEditingController();
+    final TextEditingController savePathController = TextEditingController();
+    final ValueNotifier<int?> selectedRow = ValueNotifier<int?>(null);
+    addTearDown(() {
+      selectedRow.dispose();
+      savePathController.dispose();
+      keywordController.dispose();
+      controller.dispose();
+    });
+
+    await tester.pumpWidget(
+      _app(
+        SearchWorkspace(
+          controller: controller,
+          strings: SearchUiStrings.zhHans(),
+          keywordController: keywordController,
+          savePathController: savePathController,
+          selectedRowIndexListenable: selectedRow,
+          isDesktopPlatform: true,
+          canUseAndroidSafListSave: false,
+          showTagSave: false,
+          onRowsChanged: (_) {},
+          onDesktopRowTap: (_) async {},
+          onMobileRowTap: (_, _) async {},
+          onReturnPath: () {},
+          onOpenPreviewSheet: () async {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final Finder searchInput = find.byType(EditableText).first;
+    await tester.enterText(searchInput, 'old keyword');
+    await tester.pump();
+    // 先产生真实用户输入，再在受控同步可能排队时清空。
+    await tester.enterText(searchInput, '');
+    await tester.pump();
+
+    expect(keywordController.text, isEmpty);
+    expect(controller.state.keyword, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('SearchWorkspace 保存目录输入也不会恢复旧值', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final SearchWorkflowController controller =
+        createIdleSearchWorkflowController();
+    final TextEditingController keywordController = TextEditingController();
+    final TextEditingController savePathController = TextEditingController();
+    final ValueNotifier<int?> selectedRow = ValueNotifier<int?>(null);
+    addTearDown(() {
+      selectedRow.dispose();
+      savePathController.dispose();
+      keywordController.dispose();
+      controller.dispose();
+    });
+
+    await tester.pumpWidget(
+      _app(
+        SearchWorkspace(
+          controller: controller,
+          strings: SearchUiStrings.zhHans(),
+          keywordController: keywordController,
+          savePathController: savePathController,
+          selectedRowIndexListenable: selectedRow,
+          isDesktopPlatform: true,
+          canUseAndroidSafListSave: false,
+          showTagSave: false,
+          onRowsChanged: (_) {},
+          onDesktopRowTap: (_) async {},
+          onMobileRowTap: (_, _) async {},
+          onReturnPath: () {},
+          onOpenPreviewSheet: () async {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final Finder savePathInput = find.byKey(
+      const ValueKey<String>('search_preview_save_path_field'),
+    );
+    await tester.enterText(savePathInput, 'C:/old');
+    await tester.pump();
+    await tester.enterText(savePathInput, '');
+    await tester.pump();
+
+    expect(savePathController.text, isEmpty);
+    expect(controller.state.saveDirectoryPath, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Widget _app(Widget child) => MaterialApp(home: Scaffold(body: child));

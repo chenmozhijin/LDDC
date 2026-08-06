@@ -85,6 +85,13 @@ class _SearchWorkspaceState extends State<SearchWorkspace> {
   bool _controllerSyncScheduled = false;
   String _pendingKeyword = '';
   String _pendingSavePath = '';
+  // 受控状态通过 post-frame 回写时，必须区分用户在等待期间产生的编辑。
+  // 编辑代数由 TextEditingController listener 递增，旧回调看到代数变化后
+  // 会放弃写入，避免窄屏预览关闭等重建流程恢复已经被用户清空的文本。
+  int _keywordEditGeneration = 0;
+  int _savePathEditGeneration = 0;
+  late final VoidCallback _keywordControllerListener;
+  late final VoidCallback _savePathControllerListener;
   bool? _lastExpandedLayout;
   late final ValueNotifier<double> _expandedResultFraction;
 
@@ -92,10 +99,31 @@ class _SearchWorkspaceState extends State<SearchWorkspace> {
   void initState() {
     super.initState();
     _expandedResultFraction = ValueNotifier<double>(_defaultResultFraction);
+    _keywordControllerListener = () => _keywordEditGeneration += 1;
+    _savePathControllerListener = () => _savePathEditGeneration += 1;
+    widget.keywordController.addListener(_keywordControllerListener);
+    widget.savePathController.addListener(_savePathControllerListener);
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchWorkspace oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.keywordController != widget.keywordController) {
+      oldWidget.keywordController.removeListener(_keywordControllerListener);
+      widget.keywordController.addListener(_keywordControllerListener);
+      _keywordEditGeneration += 1;
+    }
+    if (oldWidget.savePathController != widget.savePathController) {
+      oldWidget.savePathController.removeListener(_savePathControllerListener);
+      widget.savePathController.addListener(_savePathControllerListener);
+      _savePathEditGeneration += 1;
+    }
   }
 
   @override
   void dispose() {
+    widget.keywordController.removeListener(_keywordControllerListener);
+    widget.savePathController.removeListener(_savePathControllerListener);
     _expandedResultFraction.dispose();
     super.dispose();
   }
@@ -169,7 +197,12 @@ class _SearchWorkspaceState extends State<SearchWorkspace> {
                   controller.setKeyword(widget.keywordController.text);
                   await controller.search();
                 },
-                onKeywordChanged: controller.setKeyword,
+                onKeywordChanged: (String value) {
+                  // onChanged 发生在 controller listener 之后；显式递增一次，
+                  // 让同一帧已经注册的状态回写也能识别这次用户编辑。
+                  _keywordEditGeneration += 1;
+                  controller.setKeyword(value);
+                },
               ),
               if ((!isCompact || !widget.hideDescriptionInCompact) &&
                   widget.description != null &&
@@ -218,14 +251,27 @@ class _SearchWorkspaceState extends State<SearchWorkspace> {
     if (_controllerSyncScheduled) {
       return;
     }
+    final int scheduledKeywordGeneration = _keywordEditGeneration;
+    final int scheduledSavePathGeneration = _savePathEditGeneration;
+    final String scheduledKeywordText = widget.keywordController.text;
+    final String scheduledSavePathText = widget.savePathController.text;
     _controllerSyncScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
       _controllerSyncScheduled = false;
-      _syncTextController(widget.keywordController, _pendingKeyword);
-      _syncTextController(widget.savePathController, _pendingSavePath);
+      // 只有注册回调时的代数和文本都未变化，才允许业务状态回写。
+      // 用户输入即使发生在同一帧，也会先触发 controller listener，因而
+      // 不会被旧状态覆盖；下一次 build 会用最新状态重新排队同步。
+      if (_keywordEditGeneration == scheduledKeywordGeneration &&
+          widget.keywordController.text == scheduledKeywordText) {
+        _syncTextController(widget.keywordController, _pendingKeyword);
+      }
+      if (_savePathEditGeneration == scheduledSavePathGeneration &&
+          widget.savePathController.text == scheduledSavePathText) {
+        _syncTextController(widget.savePathController, _pendingSavePath);
+      }
     });
   }
 

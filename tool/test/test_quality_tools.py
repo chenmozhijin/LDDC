@@ -451,6 +451,43 @@ class QualityToolTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr.decode(errors="replace"))
 
+    def test_pre_submit_runner_has_strict_local_and_hosted_boundaries(self) -> None:
+        runner = (ROOT / "tool/test/run_pre_submit_checks.ps1").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            "dart-format",
+            "dart-analyze",
+            "windows-local-match-integration",
+            "apple-native-ui",
+            "linux-dogtail-ui",
+            "manifest.json",
+            "status = \"hosted-only\"",
+        ):
+            self.assertIn(marker, runner)
+        # 跳过本地必需项只能产生失败清单，不能把“未运行”伪装成成功。
+        self.assertIn("$overallExitCode = 1", runner)
+        self.assertIn("调用方显式跳过", runner)
+
+    def test_macos_hybrid_runner_preserves_three_failure_origins(self) -> None:
+        runner = (ROOT / "tool/test/run_macos_platform_tests.ps1").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            '"flutter_failed_xcresult_drain"',
+            '"xctest_failed_flutter_terminated"',
+            '"runner_scenario_deadline"',
+            '"macOS xcresult summary 缺失或损坏"',
+            '"macOS xcresult attachment 导出失败',
+            '"runnerClassification"',
+        ):
+            self.assertIn(marker, runner)
+        # 结果包错误只能写诊断字段，不能覆盖 Flutter/XCTest 原始失败原因。
+        self.assertNotIn(
+            '$runnerFailureMessage = "macOS xcresult attachment 导出失败',
+            runner,
+        )
+
     def test_l10n_structure_distinguishes_template_tokens_from_html(self) -> None:
         checker = _load_l10n_checker()
         structure = checker._message_structure(

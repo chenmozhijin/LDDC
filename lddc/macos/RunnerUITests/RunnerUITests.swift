@@ -69,19 +69,34 @@ final class RunnerUITests: XCTestCase {
         waitForElementToDisappear(pathField, timeout: 10),
         "NSOpenPanel 的前往文件夹 sheet 没有关闭"
       )
+      // 在查询文件候选前保存面板树。xcresult attachment 导出可能在原生断言
+      // 失败后损坏，这份前置树能保留真实 AX 角色和 identifier 证据。
+      attachText(
+        name: "lddc-macos-panel-before-fixture-selection.txt",
+        value: panel.root.debugDescription
+      )
       let fixtureCandidates = [
-        panel.root.staticTexts[fixtureName],
+        panel.root.outlineRows[fixtureName],
         panel.root.cells[fixtureName],
+        panel.root.staticTexts[fixtureName],
       ]
-      guard let fixture = firstHittableElement(fixtureCandidates, timeout: 10) else {
-        throw failure("NSOpenPanel 没有暴露可点击的精确 fixture 文件名")
+      guard let fixture = waitForExactlyOneHittableElement(
+        fixtureCandidates,
+        timeout: 10
+      ) else {
+        throw failure("NSOpenPanel 的精确 fixture 候选数量不是一个可命中目标")
       }
       fixture.click()
+      try require(
+        waitForSelectedElement(fixture, timeout: 10),
+        "NSOpenPanel 点击 fixture 后没有进入选中状态"
+      )
       let openButton = panel.root.buttons["Open"]
       try require(
         waitForHittableElement(openButton, timeout: 10),
         "选中精确 fixture 后 NSOpenPanel 的打开按钮不可点击"
       )
+      try require(openButton.isEnabled, "选中精确 fixture 后 NSOpenPanel 的打开按钮未启用")
       openButton.click()
     }
   }
@@ -313,11 +328,44 @@ final class RunnerUITests: XCTestCase {
     return nil
   }
 
+  private func waitForExactlyOneHittableElement(
+    _ candidates: [XCUIElement],
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      let hittable = candidates.filter { $0.exists && $0.isHittable }
+      if hittable.count == 1 {
+        return hittable[0]
+      }
+      // 多个精确 AX 节点同时可命中时立即失败，避免随机选择造成假绿。
+      if hittable.count > 1 {
+        return nil
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return nil
+  }
+
   private func waitForHittableElement(
     _ element: XCUIElement,
     timeout: TimeInterval
   ) -> Bool {
     firstHittableElement([element], timeout: timeout) != nil
+  }
+
+  private func waitForSelectedElement(
+    _ element: XCUIElement,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if element.exists && element.isSelected {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return false
   }
 
   private func waitForElementToDisappear(

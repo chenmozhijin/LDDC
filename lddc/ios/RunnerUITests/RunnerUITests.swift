@@ -367,15 +367,10 @@ final class RunnerUITests: XCTestCase {
     in picker: SystemPickerContext,
     timeout: TimeInterval
   ) throws -> XCUIElement {
-    // iOS 26.5 的 Browse 位于固定的 typed TabBar 中。直接从该容器查询可以
-    // 避免远程 Picker 根节点对 buttons 查询返回不可命中的代理，同时仍然只
-    // 接受精确 identifier 和精确 Button label，不回退到 .any 或坐标。
-    let modeTabBar = picker.root.tabBars["DOC.browsingModeTabBar"]
-    try require(
-      waitForHittable(modeTabBar, timeout: timeout),
-      "系统文件界面没有暴露可操作的浏览模式 TabBar"
-    )
-    let browse = modeTabBar.buttons["Browse"]
+    // 远程 Document Picker 的 TabBar 代理在 iOS 26 上可能存在但自身不可命中，
+    // 子按钮仍然可以直接操作。只查询 typed Browse Button，避免把容器的
+    // isHittable 状态误当成系统文件界面不可用，也不回退到坐标点击。
+    let browse = picker.root.buttons["Browse"]
     try require(waitForHittable(browse, timeout: timeout), "系统文件界面没有可点击的 Browse 按钮")
     return browse
   }

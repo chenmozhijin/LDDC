@@ -85,6 +85,9 @@ $scenarios = @(
     Method = "testOpenPanelCancellationReturnsToFlutter"
   }
 )
+# XCTest 结果包的收尾是独立的诊断阶段。它不能延长 Flutter 业务预算，
+# 但 Flutter 先失败时需要给 xcodebuild 一个固定窗口写出原始结果。
+$xcodeReportDrainSeconds = 15
 $testRunnerEnvironment = [ordered]@{
   TEST_RUNNER_LDDC_IT_RUN_ID = $runId
   TEST_RUNNER_LDDC_FIXTURE_PATH = $fixture
@@ -591,6 +594,41 @@ function Add-RunnerCleanupEvidence {
   )
 }
 
+function Add-RunnerDiagnosticEvidence {
+  param(
+    [Parameter(Mandatory = $true)][string]$Path,
+    [string]$RunnerTerminationReason,
+    [string]$XcresultReportError,
+    [int]$FlutterExitCode,
+    [int]$XcodeExitCode
+  )
+
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    return
+  }
+  try {
+    $payload = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable
+  } catch {
+    return
+  }
+  if (-not $payload.ContainsKey("extra") -or $payload.extra -isnot [hashtable]) {
+    $payload.extra = @{}
+  }
+  $payload.extra["runnerClassification"] = [ordered]@{
+    flutterExitCode = $FlutterExitCode
+    xctestExitCode = $XcodeExitCode
+    runnerTerminated = -not [string]::IsNullOrWhiteSpace($RunnerTerminationReason)
+    runnerTerminationReason = $RunnerTerminationReason
+    xcresultReportCorrupt = -not [string]::IsNullOrWhiteSpace($XcresultReportError)
+    xcresultReportError = $XcresultReportError
+  }
+  [IO.File]::WriteAllText(
+    $Path,
+    ($payload | ConvertTo-Json -Depth 30),
+    [Text.UTF8Encoding]::new($false)
+  )
+}
+
 function Write-InfrastructureFailureReports {
   param(
     [Parameter(Mandatory = $true)][string]$Message,
@@ -744,6 +782,8 @@ try {
     $xcodeStatus = $null
     $flutterStatus = $null
     $runnerFailureMessage = $null
+    $runnerTerminationReason = $null
+    $xcresultReportError = $null
     $scenarioStartedAt = [DateTimeOffset]::UtcNow
     $scenarioDeadline = $null
     try {
@@ -794,6 +834,7 @@ try {
           if ($xcodeExitCode -ne 0) {
             # 原生 runner 已经失败时，Flutter 仍会阻塞在系统面板。
             # 立即结束所有的进程组，不等待完整场景 deadline。
+            $runnerTerminationReason = "xctest_failed_flutter_terminated"
             if (-not $activeFlutterHandle.Process.HasExited) {
               [void](Stop-SupervisedProcess -Handle $activeFlutterHandle)
             }
@@ -817,7 +858,17 @@ try {
           $flutterStatus = Wait-SupervisedProcess -Handle $activeFlutterHandle -AdditionalSeconds 5
           $flutterExitCode = $flutterStatus.ExitCode
           if ($flutterExitCode -ne 0 -and -not $xcodeHandle.Process.HasExited) {
-            [void](Stop-SupervisedProcess -Handle $xcodeHandle)
+            # Flutter 业务先失败时，原生测试可能仍在写附件。只保留固定的
+            # 报告收尾窗口，窗口结束后再结束 XCTest；这不是业务重试或超时放宽。
+            $runnerTerminationReason = "flutter_failed_xcresult_drain"
+            $drainDeadline = [DateTimeOffset]::UtcNow.AddSeconds($xcodeReportDrainSeconds)
+            while (-not $xcodeHandle.Process.HasExited -and [DateTimeOffset]::UtcNow -lt $drainDeadline) {
+              Start-Sleep -Milliseconds 200
+              $xcodeHandle.Process.Refresh()
+            }
+            if (-not $xcodeHandle.Process.HasExited) {
+              [void](Stop-SupervisedProcess -Handle $xcodeHandle)
+            }
             break
           }
         }
@@ -830,12 +881,15 @@ try {
         [void](Stop-SupervisedProcess -Handle $activeFlutterHandle)
       }
       if (-not $xcodeHandle.Process.HasExited) {
+        $runnerTerminationReason = $runnerTerminationReason ?? "runner_scenario_deadline"
         [void](Stop-SupervisedProcess -Handle $xcodeHandle)
       }
       if ($null -eq $flutterStatus) {
+        $runnerTerminationReason = $runnerTerminationReason ?? "runner_scenario_deadline"
         $flutterStatus = Wait-SupervisedProcess -Handle $activeFlutterHandle -AdditionalSeconds 5
       }
       if ($null -eq $xcodeStatus) {
+        $runnerTerminationReason = $runnerTerminationReason ?? "runner_scenario_deadline"
         $xcodeStatus = Wait-SupervisedProcess -Handle $xcodeHandle -AdditionalSeconds 5
       }
       $flutterExitCode = $flutterStatus.ExitCode
@@ -875,6 +929,9 @@ try {
       $summaryReady = Read-XcresultSummary `
         -ResultBundle $resultBundle `
         -SummaryPath $summaryPath
+      if (-not $summaryReady -and [string]::IsNullOrWhiteSpace($xcresultReportError)) {
+        $xcresultReportError = "macOS xcresult summary 缺失或损坏"
+      }
       $nativeSummaryPassed = $summaryReady -and (Test-PassingXcresultSummary -SummaryPath $summaryPath)
       $attachmentResult = Invoke-BoundedProcess `
         -Phase "xcresult-attachments/$scenario" `
@@ -885,9 +942,11 @@ try {
         -StdoutPath (Join-Path $diagnosticsDir "$scenario.attachments.stdout.log") `
         -StderrPath (Join-Path $diagnosticsDir "$scenario.attachments.stderr.log")
       if ($attachmentResult.ExitCode -ne 0) {
-        $runnerFailureMessage = "macOS xcresult attachment 导出失败，exit=$($attachmentResult.ExitCode)"
-        Write-Warning "$scenario $runnerFailureMessage"
+        $xcresultReportError = "macOS xcresult attachment 导出失败，exit=$($attachmentResult.ExitCode)"
+        Write-Warning "$scenario $xcresultReportError"
       }
+    } elseif ([string]::IsNullOrWhiteSpace($xcresultReportError)) {
+      $xcresultReportError = "macOS xcresult 结果包缺失"
     }
     Write-SanitizedHybridStateDiagnostic `
       -StatePath $statePath `
@@ -932,6 +991,12 @@ try {
     Add-RunnerCleanupEvidence `
       -Path $evidencePath.FullName `
       -FinalChildProcessCount $ownedFinalCount
+    Add-RunnerDiagnosticEvidence `
+      -Path $evidencePath.FullName `
+      -RunnerTerminationReason $runnerTerminationReason `
+      -XcresultReportError $xcresultReportError `
+      -FlutterExitCode $flutterExitCode `
+      -XcodeExitCode $xcodeExitCode
 
     if (Test-Path -LiteralPath $containerScenarioPath -PathType Leaf) {
       Copy-Item -LiteralPath $containerScenarioPath -Destination $scenarioPath -Force
