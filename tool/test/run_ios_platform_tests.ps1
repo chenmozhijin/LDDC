@@ -23,13 +23,24 @@ $hostArchitecture = ((& uname -m 2>$null) -join "").Trim()
 if ($LASTEXITCODE -ne 0 -or $hostArchitecture -notin @("arm64", "x86_64")) {
   throw "无法确定 iOS hosted 宿主架构: $hostArchitecture"
 }
+$xcodeVersion = ((& xcodebuild -version 2>$null) -join " ").Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($xcodeVersion)) {
+  throw "无法确定 iOS hosted Xcode 版本"
+}
+$expectedXcodeVersion = [string]$env:LDDC_XCODE_VERSION
+if (-not [string]::IsNullOrWhiteSpace($expectedXcodeVersion) `
+    -and -not $xcodeVersion.StartsWith("Xcode $expectedXcodeVersion ", [StringComparison]::Ordinal)) {
+  throw "iOS hosted Xcode 漂移：actual=$xcodeVersion expected=$expectedXcodeVersion"
+}
 $simulatorMetadata = [ordered]@{
   udid = $Device
   runtime = "unknown"
+  runtimeVersion = "unknown"
   model = "unknown"
   deviceTypeIdentifier = "unknown"
   state = "unknown"
   hostArchitecture = $hostArchitecture
+  xcodeVersion = $xcodeVersion
   configuredLanguage = "unknown"
   configuredLocale = "unknown"
 }
@@ -146,16 +157,29 @@ function Get-SimulatorMetadata {
     throw "无法查询 iOS Simulator 元数据: $($output -join ' ')"
   }
   $payload = ($output -join [Environment]::NewLine) | ConvertFrom-Json
+  $runtimeOutput = & xcrun simctl list runtimes --json 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    throw "无法查询 iOS Simulator runtime 元数据: $($runtimeOutput -join ' ')"
+  }
+  $runtimePayload = ($runtimeOutput -join [Environment]::NewLine) | ConvertFrom-Json
   foreach ($runtime in $payload.devices.PSObject.Properties) {
     foreach ($deviceInfo in @($runtime.Value)) {
       if ($deviceInfo.udid -eq $Device) {
+        $runtimeInfo = @($runtimePayload.runtimes | Where-Object {
+            $_.identifier -eq $runtime.Name
+          }) | Select-Object -First 1
+        if ($null -eq $runtimeInfo -or [string]::IsNullOrWhiteSpace([string]$runtimeInfo.version)) {
+          throw "Simulator $Device 的 runtime $($runtime.Name) 缺少版本元数据"
+        }
         return [ordered]@{
           udid = [string]$deviceInfo.udid
           runtime = [string]$runtime.Name
+          runtimeVersion = [string]$runtimeInfo.version
           model = [string]$deviceInfo.name
           deviceTypeIdentifier = [string]$deviceInfo.deviceTypeIdentifier
           state = [string]$deviceInfo.state
           hostArchitecture = $hostArchitecture
+          xcodeVersion = $xcodeVersion
         }
       }
     }
@@ -467,6 +491,11 @@ try {
   }
   Ensure-SimulatorBooted -Stage "runner-entry"
   $simulatorMetadata = Get-SimulatorMetadata
+  $expectedRuntimeVersion = [string]$env:LDDC_IOS_RUNTIME_VERSION
+  if (-not [string]::IsNullOrWhiteSpace($expectedRuntimeVersion) `
+      -and $simulatorMetadata.runtimeVersion -ne $expectedRuntimeVersion) {
+    throw "iOS Simulator runtime 漂移：actual=$($simulatorMetadata.runtimeVersion) expected=$expectedRuntimeVersion"
+  }
   Invoke-RequiredSimctl `
     -Stage "locale/languages" `
     -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLanguages", "-array", "en") | Out-Null

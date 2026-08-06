@@ -454,14 +454,16 @@ final class RunnerUITests: XCTestCase {
     let cancel = picker.root.buttons.matching(
       NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")
     ).firstMatch
-    if waitForHittable(cancel, timeout: 3) {
+    if cancel.exists {
+      try require(waitForHittable(cancel, timeout: 3), "系统 Picker 的 typed Cancel 按钮存在但不可点击")
       cancel.tap()
       try require(waitForSystemPickerToClose(app: app, timeout: 10), "点击 Cancel 后系统 Picker 没有关闭")
       return
     }
 
-    // 紧凑 Picker 可能没有 Cancel 按钮。手势只作用于已经通过
-    // typed identifier 找到的 Picker 根节点，不使用屏幕坐标或 sheet fallback。
+    // 只有 typed Cancel 按钮确实不存在时，紧凑 Picker 才允许下拉关闭。
+    // 按钮已经出现但暂时不可命中属于真实 UI 失败，不能通过另一条路径掩盖。
+    // 手势只作用于已确认的 typed Picker 根，不使用屏幕坐标或 sheet fallback。
     try require(picker.root.exists && picker.root.isHittable, "系统 Picker 根节点不可操作")
     picker.root.swipeDown()
     try require(waitForSystemPickerToClose(app: app, timeout: 10), "下拉后系统 Picker 没有关闭")

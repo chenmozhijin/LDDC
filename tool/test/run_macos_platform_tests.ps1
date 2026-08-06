@@ -337,40 +337,6 @@ function Get-SupervisorResidualCount {
   return $count
 }
 
-function Wait-ForFlutterTestStart {
-  param(
-    [Parameter(Mandatory = $true)]$FlutterHandle,
-    [Parameter(Mandatory = $true)][string]$JsonlPath,
-    [Parameter(Mandatory = $true)][int]$TimeoutSeconds
-  )
-
-  $deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
-  while ([DateTimeOffset]::UtcNow -lt $deadline) {
-    if (Test-Path -LiteralPath $JsonlPath -PathType Leaf) {
-      foreach ($line in @(Get-Content -LiteralPath $JsonlPath -ErrorAction SilentlyContinue)) {
-        if ([string]::IsNullOrWhiteSpace($line)) {
-          continue
-        }
-        try {
-          $event = $line | ConvertFrom-Json
-          if ($event.type -eq "testStart" -and $event.test.hidden -ne $true) {
-            return
-          }
-        } catch {
-          # JSONL 最后一行可能仍在写入；下一轮只重新读取，不把半行当成报告损坏。
-        }
-      }
-    }
-    $FlutterHandle.Process.Refresh()
-    if ($FlutterHandle.Process.HasExited) {
-      $status = Read-SupervisorStatus -Handle $FlutterHandle
-      throw "Flutter integration_test 在实际测试开始前退出，exit=$($status.ExitCode)"
-    }
-    Start-Sleep -Milliseconds 100
-  }
-  throw "Flutter integration_test 未在冷启动预算内进入实际测试"
-}
-
 function Wait-ForHybridState {
   param(
     [Parameter(Mandatory = $true)]$FlutterHandle,
@@ -432,14 +398,25 @@ function Wait-ForHybridState {
   if ($null -eq $applicationProcess -or $applicationProcess.ProcessName -ne "LDDC") {
     throw "macOS hybrid 状态指向的 LDDC 应用进程不存在"
   }
-  $bundlePath = [string]$state.appBundlePath
-  if ([string]::IsNullOrWhiteSpace($bundlePath) `
-      -or -not [IO.Path]::IsPathRooted($bundlePath) `
-      -or [IO.Path]::GetExtension($bundlePath) -ne ".app" `
-      -or -not (Test-Path -LiteralPath $bundlePath -PathType Container)) {
-    throw "macOS hybrid 状态中的 app bundle 路径无效"
+  try {
+    $bundlePath = [string]$state.appBundlePath
+    if ([string]::IsNullOrWhiteSpace($bundlePath) `
+        -or -not [IO.Path]::IsPathRooted($bundlePath) `
+        -or [IO.Path]::GetExtension($bundlePath) -ne ".app" `
+        -or -not (Test-Path -LiteralPath $bundlePath -PathType Container)) {
+      throw "macOS hybrid 状态中的 app bundle 路径无效"
+    }
+    $infoPlist = Join-Path $bundlePath "Contents/Info.plist"
+    if (-not (Test-Path -LiteralPath $infoPlist -PathType Leaf)) {
+      throw "macOS hybrid app bundle 缺少 Info.plist"
+    }
+    [string]$bundleIdentifier = (& /usr/bin/plutil -extract CFBundleIdentifier raw -o - $infoPlist 2>$null) -join ""
+    if ($LASTEXITCODE -ne 0 -or $bundleIdentifier.Trim() -ne "com.cmzj.lddc") {
+      throw "macOS hybrid app bundle identifier 不匹配"
+    }
+  } finally {
+    $applicationProcess.Dispose()
   }
-  $applicationProcess.Dispose()
   return $state
 }
 
@@ -782,20 +759,17 @@ try {
         -StdoutPath (Join-Path $diagnosticsDir "$scenario.flutter.stdout.log") `
         -StderrPath (Join-Path $diagnosticsDir "$scenario.flutter.stderr.log")
 
-      # hosted runner 的首次 flutter test 需要完成 Debug 冷编译。冷启动预算与
-      # 原生面板业务预算分开计算，避免把 80 多秒编译时间误判为 picker 超时，
-      # 同时不延长已经进入实际 testWidgets 后的交互等待。
-      Wait-ForFlutterTestStart `
-        -FlutterHandle $activeFlutterHandle `
-        -JsonlPath $flutterJsonl `
-        -TimeoutSeconds $FlutterStartupTimeoutSeconds
-      $scenarioDeadline = [DateTimeOffset]::UtcNow.AddSeconds($ScenarioTimeoutSeconds)
-      $pickerRequestedState = Wait-ForHybridState `
+      # testStart 只表示 Dart 测试进程创建了测试事件，不能证明 Flutter 应用已经
+      # 完成冷编译、启动并准备调用 NSOpenPanel。这里只等待 Flutter 单写的
+      # picker_requested marker；冷编译消耗独立启动预算，避免在应用仍处于
+      # Building macOS application 时误杀进程。marker 出现后才开始业务总预算。
+      $null = Wait-ForHybridState `
         -FlutterHandle $activeFlutterHandle `
         -StatePath $statePath `
         -Scenario $scenario `
         -ExpectedState "picker_requested" `
-        -TimeoutSeconds ([Math]::Min(30, $ScenarioTimeoutSeconds))
+        -TimeoutSeconds $FlutterStartupTimeoutSeconds
+      $scenarioDeadline = [DateTimeOffset]::UtcNow.AddSeconds($ScenarioTimeoutSeconds)
 
       $remainingScenarioSeconds = [int][Math]::Floor(
         ($scenarioDeadline - [DateTimeOffset]::UtcNow).TotalSeconds

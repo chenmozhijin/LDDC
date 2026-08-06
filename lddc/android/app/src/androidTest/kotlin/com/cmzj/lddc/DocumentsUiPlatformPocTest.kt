@@ -65,6 +65,7 @@ class DocumentsUiPlatformPocTest {
     private lateinit var initialPersistedTreeUris: Set<String>
     private val capabilityEvidence = linkedMapOf<String, MutableList<Map<String, Any?>>>()
     private val artifacts = mutableListOf<Map<String, Any?>>()
+    private var hostedSystemAnrDetected = false
 
     @Before
     fun setUp() {
@@ -75,6 +76,7 @@ class DocumentsUiPlatformPocTest {
                 ?: "local-${UUID.randomUUID()}"
         capabilityEvidence.clear()
         artifacts.clear()
+        hostedSystemAnrDetected = false
         initialPersistedTreeUris = persistedTreeUris()
         seededAudioName = "lddc-platform-${UUID.randomUUID().toString().take(8)}.mp3"
         val fixtureBytes =
@@ -375,7 +377,7 @@ class DocumentsUiPlatformPocTest {
         return device.wait(
             Until.findObject(By.text(seededAudioName).clazz("android.widget.TextView")),
             TIMEOUT_MS,
-        ) ?: throw AssertionError("DocumentsUI 进入测试 provider 后没有返回 seed 音频")
+        ) ?: throw DocumentsUiFailureException("DocumentsUI 进入测试 provider 后没有返回 seed 音频")
     }
 
     private fun waitForLddcForeground(): Boolean {
@@ -446,7 +448,7 @@ class DocumentsUiPlatformPocTest {
                 )
             val rootsButton =
                 toolbar.findObject(By.clazz("android.widget.ImageButton").clickable(true))
-                    ?: throw AssertionError("DocumentsUI toolbar 没有可点击的 roots 导航按钮")
+                    ?: throw DocumentsUiFailureException("DocumentsUI toolbar 没有可点击的 roots 导航按钮")
             rootsButton.click()
             device.waitForIdle(500)
         }
@@ -491,7 +493,7 @@ class DocumentsUiPlatformPocTest {
             }
             device.waitForIdle(100)
         }
-        val failure = AssertionError(message())
+        val failure = DocumentsUiFailureException(message())
         lastStaleObject?.let(failure::initCause)
         throw failure
     }
@@ -499,12 +501,15 @@ class DocumentsUiPlatformPocTest {
     private fun waitForDocumentsUi() {
         val deadline = System.currentTimeMillis() + TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
+            if (detectHostedSystemAnr()) {
+                throw HostedSystemAnrException("等待 DocumentsUI 时检测到系统 ANR")
+            }
             if (device.currentPackageName in DOCUMENTS_UI_PACKAGES) {
                 return
             }
             device.waitForIdle(100)
         }
-        throw AssertionError("真实 DocumentsUI 没有打开，禁止回退坐标点击")
+        throw DocumentsUiFailureException("真实 DocumentsUI 没有打开，禁止回退坐标点击")
     }
 
     private fun documentsUiStateSummary(): String {
@@ -529,6 +534,13 @@ class DocumentsUiPlatformPocTest {
 
     private fun returnFromDocumentsUiForResourceSnapshot() {
         val deadline = System.currentTimeMillis() + 5_000
+        // hosted emulator 的 Quickstep ANR 属于 DocumentsUI 之上的系统模态层。
+        // 先用系统返回动作关闭该层，再逐层退出 Picker，才能让生产 Activity
+        // 收到取消回调并清空 pending request；清理不会改变原始失败分类。
+        if (detectHostedSystemAnr()) {
+            device.pressBack()
+            device.waitForIdle(200)
+        }
         while (System.currentTimeMillis() < deadline && device.currentPackageName in DOCUMENTS_UI_PACKAGES) {
             // 失败可能发生在 provider 根、Recent 或搜索页。Back 是系统导航语义，
             // 逐层返回会触发生产 Picker 的取消回调并清空 pending request。
@@ -549,10 +561,26 @@ class DocumentsUiPlatformPocTest {
     private fun waitForDocumentsUiResource(resourceNames: List<String>, message: String): UiObject2 {
         val deadline = System.currentTimeMillis() + TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
+            if (detectHostedSystemAnr()) {
+                throw HostedSystemAnrException("等待 DocumentsUI 资源时检测到系统 ANR")
+            }
             findDocumentsUiResource(resourceNames)?.let { return it }
             device.waitForIdle(100)
         }
-        throw AssertionError(message)
+        throw DocumentsUiFailureException(message)
+    }
+
+    private fun detectHostedSystemAnr(): Boolean {
+        val waitButton = device.findObject(By.res("android", "aerr_wait"))
+        val closeButton = device.findObject(By.text("Close app"))
+        val waitText = device.findObject(By.text("Wait"))
+        val quickstepMessage = device.findObject(By.textContains("Quickstep isn't responding"))
+        val detected = waitButton != null || closeButton != null || waitText != null || quickstepMessage != null
+        if (detected) {
+            hostedSystemAnrDetected = true
+            Log.e(EVIDENCE_LOG_TAG, "hosted system ANR detected during system UI interaction")
+        }
+        return detected
     }
 
     private fun waitForDocumentsUiFileNameInput(): UiObject2 {
@@ -572,7 +600,7 @@ class DocumentsUiPlatformPocTest {
             }
             device.waitForIdle(100)
         }
-        throw AssertionError("DocumentsUI 没有暴露可编辑的文件名输入框")
+        throw DocumentsUiFailureException("DocumentsUI 没有暴露可编辑的文件名输入框")
     }
 
     private fun completeTreeSelectionConfirmation() {
@@ -810,6 +838,10 @@ class DocumentsUiPlatformPocTest {
         failure?.let { throw it }
     }
 
+    private class HostedSystemAnrException(message: String) : AssertionError(message)
+
+    private class DocumentsUiFailureException(message: String) : AssertionError(message)
+
     private fun waitForActivityResourcesToReturnToBaseline(
         baseline: Map<String, Int>,
     ): Map<String, Int> {
@@ -878,6 +910,24 @@ class DocumentsUiPlatformPocTest {
         val directory = File(context.cacheDir, "lddc_native_evidence/$runId").apply { mkdirs() }
         val target = File(directory, "$scenarioName.json")
         val temporary = File(directory, "$scenarioName.json.tmp")
+        val nativeActionCount =
+            capabilityEvidence
+                // nativeChannels 中的 SAF 错误映射在打开系统 Picker 前执行，不能
+                // 被当作系统 UI 动作。只统计已经形成真实平台能力证据的选择、
+                // 媒体和生命周期动作；任一成功动作都会禁止系统 ANR 重试。
+                .filterKeys { capability -> capability in setOf("filePicker", "media", "lifecycle") }
+                .values
+                .sumOf { actions -> actions.size }
+        val failureCategory =
+            when {
+                failure == null -> null
+                // 系统 ANR 后也必须先把 Activity 资源清回基线。若清理仍失败，
+                // 该场景不可重试，否则会把真实 fd/picker 残留当作 hosted 波动。
+                final != baseline -> "resource_cleanup_failure"
+                hostedSystemAnrDetected || failure is HostedSystemAnrException -> "hosted_system_anr"
+                failure is DocumentsUiFailureException -> "documents_ui_failure"
+                else -> "application_failure"
+            }
         val payload =
             mapOf(
                 "runId" to runId,
@@ -901,7 +951,12 @@ class DocumentsUiPlatformPocTest {
                         "thresholds" to mapOf("openFdCount" to 0, "pendingPickerCount" to 0),
                     ),
                 "artifacts" to artifacts,
-                "extra" to emptyMap<String, Any?>(),
+                "extra" to
+                    mapOf(
+                        "failureCategory" to
+                            failureCategory,
+                        "nativeActionCount" to nativeActionCount,
+                    ),
             )
         val jsonObject = JSONObject(payload)
         temporary.writeText(jsonObject.toString(2), Charsets.UTF_8)

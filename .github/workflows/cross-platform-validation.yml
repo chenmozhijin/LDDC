@@ -113,10 +113,25 @@ jobs:
           }
 
   macos-validation:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 150
+    env:
+      LDDC_XCODE_VERSION: '26.6'
     steps:
       - uses: actions/checkout@v7
+      - name: 选择并验证固定 Xcode
+        run: |
+          developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"
+          if [[ ! -d "$developer_dir" ]]; then
+            echo "固定 Xcode 不存在: $developer_dir" >&2
+            exit 1
+          fi
+          sudo xcode-select --switch "$developer_dir"
+          actual_xcode="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+          if [[ "$actual_xcode" != "$LDDC_XCODE_VERSION" ]]; then
+            echo "Xcode 版本漂移: actual=$actual_xcode expected=$LDDC_XCODE_VERSION" >&2
+            exit 1
+          fi
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -229,10 +244,25 @@ jobs:
           }
 
   macos-system-ui-validation:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 30
+    env:
+      LDDC_XCODE_VERSION: '26.6'
     steps:
       - uses: actions/checkout@v7
+      - name: 选择并验证固定 Xcode
+        run: |
+          developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"
+          if [[ ! -d "$developer_dir" ]]; then
+            echo "固定 Xcode 不存在: $developer_dir" >&2
+            exit 1
+          fi
+          sudo xcode-select --switch "$developer_dir"
+          actual_xcode="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+          if [[ "$actual_xcode" != "$LDDC_XCODE_VERSION" ]]; then
+            echo "Xcode 版本漂移: actual=$actual_xcode expected=$LDDC_XCODE_VERSION" >&2
+            exit 1
+          fi
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -444,10 +474,34 @@ jobs:
           }
 
   ios-validation:
-    runs-on: macos-latest
+    runs-on: macos-26
     timeout-minutes: 150
+    env:
+      LDDC_XCODE_VERSION: '26.6'
+      LDDC_IOS_RUNTIME_VERSION: '26.5'
     steps:
       - uses: actions/checkout@v7
+      - name: 选择并验证固定 Xcode for iOS 26 automation
+        run: |
+          developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"
+          if [[ ! -d "$developer_dir" ]]; then
+            echo "Pinned Xcode is unavailable: $developer_dir" >&2
+            exit 1
+          fi
+          sudo xcode-select --switch "$developer_dir"
+          actual_xcode="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+          if [[ "$actual_xcode" != "$LDDC_XCODE_VERSION" ]]; then
+            echo "Xcode 版本漂移: actual=$actual_xcode expected=$LDDC_XCODE_VERSION" >&2
+            exit 1
+          fi
+          # 在下载 Flutter 依赖前确认精确 runtime，避免镜像缺少工具链时浪费完整构建时间。
+          if ! xcrun simctl list runtimes available -j | jq -e \
+            --arg version "$LDDC_IOS_RUNTIME_VERSION" \
+            '[.runtimes[] | select(.isAvailable == true and .platform == "iOS" and .version == $version)] | length > 0' \
+            >/dev/null; then
+            echo "可用 iOS Simulator runtime 不包含 $LDDC_IOS_RUNTIME_VERSION" >&2
+            exit 1
+          fi
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}

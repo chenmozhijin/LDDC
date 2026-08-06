@@ -356,14 +356,11 @@ class LocalMatchDriver {
     final Finder tile = find.byKey(
       const ValueKey<String>('local_match_skip_existing_checkbox'),
     );
-    final Finder checkbox = find.descendant(
-      of: tile,
-      matching: find.byType(Checkbox),
-    );
-    // CheckboxListTile 的 key 标记整行布局节点，但严格 hit test 需要命中真正
-    // 注册手势的 Checkbox。窄高桌面在滚动到规则区底部时，外层布局中心未必
-    // 位于 InkWell 的命中路径中；点击 typed 子控件仍是用户可执行的真实动作。
-    await tapVisible(tester, checkbox, reason: '等待“跳过已有歌词”复选框可点击');
+    // 该 key 标记的是用户实际点击的 CheckboxListTile。Linux 的 Flutter
+    // desktop hit-test 树不保证内部 Checkbox 代理节点单独可命中；使用子
+    // Checkbox 会让驱动在目标可见时仍然超时。保持整行目标，既覆盖真实
+    // onTap，也让三桌面复用同一套严格的可见性和遮挡检查。
+    await tapVisible(tester, tile, reason: '等待“跳过已有歌词”复选框可点击');
   }
 
   Future<void> tapStartOrCancel() async {

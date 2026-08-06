@@ -414,14 +414,73 @@ Future<void> tapVisible(
       }
     }
   }
-  await pumpUntil(
-    tester,
-    () => target.hitTestable().evaluate().length == 1,
-    timeout: timeout,
-    reason: '$description：目标未进入可命中区域',
-  );
+  try {
+    await pumpUntil(
+      tester,
+      () => target.hitTestable().evaluate().length == 1,
+      timeout: timeout,
+      reason: '$description：目标未进入可命中区域',
+    );
+  } on TimeoutException catch (error) {
+    // Linux 与其他桌面的语义树可能相同，但最终手势命中路径不同。失败时记录
+    // 实际 RenderObject 路径、滚动位置和 Overlay 数量，才能区分屏幕外目标、
+    // 持续提示与真正遮罩；这里只增强诊断，不改用坐标点击或放宽命中门禁。
+    throw TimeoutException(
+      '${error.message}；${_tapFailureDiagnostics(tester, target)}',
+      timeout,
+    );
+  }
   await tester.tap(target);
   await pumpForInteraction(tester);
+}
+
+String _tapFailureDiagnostics(WidgetTester tester, Finder target) {
+  try {
+    final Iterable<Element> elements = target.evaluate();
+    if (elements.length != 1) {
+      return 'targetCount=${elements.length}';
+    }
+    final Element element = elements.single;
+    final RenderObject? renderObject = element.renderObject;
+    Rect? targetRect;
+    if (renderObject is RenderBox && renderObject.hasSize) {
+      targetRect = renderObject.localToGlobal(Offset.zero) & renderObject.size;
+    }
+
+    final HitTestResult hitTest = HitTestResult();
+    if (targetRect != null) {
+      tester.binding.hitTestInView(
+        hitTest,
+        targetRect.center,
+        tester.view.viewId,
+      );
+    }
+    final String hitPath = hitTest.path
+        .map((HitTestEntry entry) => entry.target.runtimeType.toString())
+        .take(16)
+        .join(' > ');
+
+    final List<String> scrollPositions = <String>[];
+    element.visitAncestorElements((Element ancestor) {
+      if (ancestor is StatefulElement && ancestor.state is ScrollableState) {
+        final ScrollPosition position =
+            (ancestor.state as ScrollableState).position;
+        scrollPositions.add(
+          '${position.axis.name}:${position.pixels.toStringAsFixed(1)}/'
+          '${position.maxScrollExtent.toStringAsFixed(1)}',
+        );
+      }
+      return true;
+    });
+    final Size viewport =
+        tester.view.physicalSize / tester.view.devicePixelRatio;
+    return 'viewport=$viewport targetRect=$targetRect '
+        'scroll=${scrollPositions.join(',')} overlays=${find.byType(Overlay).evaluate().length} '
+        'hitPath=$hitPath';
+  } on Object catch (error) {
+    // 诊断只能补充原始命中超时，不能因 RenderObject 已卸载等竞态覆盖根因。
+    return 'diagnosticsUnavailable=${error.runtimeType}';
+  }
 }
 
 Future<void> pumpUntil(

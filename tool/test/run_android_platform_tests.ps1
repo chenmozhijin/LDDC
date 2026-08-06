@@ -66,6 +66,23 @@ function Test-AndroidReportStarted {
   }
 }
 
+function Test-ShouldRetryAndroidScenario {
+  param(
+    [Parameter(Mandatory = $true)][int]$Attempt,
+    [Parameter(Mandatory = $true)][bool]$TestStarted,
+    [string]$FailureCategory = "",
+    [int]$NativeActionCount = 0
+  )
+
+  if ($Attempt -ne 0) {
+    return $false
+  }
+  if (-not $TestStarted) {
+    return $true
+  }
+  return $FailureCategory -eq "hosted_system_anr" -and $NativeActionCount -eq 0
+}
+
 if ($ValidateReportParser) {
   $cases = @(
     @{
@@ -89,6 +106,26 @@ if ($ValidateReportParser) {
     $started = (Get-AndroidReportTestCount -Document $document) -gt 0
     if ($started -ne $case.Started) {
       throw "Android JUnit parser 自检失败：$($case.Name)"
+    }
+  }
+  $retryCases = @(
+    @{ Name = "零测试基础设施失败"; Started = $false; Category = ""; Actions = 0; Retry = $true },
+    @{ Name = "零动作系统 ANR"; Started = $true; Category = "hosted_system_anr"; Actions = 0; Retry = $true },
+    @{ Name = "已有动作系统 ANR"; Started = $true; Category = "hosted_system_anr"; Actions = 1; Retry = $false },
+    @{ Name = "DocumentsUI 确定性失败"; Started = $true; Category = "documents_ui_failure"; Actions = 0; Retry = $false },
+    @{ Name = "资源清理失败"; Started = $true; Category = "resource_cleanup_failure"; Actions = 0; Retry = $false },
+    @{ Name = "业务失败"; Started = $true; Category = "application_failure"; Actions = 0; Retry = $false },
+    @{ Name = "第二次失败"; Started = $true; Category = "hosted_system_anr"; Actions = 0; Retry = $false; Attempt = 1 }
+  )
+  foreach ($case in $retryCases) {
+    $attempt = if ($case.ContainsKey("Attempt")) { [int]$case.Attempt } else { 0 }
+    $actual = Test-ShouldRetryAndroidScenario `
+      -Attempt $attempt `
+      -TestStarted $case.Started `
+      -FailureCategory $case.Category `
+      -NativeActionCount $case.Actions
+    if ($actual -ne $case.Retry) {
+      throw "Android 重试契约自检失败：$($case.Name)"
     }
   }
   Write-Output "Android JUnit parser 自检通过：tests=0 可重试，tests=1 成功或失败均不重试。"
@@ -190,6 +227,7 @@ $scenarios = @(
 if ($ScenarioName.Count -gt 0) {
   $scenarios = @($scenarios | Where-Object { $_.Name -in $ScenarioName })
 }
+$overallStatus = 0
 
 function Invoke-BoundedInstrumentation {
   param(
@@ -294,6 +332,51 @@ function Read-LoggedAndroidEvidence {
   }
 }
 
+function Get-AndroidEvidenceMetadata {
+  param([Parameter(Mandatory = $true)][string]$Scenario)
+
+  $text = Read-LoggedAndroidEvidence -Scenario $Scenario
+  if ([string]::IsNullOrWhiteSpace($text)) {
+    return $null
+  }
+  try {
+    $payload = $text | ConvertFrom-Json -ErrorAction Stop
+    return [pscustomobject]@{
+      FailureCategory = [string]$payload.extra.failureCategory
+      NativeActionCount = [int]$payload.extra.nativeActionCount
+    }
+  } catch {
+    return $null
+  }
+}
+
+function Restart-HostedAndroidEmulator {
+  # Quickstep ANR 是 hosted emulator 的系统进程故障。仅在 evidence 证明资源
+  # 已回基线且原生动作数为零时重启一次本次 emulator；不清空应用数据、不改
+  # fixture，也不重试已经执行过业务动作或资源清理失败的场景。
+  & $adb -s $Device reboot
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Android hosted emulator 重启命令失败"
+    return $false
+  }
+
+  $deadline = [DateTimeOffset]::UtcNow.AddSeconds(120)
+  while ([DateTimeOffset]::UtcNow -lt $deadline) {
+    $deviceState = ((& $adb -s $Device get-state 2>$null) -join "").Trim()
+    if ($LASTEXITCODE -eq 0 -and $deviceState -eq "device") {
+      $bootCompleted = ((& $adb -s $Device shell getprop sys.boot_completed 2>$null) -join "").Trim()
+      if ($LASTEXITCODE -eq 0 -and $bootCompleted -eq "1") {
+        & $adb -s $Device shell input keyevent 3 | Out-Null
+        Start-Sleep -Seconds 3
+        return $true
+      }
+    }
+    Start-Sleep -Seconds 2
+  }
+  Write-Warning "Android hosted emulator 未在 120 秒内完成重启"
+  return $false
+}
+
 Push-Location $androidRoot
 try {
   foreach ($entry in $scenarios) {
@@ -303,25 +386,59 @@ try {
     $rawResult = $null
     $testExitCode = 1
     $testStarted = $false
-    for ($attempt = 0; $attempt -lt 2 -and -not $testStarted; $attempt += 1) {
+    $infrastructureRetryPerformed = $false
+    for ($attempt = 0; $attempt -lt 2; $attempt += 1) {
       $startedAt = [DateTime]::UtcNow
       $testExitCode = Invoke-BoundedInstrumentation -Method $method
       $rawResult = Find-NewAndroidTestResult -StartedAt $startedAt
       $testStarted = $null -ne $rawResult -and (Test-AndroidReportStarted -Report $rawResult)
-      if (-not $testStarted -and $attempt -eq 0) {
+      $evidenceMetadata = if ($testStarted) {
+        Get-AndroidEvidenceMetadata -Scenario $scenario
+      } else {
+        $null
+      }
+      $hostedSystemAnr = $null -ne $evidenceMetadata `
+        -and $evidenceMetadata.FailureCategory -eq "hosted_system_anr" `
+        -and $evidenceMetadata.NativeActionCount -eq 0
+      $shouldRetry = Test-ShouldRetryAndroidScenario `
+        -Attempt $attempt `
+        -TestStarted $testStarted `
+        -FailureCategory $(if ($hostedSystemAnr) { "hosted_system_anr" } else { "" }) `
+        -NativeActionCount $(if ($null -ne $evidenceMetadata) { $evidenceMetadata.NativeActionCount } else { 0 })
+      if ($shouldRetry) {
         # UTP 可能在 onBeforeAll 连接设备失败后仍生成 tests=0 的 XML。它与完全
         # 缺报告一样都没有执行测试，允许重试一次；一旦测试数大于零，无论
-        # 成败都必须保留真实结果，不能通过重跑掩盖。
-        Start-Sleep -Seconds 5
+        # 成败都必须保留真实结果。唯一例外是 evidence 明确证明 Quickstep
+        # system ANR 且资源已回基线、原生动作数为零，此时重启一次 emulator。
+        if ($hostedSystemAnr) {
+          $infrastructureRetryPerformed = Restart-HostedAndroidEmulator
+          if (-not $infrastructureRetryPerformed) {
+            break
+          }
+        } else {
+          Start-Sleep -Seconds 5
+        }
+        & $adb -s $Device logcat -c
+        continue
       }
-    }
-    if ($null -eq $rawResult) {
-      throw "Android instrumentation 两次启动均未生成 JUnit XML；最后退出码为 $testExitCode"
+      break
     }
     $rawPath = Join-Path $rawDir "$scenario.xml"
     $junitPath = Join-Path $junitDir "$scenario.xml"
-    Copy-Item -LiteralPath $rawResult.FullName -Destination $rawPath -Force
-    Copy-Item -LiteralPath $rawResult.FullName -Destination $junitPath -Force
+    if ($null -eq $rawResult) {
+      # 两次启动都没有原始 XML 时仍要为当前场景留下 tests=0 的诚实证据，
+      # 让 normalizer 明确记录 testStarted=false。不能直接 throw，否则后续互相
+      # 独立的 DocumentsUI 场景会被短路，也不能构造伪测试用例冒充已执行。
+      [xml]$missingReport = '<testsuite name="android-instrumentation-missing" tests="0" failures="0" errors="0" skipped="0" />'
+      $missingReport.Save($rawPath)
+      $testStarted = $false
+      if ($testExitCode -eq 0) {
+        $testExitCode = 1
+      }
+    } else {
+      Copy-Item -LiteralPath $rawResult.FullName -Destination $rawPath -Force
+    }
+    Copy-Item -LiteralPath $rawPath -Destination $junitPath -Force
 
     $relativeEvidence = "cache/lddc_native_evidence/$runId/$scenario.json"
     $evidenceLines = & $adb -s $Device exec-out run-as com.cmzj.lddc cat $relativeEvidence
@@ -398,6 +515,26 @@ try {
         $effectiveExitCode = 1
       }
     }
+    if ($infrastructureRetryPerformed -and $hasValidEvidence) {
+      try {
+        $evidencePayload = Get-Content -LiteralPath $evidencePath -Raw | ConvertFrom-Json
+        if ($null -eq $evidencePayload.extra) {
+          $evidencePayload | Add-Member -NotePropertyName extra -NotePropertyValue ([pscustomobject]@{})
+        }
+        $evidencePayload.extra | Add-Member `
+          -NotePropertyName infrastructureRetry `
+          -NotePropertyValue "hosted_system_anr_recovery" `
+          -Force
+        [IO.File]::WriteAllText(
+          $evidencePath,
+          ($evidencePayload | ConvertTo-Json -Depth 20),
+          [Text.UTF8Encoding]::new($false)
+        )
+      } catch {
+        Write-Warning "无法记录 Android system ANR 恢复证据: $($_.Exception.Message)"
+        $effectiveExitCode = 1
+      }
+    }
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
     & python $normalizer `
       --scenario-report $scenarioPath `
@@ -406,6 +543,7 @@ try {
       --framework uiautomator `
       --exit-code $effectiveExitCode `
       --evidence $evidencePath `
+      --failure-junit $junitPath `
       --matrix $matrix
     $normalizeExitCode = $LASTEXITCODE
 
@@ -416,10 +554,8 @@ try {
       & $adb -s $Device shell uiautomator dump /sdcard/lddc-window.xml
       & $adb -s $Device pull /sdcard/lddc-window.xml `
         (Join-Path $diagnosticsDir "$scenario-window.xml") | Out-Null
-      if ($normalizeExitCode -ne 0) {
-        exit $normalizeExitCode
-      }
-      exit $effectiveExitCode
+      $overallStatus = 1
+      Write-Warning "Android DocumentsUI 场景 $scenario 失败，继续收集其余独立场景"
     }
   }
 } finally {
@@ -435,7 +571,8 @@ try {
   --run-id $runId `
   --matrix $matrix
 if ($LASTEXITCODE -ne 0) {
-  exit $LASTEXITCODE
+  $overallStatus = 1
 }
 
 Write-Host "Android platform reports: $runRoot"
+exit $overallStatus

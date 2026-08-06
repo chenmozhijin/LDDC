@@ -108,6 +108,12 @@ def failures() -> list[str]:
         "handledSystemAnr || device.hasObject(By.pkg(APP_PACKAGE))",
         "device.currentPackageName == APP_PACKAGE",
         "Until.gone(systemAnrWaitSelector)",
+        '"hosted_system_anr"',
+        '"documents_ui_failure"',
+        '"application_failure"',
+        '"resource_cleanup_failure"',
+        '"nativeActionCount" to nativeActionCount',
+        "detectHostedSystemAnr()",
     ):
         if marker not in android_platform_test:
             problems.append(f"Android 前台状态机缺少严格 ANR/前台约束: {marker}")
@@ -324,6 +330,20 @@ def failures() -> list[str]:
     android_runner = (ROOT / "tool/test/run_android_platform_tests.ps1").read_text(
         encoding="utf-8"
     )
+    for marker in (
+        "Test-ShouldRetryAndroidScenario",
+        "Restart-HostedAndroidEmulator",
+        'FailureCategory -eq "hosted_system_anr"',
+        "NativeActionCount -eq 0",
+        'getprop sys.boot_completed',
+        "android-instrumentation-missing",
+        "--failure-junit $junitPath",
+        "$overallStatus = 1",
+    ):
+        if marker not in android_runner:
+            problems.append(f"Android runner 缺少 ANR 分类、单次恢复或失败收集约束: {marker}")
+    if "Android instrumentation 两次启动均未生成 JUnit XML" in android_runner:
+        problems.append("Android runner 禁止因单场景缺报告而短路其他场景")
     ios_runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
         encoding="utf-8"
     )
@@ -721,16 +741,20 @@ def failures() -> list[str]:
         "Invoke-BoundedProcess",
         "Start-SupervisedProcess",
         "process_group_supervisor.py",
-        "Wait-ForFlutterTestStart",
         "FlutterStartupTimeoutSeconds",
         "Get-SupervisorResidualCount",
         "Wait-ForLddcProcessBaseline",
+        '/usr/bin/plutil -extract CFBundleIdentifier raw',
+        '$bundleIdentifier.Trim() -ne "com.cmzj.lddc"',
         'ExpectedState "picker_requested"',
+        "-TimeoutSeconds $FlutterStartupTimeoutSeconds",
         'ExpectedState "flutter_completed"',
         '$payload.resources["final"]["childProcessCount"] = $FinalChildProcessCount',
     ):
         if marker not in macos_runner:
             problems.append(f"macOS XCUITest runner 缺少真实运行契约: {marker}")
+    if "Wait-ForFlutterTestStart" in macos_runner:
+        problems.append("macOS hybrid 禁止把 Dart testStart 当作应用就绪门禁")
     if '@("build", "macos", "--debug")' in macos_runner:
         problems.append("macOS hybrid runner 不得在 build-for-testing 前重复完整 Debug 构建")
     for forbidden in ("Register-OwnedProcessTree", "Wait-ForOwnedProcessBaseline"):
@@ -781,6 +805,19 @@ def failures() -> list[str]:
         ):
             if forbidden in macos_system_ui_job:
                 problems.append(f"macOS system UI job 禁止混入应用资源场景: {forbidden}")
+        for job_name, job in (
+            ("macOS 应用 job", macos_job),
+            ("macOS system UI job", macos_system_ui_job),
+        ):
+            for marker in (
+                "runs-on: macos-26",
+                "LDDC_XCODE_VERSION: '26.6'",
+                'developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"',
+                'sudo xcode-select --switch "$developer_dir"',
+                'actual_xcode="$(xcodebuild -version',
+            ):
+                if marker not in job:
+                    problems.append(f"{job_name} 缺少固定 Xcode 预检契约: {marker}")
     else:
         problems.append("macOS 应用与 system UI job 顺序或边界无效")
     macos_ui_tests = (ROOT / "lddc/macos/RunnerUITests/RunnerUITests.swift").read_text(
@@ -854,8 +891,27 @@ def failures() -> list[str]:
     ios_runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
         encoding="utf-8"
     )
+    ios_simulator_creator = (
+        ROOT / "tool/test/create_ios_simulator.sh"
+    ).read_text(encoding="utf-8")
+    for marker in (
+        'expected_runtime_version="${LDDC_IOS_RUNTIME_VERSION:-26.5}"',
+        'expected_runtime_major="${expected_runtime_version%%.*}"',
+        'expected_xcode_version="${LDDC_XCODE_VERSION:-26.6}"',
+        'xcode_version_number="$(xcodebuild -version',
+        '"$xcode_version_number" != "$expected_xcode_version"',
+        'xcode_major="${xcode_version_number%%.*}"',
+        '"$xcode_major" != "$expected_runtime_major"',
+        '--arg expectedVersion "$expected_runtime_version"',
+        'select(.version == $expectedVersion)',
+        'xcode_version="$(xcodebuild -version',
+    ):
+        if marker not in ios_simulator_creator:
+            problems.append(f"iOS Simulator 创建器缺少运行时锁定或元数据: {marker}")
     for required in (
         "Get-SimulatorMetadata",
+        "simctl list runtimes --json",
+        "runtimeVersion = [string]$runtimeInfo.version",
         'simulator = $simulatorMetadata',
         '$simulatorMetadata.configuredLanguage = "en"',
         '$simulatorMetadata.configuredLocale = "en_US"',
@@ -879,6 +935,9 @@ def failures() -> list[str]:
         "无法增补 Simulator evidence",
         "无法写入 runner evidence",
         "hostArchitecture",
+        "xcodeVersion",
+        "iOS hosted Xcode 漂移",
+        "iOS Simulator runtime 漂移",
         "arch=$hostArchitecture",
     ):
         if required not in ios_runner:
@@ -912,6 +971,25 @@ def failures() -> list[str]:
             problems.append(f"iOS native unit 测试缺少状态感知启动契约: {marker}")
     if 'simctl boot "$DEVICE_ID" || true' in workflow:
         problems.append("iOS Simulator 启动错误不得通过 || true 吞掉")
+    ios_job_start = workflow.find("  ios-validation:")
+    ios_job_end = workflow.find("  experimental-web:")
+    if 0 <= ios_job_start < ios_job_end:
+        ios_job = workflow[ios_job_start:ios_job_end]
+        for marker in (
+            "runs-on: macos-26",
+            "LDDC_XCODE_VERSION: '26.6'",
+            "LDDC_IOS_RUNTIME_VERSION: '26.5'",
+            'developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"',
+            'sudo xcode-select --switch "$developer_dir"',
+            'actual_xcode="$(xcodebuild -version',
+            "simctl list runtimes available -j",
+            '--arg version "$LDDC_IOS_RUNTIME_VERSION"',
+            "bash tool/test/create_ios_simulator.sh",
+        ):
+            if marker not in ios_job:
+                problems.append(f"iOS hosted job 缺少固定 runner/runtime 契约: {marker}")
+    else:
+        problems.append("iOS hosted job 边界无效")
     for manual_linux_asset in (
         ROOT / "tool/test/run_linux_platform_tests.sh",
         ROOT / "tool/test/requirements-linux-platform.txt",

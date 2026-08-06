@@ -9,9 +9,26 @@ if [[ "$host_arch" != "arm64" && "$host_arch" != "x86_64" ]]; then
   exit 1
 fi
 
+expected_runtime_version="${LDDC_IOS_RUNTIME_VERSION:-26.5}"
+expected_runtime_major="${expected_runtime_version%%.*}"
+expected_xcode_version="${LDDC_XCODE_VERSION:-26.6}"
+xcode_version_number="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+xcode_major="${xcode_version_number%%.*}"
+if [[ -z "$xcode_version_number" || "$xcode_version_number" != "$expected_xcode_version" ]]; then
+  echo "ERROR: 当前 Xcode $xcode_version_number 与固定版本 $expected_xcode_version 不一致" >&2
+  exit 1
+fi
+if [[ "$xcode_major" != "$expected_runtime_major" ]]; then
+  echo "ERROR: 固定 Xcode $xcode_version_number 与 iOS runtime $expected_runtime_version 主版本不一致" >&2
+  exit 1
+fi
+xcode_version="$(xcodebuild -version | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+
 runtime_json="$(xcrun simctl list runtimes available -j)"
-runtime="$(jq -r '
-  [.runtimes[] | select(.isAvailable == true and .platform == "iOS")]
+runtime="$(jq -r --arg expectedVersion "$expected_runtime_version" '
+  [.runtimes[]
+    | select(.isAvailable == true and .platform == "iOS")
+    | select(.version == $expectedVersion)]
   | sort_by(.version | split(".") | map(tonumber))
   | last | .identifier // empty
 ' <<<"$runtime_json")"
@@ -19,7 +36,7 @@ runtime_version="$(jq -r --arg id "$runtime" '
   .runtimes[] | select(.identifier == $id) | .version
 ' <<<"$runtime_json")"
 if [[ -z "$runtime" || -z "$runtime_version" ]]; then
-  echo "ERROR: hosted runner 没有可用 iOS runtime" >&2
+  echo "ERROR: hosted runner 没有可用的 iOS $expected_runtime_version runtime" >&2
   exit 1
 fi
 
@@ -57,7 +74,11 @@ jq -n \
   --arg runtimeVersion "$runtime_version" \
   --arg model "$model" \
   --arg hostArchitecture "$host_arch" \
-  '{udid: $udid, runtime: $runtime, runtimeVersion: $runtimeVersion, model: $model, hostArchitecture: $hostArchitecture}' \
+  --arg expectedRuntimeMajor "$expected_runtime_major" \
+  --arg expectedRuntimeVersion "$expected_runtime_version" \
+  --arg expectedXcodeVersion "$expected_xcode_version" \
+  --arg xcodeVersion "$xcode_version" \
+  '{udid: $udid, runtime: $runtime, runtimeVersion: $runtimeVersion, expectedRuntimeMajor: $expectedRuntimeMajor, expectedRuntimeVersion: $expectedRuntimeVersion, expectedXcodeVersion: $expectedXcodeVersion, model: $model, hostArchitecture: $hostArchitecture, xcodeVersion: $xcodeVersion}' \
   >"$report_path"
 
 echo "DEVICE_ID=$udid" >>"$GITHUB_ENV"
