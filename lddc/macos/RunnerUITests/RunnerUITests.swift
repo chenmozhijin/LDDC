@@ -67,13 +67,18 @@ final class RunnerUITests: XCTestCase {
       panel.application.typeKey("a", modifierFlags: [.command])
       pathField.typeText(fixtureDirectory)
       // macOS 26.5 的 hosted NSOpenPanel 不会保证 Enter 提交 Go To Folder
-      // sheet。必须操作系统实际暴露的 typed Go 按钮，否则 Flutter 会继续
-      // 阻塞在文件选择调用，最终把原生动作失败误报成业务超时。
+      // sheet。Go 按钮实际属于嵌套 GoToWindow sheet 的 Touch Bar；必须查询
+      // 该 typed 原生控件，否则 Flutter 会继续阻塞在文件选择调用。
       attachText(
         name: "lddc-macos-go-to-folder-accessibility.txt",
         value: panel.application.debugDescription
       )
-      let goButtons = panel.application.sheets.buttons.matching(
+      let goToFolder = panel.application.sheets["GoToWindow"]
+      try require(
+        goToFolder.waitForExistence(timeout: 10),
+        "NSOpenPanel 的前往文件夹 sheet 没有出现"
+      )
+      let goButtons = goToFolder.touchBars.buttons.matching(
         NSPredicate(format: "label == %@ OR identifier == %@", "Go", "Go")
       )
       guard let goButton = waitForExactlyOneHittableElement(
@@ -282,19 +287,11 @@ final class RunnerUITests: XCTestCase {
 
   private func currentPanelServices() -> [NSRunningApplication] {
     NSWorkspace.shared.runningApplications.filter { application in
-      guard !application.isTerminated else {
-        return false
-      }
-      let identity = [
-        application.bundleIdentifier,
-        application.localizedName,
-        application.bundleURL?.lastPathComponent,
-        application.executableURL?.lastPathComponent,
-      ]
-        .compactMap { $0 }
-        .joined(separator: " ")
-        .lowercased()
-      return identity.contains("openandsavepanel") || identity.contains("open and save panel")
+      // 只观察 AppKit 的真实 open/save panel 服务。QuickLook 等系统服务可能
+      // 在读取 accessibility 树前退出，宽泛枚举会让 XCTest 自身断言崩溃并
+      // 覆盖真正的文件面板错误。
+      return !application.isTerminated
+        && application.bundleIdentifier == "com.apple.appkit.xpc.openAndSavePanelService"
     }
   }
 

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lddc/src/app/shell/app_shell_route.dart';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
+import 'package:lddc_lyrics_flutter/lddc_lyrics_flutter.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
 import 'integration_harness.dart';
@@ -52,9 +55,10 @@ class AppShellDriver {
 }
 
 class SearchDriver {
-  SearchDriver(this.tester);
+  SearchDriver(this.tester, {this.readState});
 
   final WidgetTester tester;
+  final SearchWorkflowState Function()? readState;
 
   Future<void> enterKeyword(String keyword) async {
     final Finder searchBar = find.byKey(
@@ -70,21 +74,34 @@ class SearchDriver {
     await tapVisible(tester, searchBar, reason: '等待搜索输入框可点击');
     await tester.enterText(input, keyword);
     await pumpForInteraction(tester);
-    // 窄屏预览弹层关闭时，SearchWorkspace 可能还有一个携带旧关键词的
-    // post-frame 同步任务。单帧后立即读取 controller 会把正常的下一帧回写误判
-    // 为输入失败。这里只有界地等待当前唯一 EditableText 收敛到用户输入，
-    // 不放宽业务超时，也不接受旧值或重复输入框。
-    await pumpUntil(
-      tester,
-      () {
-        if (input.evaluate().length != 1) {
-          return false;
-        }
-        return tester.widget<EditableText>(input).controller.text == keyword;
-      },
-      timeout: const Duration(seconds: 5),
-      reason: '搜索输入框没有收敛到测试输入',
-    );
+    try {
+      await pumpUntil(
+        tester,
+        () {
+          if (input.evaluate().length != 1) {
+            return false;
+          }
+          final bool inputMatches =
+              tester.widget<EditableText>(input).controller.text == keyword;
+          final SearchWorkflowState? state = readState?.call();
+          return inputMatches && (state == null || state.keyword == keyword);
+        },
+        timeout: const Duration(seconds: 5),
+        reason: '搜索输入框和业务关键词没有收敛到测试输入',
+      );
+    } on TimeoutException {
+      final String actualText = input.evaluate().length == 1
+          ? tester.widget<EditableText>(input).controller.text
+          : '<输入框数量=${input.evaluate().length}>';
+      final SearchWorkflowState? state = readState?.call();
+      throw TimeoutException(
+        '搜索输入没有收敛: expected=$keyword, controller=$actualText, '
+        'state=${state?.keyword ?? '<未提供状态读取器>'}, '
+        'source=${state?.selectedSource.value ?? '<unknown>'}, '
+        'type=${state?.selectedSearchType.value ?? '<unknown>'}',
+        const Duration(seconds: 5),
+      );
+    }
   }
 
   Future<void> selectSource(Source source) async {

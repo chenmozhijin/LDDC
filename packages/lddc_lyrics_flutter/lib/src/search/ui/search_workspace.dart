@@ -83,8 +83,6 @@ class _SearchWorkspaceState extends State<SearchWorkspace> {
   static const double _keyboardFractionStep = 0.05;
 
   bool _controllerSyncScheduled = false;
-  String _pendingKeyword = '';
-  String _pendingSavePath = '';
   // 受控状态通过 post-frame 回写时，必须区分用户在等待期间产生的编辑。
   // 编辑代数由 TextEditingController listener 递增，旧回调看到代数变化后
   // 会放弃写入，避免窄屏预览关闭等重建流程恢复已经被用户清空的文本。
@@ -246,8 +244,6 @@ class _SearchWorkspaceState extends State<SearchWorkspace> {
     required String keyword,
     required String savePath,
   }) {
-    _pendingKeyword = keyword;
-    _pendingSavePath = savePath;
     if (_controllerSyncScheduled) {
       return;
     }
@@ -255,22 +251,44 @@ class _SearchWorkspaceState extends State<SearchWorkspace> {
     final int scheduledSavePathGeneration = _savePathEditGeneration;
     final String scheduledKeywordText = widget.keywordController.text;
     final String scheduledSavePathText = widget.savePathController.text;
+    final String scheduledKeywordState = keyword;
+    final String scheduledSavePathState = savePath;
     _controllerSyncScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
       _controllerSyncScheduled = false;
+      final SearchWorkflowState latestState = widget.controller.state;
+      final String latestKeyword = latestState.keyword;
+      final String latestSavePath = latestState.saveDirectoryPath ?? '';
+      final bool keywordIsUnchanged =
+          _keywordEditGeneration == scheduledKeywordGeneration &&
+          widget.keywordController.text == scheduledKeywordText &&
+          latestKeyword == scheduledKeywordState;
+      final bool savePathIsUnchanged =
+          _savePathEditGeneration == scheduledSavePathGeneration &&
+          widget.savePathController.text == scheduledSavePathText &&
+          latestSavePath == scheduledSavePathState;
+
       // 只有注册回调时的代数和文本都未变化，才允许业务状态回写。
-      // 用户输入即使发生在同一帧，也会先触发 controller listener，因而
-      // 不会被旧状态覆盖；下一次 build 会用最新状态重新排队同步。
-      if (_keywordEditGeneration == scheduledKeywordGeneration &&
-          widget.keywordController.text == scheduledKeywordText) {
-        _syncTextController(widget.keywordController, _pendingKeyword);
+      // 如果回调因为用户输入或外部 controller 替换而过期，不能把旧 pending
+      // 值直接丢掉：下一帧重新读取 controller.state，确保新的业务状态最终能够
+      // 收敛到输入框，同时不会覆盖用户刚刚输入的内容。
+      if (keywordIsUnchanged) {
+        _syncTextController(widget.keywordController, latestKeyword);
       }
-      if (_savePathEditGeneration == scheduledSavePathGeneration &&
-          widget.savePathController.text == scheduledSavePathText) {
-        _syncTextController(widget.savePathController, _pendingSavePath);
+      if (savePathIsUnchanged) {
+        _syncTextController(widget.savePathController, latestSavePath);
+      }
+      if ((!keywordIsUnchanged &&
+              latestKeyword != widget.keywordController.text) ||
+          (!savePathIsUnchanged &&
+              latestSavePath != widget.savePathController.text)) {
+        _scheduleControllerSync(
+          keyword: latestKeyword,
+          savePath: latestSavePath,
+        );
       }
     });
   }

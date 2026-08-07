@@ -45,11 +45,14 @@ void main() {
       addTearDown(app.dispose);
 
       final AppShellDriver shell = AppShellDriver(tester);
-      final SearchDriver search = SearchDriver(tester);
       await shell.openRoute(AppShellRoute.search);
       final searchContainer = scopedProviderContainer(
         tester,
         find.byType(SearchPage),
+      );
+      final SearchDriver search = SearchDriver(
+        tester,
+        readState: () => searchContainer.read(searchWorkflowControllerProvider),
       );
       expect(await _readExportedLyrics(app.workspace.exportsDir), isEmpty);
       // 移动端列表批量保存依赖真实 SAF tree。offline profile 明确使用

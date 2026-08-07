@@ -22,6 +22,7 @@ abstract final class AppSemanticsIdentifiers {
       'lddc.open_lyrics.notice.saveTagFailed';
   static const String openLyricsConvertFailed =
       'lddc.open_lyrics.notice.convertFailed';
+  static const String openLyricsPreview = 'lddc.open_lyrics.preview';
 
   static const String localMatchPickFiles = 'lddc.local_match.pick_files';
   static const String localMatchPickDirectories =
@@ -58,6 +59,7 @@ abstract final class AppSemanticsIdentifiers {
     openLyricsSaveTagSucceeded,
     openLyricsSaveTagFailed,
     openLyricsConvertFailed,
+    openLyricsPreview,
     localMatchPickFiles,
     localMatchPickDirectories,
     localMatchPickTree,

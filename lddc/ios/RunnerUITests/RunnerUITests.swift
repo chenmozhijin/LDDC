@@ -14,6 +14,7 @@ final class RunnerUITests: XCTestCase {
   private let saveFileIdentifier = "lddc.open_lyrics.save_file"
   private let saveTagIdentifier = "lddc.open_lyrics.save_tag"
   private let saveTagSucceededIdentifier = "lddc.open_lyrics.notice.saveTagSucceeded"
+  private let previewIdentifier = "lddc.open_lyrics.preview"
   private let documentsBundleIdentifier = "com.apple.DocumentsApp"
   private let springBoardBundleIdentifier = "com.apple.springboard"
   private let documentBrowsingRootPrefix = "DOC.browsingRoot Source: "
@@ -37,8 +38,7 @@ final class RunnerUITests: XCTestCase {
     do {
       let launchedApp = try launchApp()
       app = launchedApp
-      try selectSeededAudio(app: launchedApp)
-      addAction(&actions, capability: "filePicker", action: "document_picker_select_audio")
+      try selectSeededAudio(app: launchedApp, actions: &actions)
       addAction(&actions, capability: "nativeChannels", action: "flutter_picker_round_trip")
       addAction(&actions, capability: "media", action: "security_scoped_fd_read_embedded_lyrics")
 
@@ -53,7 +53,7 @@ final class RunnerUITests: XCTestCase {
       // 经系统 Picker 回读，才能证明写入不是同一 TagLib 会话缓存造成的假绿。
       try terminateAndVerify(launchedApp)
       relaunchPreservingFixture(launchedApp)
-      try selectSeededAudio(app: launchedApp)
+      try selectSeededAudio(app: launchedApp, actions: &actions)
       addAction(&actions, capability: "media", action: "saved_tag_reopened_after_app_restart")
       try terminateAndVerify(launchedApp)
       addAction(&actions, capability: "resourceCleanup", action: "application_and_picker_closed")
@@ -100,7 +100,7 @@ final class RunnerUITests: XCTestCase {
     do {
       let launchedApp = try launchApp()
       app = launchedApp
-      try selectSeededAudio(app: launchedApp)
+      try selectSeededAudio(app: launchedApp, actions: &actions)
       let picker = try openExportPicker(app: launchedApp)
       let save = try requireTypedButton(named: "Save", in: picker, timeout: 15)
       save.tap()
@@ -129,7 +129,7 @@ final class RunnerUITests: XCTestCase {
     do {
       let launchedApp = try launchApp()
       app = launchedApp
-      try selectSeededAudio(app: launchedApp)
+      try selectSeededAudio(app: launchedApp, actions: &actions)
       _ = try openExportPicker(app: launchedApp)
       try cancelSystemPicker(app: launchedApp)
       try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消导出后 LDDC 没有返回前台")
@@ -156,7 +156,7 @@ final class RunnerUITests: XCTestCase {
     do {
       let launchedApp = try launchApp()
       app = launchedApp
-      try selectSeededAudio(app: launchedApp)
+      try selectSeededAudio(app: launchedApp, actions: &actions)
       _ = try openExportPicker(app: launchedApp)
       launchedApp.terminate()
       try require(launchedApp.wait(for: .notRunning, timeout: 5), "导出中终止时 LDDC 未在超时内关闭")
@@ -220,20 +220,23 @@ final class RunnerUITests: XCTestCase {
     return try waitForSystemPicker(app: app, timeout: 15)
   }
 
-  private func selectSeededAudio(app: XCUIApplication) throws {
+  private func selectSeededAudio(
+    app: XCUIApplication,
+    actions: inout [String: [[String: Any]]]
+  ) throws {
     var picker = try openDocumentPicker(app: app)
 
     // Files 会记住上次的目录。先仅查找 typed file cell，可以处理
     // 已在 fixture 目录的情况，也不会把 Picker 容器或菜单按钮误当成文件。
     if let fixture = waitForFixtureCell(in: picker, timeout: 1) {
-      try selectFixture(fixture, app: app)
+      try selectFixture(fixture, app: app, actions: &actions)
       return
     }
     if let folder = waitForPlatformTestFolder(in: picker, timeout: 1) {
       folder.tap()
       picker = try waitForSystemPicker(app: app, timeout: 5)
       let fixture = try requireFixtureCell(in: picker, timeout: 15)
-      try selectFixture(fixture, app: app)
+      try selectFixture(fixture, app: app, actions: &actions)
       return
     }
 
@@ -246,7 +249,7 @@ final class RunnerUITests: XCTestCase {
     picker = try waitForSystemPicker(app: app, timeout: 5)
 
     if let fixture = waitForFixtureCell(in: picker, timeout: 1) {
-      try selectFixture(fixture, app: app)
+      try selectFixture(fixture, app: app, actions: &actions)
       return
     }
     if let folder = waitForPlatformTestFolder(in: picker, timeout: 1) {
@@ -272,23 +275,31 @@ final class RunnerUITests: XCTestCase {
 
     picker = try waitForSystemPicker(app: app, timeout: 5)
     let fixture = try requireFixtureCell(in: picker, timeout: 15)
-    try selectFixture(fixture, app: app)
+    try selectFixture(fixture, app: app, actions: &actions)
   }
 
-  private func selectFixture(_ fixture: XCUIElement, app: XCUIApplication) throws {
+  private func selectFixture(
+    _ fixture: XCUIElement,
+    app: XCUIApplication,
+    actions: inout [String: [[String: Any]]]
+  ) throws {
     try require(fixture.exists && fixture.isHittable, "匿名音频 fixture 不可点击")
     fixture.tap()
     try require(waitForSystemPickerToClose(app: app, timeout: 15), "选择文件后系统 Picker 没有关闭")
+    // 原生文件选择动作在 Picker 关闭后已经完成，先记录证据再验证 Flutter
+    // 预览，避免后置语义断言失败时把真实选择动作错误报告为零动作。
+    addAction(&actions, capability: "filePicker", action: "document_picker_select_audio")
     try require(app.wait(for: .runningForeground, timeout: 15), "选择文件后 LDDC 没有返回前台")
     try require(
-      app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", fixtureName))
-        .firstMatch.waitForExistence(timeout: 15),
-      "选择结果没有回到 Flutter 页面"
+      app.otherElements[previewIdentifier].waitForExistence(timeout: 15),
+      "选择结果没有回到 Flutter 预览区域"
     )
+    let preview = app.otherElements[previewIdentifier]
+    let lyricContent = preview.descendants(matching: .otherElements).matching(
+      NSPredicate(format: "label == %@ OR value == %@", "Hello LDDC", "Hello LDDC")
+    ).firstMatch
     try require(
-      app.descendants(matching: .any)
-        .matching(NSPredicate(format: "label CONTAINS %@", "Hello LDDC"))
-        .firstMatch.waitForExistence(timeout: 15),
+      lyricContent.waitForExistence(timeout: 15),
       "生产 TagLib 没有从 security-scoped fd 回读匿名内嵌歌词"
     )
   }

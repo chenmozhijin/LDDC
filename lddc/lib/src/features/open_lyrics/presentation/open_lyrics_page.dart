@@ -328,20 +328,24 @@ class _PreviewCard extends StatelessWidget {
               ],
               const SizedBox(height: 6),
               Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant,
+                child: Semantics(
+                  identifier: AppSemanticsIdentifiers.openLyricsPreview,
+                  container: true,
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: LyricsTranslationProgressOverlay(
-                    progress: state.translationProgress,
-                    strings: context.l10n.toLyricsUiStrings(),
-                    child: Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: _buildPreviewContent(context),
+                    child: LyricsTranslationProgressOverlay(
+                      progress: state.translationProgress,
+                      strings: context.l10n.toLyricsUiStrings(),
+                      child: Padding(
+                        padding: const EdgeInsets.all(10),
+                        child: _buildPreviewContent(context),
+                      ),
                     ),
                   ),
                 ),

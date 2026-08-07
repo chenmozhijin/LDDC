@@ -88,11 +88,14 @@ void main() {
       ).path;
 
       final AppShellDriver shell = AppShellDriver(tester);
-      final SearchDriver search = SearchDriver(tester);
       await shell.openRoute(AppShellRoute.search);
       final searchContainer = scopedProviderContainer(
         tester,
         find.byType(SearchPage),
+      );
+      final SearchDriver search = SearchDriver(
+        tester,
+        readState: () => searchContainer.read(searchWorkflowControllerProvider),
       );
 
       await reporter.runStep('search_song', () async {

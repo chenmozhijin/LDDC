@@ -389,6 +389,35 @@ void main() {
     });
   });
 
+  testWidgets('打开歌曲后预览区暴露稳定结果 identifier', (WidgetTester tester) async {
+    final _FakeOpenLyricsInputPicker picker = _FakeOpenLyricsInputPicker(
+      pickedAudioFile: const PickedAudioFileHandle(
+        name: 'demo.mp3',
+        path: r'D:\demo.mp3',
+      ),
+    );
+    final _FakeLocalMatchMediaGateway mediaGateway =
+        _FakeLocalMatchMediaGateway()..readLyricsText = '[00:00.00]Hello LDDC';
+    final ProviderContainer container = _createContainer(
+      picker: picker,
+      lyricsApi: _FakeLyricsApi(lyrics: _buildLyrics()),
+      mediaGateway: mediaGateway,
+    );
+    addTearDown(container.dispose);
+    final OpenLyricsPageController controller = container.read(
+      openLyricsPageControllerProvider.notifier,
+    );
+
+    await tester.pumpWidget(_buildTestApp(container));
+    await controller.openSongFile();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.bySemanticsIdentifier(AppSemanticsIdentifiers.openLyricsPreview),
+      findsOneWidget,
+    );
+  });
+
   group('OpenLyricsPage', () {
     testWidgets('页面展示主流程控件且控制区收口为无标题卡片', (WidgetTester tester) async {
       _setTestViewport(tester, const Size(1366, 1024));

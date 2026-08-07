@@ -9,8 +9,8 @@ void main() {
   test('原生平台控件 identifier 全局唯一且数量保持在收口范围', () {
     expect(
       AppSemanticsIdentifiers.all,
-      hasLength(27),
-      reason: '27 项包含原生操作入口、四个拖放目标以及三种结果证据；新增协议项必须重新审计',
+      hasLength(28),
+      reason: '28 项包含原生操作入口、四个拖放目标以及预览结果证据；新增协议项必须重新审计',
     );
     expect(
       AppSemanticsIdentifiers.all.toSet(),
