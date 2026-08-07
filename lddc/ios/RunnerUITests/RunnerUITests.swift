@@ -643,9 +643,9 @@ final class RunnerUITests: XCTestCase {
       ]],
       "capabilityEvidence": actions,
       "resources": [
-        "baseline": ["nativeWindowCount": 0],
-        "final": ["nativeWindowCount": cleanupVerified ? 0 : 1],
-        "thresholds": ["nativeWindowCount": 0],
+        "baseline": ["applicationProcessCount": 0],
+        "final": ["applicationProcessCount": cleanupVerified ? 0 : 1],
+        "thresholds": ["applicationProcessCount": 0],
       ],
       "artifacts": artifact,
       "extra": cleanupDiagnostics,

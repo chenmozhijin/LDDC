@@ -66,7 +66,6 @@ cleanup_failed_device() {
 trap cleanup_failed_device ERR
 xcrun simctl boot "$udid"
 xcrun simctl bootstatus "$udid" -b
-trap - ERR
 
 jq -n \
   --arg udid "$udid" \
@@ -81,8 +80,20 @@ jq -n \
   '{udid: $udid, runtime: $runtime, runtimeVersion: $runtimeVersion, expectedRuntimeMajor: $expectedRuntimeMajor, expectedRuntimeVersion: $expectedRuntimeVersion, expectedXcodeVersion: $expectedXcodeVersion, model: $model, hostArchitecture: $hostArchitecture, xcodeVersion: $xcodeVersion}' \
   >"$report_path"
 
-echo "DEVICE_ID=$udid" >>"$GITHUB_ENV"
-echo "IOS_SIMULATOR_RUNTIME=$runtime" >>"$GITHUB_ENV"
-echo "IOS_SIMULATOR_MODEL=$model" >>"$GITHUB_ENV"
-echo "IOS_HOST_ARCH=$host_arch" >>"$GITHUB_ENV"
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  echo "DEVICE_ID=$udid" >>"$GITHUB_ENV"
+  echo "IOS_SIMULATOR_RUNTIME=$runtime" >>"$GITHUB_ENV"
+  echo "IOS_SIMULATOR_MODEL=$model" >>"$GITHUB_ENV"
+  echo "IOS_HOST_ARCH=$host_arch" >>"$GITHUB_ENV"
+else
+  # 本地开发不会提供 GitHub Actions 环境文件。将同样的显式设备契约
+  # 输出到终端，调用者可直接传给 run_ios_platform_tests.ps1 -Device。
+  echo "DEVICE_ID=$udid"
+  echo "IOS_SIMULATOR_RUNTIME=$runtime"
+  echo "IOS_SIMULATOR_MODEL=$model"
+  echo "IOS_HOST_ARCH=$host_arch"
+fi
+# 设备元数据和调用方交接全部成功后，才把清理所有权交给 workflow 或本地开发者。
+# 此前任一步骤失败都会由 ERR trap 删除本次创建的唯一模拟器。
+trap - ERR
 echo "Created iOS simulator: $model $runtime_version ($udid)"

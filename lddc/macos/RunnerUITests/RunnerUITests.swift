@@ -56,13 +56,15 @@ final class RunnerUITests: XCTestCase {
       let rootComboBox = panel.root.comboBoxes.firstMatch
       let rootTextField = panel.root.textFields.firstMatch
       let pathFields = [comboBox, textField, rootComboBox, rootTextField]
-      guard let pathField = firstExistingElement(pathFields, timeout: 10) else {
+      guard let pathField = firstHittableElement(pathFields, timeout: 10) else {
         throw failure("NSOpenPanel 没有打开可访问的前往文件夹输入框")
       }
       // “前往文件夹”只输入 fixture 的父目录。把完整文件路径
       // 交给该 sheet 只能证明面板关闭，不能证明列表中的文件真正
       // 被选中。进入父目录后再精确点击文件名，使原生动作与
       // Flutter 最终收到的选择结果形成同一条证据链。
+      pathField.click()
+      panel.application.typeKey("a", modifierFlags: [.command])
       pathField.typeText(fixtureDirectory)
       panel.application.typeKey(.enter, modifierFlags: [])
       try require(
@@ -298,20 +300,6 @@ final class RunnerUITests: XCTestCase {
       Thread.sleep(forTimeInterval: 0.2)
     } while Date() < deadline
     return false
-  }
-
-  private func firstExistingElement(
-    _ candidates: [XCUIElement],
-    timeout: TimeInterval
-  ) -> XCUIElement? {
-    let deadline = Date().addingTimeInterval(timeout)
-    repeat {
-      if let element = candidates.first(where: { $0.exists }) {
-        return element
-      }
-      Thread.sleep(forTimeInterval: 0.1)
-    } while Date() < deadline
-    return nil
   }
 
   private func firstHittableElement(

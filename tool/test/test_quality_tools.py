@@ -480,6 +480,9 @@ class QualityToolTests(unittest.TestCase):
             '"macOS xcresult summary 缺失或损坏"',
             '"macOS xcresult attachment 导出失败',
             '"runnerClassification"',
+            "-and [string]::IsNullOrWhiteSpace($runnerFailureMessage)",
+            "-and [string]::IsNullOrWhiteSpace($xcresultReportError)",
+            "-and $evidenceCandidates.Count -eq 1",
         ):
             self.assertIn(marker, runner)
         # 结果包错误只能写诊断字段，不能覆盖 Flutter/XCTest 原始失败原因。
@@ -487,6 +490,37 @@ class QualityToolTests(unittest.TestCase):
             '$runnerFailureMessage = "macOS xcresult attachment 导出失败',
             runner,
         )
+
+    def test_apple_runners_require_unique_xcode_products(self) -> None:
+        for relative in (
+            "tool/test/run_macos_platform_tests.ps1",
+            "tool/test/run_ios_platform_tests.ps1",
+        ):
+            runner = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("Resolve-UniqueBuildArtifact", runner, relative)
+            self.assertNotIn(
+                'Filter "*.xctestrun" | Select-Object -First 1',
+                runner,
+                relative,
+            )
+        ios_runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn(
+            'Filter "LDDC.app" | Select-Object -First 1',
+            ios_runner,
+        )
+        self.assertIn("iOS Xcode DerivedData 超出测试构建根", ios_runner)
+
+    def test_ios_simulator_creator_supports_local_and_ci_ownership(self) -> None:
+        creator = (ROOT / "tool/test/create_ios_simulator.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('if [[ -n "${GITHUB_ENV:-}" ]]', creator)
+        self.assertIn("run_ios_platform_tests.ps1 -Device", creator)
+        # ERR trap 必须覆盖报告和环境交接；成功后才能把清理责任交给调用方。
+        self.assertGreater(creator.rfind("trap - ERR"), creator.find('>"$report_path"'))
+        self.assertGreater(creator.rfind("trap - ERR"), creator.find('>>"$GITHUB_ENV"'))
 
     def test_l10n_structure_distinguishes_template_tokens_from_html(self) -> None:
         checker = _load_l10n_checker()

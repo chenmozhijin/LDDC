@@ -65,13 +65,44 @@ $testRunnerEnvironment = [ordered]@{
 }
 $previousTestRunnerEnvironment = @{}
 $runRoot = Join-Path $ReportDir $runId
-$derivedData = Join-Path $appRoot "build/native_test_derived_data/$runId"
+$derivedDataParent = [IO.Path]::GetFullPath(
+  (Join-Path $appRoot "build/native_test_derived_data")
+)
+$derivedData = [IO.Path]::GetFullPath((Join-Path $derivedDataParent $runId))
+if (-not $derivedData.StartsWith(
+    $derivedDataParent + [IO.Path]::DirectorySeparatorChar,
+    [StringComparison]::Ordinal
+  )) {
+  throw "iOS Xcode DerivedData 超出测试构建根"
+}
 $scenarioDir = Join-Path $runRoot "scenarios"
 $rawDir = Join-Path $runRoot "raw"
 $junitDir = Join-Path $runRoot "junit"
 $attachmentsDir = Join-Path $runRoot "attachments"
 foreach ($directory in @($scenarioDir, $rawDir, $junitDir, $attachmentsDir)) {
   New-Item -ItemType Directory -Force -Path $directory | Out-Null
+}
+
+function Resolve-UniqueBuildArtifact {
+  param(
+    [Parameter(Mandatory = $true)][string]$Root,
+    [Parameter(Mandatory = $true)][string]$Filter,
+    [Parameter(Mandatory = $true)][string]$Description,
+    [switch]$Directory
+  )
+
+  $matches = if ($Directory) {
+    @(Get-ChildItem -Path $Root -Recurse -Directory -Filter $Filter | Sort-Object FullName)
+  } else {
+    @(Get-ChildItem -Path $Root -Recurse -File -Filter $Filter | Sort-Object FullName)
+  }
+  if ($matches.Count -ne 1) {
+    $relativeMatches = @($matches | ForEach-Object {
+        [IO.Path]::GetRelativePath($Root, $_.FullName).Replace("\", "/")
+      })
+    throw "$Description 必须且只能生成一个，实际为 $($matches.Count)：$($relativeMatches -join ', ')"
+  }
+  return $matches[0]
 }
 
 function Invoke-BoundedNativeCommand {
@@ -421,9 +452,9 @@ function Write-FallbackEvidence {
     steps = @([ordered]@{ step = $Scenario; success = $false; error = $Message })
     capabilityEvidence = @{}
     resources = [ordered]@{
-      baseline = @{ nativeWindowCount = 0 }
-      final = @{ nativeWindowCount = 1 }
-      thresholds = @{ nativeWindowCount = 0 }
+      baseline = @{ applicationProcessCount = 0 }
+      final = @{ applicationProcessCount = 1 }
+      thresholds = @{ applicationProcessCount = 0 }
     }
     artifacts = @()
     extra = @{ simulator = $simulatorMetadata }
@@ -530,13 +561,16 @@ try {
     throw "iOS build-for-testing 失败，exit=$buildExitCode"
   }
 
-  $appBundle = Get-ChildItem -Path (Join-Path $derivedData "Build/Products") `
-    -Recurse -Directory -Filter "LDDC.app" | Select-Object -First 1
-  $xctestrun = Get-ChildItem -Path (Join-Path $derivedData "Build/Products") `
-    -Recurse -File -Filter "*.xctestrun" | Select-Object -First 1
-  if ($null -eq $appBundle -or $null -eq $xctestrun) {
-    throw "iOS build-for-testing 没有生成 app 或 xctestrun"
-  }
+  $buildProducts = Join-Path $derivedData "Build/Products"
+  $appBundle = Resolve-UniqueBuildArtifact `
+    -Root $buildProducts `
+    -Filter "LDDC.app" `
+    -Description "iOS PlatformTest app" `
+    -Directory
+  $xctestrun = Resolve-UniqueBuildArtifact `
+    -Root $buildProducts `
+    -Filter "*.xctestrun" `
+    -Description "iOS RunnerPlatformTests xctestrun"
   Ensure-SimulatorBooted -Stage "before-install"
   Invoke-RequiredSimctl `
     -Stage "install-platform-test-app" `
@@ -656,18 +690,24 @@ try {
         $reportingErrors += "xcresult attachment 导出失败，exit=$attachmentExitCode，诊断=$([IO.Path]::GetFileName($attachmentStderr))"
       }
     }
-    $evidencePath = Get-ChildItem -Path $scenarioAttachments -Recurse -File `
-      | Where-Object {
-          try {
-            $payload = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
-            $payload.scenario -eq $scenario
-          } catch {
-            $false
+    $evidenceCandidates = @(
+      Get-ChildItem -Path $scenarioAttachments -Recurse -File `
+        | Where-Object {
+            try {
+              $payload = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
+              $payload.scenario -eq $scenario
+            } catch {
+              $false
+            }
           }
-        } `
-      | Select-Object -First 1
+    )
+    $evidencePath = if ($evidenceCandidates.Count -eq 1) {
+      $evidenceCandidates[0]
+    } else {
+      $null
+    }
     if ($null -eq $evidencePath) {
-      $reportingErrors += "XCUITest 未导出 evidence attachment"
+      $reportingErrors += "XCUITest evidence attachment 必须且只能有一个，实际为 $($evidenceCandidates.Count)"
       $fallbackEvidence = Join-Path $scenarioAttachments "lddc-evidence-$scenario.json"
       Write-FallbackEvidence `
         -Path $fallbackEvidence `
@@ -860,6 +900,14 @@ try {
   & xcrun simctl terminate $Device com.cmzj.lddc.platformtests 2>$null
   & xcrun simctl terminate $Device com.apple.DocumentsApp 2>$null
   & xcrun simctl uninstall $Device com.cmzj.lddc.platformtests 2>$null
+  try {
+    if (Test-Path -LiteralPath $derivedData -PathType Container) {
+      Remove-Item -LiteralPath $derivedData -Recurse -Force
+    }
+  } catch {
+    $overallExitCode = 1
+    Write-Error "iOS Xcode DerivedData 清理失败: $($_.Exception.Message)" -ErrorAction Continue
+  }
   foreach ($environmentName in $previousTestRunnerEnvironment.Keys) {
     [Environment]::SetEnvironmentVariable(
       $environmentName,

@@ -73,6 +73,25 @@ foreach ($directory in @($scenarioDir, $rawDir, $junitDir, $attachmentsDir, $dia
   New-Item -ItemType Directory -Force -Path $directory | Out-Null
 }
 
+function Resolve-UniqueBuildArtifact {
+  param(
+    [Parameter(Mandatory = $true)][string]$Root,
+    [Parameter(Mandatory = $true)][string]$Filter,
+    [Parameter(Mandatory = $true)][string]$Description
+  )
+
+  $matches = @(
+    Get-ChildItem -Path $Root -Recurse -File -Filter $Filter | Sort-Object FullName
+  )
+  if ($matches.Count -ne 1) {
+    $relativeMatches = @($matches | ForEach-Object {
+        [IO.Path]::GetRelativePath($Root, $_.FullName).Replace("\", "/")
+      })
+    throw "$Description 必须且只能生成一个，实际为 $($matches.Count)：$($relativeMatches -join ', ')"
+  }
+  return $matches[0]
+}
+
 $scenarios = @(
   @{
     Name = "macos_open_panel_select"
@@ -91,8 +110,6 @@ $xcodeReportDrainSeconds = 15
 $testRunnerEnvironment = [ordered]@{
   TEST_RUNNER_LDDC_IT_RUN_ID = $runId
   TEST_RUNNER_LDDC_FIXTURE_PATH = $fixture
-  TEST_RUNNER_LDDC_FIXTURE_SIZE = [string]$fixtureSize
-  TEST_RUNNER_LDDC_FIXTURE_SHA256 = $fixtureSha256
   TEST_RUNNER_LDDC_MACOS_HYBRID_SYNC_DIR = $syncDir
 }
 $previousTestRunnerEnvironment = @{}
@@ -732,11 +749,10 @@ try {
   if ($uiBuildResult.ExitCode -ne 0) {
     throw "macOS XCUITest build-for-testing 失败，exit=$($uiBuildResult.ExitCode)"
   }
-  $xctestrun = Get-ChildItem -Path (Join-Path $derivedData "Build/Products") `
-    -Recurse -File -Filter "*.xctestrun" | Select-Object -First 1
-  if ($null -eq $xctestrun) {
-    throw "macOS build-for-testing 没有生成 xctestrun"
-  }
+  $xctestrun = Resolve-UniqueBuildArtifact `
+    -Root (Join-Path $derivedData "Build/Products") `
+    -Filter "*.xctestrun" `
+    -Description "macOS RunnerPlatformTests xctestrun"
 
   foreach ($entry in $scenarios) {
     $scenario = $entry.Name
@@ -958,23 +974,29 @@ try {
       $process.Dispose()
     }
     $finalLddcCount = Wait-ForLddcProcessBaseline
-    $evidencePath = Get-ChildItem -Path $scenarioAttachments -Recurse -File `
-      | Where-Object {
-          try {
-            $payload = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
-            $payload.scenario -eq $scenario
-          } catch {
-            $false
+    $evidenceCandidates = @(
+      Get-ChildItem -Path $scenarioAttachments -Recurse -File `
+        | Where-Object {
+            try {
+              $payload = Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json
+              $payload.scenario -eq $scenario
+            } catch {
+              $false
+            }
           }
-        } `
-      | Select-Object -First 1
+    )
+    $evidencePath = if ($evidenceCandidates.Count -eq 1) {
+      $evidenceCandidates[0]
+    } else {
+      $null
+    }
     if ($null -eq $evidencePath) {
       $fallbackEvidence = Join-Path $scenarioAttachments "lddc-evidence-$scenario.json"
       Write-FallbackEvidence `
         -Path $fallbackEvidence `
         -Scenario $scenario `
         -Message $(if ([string]::IsNullOrWhiteSpace($runnerFailureMessage)) {
-          "XCUITest 未导出 hybrid evidence attachment"
+          "XCUITest hybrid evidence attachment 必须且只能有一个，实际为 $($evidenceCandidates.Count)"
         } else {
           $runnerFailureMessage
         })
@@ -1005,6 +1027,9 @@ try {
       $flutterExitCode -eq 0 `
         -and $xcodeExitCode -eq 0 `
         -and $nativeSummaryPassed `
+        -and [string]::IsNullOrWhiteSpace($runnerFailureMessage) `
+        -and [string]::IsNullOrWhiteSpace($xcresultReportError) `
+        -and $evidenceCandidates.Count -eq 1 `
         -and $finalLddcCount -eq 0 `
         -and $ownedFinalCount -eq 0
     ) { 0 } else { 1 }

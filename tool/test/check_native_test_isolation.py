@@ -318,6 +318,7 @@ def failures() -> list[str]:
         "backButton.tap()",
         "label CONTAINS[c]",
         "identifier CONTAINS[c]",
+        '"nativeWindowCount"',
     ):
         if forbidden in ios_ui_test:
             problems.append(f"iOS Document Picker 禁止宽泛选择或 sheet fallback: {forbidden}")
@@ -828,6 +829,31 @@ def failures() -> list[str]:
     macos_ui_tests = (ROOT / "lddc/macos/RunnerUITests/RunnerUITests.swift").read_text(
         encoding="utf-8"
     )
+    desktop_launch_parser = (
+        ROOT
+        / "lddc/lib/src/platform/desktop/service_host/desktop_service_launch_arguments.dart"
+    ).read_text(encoding="utf-8")
+    desktop_launch_tests = (
+        ROOT
+        / "lddc/test/platform/desktop/service_host/desktop_service_launch_arguments_test.dart"
+    ).read_text(encoding="utf-8")
+    for host_argument in (
+        "-NSTreatUnknownArgumentsAsOpen",
+        "-ApplePersistenceIgnoreState",
+    ):
+        if f"case '{host_argument}':" not in desktop_launch_parser:
+            problems.append(f"桌面启动参数解析器缺少已知 AppKit 宿主参数: {host_argument}")
+        if desktop_launch_tests.count(host_argument) < 4:
+            problems.append(f"桌面启动参数测试未覆盖顺序、边界和真实宿主序列: {host_argument}")
+    for marker in (
+        "已观测 AppKit 宿主参数在不同组合顺序和重复注入下保持可解析",
+        "ApplePersistenceIgnoreState 缺失值不会吞掉后续 LDDC 参数",
+        "ApplePersistenceIgnoreState 非法值仍然严格失败",
+        "AppKit 宿主参数缺少值时不吞掉后续 LDDC 参数",
+        "AppKit 宿主参数后的非布尔值仍严格报错",
+    ):
+        if marker not in desktop_launch_tests:
+            problems.append(f"桌面启动参数缺少 hosted 边界测试: {marker}")
     macos_flutter_test = (
         ROOT / "lddc/integration_test/macos_file_dialog_platform_test.dart"
     ).read_text(encoding="utf-8")
@@ -863,6 +889,9 @@ def failures() -> list[str]:
         "panel.root.staticTexts[fixtureName]",
         "panel.root.cells[fixtureName]",
         "waitForExactlyOneHittableElement",
+        "firstHittableElement(pathFields, timeout: 10)",
+        'pathField.click()',
+        'panel.application.typeKey("a", modifierFlags: [.command])',
         "waitForSelectedElement(fixture",
         "openButton.isEnabled",
         'expectedState: "picker_requested"',
@@ -902,9 +931,39 @@ def failures() -> list[str]:
         "TEST_RUNNER_LDDC_FIXTURE_PATH",
         "TEST_RUNNER_LDDC_MACOS_HYBRID_SYNC_DIR",
         "if ($xcodeExitCode -ne 0)",
+        "Resolve-UniqueBuildArtifact",
+        "-and [string]::IsNullOrWhiteSpace($runnerFailureMessage)",
+        "-and [string]::IsNullOrWhiteSpace($xcresultReportError)",
+        "-and $evidenceCandidates.Count -eq 1",
     ):
         if required not in macos_runner:
             problems.append(f"macOS hybrid runner 缺少协同或失败报告契约: {required}")
+    for scenario, method in (
+        ("macos_open_panel_select", "testOpenPanelSelectsFixture"),
+        ("macos_open_panel_cancel", "testOpenPanelCancellationReturnsToFlutter"),
+    ):
+        pair_pattern = re.compile(
+            rf'Name = "{re.escape(scenario)}"[\s\S]{{0,200}}Method = "{re.escape(method)}"'
+        )
+        if pair_pattern.search(macos_runner) is None:
+            problems.append(f"macOS runner 场景与 XCTest 方法映射错误: {scenario} -> {method}")
+        if f"func {method}()" not in macos_ui_tests or f'"{scenario}"' not in macos_ui_tests:
+            problems.append(f"macOS XCUITest 缺少场景实现: {scenario} -> {method}")
+    for environment_name in (
+        "LDDC_IT_RUN_ID",
+        "LDDC_FIXTURE_PATH",
+        "LDDC_MACOS_HYBRID_SYNC_DIR",
+    ):
+        if f"TEST_RUNNER_{environment_name}" not in macos_runner:
+            problems.append(f"macOS runner 缺少 XCTest 环境变量: {environment_name}")
+        if f'["{environment_name}"]' not in macos_ui_tests:
+            problems.append(f"macOS XCUITest 未读取 runner 环境变量: {environment_name}")
+    for unused_environment_name in (
+        "TEST_RUNNER_LDDC_FIXTURE_SIZE",
+        "TEST_RUNNER_LDDC_FIXTURE_SHA256",
+    ):
+        if unused_environment_name in macos_runner:
+            problems.append(f"macOS runner 禁止注入 XCUITest 未消费变量: {unused_environment_name}")
     ios_runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
         encoding="utf-8"
     )
@@ -922,6 +981,9 @@ def failures() -> list[str]:
         '--arg expectedVersion "$expected_runtime_version"',
         'select(.version == $expectedVersion)',
         'xcode_version="$(xcodebuild -version',
+        'if [[ -n "${GITHUB_ENV:-}" ]]',
+        'trap - ERR',
+        'run_ios_platform_tests.ps1 -Device',
     ):
         if marker not in ios_simulator_creator:
             problems.append(f"iOS Simulator 创建器缺少运行时锁定或元数据: {marker}")
@@ -956,6 +1018,8 @@ def failures() -> list[str]:
         "iOS hosted Xcode 漂移",
         "iOS Simulator runtime 漂移",
         "arch=$hostArchitecture",
+        "Resolve-UniqueBuildArtifact",
+        "iOS Xcode DerivedData 超出测试构建根",
     ):
         if required not in ios_runner:
             problems.append(f"iOS runner 缺少 Simulator 证据或串行测试契约: {required}")
@@ -963,9 +1027,41 @@ def failures() -> list[str]:
         "& xcodebuild build-for-testing",
         "& xcodebuild test-without-building",
         "& xcrun xcresulttool",
+        'Filter "*.xctestrun" | Select-Object -First 1',
+        'Filter "LDDC.app" | Select-Object -First 1',
     ):
         if forbidden in ios_runner:
             problems.append(f"iOS 外部 Xcode/报告进程禁止绕过硬超时执行器: {forbidden}")
+    for scenario, method in (
+        ("ios_document_picker_select", "testDocumentPickerSelectsSeededAudio"),
+        ("ios_document_picker_cancel", "testDocumentPickerCancellationReturnsToFlutter"),
+        ("ios_document_picker_export", "testDocumentPickerExportsLyricsFile"),
+        (
+            "ios_document_picker_export_cancel",
+            "testDocumentPickerExportCancellationCleansTemporaryFile",
+        ),
+        (
+            "ios_document_picker_export_termination",
+            "testTerminatedExportIsCleanedOnNextLaunch",
+        ),
+    ):
+        pair_pattern = re.compile(
+            rf'Name = "{re.escape(scenario)}"[\s\S]{{0,160}}Method = "{re.escape(method)}"'
+        )
+        if pair_pattern.search(ios_runner) is None:
+            problems.append(f"iOS runner 场景与 XCTest 方法映射错误: {scenario} -> {method}")
+        if f"func {method}()" not in ios_ui_test or f'"{scenario}"' not in ios_ui_test:
+            problems.append(f"iOS XCUITest 缺少场景实现: {scenario} -> {method}")
+    for environment_name in (
+        "LDDC_IT_RUN_ID",
+        "LDDC_FIXTURE_SIZE",
+        "LDDC_FIXTURE_SHA256",
+        "LDDC_FIXTURE_BASE64",
+    ):
+        if f"TEST_RUNNER_{environment_name}" not in ios_runner:
+            problems.append(f"iOS runner 缺少 XCTest 环境变量: {environment_name}")
+        if f'["{environment_name}"]' not in ios_ui_test:
+            problems.append(f"iOS XCUITest 未读取 runner 环境变量: {environment_name}")
     if "-parallel-testing-enabled NO" not in workflow:
         problems.append("iOS native XCTest 必须禁用并行执行")
     simulator_creator = (ROOT / "tool/test/create_ios_simulator.sh").read_text(

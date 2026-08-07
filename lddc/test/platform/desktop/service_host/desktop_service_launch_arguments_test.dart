@@ -69,6 +69,34 @@ void main() {
       expect(args.parseError, isNull);
     });
 
+    test('已观测 AppKit 宿主参数在不同组合顺序和重复注入下保持可解析', () {
+      final List<List<String>> hostedArgumentSamples = <List<String>>[
+        <String>[
+          '-ApplePersistenceIgnoreState',
+          'NO',
+          '-NSTreatUnknownArgumentsAsOpen',
+          'NO',
+          '--not-show',
+        ],
+        <String>[
+          '-NSTreatUnknownArgumentsAsOpen',
+          'YES',
+          '-ApplePersistenceIgnoreState',
+          'YES',
+          '-ApplePersistenceIgnoreState',
+          'NO',
+          '--get-service-port',
+        ],
+      ];
+
+      for (final List<String> sample in hostedArgumentSamples) {
+        final DesktopServiceLaunchArguments args =
+            DesktopServiceLaunchArguments.parse(sample);
+
+        expect(args.parseError, isNull, reason: sample.join(' '));
+      }
+    });
+
     test('ApplePersistenceIgnoreState 缺失值不会吞掉后续 LDDC 参数', () {
       final DesktopServiceLaunchArguments args =
           DesktopServiceLaunchArguments.parse(<String>[
