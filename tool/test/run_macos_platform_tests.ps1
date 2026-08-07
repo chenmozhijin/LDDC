@@ -106,7 +106,7 @@ $scenarios = @(
 )
 # XCTest 结果包的收尾是独立的诊断阶段。它不能延长 Flutter 业务预算，
 # 但 Flutter 先失败时需要给 xcodebuild 一个固定窗口写出原始结果。
-$xcodeReportDrainSeconds = 15
+$xcodeReportDrainSeconds = 30
 $testRunnerEnvironment = [ordered]@{
   TEST_RUNNER_LDDC_IT_RUN_ID = $runId
   TEST_RUNNER_LDDC_FIXTURE_PATH = $fixture
@@ -616,6 +616,7 @@ function Add-RunnerDiagnosticEvidence {
     [Parameter(Mandatory = $true)][string]$Path,
     [string]$RunnerTerminationReason,
     [string]$XcresultReportError,
+    [bool]$ReportDrainAttempted,
     [int]$FlutterExitCode,
     [int]$XcodeExitCode
   )
@@ -636,6 +637,7 @@ function Add-RunnerDiagnosticEvidence {
     xctestExitCode = $XcodeExitCode
     runnerTerminated = -not [string]::IsNullOrWhiteSpace($RunnerTerminationReason)
     runnerTerminationReason = $RunnerTerminationReason
+    reportDrainAttempted = $ReportDrainAttempted
     xcresultReportCorrupt = -not [string]::IsNullOrWhiteSpace($XcresultReportError)
     xcresultReportError = $XcresultReportError
   }
@@ -800,6 +802,7 @@ try {
     $runnerFailureMessage = $null
     $runnerTerminationReason = $null
     $xcresultReportError = $null
+    $reportDrainAttempted = $false
     $scenarioStartedAt = [DateTimeOffset]::UtcNow
     $scenarioDeadline = $null
     try {
@@ -876,14 +879,20 @@ try {
           if ($flutterExitCode -ne 0 -and -not $xcodeHandle.Process.HasExited) {
             # Flutter 业务先失败时，原生测试可能仍在写附件。只保留固定的
             # 报告收尾窗口，窗口结束后再结束 XCTest；这不是业务重试或超时放宽。
-            $runnerTerminationReason = "flutter_failed_xcresult_drain"
+            $reportDrainAttempted = $true
             $drainDeadline = [DateTimeOffset]::UtcNow.AddSeconds($xcodeReportDrainSeconds)
             while (-not $xcodeHandle.Process.HasExited -and [DateTimeOffset]::UtcNow -lt $drainDeadline) {
               Start-Sleep -Milliseconds 200
               $xcodeHandle.Process.Refresh()
             }
             if (-not $xcodeHandle.Process.HasExited) {
+              $runnerTerminationReason = "flutter_failed_xcresult_drain_expired"
               [void](Stop-SupervisedProcess -Handle $xcodeHandle)
+            } else {
+              # 原生测试在独立收尾窗口内自然退出时，保留其真实退出码，不能把
+              # runner 主动终止或 143 伪造成原始 XCTest 结果。
+              $xcodeStatus = Wait-SupervisedProcess -Handle $xcodeHandle -AdditionalSeconds 5
+              $xcodeExitCode = $xcodeStatus.ExitCode
             }
             break
           }
@@ -1017,6 +1026,7 @@ try {
       -Path $evidencePath.FullName `
       -RunnerTerminationReason $runnerTerminationReason `
       -XcresultReportError $xcresultReportError `
+      -ReportDrainAttempted $reportDrainAttempted `
       -FlutterExitCode $flutterExitCode `
       -XcodeExitCode $xcodeExitCode
 

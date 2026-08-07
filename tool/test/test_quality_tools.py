@@ -474,12 +474,15 @@ class QualityToolTests(unittest.TestCase):
             encoding="utf-8"
         )
         for marker in (
-            '"flutter_failed_xcresult_drain"',
+            "$xcodeReportDrainSeconds = 30",
+            "$reportDrainAttempted = $true",
+            '"flutter_failed_xcresult_drain_expired"',
             '"xctest_failed_flutter_terminated"',
             '"runner_scenario_deadline"',
             '"macOS xcresult summary 缺失或损坏"',
             '"macOS xcresult attachment 导出失败',
             '"runnerClassification"',
+            "reportDrainAttempted = $ReportDrainAttempted",
             "-and [string]::IsNullOrWhiteSpace($runnerFailureMessage)",
             "-and [string]::IsNullOrWhiteSpace($xcresultReportError)",
             "-and $evidenceCandidates.Count -eq 1",
@@ -488,6 +491,10 @@ class QualityToolTests(unittest.TestCase):
         # 结果包错误只能写诊断字段，不能覆盖 Flutter/XCTest 原始失败原因。
         self.assertNotIn(
             '$runnerFailureMessage = "macOS xcresult attachment 导出失败',
+            runner,
+        )
+        self.assertNotIn(
+            '$runnerTerminationReason = "flutter_failed_xcresult_drain"',
             runner,
         )
 

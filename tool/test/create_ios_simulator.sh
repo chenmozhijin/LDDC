@@ -12,9 +12,15 @@ fi
 expected_runtime_version="${LDDC_IOS_RUNTIME_VERSION:-26.5}"
 expected_runtime_major="${expected_runtime_version%%.*}"
 expected_xcode_version="${LDDC_XCODE_VERSION:-26.6}"
-xcode_version_number="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+xcode_version_output="$(xcodebuild -version)"
+xcode_version_number="$(awk '/^Xcode / { print $2 }' <<<"$xcode_version_output")"
+xcode_build_version="$(awk '/^Build version / { print $3 }' <<<"$xcode_version_output")"
 xcode_major="${xcode_version_number%%.*}"
-if [[ -z "$xcode_version_number" || "$xcode_version_number" != "$expected_xcode_version" ]]; then
+if [[ -z "$xcode_version_number" || -z "$xcode_build_version" ]]; then
+  echo "ERROR: 无法解析 Xcode 版本信息: $xcode_version_output" >&2
+  exit 1
+fi
+if [[ "$xcode_version_number" != "$expected_xcode_version" ]]; then
   echo "ERROR: 当前 Xcode $xcode_version_number 与固定版本 $expected_xcode_version 不一致" >&2
   exit 1
 fi
@@ -22,7 +28,7 @@ if [[ "$xcode_major" != "$expected_runtime_major" ]]; then
   echo "ERROR: 固定 Xcode $xcode_version_number 与 iOS runtime $expected_runtime_version 主版本不一致" >&2
   exit 1
 fi
-xcode_version="$(xcodebuild -version | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+xcode_version="$(tr '\n' ' ' <<<"$xcode_version_output" | sed 's/[[:space:]]*$//')"
 
 runtime_json="$(xcrun simctl list runtimes available -j)"
 runtime="$(jq -r --arg expectedVersion "$expected_runtime_version" '

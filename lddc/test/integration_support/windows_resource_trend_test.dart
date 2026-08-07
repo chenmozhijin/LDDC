@@ -31,4 +31,43 @@ void main() {
   test('样本不足时不伪造趋势证据', () {
     expect(estimatePrivateBytesGrowthPerOperation(<int>[1, 2, 3]), 0);
   });
+
+  test('hosted 回落后的高局部斜率不构成持续增长', () {
+    expect(
+      hasSustainedPrivateBytesGrowth(
+        baselinePrivateBytes: 355266560,
+        settledPrivateBytes: 353599488,
+        estimatedGrowthPerOperation: 275501,
+        growthPerOperationLimit: 256 * 1024,
+        residentPrivateBytesSlack: 24 * 1024 * 1024,
+      ),
+      isFalse,
+    );
+  });
+
+  test('趋势和 settle 后驻留同时超标才构成持续增长', () {
+    expect(
+      hasSustainedPrivateBytesGrowth(
+        baselinePrivateBytes: 320 * 1024 * 1024,
+        settledPrivateBytes: 350 * 1024 * 1024,
+        estimatedGrowthPerOperation: 512 * 1024,
+        growthPerOperationLimit: 256 * 1024,
+        residentPrivateBytesSlack: 24 * 1024 * 1024,
+      ),
+      isTrue,
+    );
+  });
+
+  test('只有驻留超标时不伪造操作期持续趋势', () {
+    expect(
+      hasSustainedPrivateBytesGrowth(
+        baselinePrivateBytes: 320 * 1024 * 1024,
+        settledPrivateBytes: 350 * 1024 * 1024,
+        estimatedGrowthPerOperation: 128 * 1024,
+        growthPerOperationLimit: 256 * 1024,
+        residentPrivateBytesSlack: 24 * 1024 * 1024,
+      ),
+      isFalse,
+    );
+  });
 }

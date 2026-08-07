@@ -28,3 +28,22 @@ int estimatePrivateBytesGrowthPerOperation(List<int> privateBytes) {
       : (slopes[middle - 1] + slopes[middle]) / 2;
   return median.round();
 }
+
+/// 判断操作期上升是否在窗口保持常驻后仍形成真实私有内存增长。
+///
+/// Theil-Sen 只观察最近一段样本，Windows 分配器或 Dart GC 的局部相位可能让
+/// 斜率短暂超过门槛。真实泄漏必须同时满足趋势超标和 settle 后累计驻留超标；
+/// 任一证据缺失都不能把分配器波动宣称为持续泄漏。
+bool hasSustainedPrivateBytesGrowth({
+  required int baselinePrivateBytes,
+  required int settledPrivateBytes,
+  required int estimatedGrowthPerOperation,
+  required int growthPerOperationLimit,
+  required int residentPrivateBytesSlack,
+}) {
+  final bool trendExceeded =
+      estimatedGrowthPerOperation > growthPerOperationLimit;
+  final bool residentDeltaExceeded =
+      settledPrivateBytes > baselinePrivateBytes + residentPrivateBytesSlack;
+  return trendExceeded && residentDeltaExceeded;
+}

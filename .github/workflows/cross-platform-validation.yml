@@ -127,9 +127,15 @@ jobs:
             exit 1
           fi
           sudo xcode-select --switch "$developer_dir"
-          actual_xcode="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+          xcode_version_output="$(xcodebuild -version)"
+          actual_xcode="$(awk '/^Xcode / { print $2 }' <<<"$xcode_version_output")"
+          actual_build_version="$(awk '/^Build version / { print $3 }' <<<"$xcode_version_output")"
+          if [[ -z "$actual_xcode" || -z "$actual_build_version" ]]; then
+            echo "无法解析 Xcode 版本信息: $xcode_version_output" >&2
+            exit 1
+          fi
           if [[ "$actual_xcode" != "$LDDC_XCODE_VERSION" ]]; then
-            echo "Xcode 版本漂移: actual=$actual_xcode expected=$LDDC_XCODE_VERSION" >&2
+            echo "Xcode 版本漂移: actual=$actual_xcode build=$actual_build_version expected=$LDDC_XCODE_VERSION" >&2
             exit 1
           fi
       - uses: subosito/flutter-action@v2
@@ -258,9 +264,15 @@ jobs:
             exit 1
           fi
           sudo xcode-select --switch "$developer_dir"
-          actual_xcode="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+          xcode_version_output="$(xcodebuild -version)"
+          actual_xcode="$(awk '/^Xcode / { print $2 }' <<<"$xcode_version_output")"
+          actual_build_version="$(awk '/^Build version / { print $3 }' <<<"$xcode_version_output")"
+          if [[ -z "$actual_xcode" || -z "$actual_build_version" ]]; then
+            echo "无法解析 Xcode 版本信息: $xcode_version_output" >&2
+            exit 1
+          fi
           if [[ "$actual_xcode" != "$LDDC_XCODE_VERSION" ]]; then
-            echo "Xcode 版本漂移: actual=$actual_xcode expected=$LDDC_XCODE_VERSION" >&2
+            echo "Xcode 版本漂移: actual=$actual_xcode build=$actual_build_version expected=$LDDC_XCODE_VERSION" >&2
             exit 1
           fi
       - uses: subosito/flutter-action@v2
@@ -489,9 +501,15 @@ jobs:
             exit 1
           fi
           sudo xcode-select --switch "$developer_dir"
-          actual_xcode="$(xcodebuild -version | awk '/^Xcode / { print $2; exit }')"
+          xcode_version_output="$(xcodebuild -version)"
+          actual_xcode="$(awk '/^Xcode / { print $2 }' <<<"$xcode_version_output")"
+          actual_build_version="$(awk '/^Build version / { print $3 }' <<<"$xcode_version_output")"
+          if [[ -z "$actual_xcode" || -z "$actual_build_version" ]]; then
+            echo "无法解析 Xcode 版本信息: $xcode_version_output" >&2
+            exit 1
+          fi
           if [[ "$actual_xcode" != "$LDDC_XCODE_VERSION" ]]; then
-            echo "Xcode 版本漂移: actual=$actual_xcode expected=$LDDC_XCODE_VERSION" >&2
+            echo "Xcode 版本漂移: actual=$actual_xcode build=$actual_build_version expected=$LDDC_XCODE_VERSION" >&2
             exit 1
           fi
           # 在下载 Flutter 依赖前确认精确 runtime，避免镜像缺少工具链时浪费完整构建时间。

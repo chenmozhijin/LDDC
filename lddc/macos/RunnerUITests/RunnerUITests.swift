@@ -66,10 +66,30 @@ final class RunnerUITests: XCTestCase {
       pathField.click()
       panel.application.typeKey("a", modifierFlags: [.command])
       pathField.typeText(fixtureDirectory)
-      panel.application.typeKey(.enter, modifierFlags: [])
+      // macOS 26.5 的 hosted NSOpenPanel 不会保证 Enter 提交 Go To Folder
+      // sheet。必须操作系统实际暴露的 typed Go 按钮，否则 Flutter 会继续
+      // 阻塞在文件选择调用，最终把原生动作失败误报成业务超时。
+      attachText(
+        name: "lddc-macos-go-to-folder-accessibility.txt",
+        value: panel.application.debugDescription
+      )
+      let goButtons = panel.application.sheets.buttons.matching(
+        NSPredicate(format: "label == %@ OR identifier == %@", "Go", "Go")
+      )
+      guard let goButton = waitForExactlyOneHittableElement(
+        in: goButtons,
+        timeout: 10
+      ) else {
+        throw failure("NSOpenPanel 的前往文件夹 sheet 没有唯一可点击的 Go 按钮")
+      }
+      goButton.click()
       try require(
         waitForElementToDisappear(pathField, timeout: 10),
         "NSOpenPanel 的前往文件夹 sheet 没有关闭"
+      )
+      try require(
+        hasOpenPanelControls(panel.root),
+        "前往父目录后 NSOpenPanel 主面板没有保持可操作状态"
       )
       // 在查询文件候选前保存面板树。xcresult attachment 导出可能在原生断言
       // 失败后损坏，这份前置树能保留真实 AX 角色和 identifier 证据。
@@ -327,6 +347,26 @@ final class RunnerUITests: XCTestCase {
         return hittable[0]
       }
       // 多个精确 AX 节点同时可命中时立即失败，避免随机选择造成假绿。
+      if hittable.count > 1 {
+        return nil
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return nil
+  }
+
+  private func waitForExactlyOneHittableElement(
+    in query: XCUIElementQuery,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      let hittable = query.allElementsBoundByIndex.filter {
+        $0.exists && $0.isHittable
+      }
+      if hittable.count == 1 {
+        return hittable[0]
+      }
       if hittable.count > 1 {
         return nil
       }

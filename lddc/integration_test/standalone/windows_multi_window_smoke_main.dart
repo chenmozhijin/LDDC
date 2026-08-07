@@ -562,6 +562,18 @@ Future<Map<String, Object?>> _runResidentSmoke(
           .map((_ProcessResources value) => value.privateBytes)
           .toList(growable: false),
     );
+    final bool trendExceeded =
+        tailGrowth > _kPrivateBytesGrowthPerOperationLimit;
+    final bool residentDeltaExceeded =
+        settledResources.privateBytes >
+        baseline.privateBytes + _kPrivateBytesSlack;
+    final bool sustainedPrivateGrowth = hasSustainedPrivateBytesGrowth(
+      baselinePrivateBytes: baseline.privateBytes,
+      settledPrivateBytes: settledResources.privateBytes,
+      estimatedGrowthPerOperation: tailGrowth,
+      growthPerOperationLimit: _kPrivateBytesGrowthPerOperationLimit,
+      residentPrivateBytesSlack: _kPrivateBytesSlack,
+    );
     final bool timingPass =
         floatingP95 <= 3000 && selectorP95 <= 3000 && maxOperationMs <= 15000;
     final bool lifecyclePass =
@@ -598,13 +610,19 @@ Future<Map<String, Object?>> _runResidentSmoke(
     await Future<void>.delayed(const Duration(seconds: 2));
     final _ProcessResources finalResources = _readProcessResources();
     trace?.write('resident_cleanup_settle_complete');
-    final bool resourcesPass =
+    final bool residentResourcesPass =
+        settledResources.handleCount <= baseline.handleCount &&
+        settledResources.gdiObjects <= baseline.gdiObjects &&
+        settledResources.userObjects <= baseline.userObjects + 2 &&
+        !residentDeltaExceeded &&
+        !sustainedPrivateGrowth;
+    final bool cleanupResourcesPass =
         finalResources.handleCount <= baseline.handleCount &&
         finalResources.gdiObjects <= baseline.gdiObjects &&
         finalResources.userObjects <= baseline.userObjects + 2 &&
         finalResources.privateBytes <=
-            baseline.privateBytes + _kPrivateBytesSlack &&
-        tailGrowth <= _kPrivateBytesGrowthPerOperationLimit;
+            baseline.privateBytes + _kPrivateBytesSlack;
+    final bool resourcesPass = residentResourcesPass && cleanupResourcesPass;
 
     return <String, Object?>{
       'success':
@@ -672,6 +690,11 @@ Future<Map<String, Object?>> _runResidentSmoke(
             .map((_ProcessResources value) => value.userObjects)
             .toList(growable: false),
         'theilSenPrivateGrowthPerOperation': tailGrowth,
+        'trendExceeded': trendExceeded,
+        'residentDeltaExceeded': residentDeltaExceeded,
+        'sustainedPrivateGrowth': sustainedPrivateGrowth,
+        'residentResourcesPass': residentResourcesPass,
+        'cleanupResourcesPass': cleanupResourcesPass,
         'limits': <String, Object?>{
           'handleDelta': 0,
           'gdiDelta': 0,

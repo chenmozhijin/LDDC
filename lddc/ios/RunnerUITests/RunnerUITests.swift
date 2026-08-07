@@ -1,6 +1,7 @@
 import XCTest
 
 private struct SystemPickerContext {
+  let application: XCUIApplication
   let root: XCUIElement
 }
 
@@ -253,10 +254,16 @@ final class RunnerUITests: XCTestCase {
     } else {
       // 只允许点击位置页的真实 On My iPhone 按钮。BackButton 即使
       // 使用相同 label 也必须排除，避免再次把返回动作误当成位置导航。
-      let onMyIPhone = picker.root.buttons.matching(
-        NSPredicate(format: "label ==[c] %@ AND identifier != %@", "On My iPhone", "BackButton")
-      ).firstMatch
-      try require(waitForHittable(onMyIPhone, timeout: 15), "Browse 中没有可点击的 On My iPhone 位置")
+      let onMyIPhone = try requireUniquePickerElement(
+        queries: [
+          picker.application.buttons.matching(
+            NSPredicate(format: "label ==[c] %@ AND identifier != %@", "On My iPhone", "BackButton")
+          ),
+        ],
+        in: picker,
+        timeout: 15,
+        description: "On My iPhone 位置"
+      )
       onMyIPhone.tap()
       picker = try waitForSystemPicker(app: app, timeout: 5)
       let folder = try requirePlatformTestFolder(in: picker, timeout: 15)
@@ -299,12 +306,12 @@ final class RunnerUITests: XCTestCase {
     // typed Other，而不是旧系统的 Browse View (Picker)。两者均限定为
     // 系统文档浏览根节点，不使用通用 .any、进程前台状态或 SpringBoard。
     if let hostedRoot = typedSystemPickerRoot(in: app) {
-      return SystemPickerContext(root: hostedRoot)
+      return SystemPickerContext(application: app, root: hostedRoot)
     }
     let documents = XCUIApplication(bundleIdentifier: documentsBundleIdentifier)
     if documents.state != .notRunning,
        let documentsRoot = typedSystemPickerRoot(in: documents) {
-      return SystemPickerContext(root: documentsRoot)
+      return SystemPickerContext(application: documents, root: documentsRoot)
     }
     return nil
   }
@@ -354,43 +361,43 @@ final class RunnerUITests: XCTestCase {
     in picker: SystemPickerContext,
     timeout: TimeInterval
   ) throws -> XCUIElement {
-    // iOS 26 的远程 Document Picker 会在 hierarchy 中暴露精确的
-    // typed Button，但对同一子树使用 NSPredicate + firstMatch 会得到
-    // 不可点击的查询代理。使用 XCUITest 原生精确下标同时限定
-    // 了控件类型和名称，不依赖坐标、contains 或系统进程前台状态。
-    let button = picker.root.buttons[name]
-    try require(waitForHittable(button, timeout: timeout), "系统文件界面没有可点击的 \(name) 按钮")
-    return button
+    try requireUniquePickerElement(
+      queries: [
+        picker.application.buttons.matching(
+          NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", name, name)
+        ),
+      ],
+      in: picker,
+      timeout: timeout,
+      description: "\(name) 按钮"
+    )
   }
 
   private func requireBrowseButton(
     in picker: SystemPickerContext,
     timeout: TimeInterval
   ) throws -> XCUIElement {
-    // 远程 Document Picker 的 TabBar 代理在 iOS 26 上可能存在但自身不可命中，
-    // 子按钮仍然可以直接操作。只查询 typed Browse Button，避免把容器的
-    // isHittable 状态误当成系统文件界面不可用，也不回退到坐标点击。
-    let browse = picker.root.buttons["Browse"]
-    try require(waitForHittable(browse, timeout: timeout), "系统文件界面没有可点击的 Browse 按钮")
-    return browse
-  }
-
-  private func fixtureCell(in picker: SystemPickerContext) -> XCUIElement {
-    picker.root.cells.matching(
-      NSPredicate(
-        format: "label BEGINSWITH[c] %@ OR identifier BEGINSWITH[c] %@",
-        fixtureAccessibilityName,
-        fixtureAccessibilityName
-      )
-    ).firstMatch
+    // iOS 26.5 的 hosted hierarchy 明确把 Browse 暴露为宿主应用中的 typed
+    // Button，但 picker.root.buttons 无法跨 remote view-service 查询边界解析它。
+    // 从根节点所属 application 查询，再验证元素中心仍位于 Picker 根范围内，
+    // 可以证明控件归属而不使用坐标点击或 SpringBoard fallback。
+    try requireTypedButton(named: "Browse", in: picker, timeout: timeout)
   }
 
   private func waitForFixtureCell(
     in picker: SystemPickerContext,
     timeout: TimeInterval
   ) -> XCUIElement? {
-    let cell = fixtureCell(in: picker)
-    return waitForHittable(cell, timeout: timeout) ? cell : nil
+    let predicate = NSPredicate(
+      format: "label BEGINSWITH[c] %@ OR identifier BEGINSWITH[c] %@",
+      fixtureAccessibilityName,
+      fixtureAccessibilityName
+    )
+    return waitForUniquePickerElement(
+      queries: [picker.application.cells.matching(predicate)],
+      in: picker,
+      timeout: timeout
+    )
   }
 
   private func requireFixtureCell(
@@ -412,8 +419,12 @@ final class RunnerUITests: XCTestCase {
       "\(platformTestDisplayName),",
       "\(platformTestDisplayName),"
     )
-    return waitForFirstHittable(
-      { [picker.root.cells.matching(predicate).firstMatch, picker.root.links.matching(predicate).firstMatch] },
+    return waitForUniquePickerElement(
+      queries: [
+        picker.application.cells.matching(predicate),
+        picker.application.links.matching(predicate),
+      ],
+      in: picker,
       timeout: timeout
     )
   }
@@ -432,10 +443,16 @@ final class RunnerUITests: XCTestCase {
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
       if let picker = systemPickerContext(app: app) {
-        let location = picker.root.buttons.matching(
-          NSPredicate(format: "label ==[c] %@ AND identifier != %@", "On My iPhone", "BackButton")
-        ).firstMatch
-        if (location.exists && location.isHittable)
+        let location = waitForUniquePickerElement(
+          queries: [
+            picker.application.buttons.matching(
+              NSPredicate(format: "label ==[c] %@ AND identifier != %@", "On My iPhone", "BackButton")
+            ),
+          ],
+          in: picker,
+          timeout: 0
+        )
+        if location != nil
           || waitForFixtureCell(in: picker, timeout: 0) != nil
           || waitForPlatformTestFolder(in: picker, timeout: 0) != nil {
           return true
@@ -446,14 +463,23 @@ final class RunnerUITests: XCTestCase {
     return false
   }
 
-  private func waitForFirstHittable(
-    _ candidates: () -> [XCUIElement],
+  private func waitForUniquePickerElement(
+    queries: [XCUIElementQuery],
+    in picker: SystemPickerContext,
     timeout: TimeInterval
   ) -> XCUIElement? {
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
-      if let element = candidates().first(where: { $0.exists && $0.isHittable }) {
-        return element
+      let candidates = pickerElements(
+        queries: queries,
+        in: picker,
+        requireHittable: true
+      )
+      if candidates.count == 1 {
+        return candidates[0]
+      }
+      if candidates.count > 1 {
+        return nil
       }
       if timeout == 0 {
         return nil
@@ -463,10 +489,63 @@ final class RunnerUITests: XCTestCase {
     return nil
   }
 
+  private func pickerElements(
+    queries: [XCUIElementQuery],
+    in picker: SystemPickerContext,
+    requireHittable: Bool
+  ) -> [XCUIElement] {
+    queries.flatMap { $0.allElementsBoundByIndex }.filter {
+      $0.exists
+        && (!requireHittable || $0.isHittable)
+        && elementBelongsToPicker($0, picker: picker)
+    }
+  }
+
+  private func requireUniquePickerElement(
+    queries: [XCUIElementQuery],
+    in picker: SystemPickerContext,
+    timeout: TimeInterval,
+    description: String
+  ) throws -> XCUIElement {
+    guard let element = waitForUniquePickerElement(
+      queries: queries,
+      in: picker,
+      timeout: timeout
+    ) else {
+      throw testFailure("系统文件界面的 \(description) 不是唯一可点击的 typed 控件")
+    }
+    return element
+  }
+
+  private func elementBelongsToPicker(
+    _ element: XCUIElement,
+    picker: SystemPickerContext
+  ) -> Bool {
+    let rootFrame = picker.root.frame
+    let elementFrame = element.frame
+    guard !rootFrame.isEmpty, !elementFrame.isEmpty else {
+      return false
+    }
+    return rootFrame.contains(
+      CGPoint(x: elementFrame.midX, y: elementFrame.midY)
+    )
+  }
+
   private func cancelSystemPicker(app: XCUIApplication) throws {
     let picker = try waitForSystemPicker(app: app, timeout: 5)
-    let cancel = picker.root.buttons["Cancel"]
-    if cancel.exists {
+    let cancelQueries = [
+      picker.application.buttons.matching(
+        NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")
+      ),
+    ]
+    let existingCancelButtons = pickerElements(
+      queries: cancelQueries,
+      in: picker,
+      requireHittable: false
+    )
+    if !existingCancelButtons.isEmpty {
+      try require(existingCancelButtons.count == 1, "系统 Picker 的 typed Cancel 按钮不是唯一控件")
+      let cancel = existingCancelButtons[0]
       try require(waitForHittable(cancel, timeout: 3), "系统 Picker 的 typed Cancel 按钮存在但不可点击")
       cancel.tap()
       try require(waitForSystemPickerToClose(app: app, timeout: 10), "点击 Cancel 后系统 Picker 没有关闭")

@@ -289,12 +289,15 @@ def failures() -> list[str]:
         "typedSystemPickerRoot(in: app)",
         'application.otherElements["Browse View (Picker)"]',
         'NSPredicate(format: "identifier BEGINSWITH %@", documentBrowsingRootPrefix)',
-        "picker.root.buttons[name]",
-        'picker.root.buttons["Cancel"]',
-        'picker.root.buttons["Browse"]',
-        "picker.root.cells.matching(",
-        "picker.root.links.matching(",
+        "let application: XCUIApplication",
+        "picker.application.buttons.matching(",
+        "picker.application.cells.matching(",
+        "picker.application.links.matching(",
+        "requireUniquePickerElement(",
+        "elementBelongsToPicker(",
+        "CGPoint(x: elementFrame.midX, y: elementFrame.midY)",
         'private let fixtureAccessibilityName = "audio_sample, mp3"',
+        'requireTypedButton(named: "Browse"',
         'requireTypedButton(named: "Save"',
         '"On My iPhone"',
         'private let platformTestDisplayName = "LDDC Platform Tests"',
@@ -312,7 +315,11 @@ def failures() -> list[str]:
         "pickerElement(",
         "findSystemPickerElement",
         "requireSystemPickerElement",
-        "allElementsBoundByIndex",
+        'picker.root.buttons["Browse"]',
+        'picker.root.buttons["Cancel"]',
+        "picker.root.buttons.matching(",
+        "picker.root.cells.matching(",
+        "picker.root.links.matching(",
         ".sheets",
         "let backButton =",
         "backButton.tap()",
@@ -820,7 +827,8 @@ def failures() -> list[str]:
                 "LDDC_XCODE_VERSION: '26.6'",
                 'developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"',
                 'sudo xcode-select --switch "$developer_dir"',
-                'actual_xcode="$(xcodebuild -version',
+                'xcode_version_output="$(xcodebuild -version)"',
+                'actual_build_version="$(awk \'/^Build version / { print $3 }\'',
             ):
                 if marker not in job:
                     problems.append(f"{job_name} 缺少固定 Xcode 预检契约: {marker}")
@@ -889,6 +897,10 @@ def failures() -> list[str]:
         "panel.root.staticTexts[fixtureName]",
         "panel.root.cells[fixtureName]",
         "waitForExactlyOneHittableElement",
+        "waitForExactlyOneHittableElement(\n        in: goButtons",
+        'NSPredicate(format: "label == %@ OR identifier == %@", "Go", "Go")',
+        'goButton.click()',
+        'lddc-macos-go-to-folder-accessibility.txt',
         "firstHittableElement(pathFields, timeout: 10)",
         'pathField.click()',
         'panel.application.typeKey("a", modifierFlags: [.command])',
@@ -915,6 +927,7 @@ def failures() -> list[str]:
         "--lddc-enable-accessibility-for-ui-test",
         "lddc-open-lyrics",
         "pathField.typeText(fixturePath)",
+        'panel.application.typeKey(.enter',
         "panel.root.outlineRows.firstMatch",
     ):
         if forbidden in macos_ui_tests:
@@ -935,6 +948,10 @@ def failures() -> list[str]:
         "-and [string]::IsNullOrWhiteSpace($runnerFailureMessage)",
         "-and [string]::IsNullOrWhiteSpace($xcresultReportError)",
         "-and $evidenceCandidates.Count -eq 1",
+        "$xcodeReportDrainSeconds = 30",
+        "$reportDrainAttempted = $true",
+        '"flutter_failed_xcresult_drain_expired"',
+        "reportDrainAttempted = $ReportDrainAttempted",
     ):
         if required not in macos_runner:
             problems.append(f"macOS hybrid runner 缺少协同或失败报告契约: {required}")
@@ -949,6 +966,8 @@ def failures() -> list[str]:
             problems.append(f"macOS runner 场景与 XCTest 方法映射错误: {scenario} -> {method}")
         if f"func {method}()" not in macos_ui_tests or f'"{scenario}"' not in macos_ui_tests:
             problems.append(f"macOS XCUITest 缺少场景实现: {scenario} -> {method}")
+    if '$runnerTerminationReason = "flutter_failed_xcresult_drain"' in macos_runner:
+        problems.append("macOS runner 禁止把自然完成的 xcresult 收尾误记为主动终止")
     for environment_name in (
         "LDDC_IT_RUN_ID",
         "LDDC_FIXTURE_PATH",
@@ -974,13 +993,15 @@ def failures() -> list[str]:
         'expected_runtime_version="${LDDC_IOS_RUNTIME_VERSION:-26.5}"',
         'expected_runtime_major="${expected_runtime_version%%.*}"',
         'expected_xcode_version="${LDDC_XCODE_VERSION:-26.6}"',
-        'xcode_version_number="$(xcodebuild -version',
+        'xcode_version_output="$(xcodebuild -version)"',
+        'xcode_version_number="$(awk \'/^Xcode / { print $2 }\'',
+        'xcode_build_version="$(awk \'/^Build version / { print $3 }\'',
         '"$xcode_version_number" != "$expected_xcode_version"',
         'xcode_major="${xcode_version_number%%.*}"',
         '"$xcode_major" != "$expected_runtime_major"',
         '--arg expectedVersion "$expected_runtime_version"',
         'select(.version == $expectedVersion)',
-        'xcode_version="$(xcodebuild -version',
+        'xcode_version="$(tr \'\\n\' \' \' <<<"$xcode_version_output"',
         'if [[ -n "${GITHUB_ENV:-}" ]]',
         'trap - ERR',
         'run_ios_platform_tests.ps1 -Device',
@@ -1094,7 +1115,8 @@ def failures() -> list[str]:
             "LDDC_IOS_RUNTIME_VERSION: '26.5'",
             'developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"',
             'sudo xcode-select --switch "$developer_dir"',
-            'actual_xcode="$(xcodebuild -version',
+            'xcode_version_output="$(xcodebuild -version)"',
+            'actual_build_version="$(awk \'/^Build version / { print $3 }\'',
             "simctl list runtimes available -j",
             '--arg version "$LDDC_IOS_RUNTIME_VERSION"',
             "bash tool/test/create_ios_simulator.sh",
@@ -1103,6 +1125,8 @@ def failures() -> list[str]:
                 problems.append(f"iOS hosted job 缺少固定 runner/runtime 契约: {marker}")
     else:
         problems.append("iOS hosted job 边界无效")
+    if "xcodebuild -version |" in workflow or "xcodebuild -version |" in ios_simulator_creator:
+        problems.append("Apple 版本预检必须先完整读取 xcodebuild 输出，禁止提前关闭管道")
     for manual_linux_asset in (
         ROOT / "tool/test/run_linux_platform_tests.sh",
         ROOT / "tool/test/requirements-linux-platform.txt",
