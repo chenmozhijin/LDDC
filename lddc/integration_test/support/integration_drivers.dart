@@ -387,21 +387,17 @@ class LocalMatchDriver {
     if (tile.evaluate().length != 1) {
       throw StateError('“跳过已有歌词”选项不存在或不唯一');
     }
-    final Finder checkbox = find.descendant(
-      of: tile,
-      matching: find.byType(Checkbox),
-    );
-    if (checkbox.evaluate().length != 1) {
-      throw StateError('“跳过已有歌词”选项没有唯一的复选框控件');
+    final Widget tileWidget = tester.widget<Widget>(tile);
+    if (tileWidget is! CheckboxListTile) {
+      throw StateError('“跳过已有歌词”选项不是预期的复选列表控件');
     }
-    final Checkbox checkboxWidget = tester.widget<Checkbox>(checkbox);
-    if (checkboxWidget.onChanged == null) {
+    if (tileWidget.onChanged == null) {
       throw StateError('“跳过已有歌词”选项当前不可操作');
     }
-    // 标题文本只是 ListTile 的显示内容，在 Linux 真实命中树中不承担手势。
-    // 直接操作 CheckboxListTile 创建的唯一 Checkbox，既对应用户可见控件，
-    // 也继续经过 tapVisible 的滚动、唯一性和遮挡校验。
-    await tapVisible(tester, checkbox, reason: '等待“跳过已有歌词”复选框可点击');
+    // CheckboxListTile 使用 MergeSemantics，并由整行 ListTile 持有真实手势层。
+    // Linux 的子 Checkbox 虽然可见，但命中路径会落在父级 _RenderListTile；
+    // 因此操作带稳定 key 的真实列表控件，同时保留可见性和遮挡校验。
+    await tapVisible(tester, tile, reason: '等待“跳过已有歌词”复选控件可点击');
   }
 
   Future<void> tapStartOrCancel() async {

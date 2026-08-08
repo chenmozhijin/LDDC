@@ -555,7 +555,7 @@ class QualityToolTests(unittest.TestCase):
             [],
         )
 
-    def test_local_match_driver_keeps_checkbox_descendant_contract(self) -> None:
+    def test_local_match_driver_keeps_real_keyed_tile_contract(self) -> None:
         source = (
             ROOT / "lddc/integration_test/support/integration_drivers.dart"
         ).read_text(encoding="utf-8")
@@ -566,8 +566,12 @@ class QualityToolTests(unittest.TestCase):
         )
         self.assertIsNotNone(match)
         body = match.group("body")
-        self.assertIn("find.descendant(", body)
-        self.assertIn("find.byType(Checkbox)", body)
+        self.assertIn("tile.evaluate().length != 1", body)
+        self.assertIn("tileWidget is! CheckboxListTile", body)
+        self.assertIn("tileWidget.onChanged == null", body)
+        self.assertIn("await tapVisible(tester, tile", body)
+        self.assertNotIn("find.descendant(", body)
+        self.assertNotIn("find.byType(Checkbox)", body)
         self.assertNotIn(".title", body)
         self.assertNotIn("find.byWidget(", body)
 
@@ -1139,6 +1143,174 @@ class QualityToolTests(unittest.TestCase):
             normalized = json.loads(scenario.read_text(encoding="utf-8"))
             self.assertFalse(normalized["success"])
             self.assertEqual(ET.parse(junit).getroot().get("failures"), "1")
+
+    def test_flutter_normalizer_preserves_native_failure_when_scenario_is_missing(self) -> None:
+        normalizer = ROOT / "tool/test/normalize_integration_report.py"
+        framework = "integration_test+xcuitest"
+        scenario_name = "macos_open_panel_select"
+        native_error = "NSOpenPanel 的精确 fixture 候选数量不是一个可命中目标"
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            scenario = root / "scenario.json"
+            raw = root / "flutter.jsonl"
+            evidence = root / "evidence.json"
+            junit = root / "scenario.xml"
+            raw.write_text(
+                json.dumps({"type": "testStart", "test": {"id": 1}}) + "\n",
+                encoding="utf-8",
+            )
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "runId": "macos-hybrid-failure",
+                        "scenario": scenario_name,
+                        "profile": "platform",
+                        "platform": "macos",
+                        "framework": framework,
+                        "steps": [
+                            {
+                                "step": "xcuitest_native_panel_action",
+                                "success": False,
+                                "error": native_error,
+                            }
+                        ],
+                        "capabilityEvidence": {
+                            "resourceCleanup": [
+                                {"action": "flutter_and_xcuitest_processes_closed"}
+                            ]
+                        },
+                        "resources": {
+                            "baseline": {"childProcessCount": 0},
+                            "final": {"childProcessCount": 0},
+                            "thresholds": {"childProcessCount": 0},
+                        },
+                        "artifacts": [],
+                        "extra": {"xctestExitCode": 65},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(normalizer),
+                    "--scenario-report",
+                    str(scenario),
+                    "--raw-report",
+                    str(raw),
+                    "--raw-report-type",
+                    "flutter-jsonl",
+                    "--framework",
+                    framework,
+                    "--exit-code",
+                    "1",
+                    "--evidence",
+                    str(evidence),
+                    "--run-id",
+                    "macos-hybrid-failure",
+                    "--scenario",
+                    scenario_name,
+                    "--profile",
+                    "platform",
+                    "--platform",
+                    "macos",
+                    "--failure-junit",
+                    str(junit),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(scenario.read_text(encoding="utf-8"))
+            self.assertFalse(report["success"])
+            self.assertEqual(report["coverageStatus"], "executed")
+            self.assertEqual(report["steps"][0]["error"], native_error)
+            self.assertIn(
+                "场景报告不存在",
+                report["extra"]["flutterScenarioReportFailure"],
+            )
+            failure = ET.parse(junit).getroot().find(".//failure")
+            self.assertIsNotNone(failure)
+            self.assertEqual(failure.get("message"), native_error)
+
+    def test_flutter_normalizer_missing_scenario_cannot_pass_with_success_evidence(self) -> None:
+        normalizer = ROOT / "tool/test/normalize_integration_report.py"
+        framework = "integration_test+xcuitest"
+        scenario_name = "macos_open_panel_cancel"
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            scenario = root / "scenario.json"
+            raw = root / "flutter.jsonl"
+            evidence = root / "evidence.json"
+            raw.write_text(
+                json.dumps({"type": "testStart", "test": {"id": 1}}) + "\n",
+                encoding="utf-8",
+            )
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "runId": "macos-hybrid-missing",
+                        "scenario": scenario_name,
+                        "profile": "platform",
+                        "platform": "macos",
+                        "framework": framework,
+                        "steps": [{"step": "xcuitest_cancel", "success": True}],
+                        "capabilityEvidence": {
+                            "filePicker": [{"action": "cancel"}],
+                            "windowHost": [{"action": "native_panel"}],
+                            "resourceCleanup": [{"action": "closed"}],
+                        },
+                        "resources": {
+                            "baseline": {},
+                            "final": {},
+                            "thresholds": {},
+                        },
+                        "artifacts": [],
+                        "extra": {},
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(normalizer),
+                    "--scenario-report",
+                    str(scenario),
+                    "--raw-report",
+                    str(raw),
+                    "--raw-report-type",
+                    "flutter-jsonl",
+                    "--framework",
+                    framework,
+                    "--exit-code",
+                    "0",
+                    "--evidence",
+                    str(evidence),
+                    "--run-id",
+                    "macos-hybrid-missing",
+                    "--scenario",
+                    scenario_name,
+                    "--profile",
+                    "platform",
+                    "--platform",
+                    "macos",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(scenario.read_text(encoding="utf-8"))
+            self.assertFalse(report["success"])
+            self.assertEqual(report["status"], "failed")
+            self.assertFalse(report["steps"][-1]["success"])
+            self.assertIn("场景报告不存在", report["steps"][-1]["error"])
 
     def test_flutter_normalizer_merges_flaui_evidence_and_rejects_mismatch(self) -> None:
         normalizer = ROOT / "tool/test/normalize_integration_report.py"

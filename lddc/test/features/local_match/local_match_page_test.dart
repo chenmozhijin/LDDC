@@ -918,7 +918,7 @@ void main() {
       expect(find.text('保存根目录'), findsNothing);
     });
 
-    testWidgets('桌面生产侧栏滚到底且存在持续提示时仍点击真实复选框', (WidgetTester tester) async {
+    testWidgets('桌面生产侧栏滚到底且存在持续提示时仍点击真实复选控件', (WidgetTester tester) async {
       _setTestViewport(tester, const Size(1280, 720));
       final GlobalKey<ScaffoldMessengerState> messengerKey =
           GlobalKey<ScaffoldMessengerState>();
@@ -990,18 +990,13 @@ void main() {
       final Finder tile = find.byKey(
         const ValueKey<String>('local_match_skip_existing_checkbox'),
       );
-      final Finder checkbox = find.descendant(
-        of: tile,
-        matching: find.byType(Checkbox),
-      );
       expect(tile, findsOneWidget);
-      expect(checkbox, findsOneWidget);
       expect(find.text('Disabled by default'), findsOneWidget);
 
       await LocalMatchDriver(tester).toggleSkipExisting();
       await tester.pump();
 
-      expect(checkbox.hitTestable(), findsOneWidget);
+      expect(tile.hitTestable(), findsOneWidget);
       expect(
         container.read(localMatchPageControllerProvider).skipExistingLyrics,
         isTrue,

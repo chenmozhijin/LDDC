@@ -311,8 +311,11 @@ def failures() -> list[str]:
         'requireTypedButton(named: "Save"',
         'private let previewIdentifier = "lddc.open_lyrics.preview"',
         'app.otherElements[previewIdentifier]',
-        'label == %@ OR value == %@", "Hello LDDC", "Hello LDDC"',
+        'private let fixtureLyricsAccessibilityValue = "[00:00.00]Hello LDDC"',
+        'NSPredicate(format: "value == %@", fixtureLyricsAccessibilityValue)',
         '"On My iPhone"',
+        '"DOC.sidebar.item.On My iPhone"',
+        "requireOnMyIPhoneLocation(in: picker",
         'private let platformTestDisplayName = "LDDC Platform Tests"',
         "if documents.state != .notRunning",
         "executionTimeAllowance = 120",
@@ -603,11 +606,17 @@ def failures() -> list[str]:
         if "schedule:" in source or "cron:" in source:
             problems.append(f"{filename} 禁止定时触发")
 
-    workflow = (workflow_dir / "cross-platform-validation.yml").read_text(
-        encoding="utf-8"
+    cross_platform_path = workflow_dir / "cross-platform-validation.yml"
+    quality_path = workflow_dir / "code-quality.yml"
+    # 工作流缺失本身已经由上面的集合门禁报告。这里继续使用空源码完成其余
+    # 静态审计，避免实验分支或误删文件时由 FileNotFoundError 遮蔽其他问题。
+    workflow = (
+        cross_platform_path.read_text(encoding="utf-8")
+        if cross_platform_path.is_file()
+        else ""
     )
-    quality_workflow = (workflow_dir / "code-quality.yml").read_text(
-        encoding="utf-8"
+    quality_workflow = (
+        quality_path.read_text(encoding="utf-8") if quality_path.is_file() else ""
     )
     if workflow.count("tool/test/ci_phase_summary.py") != 6:
         problems.append("五个平台及独立 macOS 系统 UI job 必须统一使用 CI required phase 汇总器")
@@ -915,9 +924,10 @@ def failures() -> list[str]:
         "currentPanelServices",
         'application.bundleIdentifier == "com.apple.appkit.xpc.openAndSavePanelService"',
         "fixtureURL.deletingLastPathComponent().path",
-        "panel.root.outlineRows[fixtureName]",
-        "panel.root.staticTexts[fixtureName]",
-        "panel.root.cells[fixtureName]",
+        'NSPredicate(format: "value == %@", directoryName)',
+        "selectedDirectory.firstMatch.isSelected",
+        "panel.application.typeKey(.rightArrow, modifierFlags: [])",
+        'NSPredicate(format: "value == %@", fixtureName)',
         "waitForExactlyOneHittableElement",
         'panel.application.sheets["GoToWindow"]',
         'goToFolder.textFields["PathTextField"]',
@@ -928,7 +938,7 @@ def failures() -> list[str]:
         'lddc-macos-go-to-folder-accessibility.txt',
         'pathField.click()',
         'pathField.typeKey("a", modifierFlags: [.command])',
-        "waitForSelectedElement(fixtureCandidates",
+        "waitForSelectedElement([fixture]",
         "openButton.isEnabled",
         'expectedState: "picker_requested"',
         'expectedState: "flutter_completed"',
@@ -1218,10 +1228,19 @@ def failures() -> list[str]:
         problems.append("Local Match 集成驱动缺少跳过已有歌词操作")
     else:
         toggle_body = local_match_toggle.group("body")
-        if "find.descendant(" not in toggle_body or "find.byType(Checkbox)" not in toggle_body:
-            problems.append("Local Match 跳过已有歌词必须点击 keyed tile 内唯一 Checkbox")
-        if ".title" in toggle_body or "find.byWidget(" in toggle_body:
-            problems.append("Local Match 跳过已有歌词禁止回退到动态标题 Widget")
+        for marker in (
+            "tile.evaluate().length != 1",
+            "tileWidget is! CheckboxListTile",
+            "tileWidget.onChanged == null",
+            "await tapVisible(tester, tile",
+        ):
+            if marker not in toggle_body:
+                problems.append(f"Local Match 跳过已有歌词缺少真实 keyed tile 门禁: {marker}")
+        if any(
+            marker in toggle_body
+            for marker in ("find.descendant(", "find.byType(Checkbox)", ".title", "find.byWidget(")
+        ):
+            problems.append("Local Match 跳过已有歌词禁止回退到子 Checkbox 或动态标题 Widget")
     integration_sources = "\n".join(
         path.read_text(encoding="utf-8")
         for path in (ROOT / "lddc/integration_test").rglob("*.dart")
@@ -1279,9 +1298,12 @@ def failures() -> list[str]:
         "flutter_controller_.reset();" not in windows_flutter_window
     ):
         problems.append("Windows 主窗口析构必须先清空 controller 再删除原生 Flutter view")
+    performance_path = ROOT / ".github/workflows/performance-regression.yml"
     performance_workflow = (
-        ROOT / ".github/workflows/performance-regression.yml"
-    ).read_text(encoding="utf-8")
+        performance_path.read_text(encoding="utf-8")
+        if performance_path.is_file()
+        else ""
+    )
     if "media-resource-stress:" not in performance_workflow or (
         "run_platform_media_resource.ps1 -Platform ${{ matrix.platform }} -LoopCount 20"
         not in performance_workflow

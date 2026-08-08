@@ -220,16 +220,126 @@ def _merge_external_evidence(
     extra["externalNativeEvidence"] = external_extra
 
 
+def _payload_from_external_evidence(args: argparse.Namespace) -> dict[str, Any]:
+    if args.evidence is None or not args.evidence.is_file():
+        raise SystemExit("联合场景缺少外部 evidence JSON")
+    evidence: Any = json.loads(args.evidence.read_text(encoding="utf-8"))
+    if not isinstance(evidence, dict):
+        raise SystemExit("外部 evidence 顶层必须为对象")
+
+    explicit_identity = {
+        "runId": args.run_id,
+        "scenario": args.scenario,
+        "profile": args.profile,
+        "platform": args.platform,
+        "framework": args.framework,
+    }
+    for field, expected_value in explicit_identity.items():
+        actual_value = evidence.get(field)
+        if not isinstance(actual_value, str) or not actual_value.strip():
+            raise SystemExit(f"外部 evidence 缺少 {field}")
+        if expected_value is not None and actual_value != expected_value:
+            raise SystemExit(f"外部 evidence 的 {field} 与 runner 参数不一致")
+
+    expected_capabilities = resolve_contract(
+        load_matrix(args.matrix),
+        profile=evidence["profile"],
+        platform=evidence["platform"],
+        scenario=evidence["scenario"],
+        framework=evidence["framework"],
+    )
+    payload: dict[str, Any] = {
+        "schemaVersion": 2,
+        "runId": evidence["runId"],
+        "scenario": evidence["scenario"],
+        "profile": evidence["profile"],
+        "platform": evidence["platform"],
+        "framework": evidence["framework"],
+        "capabilities": {
+            name: {**state, "evidence": []}
+            for name, state in expected_capabilities.items()
+        },
+        "resources": {"baseline": {}, "final": {}, "thresholds": {}},
+        "runner": {},
+        "artifacts": [],
+        "steps": [],
+        "status": "failed",
+        "coverageStatus": "notExercised",
+        "success": False,
+        "extra": {},
+    }
+    _merge_external_evidence(payload, args.evidence, args.framework)
+    return payload
+
+
+def _normalize_flutter_from_external_failure(
+    args: argparse.Namespace,
+    report_error: BaseException,
+) -> None:
+    # Hybrid 场景可能在 XCTest 失败后由 runner 主动终止 Flutter。此时 Flutter
+    # 来不及写场景 JSON，但 XCTest evidence 仍包含真正的原生断言。统一报告必须
+    # 保留该主错误，同时明确记录 Flutter 报告没有落盘，不能把两者混成假成功。
+    payload = _payload_from_external_evidence(args)
+    report_message = f"Flutter 场景报告收集失败: {report_error}"
+    steps = payload["steps"]
+    assert isinstance(steps, list)
+    native_failure = next(
+        (
+            str(step.get("error"))
+            for step in steps
+            if isinstance(step, dict)
+            and step.get("success") is not True
+            and isinstance(step.get("error"), str)
+            and step["error"].strip()
+        ),
+        None,
+    )
+    steps.append(
+        {
+            "name": "collect_flutter_scenario_report",
+            "success": False,
+            "error": report_message,
+        }
+    )
+    test_started = _flutter_jsonl_started(args.raw_report)
+    payload["runner"] = {
+        "exitCode": args.exit_code,
+        "originalReportType": args.raw_report_type,
+        "testStarted": test_started,
+        "nativeActionCount": _real_action_count(payload.get("capabilities")),
+    }
+    payload["coverageStatus"] = "executed" if test_started else "notExercised"
+    payload["generatedAt"] = datetime.now(timezone.utc).isoformat()
+    payload["status"] = "failed"
+    payload["success"] = False
+    extra = payload["extra"]
+    assert isinstance(extra, dict)
+    extra["flutterScenarioReportFailure"] = report_message
+    _write_atomic(args.scenario_report, payload)
+    if args.failure_junit is not None:
+        _write_failure_junit(
+            args.failure_junit,
+            str(payload["scenario"]),
+            native_failure or report_message,
+        )
+
+
 def _normalize_flutter(args: argparse.Namespace) -> None:
-    if not args.scenario_report.is_file():
-        raise SystemExit(f"场景报告不存在: {args.scenario_report.name}")
-    payload: Any = json.loads(args.scenario_report.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise SystemExit("场景报告顶层必须为对象")
-    if payload.get("schemaVersion") != 2:
-        raise SystemExit("场景报告 schemaVersion 必须为 2")
-    if payload.get("framework") != args.framework:
-        raise SystemExit("场景报告 framework 与 runner 不一致")
+    try:
+        if not args.scenario_report.is_file():
+            raise SystemExit(f"场景报告不存在: {args.scenario_report.name}")
+        payload: Any = json.loads(args.scenario_report.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise SystemExit("场景报告顶层必须为对象")
+        if payload.get("schemaVersion") != 2:
+            raise SystemExit("场景报告 schemaVersion 必须为 2")
+        if payload.get("framework") != args.framework:
+            raise SystemExit("场景报告 framework 与 runner 不一致")
+    except (SystemExit, OSError, ValueError, json.JSONDecodeError) as error:
+        if args.evidence is not None and args.evidence.is_file():
+            _normalize_flutter_from_external_failure(args, error)
+            return
+        raise
     if args.evidence is not None:
         if not args.evidence.is_file():
             raise SystemExit("联合场景缺少外部 evidence JSON")

@@ -9,6 +9,7 @@ final class RunnerUITests: XCTestCase {
   private let appBundleIdentifier = "com.cmzj.lddc.platformtests"
   private let fixtureName = "audio_sample.mp3"
   private let fixtureAccessibilityName = "audio_sample, mp3"
+  private let fixtureLyricsAccessibilityValue = "[00:00.00]Hello LDDC"
   private let navigationIdentifier = "lddc.nav.open_lyrics"
   private let openSongIdentifier = "lddc.open_lyrics.open_song_file"
   private let saveFileIdentifier = "lddc.open_lyrics.save_file"
@@ -225,21 +226,9 @@ final class RunnerUITests: XCTestCase {
     actions: inout [String: [[String: Any]]]
   ) throws {
     var picker = try openDocumentPicker(app: app)
-
-    // Files 会记住上次的目录。先仅查找 typed file cell，可以处理
-    // 已在 fixture 目录的情况，也不会把 Picker 容器或菜单按钮误当成文件。
-    if let fixture = waitForFixtureCell(in: picker, timeout: 1) {
-      try selectFixture(fixture, app: app, actions: &actions)
-      return
-    }
-    if let folder = waitForPlatformTestFolder(in: picker, timeout: 1) {
-      folder.tap()
-      picker = try waitForSystemPicker(app: app, timeout: 5)
-      let fixture = try requireFixtureCell(in: picker, timeout: 15)
-      try selectFixture(fixture, app: app, actions: &actions)
-      return
-    }
-
+    // Files 会跨场景记住上次目录。直接点击刚打开时缓存的文件单元格在
+    // iOS 26.5 上只会选中项目而不会完成 Document Picker 回调；先点击
+    // typed Browse 让远程文档视图完成模式切换，再按当前 typed 页面继续。
     let browse = try requireBrowseButton(in: picker, timeout: 15)
     browse.tap()
     try require(
@@ -255,18 +244,7 @@ final class RunnerUITests: XCTestCase {
     if let folder = waitForPlatformTestFolder(in: picker, timeout: 1) {
       folder.tap()
     } else {
-      // 只允许点击位置页的真实 On My iPhone 按钮。BackButton 即使
-      // 使用相同 label 也必须排除，避免再次把返回动作误当成位置导航。
-      let onMyIPhone = try requireUniquePickerElement(
-        queries: [
-          picker.application.buttons.matching(
-            NSPredicate(format: "label ==[c] %@ AND identifier != %@", "On My iPhone", "BackButton")
-          ),
-        ],
-        in: picker,
-        timeout: 15,
-        description: "On My iPhone 位置"
-      )
+      let onMyIPhone = try requireOnMyIPhoneLocation(in: picker, timeout: 15)
       onMyIPhone.tap()
       picker = try waitForSystemPicker(app: app, timeout: 5)
       let folder = try requirePlatformTestFolder(in: picker, timeout: 15)
@@ -296,7 +274,7 @@ final class RunnerUITests: XCTestCase {
     )
     let preview = app.otherElements[previewIdentifier]
     let lyricContent = preview.descendants(matching: .other).matching(
-      NSPredicate(format: "label == %@ OR value == %@", "Hello LDDC", "Hello LDDC")
+      NSPredicate(format: "value == %@", fixtureLyricsAccessibilityValue)
     ).firstMatch
     try require(
       lyricContent.waitForExistence(timeout: 15),
@@ -454,15 +432,7 @@ final class RunnerUITests: XCTestCase {
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
       if let picker = systemPickerContext(app: app) {
-        let location = waitForUniquePickerElement(
-          queries: [
-            picker.application.buttons.matching(
-              NSPredicate(format: "label ==[c] %@ AND identifier != %@", "On My iPhone", "BackButton")
-            ),
-          ],
-          in: picker,
-          timeout: 0
-        )
+        let location = waitForOnMyIPhoneLocation(in: picker, timeout: 0)
         if location != nil
           || waitForFixtureCell(in: picker, timeout: 0) != nil
           || waitForPlatformTestFolder(in: picker, timeout: 0) != nil {
@@ -472,6 +442,42 @@ final class RunnerUITests: XCTestCase {
       Thread.sleep(forTimeInterval: 0.2)
     } while Date() < deadline
     return false
+  }
+
+  private func waitForOnMyIPhoneLocation(
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    waitForUniquePickerElement(
+      queries: [
+        picker.application.buttons.matching(
+          NSPredicate(
+            format: "label ==[c] %@ AND identifier != %@",
+            "On My iPhone",
+            "BackButton"
+          )
+        ),
+        picker.application.cells.matching(
+          NSPredicate(
+            format: "label ==[c] %@ OR identifier == %@",
+            "On My iPhone",
+            "DOC.sidebar.item.On My iPhone"
+          )
+        ),
+      ],
+      in: picker,
+      timeout: timeout
+    )
+  }
+
+  private func requireOnMyIPhoneLocation(
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) throws -> XCUIElement {
+    guard let location = waitForOnMyIPhoneLocation(in: picker, timeout: timeout) else {
+      throw testFailure("系统文件界面的 On My iPhone 位置不是唯一可点击的 typed 控件")
+    }
+    return location
   }
 
   private func waitForUniquePickerElement(

@@ -92,20 +92,34 @@ final class RunnerUITests: XCTestCase {
         name: "lddc-macos-panel-before-fixture-selection.txt",
         value: panel.root.debugDescription
       )
-      let fixtureCandidates = [
-        panel.root.outlineRows[fixtureName],
-        panel.root.cells[fixtureName],
-        panel.root.staticTexts[fixtureName],
-      ]
+      let directoryName = fixtureURL.deletingLastPathComponent().lastPathComponent
+      let selectedDirectory = panel.root.textFields.matching(
+        NSPredicate(format: "value == %@", directoryName)
+      )
+      try require(
+        selectedDirectory.count == 1 && selectedDirectory.firstMatch.isSelected,
+        "NSOpenPanel 进入父目录后没有保持当前目录列的精确选中状态"
+      )
+      // hosted NSOpenPanel 使用 Column View，目标文件列位于窗口右侧之外。
+      // 当前目录已经选中且浏览器持有键盘焦点，右方向键会让原生列视图进入
+      // 下一列并自动滚动到可见区域；这与用户键盘导航一致，不依赖屏幕坐标。
+      panel.application.typeKey(.rightArrow, modifierFlags: [])
+      let fixtureQuery = panel.root.textFields.matching(
+        NSPredicate(format: "value == %@", fixtureName)
+      )
       guard let fixture = waitForExactlyOneHittableElement(
-        fixtureCandidates,
+        fixtureQuery,
         timeout: 10
       ) else {
-        throw failure("NSOpenPanel 的精确 fixture 候选数量不是一个可命中目标")
+        throw failure("NSOpenPanel 的精确 fixture TextField 不是唯一可命中目标")
       }
+      attachText(
+        name: "lddc-macos-panel-after-column-navigation.txt",
+        value: panel.root.debugDescription
+      )
       fixture.click()
       try require(
-        waitForSelectedElement(fixtureCandidates, timeout: 10),
+        waitForSelectedElement([fixture], timeout: 10),
         "NSOpenPanel 点击 fixture 后没有进入选中状态"
       )
       let openButton = panel.root.buttons["Open"]
@@ -335,6 +349,24 @@ final class RunnerUITests: XCTestCase {
       }
       // 多个精确 AX 节点同时可命中时立即失败，避免随机选择造成假绿。
       if hittable.count > 1 {
+        return nil
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return nil
+  }
+
+  private func waitForExactlyOneHittableElement(
+    _ query: XCUIElementQuery,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      let candidates = query.allElementsBoundByIndex.filter { $0.exists && $0.isHittable }
+      if candidates.count == 1 {
+        return candidates[0]
+      }
+      if candidates.count > 1 {
         return nil
       }
       Thread.sleep(forTimeInterval: 0.1)
