@@ -12,6 +12,7 @@ private struct HybridSyncState: Codable {
   let action: String
   let success: Bool?
   let error: String?
+  let diagnostics: [String: String]?
 }
 
 private struct PanelHandle {
@@ -173,10 +174,13 @@ final class RunnerUITests: XCTestCase {
       try operation(panel)
       try require(waitForPanelToClose(panel, timeout: 15), "NSOpenPanel 操作后没有关闭")
       nativeDialogClosed = true
+      // Flutter 的 90 秒 step 从打开面板前开始计时，而 XCTest 还包含附着应用、
+      // 发现 panel 和键盘导航开销。面板关闭后最多观察 20 秒，在同一个
+      // 90 秒业务边界内读取最终状态，并为 XCTest 附件与 evidence 留出收尾时间。
       _ = try waitForSyncState(
         scenario: scenario,
         expectedState: "flutter_completed",
-        timeout: 15
+        timeout: 20
       )
       addAction(&actions, capability: "filePicker", action: action)
       addAction(&actions, capability: "resourceCleanup", action: "native_file_panel_closed")
@@ -445,7 +449,13 @@ final class RunnerUITests: XCTestCase {
       if let state = try readSyncState(scenario: scenario) {
         try validateSyncState(state, scenario: scenario)
         if state.state == "flutter_failed" {
-          throw failure("Flutter hybrid 状态已经失败: \(state.error ?? "unknown")")
+          let diagnosticText = state.diagnostics?
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: ",") ?? "unavailable"
+          throw failure(
+            "Flutter hybrid 状态已经失败: \(state.error ?? "unknown"); diagnostics=\(diagnosticText)"
+          )
         }
         if state.state == expectedState {
           return state

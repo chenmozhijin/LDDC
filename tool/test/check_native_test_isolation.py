@@ -307,12 +307,19 @@ def failures() -> list[str]:
         "elementBelongsToPicker(",
         "CGPoint(x: elementFrame.midX, y: elementFrame.midY)",
         'private let fixtureAccessibilityName = "audio_sample, mp3"',
+        "waitForStableFixtureCell(app: app",
+        'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
+        'action: "document_picker_fixture_cell_tapped"',
         'requireTypedButton(named: "Browse"',
         'requireTypedButton(named: "Save"',
         'private let previewIdentifier = "lddc.open_lyrics.preview"',
         'app.otherElements[previewIdentifier]',
         'private let fixtureLyricsAccessibilityValue = "[00:00.00]Hello LDDC"',
         'NSPredicate(format: "value == %@", fixtureLyricsAccessibilityValue)',
+        "waitForPreviewLyricsValue(app: app, preview: preview",
+        "preview.frame.contains(",
+        "cancelSystemPicker(app: launchedApp, returnControl: openSong)",
+        "cancelSystemPicker(app: launchedApp, returnControl: saveFile)",
         '"On My iPhone"',
         '"DOC.sidebar.item.On My iPhone"',
         "requireOnMyIPhoneLocation(in: picker",
@@ -348,6 +355,8 @@ def failures() -> list[str]:
         "label CONTAINS[c]",
         "identifier CONTAINS[c]",
         '"nativeWindowCount"',
+        "waitForSystemPickerToClose(",
+        "preview.descendants(matching:",
     ):
         if forbidden in ios_ui_test:
             problems.append(f"iOS Document Picker 禁止宽泛选择或 sheet fallback: {forbidden}")
@@ -942,6 +951,7 @@ def failures() -> list[str]:
         "openButton.isEnabled",
         'expectedState: "picker_requested"',
         'expectedState: "flutter_completed"',
+        "timeout: 20",
         'state.state == "flutter_failed"',
         "attachedToExistingApplication",
         "usedExactApplicationURL",
@@ -993,6 +1003,9 @@ def failures() -> list[str]:
         "Get-XcresultFailureMessage",
         "Get-FlutterScenarioFailureMessage",
         "Resolve-FallbackFailureMessage",
+        "diagnostics = $state.diagnostics",
+        "$hybridNativeActionTimeoutSeconds + $xcodeReportDrainSeconds",
+        'diagnostics=$diagnosticText',
     ):
         if required not in macos_runner:
             problems.append(f"macOS hybrid runner 缺少协同或失败报告契约: {required}")

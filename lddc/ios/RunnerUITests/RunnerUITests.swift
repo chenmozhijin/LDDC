@@ -76,9 +76,9 @@ final class RunnerUITests: XCTestCase {
       let launchedApp = try launchApp()
       app = launchedApp
       _ = try openDocumentPicker(app: launchedApp)
-      try cancelSystemPicker(app: launchedApp)
-      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消后 LDDC 没有返回前台")
       let openSong = launchedApp.buttons[openSongIdentifier]
+      try cancelSystemPicker(app: launchedApp, returnControl: openSong)
+      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消后 LDDC 没有返回前台")
       try require(waitForHittable(openSong, timeout: 15), "取消后 Flutter 打开歌曲动作不可再次操作")
       addAction(&actions, capability: "filePicker", action: "document_picker_cancel")
       addAction(&actions, capability: "nativeChannels", action: "flutter_picker_cancel_round_trip")
@@ -105,10 +105,12 @@ final class RunnerUITests: XCTestCase {
       let picker = try openExportPicker(app: launchedApp)
       let save = try requireTypedButton(named: "Save", in: picker, timeout: 15)
       save.tap()
-      try require(waitForSystemPickerToClose(app: launchedApp, timeout: 15), "导出保存后系统文件界面没有关闭")
-      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "导出后 LDDC 没有返回前台")
       let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
-      try require(waitForHittable(saveFile, timeout: 15), "导出完成后 Flutter 页面没有恢复交互")
+      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "导出后 LDDC 没有返回前台")
+      try require(
+        waitForHittable(saveFile, timeout: 15),
+        "导出保存后 Flutter 页面没有恢复可操作状态"
+      )
       addAction(&actions, capability: "filePicker", action: "document_picker_export_lyrics")
       addAction(&actions, capability: "nativeChannels", action: "flutter_export_round_trip")
       try terminateAndVerify(launchedApp)
@@ -132,9 +134,9 @@ final class RunnerUITests: XCTestCase {
       app = launchedApp
       try selectSeededAudio(app: launchedApp, actions: &actions)
       _ = try openExportPicker(app: launchedApp)
-      try cancelSystemPicker(app: launchedApp)
-      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消导出后 LDDC 没有返回前台")
       let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
+      try cancelSystemPicker(app: launchedApp, returnControl: saveFile)
+      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消导出后 LDDC 没有返回前台")
       try require(waitForHittable(saveFile, timeout: 15), "取消导出后 Flutter 页面没有恢复交互")
       addAction(&actions, capability: "filePicker", action: "document_picker_export_cancel")
       addAction(&actions, capability: "nativeChannels", action: "flutter_export_cancel_round_trip")
@@ -237,7 +239,8 @@ final class RunnerUITests: XCTestCase {
     )
     picker = try waitForSystemPicker(app: app, timeout: 5)
 
-    if let fixture = waitForFixtureCell(in: picker, timeout: 1) {
+    if isFixtureDirectory(picker) {
+      let fixture = try requireStableFixtureCell(app: app, timeout: 15)
       try selectFixture(fixture, app: app, actions: &actions)
       return
     }
@@ -251,8 +254,7 @@ final class RunnerUITests: XCTestCase {
       folder.tap()
     }
 
-    picker = try waitForSystemPicker(app: app, timeout: 5)
-    let fixture = try requireFixtureCell(in: picker, timeout: 15)
+    let fixture = try requireStableFixtureCell(app: app, timeout: 15)
     try selectFixture(fixture, app: app, actions: &actions)
   }
 
@@ -263,7 +265,12 @@ final class RunnerUITests: XCTestCase {
   ) throws {
     try require(fixture.exists && fixture.isHittable, "匿名音频 fixture 不可点击")
     fixture.tap()
-    try require(waitForSystemPickerToClose(app: app, timeout: 15), "选择文件后系统 Picker 没有关闭")
+    addAction(&actions, capability: "filePicker", action: "document_picker_fixture_cell_tapped")
+    let openSong = app.buttons[openSongIdentifier]
+    try require(
+      waitForHittable(openSong, timeout: 15),
+      "选择文件后 Flutter 打开歌曲动作没有恢复，Picker 回调尚未完成"
+    )
     // 原生文件选择动作在 Picker 关闭后已经完成，先记录证据再验证 Flutter
     // 预览，避免后置语义断言失败时把真实选择动作错误报告为零动作。
     addAction(&actions, capability: "filePicker", action: "document_picker_select_audio")
@@ -273,11 +280,8 @@ final class RunnerUITests: XCTestCase {
       "选择结果没有回到 Flutter 预览区域"
     )
     let preview = app.otherElements[previewIdentifier]
-    let lyricContent = preview.descendants(matching: .other).matching(
-      NSPredicate(format: "value == %@", fixtureLyricsAccessibilityValue)
-    ).firstMatch
     try require(
-      lyricContent.waitForExistence(timeout: 15),
+      waitForPreviewLyricsValue(app: app, preview: preview, timeout: 15),
       "生产 TagLib 没有从 security-scoped fd 回读匿名内嵌歌词"
     )
   }
@@ -331,20 +335,6 @@ final class RunnerUITests: XCTestCase {
     throw testFailure("系统文件界面没有暴露 typed Document Picker 根节点")
   }
 
-  private func waitForSystemPickerToClose(
-    app: XCUIApplication,
-    timeout: TimeInterval
-  ) -> Bool {
-    let deadline = Date().addingTimeInterval(timeout)
-    repeat {
-      if systemPickerContext(app: app) == nil {
-        return true
-      }
-      Thread.sleep(forTimeInterval: 0.2)
-    } while Date() < deadline
-    return false
-  }
-
   private func requireTypedButton(
     named name: String,
     in picker: SystemPickerContext,
@@ -389,14 +379,76 @@ final class RunnerUITests: XCTestCase {
     )
   }
 
-  private func requireFixtureCell(
-    in picker: SystemPickerContext,
+  private func requireStableFixtureCell(
+    app: XCUIApplication,
     timeout: TimeInterval
   ) throws -> XCUIElement {
-    guard let cell = waitForFixtureCell(in: picker, timeout: timeout) else {
+    guard let cell = waitForStableFixtureCell(app: app, timeout: timeout) else {
       throw testFailure("系统文件界面没有可点击的 \(fixtureAccessibilityName) 文件单元格")
     }
     return cell
+  }
+
+  private func waitForStableFixtureCell(
+    app: XCUIApplication,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    let deadline = Date().addingTimeInterval(timeout)
+    var previousFrame: CGRect?
+    var stableSamples = 0
+    repeat {
+      // 每次重新解析远程 Picker 根。目录切换后旧 XCUIElement 可能继续存在于
+      // snapshot，复用旧 root 会把新文件单元格错误归到上一页。
+      guard let picker = systemPickerContext(app: app) else {
+        previousFrame = nil
+        stableSamples = 0
+        Thread.sleep(forTimeInterval: 0.1)
+        continue
+      }
+      guard isFixtureDirectory(picker) else {
+        previousFrame = nil
+        stableSamples = 0
+        if timeout == 0 {
+          return nil
+        }
+        Thread.sleep(forTimeInterval: 0.1)
+        continue
+      }
+      guard let candidate = waitForFixtureCell(in: picker, timeout: 0) else {
+        previousFrame = nil
+        stableSamples = 0
+        if timeout == 0 {
+          return nil
+        }
+        Thread.sleep(forTimeInterval: 0.1)
+        continue
+      }
+      // Files 的目录切换由远程 view service 异步完成。只看到一次可命中节点
+      // 仍可能处于旧 snapshot；连续五次保持同一 frame 后再点击，避免在导航
+      // 动画中把真实单击交给即将失效的文件单元格。
+      if previousFrame == candidate.frame {
+        stableSamples += 1
+      } else {
+        previousFrame = candidate.frame
+        stableSamples = 1
+      }
+      if stableSamples >= 5 {
+        return candidate
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return nil
+  }
+
+  private func isFixtureDirectory(_ picker: SystemPickerContext) -> Bool {
+    let rootIdentifier = picker.root.identifier
+    if rootIdentifier.hasSuffix(", Title: \(platformTestDisplayName)") {
+      return true
+    }
+    // 旧系统只暴露无标题的 Browse View 根；此时必须同时看到精确 fixture，
+    // 不能把任意 Files 目录误判为测试目录。
+    return rootIdentifier == "Browse View (Picker)"
+      && waitForFixtureCell(in: picker, timeout: 0) != nil
   }
 
   private func waitForPlatformTestFolder(
@@ -548,7 +600,10 @@ final class RunnerUITests: XCTestCase {
     )
   }
 
-  private func cancelSystemPicker(app: XCUIApplication) throws {
+  private func cancelSystemPicker(
+    app: XCUIApplication,
+    returnControl: XCUIElement?
+  ) throws {
     let picker = try waitForSystemPicker(app: app, timeout: 5)
     let cancelQueries = [
       picker.application.buttons.matching(
@@ -565,7 +620,12 @@ final class RunnerUITests: XCTestCase {
       let cancel = existingCancelButtons[0]
       try require(waitForHittable(cancel, timeout: 3), "系统 Picker 的 typed Cancel 按钮存在但不可点击")
       cancel.tap()
-      try require(waitForSystemPickerToClose(app: app, timeout: 10), "点击 Cancel 后系统 Picker 没有关闭")
+      if let returnControl {
+        try require(
+          waitForHittable(returnControl, timeout: 10),
+          "点击 Cancel 后 Flutter 页面没有恢复可操作状态"
+        )
+      }
       return
     }
 
@@ -574,7 +634,39 @@ final class RunnerUITests: XCTestCase {
     // 手势只作用于已确认的 typed Picker 根，不使用屏幕坐标或 sheet fallback。
     try require(picker.root.exists && picker.root.isHittable, "系统 Picker 根节点不可操作")
     picker.root.swipeDown()
-    try require(waitForSystemPickerToClose(app: app, timeout: 10), "下拉后系统 Picker 没有关闭")
+    if let returnControl {
+      try require(
+        waitForHittable(returnControl, timeout: 10),
+        "下拉后 Flutter 页面没有恢复可操作状态"
+      )
+    }
+  }
+
+  private func waitForPreviewLyricsValue(
+    app: XCUIApplication,
+    preview: XCUIElement,
+    timeout: TimeInterval
+  ) -> Bool {
+    let predicate = NSPredicate(format: "value == %@", fixtureLyricsAccessibilityValue)
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      // iOS 26 的 Flutter 远程 AX snapshot 能在 app 级 typed query 中返回歌词
+      // Other，但从父 preview 执行 descendants 查询会丢失同一节点。这里保持
+      // 精确值与唯一性，并用 frame 证明节点确实属于预览区域。
+      let candidates = app.otherElements.matching(predicate).allElementsBoundByIndex.filter {
+        $0.exists && preview.frame.contains(
+          CGPoint(x: $0.frame.midX, y: $0.frame.midY)
+        )
+      }
+      if candidates.count == 1 {
+        return true
+      }
+      if candidates.count > 1 {
+        return false
+      }
+      Thread.sleep(forTimeInterval: 0.2)
+    } while Date() < deadline
+    return false
   }
 
   private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
@@ -655,8 +747,14 @@ final class RunnerUITests: XCTestCase {
     var pickerDismissError: String?
     if app.state != .notRunning, isSystemPickerVisible(app: app) {
       do {
-        try cancelSystemPicker(app: app)
-        pickerDismissed = app.wait(for: .runningForeground, timeout: 5)
+        try cancelSystemPicker(app: app, returnControl: nil)
+        let returnControls = [
+          app.buttons[openSongIdentifier],
+          app.descendants(matching: .any)[saveFileIdentifier],
+        ]
+        pickerDismissed = returnControls.contains {
+          waitForHittable($0, timeout: 2)
+        }
       } catch {
         pickerDismissError = String(describing: error)
       }

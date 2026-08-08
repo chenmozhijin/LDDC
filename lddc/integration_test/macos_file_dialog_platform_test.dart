@@ -118,6 +118,9 @@ void main() {
             success: true,
           );
         } on Object catch (error, stackTrace) {
+          final OpenLyricsPageState failedState = container.read(
+            openLyricsPageControllerProvider,
+          );
           // 失败状态只保留错误类型；完整异常由 Flutter JSONL
           // 记录，避免 hybrid diagnostic 泄露容器或 fixture 绝对路径。
           try {
@@ -127,6 +130,18 @@ void main() {
               state: 'flutter_failed',
               success: false,
               error: '${error.runtimeType}: Flutter file picker failed',
+              diagnostics: <String, String>{
+                'isOpening': failedState.isOpening.toString(),
+                'inputType': failedState.inputType?.name ?? 'null',
+                'inputName': failedState.inputName,
+                'inputPathPresent': (failedState.inputPath?.isNotEmpty ?? false)
+                    .toString(),
+                'audioFileHandlePresent': (failedState.audioFileHandle != null)
+                    .toString(),
+                'rawTextContainsFixture': failedState.rawText
+                    .contains('Hello LDDC')
+                    .toString(),
+              },
             );
           } on Object {
             // 状态记录失败不能覆盖原始业务异常。
@@ -194,6 +209,7 @@ Future<void> _writeHybridState({
   required String state,
   bool? success,
   String? error,
+  Map<String, String>? diagnostics,
 }) async {
   final Directory directory = Directory(_nativeSyncRoot);
   await directory.create(recursive: true);
@@ -220,6 +236,7 @@ Future<void> _writeHybridState({
       'action': _dialogAction,
       'success': success,
       'error': error,
+      'diagnostics': diagnostics,
     }),
     flush: true,
   );

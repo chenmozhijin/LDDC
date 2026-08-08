@@ -392,7 +392,12 @@ function Wait-ForHybridState {
       throw "macOS hybrid 状态与当前 schema/runId/scenario 不匹配"
     }
     if ($state.state -eq "flutter_failed") {
-      throw "Flutter hybrid 状态失败: $($state.error)"
+      $diagnosticText = if ($null -eq $state.diagnostics) {
+        "unavailable"
+      } else {
+        ($state.diagnostics | ConvertTo-Json -Compress -Depth 3)
+      }
+      throw "Flutter hybrid 状态失败: $($state.error); diagnostics=$diagnosticText"
     }
     if ($state.state -eq $ExpectedState) {
       break
@@ -464,6 +469,7 @@ function Write-SanitizedHybridStateDiagnostic {
       action = $state.action
       success = $state.success
       error = $state.error
+      diagnostics = $state.diagnostics
     }
     [IO.File]::WriteAllText(
       $OutputPath,
@@ -924,12 +930,17 @@ try {
       if ($remainingScenarioSeconds -le 0) {
         throw "macOS hybrid 在启动 XCUITest 前已耗尽场景总预算"
       }
+      # XCTest 内部仍以 90 秒终止原生业务动作；xcodebuild 进程额外获得固定
+      # 30 秒写完 xcresult。该监督预算不延长测试动作，只防止报告在落盘时被截断。
       $xcodeHandle = Start-SupervisedXcodeTest `
         -XcTestRun $xctestrun.FullName `
         -Method $method `
         -ResultBundle $resultBundle `
         -LogPrefix (Join-Path $diagnosticsDir "$scenario.xcodebuild") `
-        -TimeoutSeconds ([Math]::Min($hybridNativeActionTimeoutSeconds, $remainingScenarioSeconds))
+        -TimeoutSeconds ([Math]::Min(
+          $hybridNativeActionTimeoutSeconds + $xcodeReportDrainSeconds,
+          $remainingScenarioSeconds
+        ))
 
       while ([DateTimeOffset]::UtcNow -lt $scenarioDeadline) {
         $activeFlutterHandle.Process.Refresh()

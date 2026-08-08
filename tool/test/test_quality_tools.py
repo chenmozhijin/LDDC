@@ -486,6 +486,8 @@ class QualityToolTests(unittest.TestCase):
         )
         for marker in (
             "$xcodeReportDrainSeconds = 30",
+            "$hybridNativeActionTimeoutSeconds + $xcodeReportDrainSeconds",
+            'diagnostics=$diagnosticText',
             "$reportDrainAttempted = $true",
             '"flutter_failed_xcresult_drain_expired"',
             '"xctest_failed_flutter_terminated"',
@@ -508,6 +510,25 @@ class QualityToolTests(unittest.TestCase):
             '$runnerTerminationReason = "flutter_failed_xcresult_drain"',
             runner,
         )
+
+    def test_ios_picker_uses_positive_flutter_round_trip_and_stable_fixture(self) -> None:
+        source = (ROOT / "lddc/ios/RunnerUITests/RunnerUITests.swift").read_text(
+            encoding="utf-8"
+        )
+        for marker in (
+            "waitForStableFixtureCell(app: app",
+            'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
+            'action: "document_picker_fixture_cell_tapped"',
+            "waitForPreviewLyricsValue(app: app, preview: preview",
+            "preview.frame.contains(",
+            "cancelSystemPicker(app: launchedApp, returnControl: openSong)",
+            "cancelSystemPicker(app: launchedApp, returnControl: saveFile)",
+        ):
+            self.assertIn(marker, source)
+        # iOS 26 会短暂保留已关闭 remote view 的 AX 根；关闭门禁必须使用
+        # Flutter 业务控件重新可命中的正向证据，不能继续等待 stale 根消失。
+        self.assertNotIn("waitForSystemPickerToClose(", source)
+        self.assertNotIn("preview.descendants(matching:", source)
 
     def test_apple_runners_require_unique_xcode_products(self) -> None:
         for relative in (
