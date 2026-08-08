@@ -1,0 +1,210 @@
+name: Platform Stabilization
+
+on:
+  push:
+    branches:
+      - ci/platform-stabilization
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-stabilization-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.47.0-0.2.pre
+
+jobs:
+  linux-local-match:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - name: Install Linux Flutter dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev \
+            liblzma-dev libstdc++-12-dev libayatana-appindicator3-dev \
+            dbus-x11 ffmpeg xvfb xauth
+      - run: flutter pub get
+      - name: Run Linux Local Match only
+        run: |
+          mkdir -p lddc/build/integration_reports/stabilization-supervisor
+          python tool/test/process_group_supervisor.py \
+            --phase stabilization-linux-local-match \
+            --timeout 1500 \
+            --grace 15 \
+            --cwd "$PWD" \
+            --status lddc/build/integration_reports/stabilization-supervisor/status.json \
+            --stdout lddc/build/integration_reports/stabilization-supervisor/stdout.log \
+            --stderr lddc/build/integration_reports/stabilization-supervisor/stderr.log \
+            -- xvfb-run -a --server-args="-screen 0 1600x1000x24" \
+              pwsh -NoLogo -NoProfile -File tool/test/run_real_integration.ps1 \
+              -Profile offline -Device linux -Platform linux \
+              -Targets integration_test/local_match_flow_test.dart
+      - name: Capture Linux failure context
+        if: failure()
+        run: |
+          set +e
+          context_dir='lddc/build/integration_reports/stabilization-host'
+          mkdir -p "$context_dir"
+          uname -a > "$context_dir/uname.txt" 2>&1
+          flutter doctor -v > "$context_dir/flutter-doctor.txt" 2>&1
+          ps -eo pid,ppid,stat,rss,etime,comm --sort=pid > "$context_dir/processes.txt" 2>&1
+          printf 'runId=%s\nsha=%s\nref=%s\nrunnerOs=%s\nrunnerArch=%s\n' \
+            "$GITHUB_RUN_ID" "$GITHUB_SHA" "$GITHUB_REF" "$RUNNER_OS" "$RUNNER_ARCH" \
+            > "$context_dir/runner.txt"
+          exit 0
+      - name: Upload Linux Local Match diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stabilization-linux-local-match-${{ github.run_id }}
+          path: lddc/build/integration_reports/**
+          if-no-files-found: warn
+          retention-days: 3
+
+  macos-open-panel:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      LDDC_XCODE_VERSION: '26.6'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select pinned Xcode
+        run: |
+          developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"
+          test -d "$developer_dir"
+          sudo xcode-select --switch "$developer_dir"
+          test "$(xcodebuild -version | awk '/^Xcode / { print $2 }')" = "$LDDC_XCODE_VERSION"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - run: flutter pub get
+      - name: Keep Apple dependency resolution on CocoaPods
+        run: flutter config --no-enable-swift-package-manager
+      - name: Run macOS OpenPanel hybrid only
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force `
+            -Path lddc/build/integration_reports/macos-native/stabilization-supervisor | Out-Null
+          python tool/test/process_group_supervisor.py `
+            --phase stabilization-macos-open-panel `
+            --timeout 2100 `
+            --grace 15 `
+            --cwd $PWD.Path `
+            --status lddc/build/integration_reports/macos-native/stabilization-supervisor/status.json `
+            --stdout lddc/build/integration_reports/macos-native/stabilization-supervisor/stdout.log `
+            --stderr lddc/build/integration_reports/macos-native/stabilization-supervisor/stderr.log `
+            -- pwsh -NoLogo -NoProfile -File tool/test/run_macos_platform_tests.ps1
+          exit $LASTEXITCODE
+      - name: Capture macOS failure context
+        if: failure()
+        run: |
+          set +e
+          context_dir='lddc/build/integration_reports/macos-native/stabilization-host'
+          mkdir -p "$context_dir"
+          sw_vers > "$context_dir/sw-vers.txt" 2>&1
+          uname -a > "$context_dir/uname.txt" 2>&1
+          xcodebuild -version > "$context_dir/xcode-version.txt" 2>&1
+          flutter doctor -v > "$context_dir/flutter-doctor.txt" 2>&1
+          ps -axo pid,ppid,stat,rss,etime,comm > "$context_dir/processes.txt" 2>&1
+          /usr/bin/log show --last 20m --style compact \
+            --predicate 'process == "LDDC" OR process == "RunnerUITests-Runner" OR process CONTAINS "OpenAndSavePanel"' \
+            > "$context_dir/system.log" 2>&1
+          exit 0
+      - name: Upload macOS OpenPanel diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stabilization-macos-open-panel-${{ github.run_id }}
+          path: lddc/build/integration_reports/macos-native/**
+          if-no-files-found: warn
+          retention-days: 3
+
+  ios-document-picker:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      LDDC_XCODE_VERSION: '26.6'
+      LDDC_IOS_RUNTIME_VERSION: '26.5'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select pinned Xcode and runtime
+        run: |
+          developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"
+          test -d "$developer_dir"
+          sudo xcode-select --switch "$developer_dir"
+          test "$(xcodebuild -version | awk '/^Xcode / { print $2 }')" = "$LDDC_XCODE_VERSION"
+          xcrun simctl list runtimes available -j | jq -e \
+            --arg version "$LDDC_IOS_RUNTIME_VERSION" \
+            '[.runtimes[] | select(.isAvailable == true and .platform == "iOS" and .version == $version)] | length > 0'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - run: flutter pub get
+      - name: Keep Apple dependency resolution on CocoaPods
+        run: flutter config --no-enable-swift-package-manager
+      - name: Create and boot the iOS simulator
+        run: bash tool/test/create_ios_simulator.sh
+      - name: Run iOS Document Picker only
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force `
+            -Path lddc/build/integration_reports/ios-native/stabilization-supervisor | Out-Null
+          python tool/test/process_group_supervisor.py `
+            --phase stabilization-ios-document-picker `
+            --timeout 3000 `
+            --grace 15 `
+            --cwd $PWD.Path `
+            --status lddc/build/integration_reports/ios-native/stabilization-supervisor/status.json `
+            --stdout lddc/build/integration_reports/ios-native/stabilization-supervisor/stdout.log `
+            --stderr lddc/build/integration_reports/ios-native/stabilization-supervisor/stderr.log `
+            -- pwsh -NoLogo -NoProfile -File tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID
+          exit $LASTEXITCODE
+      - name: Capture iOS failure context
+        if: failure()
+        run: |
+          set +e
+          context_dir='lddc/build/integration_reports/ios-native/stabilization-host'
+          mkdir -p "$context_dir"
+          sw_vers > "$context_dir/sw-vers.txt" 2>&1
+          uname -a > "$context_dir/uname.txt" 2>&1
+          xcodebuild -version > "$context_dir/xcode-version.txt" 2>&1
+          xcrun simctl list devices --json > "$context_dir/simulator-devices.json" 2>&1
+          if [[ -n "$DEVICE_ID" ]]; then
+            xcrun simctl io "$DEVICE_ID" screenshot "$context_dir/final-screen.png" \
+              > "$context_dir/screenshot.log" 2>&1
+            xcrun simctl spawn "$DEVICE_ID" log show --last 30m --style compact \
+              --predicate 'process == "LDDC" OR process == "Runner" OR process == "fileproviderd" OR process == "documentmanagerd"' \
+              > "$context_dir/simulator-system.log" 2>&1
+          else
+            printf 'DEVICE_ID was not created; simulator-specific diagnostics were not applicable.\n' \
+              > "$context_dir/simulator-not-created.txt"
+          fi
+          ps -axo pid,ppid,stat,rss,etime,comm > "$context_dir/host-processes.txt" 2>&1
+          exit 0
+      - name: Delete the stabilization simulator
+        if: always() && env.DEVICE_ID != ''
+        run: |
+          xcrun simctl shutdown "$DEVICE_ID" || true
+          xcrun simctl delete "$DEVICE_ID"
+      - name: Upload iOS Document Picker diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stabilization-ios-document-picker-${{ github.run_id }}
+          path: lddc/build/integration_reports/ios-native/**
+          if-no-files-found: warn
+          retention-days: 3
