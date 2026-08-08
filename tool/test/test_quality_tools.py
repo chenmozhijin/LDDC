@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -53,6 +54,16 @@ def _load_ci_phase_summary():
         raise RuntimeError(f"无法加载 CI 阶段汇总器: {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_native_isolation_checker():
+    path = ROOT / "tool/test/check_native_test_isolation.py"
+    spec = importlib.util.spec_from_file_location("check_native_test_isolation", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"无法加载原生测试隔离检查器: {path}")
+    module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
@@ -529,6 +540,37 @@ class QualityToolTests(unittest.TestCase):
         self.assertGreater(creator.rfind("trap - ERR"), creator.find('>"$report_path"'))
         self.assertGreater(creator.rfind("trap - ERR"), creator.find('>>"$GITHUB_ENV"'))
 
+    def test_ios_element_type_gate_rejects_collection_property_mutation(self) -> None:
+        checker = _load_native_isolation_checker()
+        self.assertEqual(
+            checker.invalid_descendant_element_types(
+                "preview.descendants(matching: .otherElements)"
+            ),
+            ["otherElements"],
+        )
+        self.assertEqual(
+            checker.invalid_descendant_element_types(
+                "preview.descendants(matching: .other)"
+            ),
+            [],
+        )
+
+    def test_local_match_driver_keeps_checkbox_descendant_contract(self) -> None:
+        source = (
+            ROOT / "lddc/integration_test/support/integration_drivers.dart"
+        ).read_text(encoding="utf-8")
+        match = re.search(
+            r"Future<void> toggleSkipExisting\(\) async \{(?P<body>.*?)\n  \}",
+            source,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(match)
+        body = match.group("body")
+        self.assertIn("find.descendant(", body)
+        self.assertIn("find.byType(Checkbox)", body)
+        self.assertNotIn(".title", body)
+        self.assertNotIn("find.byWidget(", body)
+
     def test_l10n_structure_distinguishes_template_tokens_from_html(self) -> None:
         checker = _load_l10n_checker()
         structure = checker._message_structure(
@@ -925,6 +967,83 @@ class QualityToolTests(unittest.TestCase):
             self.assertIn("resourceCleanup", rejected.stderr)
             self.assertNotEqual(rejected_resources.returncode, 0)
             self.assertIn("超过阈值", rejected_resources.stderr)
+
+    def test_native_normalizer_marks_unstarted_xcresult_as_not_exercised(self) -> None:
+        normalizer = ROOT / "tool/test/normalize_integration_report.py"
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            scenario = root / "scenario.json"
+            raw = root / "scenario.summary.json"
+            evidence = root / "evidence.json"
+            raw.write_text(
+                json.dumps(
+                    {
+                        "totalTestCount": 0,
+                        "passedTests": 0,
+                        "failedTests": 1,
+                        "skippedTests": 0,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "runId": "ios-build-failure",
+                        "scenario": "ios_document_picker_select",
+                        "profile": "platform",
+                        "platform": "ios",
+                        "framework": "xcuitest",
+                        "steps": [
+                            {
+                                "step": "build",
+                                "success": False,
+                                "error": "build failure",
+                            }
+                        ],
+                        "capabilityEvidence": {},
+                        "resources": {
+                            "baseline": {},
+                            "final": {},
+                            "thresholds": {},
+                        },
+                        "artifacts": [],
+                        "extra": {
+                            "failureClass": "build_failure",
+                            "resourceMeasurementStatus": (
+                                "not_exercised_before_test_start"
+                            ),
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(normalizer),
+                    "--scenario-report",
+                    str(scenario),
+                    "--raw-report",
+                    str(raw),
+                    "--raw-report-type",
+                    "xcresult-summary",
+                    "--framework",
+                    "xcuitest",
+                    "--exit-code",
+                    "1",
+                    "--evidence",
+                    str(evidence),
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(scenario.read_text(encoding="utf-8"))
+            self.assertFalse(report["runner"]["testStarted"])
+            self.assertEqual(report["coverageStatus"], "notExercised")
+            self.assertEqual(report["resources"]["baseline"], {})
 
     def test_flutter_normalizer_writes_failure_reports_for_invalid_mobile_json(self) -> None:
         normalizer = ROOT / "tool/test/normalize_integration_report.py"

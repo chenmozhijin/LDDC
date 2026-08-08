@@ -32,9 +32,9 @@ final class RunnerUITests: XCTestCase {
     nativeDialogClosed = false
     panelOwnerIdentifier = "unresolved"
     panelUsedNewProcess = false
-    // 单场景只允许 60 秒。外层进程组监督器还会在 120 秒场景总预算内
-    // 回收 xcodebuild、测试 runner 和被测 Flutter 进程，避免 XCTest 自身失联。
-    executionTimeAllowance = 60
+    // 原生动作最多使用 runner 注入给 Flutter hybrid 的 90 秒 test-only 预算。
+    // 外层 120 秒场景总预算仍负责回收 xcodebuild、测试 runner 和 Flutter 进程。
+    executionTimeAllowance = 90
   }
 
   func testOpenPanelSelectsFixture() throws {
@@ -49,47 +49,37 @@ final class RunnerUITests: XCTestCase {
       let fixtureDirectory = fixtureURL.deletingLastPathComponent().path
       let fixtureName = fixtureURL.lastPathComponent
       panel.application.typeKey("g", modifierFlags: [.command, .shift])
-      // “前往文件夹”是系统面板内的第二层原生 sheet。优先在实际面板拥有者中
-      // 查询，再检查其 sheet；不使用屏幕坐标或图像识别兜底。
-      let comboBox = panel.application.sheets.comboBoxes.firstMatch
-      let textField = panel.application.sheets.textFields.firstMatch
-      let rootComboBox = panel.root.comboBoxes.firstMatch
-      let rootTextField = panel.root.textFields.firstMatch
-      let pathFields = [comboBox, textField, rootComboBox, rootTextField]
-      guard let pathField = firstHittableElement(pathFields, timeout: 10) else {
-        throw failure("NSOpenPanel 没有打开可访问的前往文件夹输入框")
-      }
-      // “前往文件夹”只输入 fixture 的父目录。把完整文件路径
-      // 交给该 sheet 只能证明面板关闭，不能证明列表中的文件真正
-      // 被选中。进入父目录后再精确点击文件名，使原生动作与
-      // Flutter 最终收到的选择结果形成同一条证据链。
-      pathField.click()
-      panel.application.typeKey("a", modifierFlags: [.command])
-      pathField.typeText(fixtureDirectory)
-      // macOS 26.5 的 hosted NSOpenPanel 不会保证 Enter 提交 Go To Folder
-      // sheet。Go 按钮实际属于嵌套 GoToWindow sheet 的 Touch Bar；必须查询
-      // 该 typed 原生控件，否则 Flutter 会继续阻塞在文件选择调用。
-      attachText(
-        name: "lddc-macos-go-to-folder-accessibility.txt",
-        value: panel.application.debugDescription
-      )
       let goToFolder = panel.application.sheets["GoToWindow"]
       try require(
         goToFolder.waitForExistence(timeout: 10),
         "NSOpenPanel 的前往文件夹 sheet 没有出现"
       )
-      let goButtons = goToFolder.touchBars.buttons.matching(
-        NSPredicate(format: "label == %@ OR identifier == %@", "Go", "Go")
-      )
-      guard let goButton = waitForExactlyOneHittableElement(
-        in: goButtons,
-        timeout: 10
-      ) else {
-        throw failure("NSOpenPanel 的前往文件夹 sheet 没有唯一可点击的 Go 按钮")
-      }
-      goButton.click()
+      let pathField = goToFolder.textFields["PathTextField"]
       try require(
-        waitForElementToDisappear(pathField, timeout: 10),
+        waitForHittableElement(pathField, timeout: 10),
+        "NSOpenPanel 没有可点击的 PathTextField"
+      )
+      // “前往文件夹”只输入 fixture 的父目录。把完整文件路径
+      // 交给该 sheet 只能证明面板关闭，不能证明列表中的文件真正
+      // 被选中。进入父目录后再精确点击文件名，使原生动作与
+      // Flutter 最终收到的选择结果形成同一条证据链。
+      pathField.click()
+      pathField.typeKey("a", modifierFlags: [.command])
+      pathField.typeText(fixtureDirectory)
+      try require(
+        waitForStringValue(pathField, equals: fixtureDirectory, timeout: 10),
+        "NSOpenPanel 的 PathTextField 没有保持完整父目录"
+      )
+      attachText(
+        name: "lddc-macos-go-to-folder-accessibility.txt",
+        value: panel.application.debugDescription
+      )
+      // hosted hierarchy 中 Touch Bar 的 Go 按钮处于 Disabled，不能作为稳定
+      // 控件。对已经聚焦且完成值校验的原生输入框发送 Return，等价于用户在
+      // Go To Folder sheet 中提交路径，同时不引入坐标或完整文件路径捷径。
+      pathField.typeKey(.return, modifierFlags: [])
+      try require(
+        waitForElementToDisappear(goToFolder, timeout: 10),
         "NSOpenPanel 的前往文件夹 sheet 没有关闭"
       )
       try require(
@@ -115,7 +105,7 @@ final class RunnerUITests: XCTestCase {
       }
       fixture.click()
       try require(
-        waitForSelectedElement(fixture, timeout: 10),
+        waitForSelectedElement(fixtureCandidates, timeout: 10),
         "NSOpenPanel 点击 fixture 后没有进入选中状态"
       )
       let openButton = panel.root.buttons["Open"]
@@ -352,26 +342,6 @@ final class RunnerUITests: XCTestCase {
     return nil
   }
 
-  private func waitForExactlyOneHittableElement(
-    in query: XCUIElementQuery,
-    timeout: TimeInterval
-  ) -> XCUIElement? {
-    let deadline = Date().addingTimeInterval(timeout)
-    repeat {
-      let hittable = query.allElementsBoundByIndex.filter {
-        $0.exists && $0.isHittable
-      }
-      if hittable.count == 1 {
-        return hittable[0]
-      }
-      if hittable.count > 1 {
-        return nil
-      }
-      Thread.sleep(forTimeInterval: 0.1)
-    } while Date() < deadline
-    return nil
-  }
-
   private func waitForHittableElement(
     _ element: XCUIElement,
     timeout: TimeInterval
@@ -380,12 +350,27 @@ final class RunnerUITests: XCTestCase {
   }
 
   private func waitForSelectedElement(
-    _ element: XCUIElement,
+    _ candidates: [XCUIElement],
     timeout: TimeInterval
   ) -> Bool {
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
-      if element.exists && element.isSelected {
+      if candidates.contains(where: { $0.exists && $0.isSelected }) {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return false
+  }
+
+  private func waitForStringValue(
+    _ element: XCUIElement,
+    equals expected: String,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if element.exists, (element.value as? String) == expected {
         return true
       }
       Thread.sleep(forTimeInterval: 0.1)

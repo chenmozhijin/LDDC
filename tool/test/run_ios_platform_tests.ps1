@@ -441,7 +441,8 @@ function Write-FallbackEvidence {
   param(
     [Parameter(Mandatory = $true)][string]$Path,
     [Parameter(Mandatory = $true)][string]$Scenario,
-    [Parameter(Mandatory = $true)][string]$Message
+    [Parameter(Mandatory = $true)][string]$Message,
+    [string]$FailureClass = "infrastructure_failure"
   )
   $payload = [ordered]@{
     runId = $runId
@@ -452,18 +453,25 @@ function Write-FallbackEvidence {
     steps = @([ordered]@{ step = $Scenario; success = $false; error = $Message })
     capabilityEvidence = @{}
     resources = [ordered]@{
-      baseline = @{ applicationProcessCount = 0 }
-      final = @{ applicationProcessCount = 1 }
-      thresholds = @{ applicationProcessCount = 0 }
+      baseline = @{}
+      final = @{}
+      thresholds = @{}
     }
     artifacts = @()
-    extra = @{ simulator = $simulatorMetadata }
+    extra = [ordered]@{
+      simulator = $simulatorMetadata
+      failureClass = $FailureClass
+      resourceMeasurementStatus = "not_exercised_before_test_start"
+    }
   }
   [IO.File]::WriteAllText($Path, ($payload | ConvertTo-Json -Depth 20), [Text.UTF8Encoding]::new($false))
 }
 
 function Write-InfrastructureFailureReports {
-  param([Parameter(Mandatory = $true)][string]$Message)
+  param(
+    [Parameter(Mandatory = $true)][string]$Message,
+    [string]$FailureClass = "infrastructure_failure"
+  )
 
   foreach ($entry in $scenarios) {
     $scenario = $entry.Name
@@ -475,7 +483,11 @@ function Write-InfrastructureFailureReports {
     $summaryPath = Join-Path $rawDir "$scenario.summary.json"
     $fallbackEvidence = Join-Path $attachmentsDir "lddc-evidence-$scenario.json"
     Write-FallbackSummary -Path $summaryPath -Message $Message
-    Write-FallbackEvidence -Path $fallbackEvidence -Scenario $scenario -Message $Message
+    Write-FallbackEvidence `
+      -Path $fallbackEvidence `
+      -Scenario $scenario `
+      -Message $Message `
+      -FailureClass $FailureClass
     & python $normalizer `
       --scenario-report $scenarioPath `
       --raw-report $summaryPath `
@@ -511,6 +523,9 @@ $scenarios = @(
   }
 )
 $overallExitCode = 0
+$infrastructureFailureMessage = $null
+$infrastructureFailureClass = "infrastructure_failure"
+$activeInfrastructureFailureClass = "infrastructure_failure"
 
 Push-Location $appRoot
 try {
@@ -541,6 +556,30 @@ try {
     -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLocale", "en_US") | Out-Null
   $simulatorMetadata.configuredLanguage = "en"
   $simulatorMetadata.configuredLocale = "en_US"
+  $activeInfrastructureFailureClass = "build_failure"
+  # Document Picker 已被前移到其它完整 Flutter 构建之前。首次 checkout 中
+  # 只有 pub 依赖，尚无 Generated.xcconfig 与 Pods；先执行 config-only 和
+  # 有界 pod install，避免依赖后续 release/debug 阶段隐式准备工作区。
+  $flutterConfigExitCode = Invoke-BoundedNativeCommand `
+    -Phase "ios-flutter-config" `
+    -FilePath "flutter" `
+    -Arguments @("build", "ios", "--debug", "--simulator", "--config-only") `
+    -TimeoutSeconds 300 `
+    -StdoutPath (Join-Path $rawDir "flutter-config.stdout.log") `
+    -StderrPath (Join-Path $rawDir "flutter-config.stderr.log")
+  if ($flutterConfigExitCode -ne 0) {
+    throw "iOS Flutter Xcode 配置生成失败，exit=$flutterConfigExitCode"
+  }
+  $podInstallExitCode = Invoke-BoundedNativeCommand `
+    -Phase "ios-pod-install" `
+    -FilePath "pod" `
+    -Arguments @("install", "--project-directory=ios") `
+    -TimeoutSeconds 300 `
+    -StdoutPath (Join-Path $rawDir "pod-install.stdout.log") `
+    -StderrPath (Join-Path $rawDir "pod-install.stderr.log")
+  if ($podInstallExitCode -ne 0) {
+    throw "iOS CocoaPods 解析失败，exit=$podInstallExitCode"
+  }
   $buildExitCode = Invoke-BoundedNativeCommand `
     -Phase "ios-xcuitest-build-for-testing" `
     -FilePath "xcodebuild" `
@@ -560,6 +599,7 @@ try {
   if ($buildExitCode -ne 0) {
     throw "iOS build-for-testing 失败，exit=$buildExitCode"
   }
+  $activeInfrastructureFailureClass = "test_infrastructure_failure"
 
   $buildProducts = Join-Path $derivedData "Build/Products"
   $appBundle = Resolve-UniqueBuildArtifact `
@@ -893,9 +933,9 @@ try {
   }
 } catch {
   $overallExitCode = 1
-  $message = "iOS platform infrastructure failure: $($_.Exception.Message)"
-  Write-Error $message -ErrorAction Continue
-  Write-InfrastructureFailureReports -Message $message
+  $infrastructureFailureMessage = "iOS platform infrastructure failure: $($_.Exception.Message)"
+  $infrastructureFailureClass = $activeInfrastructureFailureClass
+  Write-Error $infrastructureFailureMessage -ErrorAction Continue
 } finally {
   & xcrun simctl terminate $Device com.cmzj.lddc.platformtests 2>$null
   & xcrun simctl terminate $Device com.apple.DocumentsApp 2>$null
@@ -916,6 +956,15 @@ try {
     )
   }
   Pop-Location
+}
+
+if (-not [string]::IsNullOrWhiteSpace($infrastructureFailureMessage)) {
+  # 基础设施失败报告必须在应用、系统 Picker 和 DerivedData 清理完成后生成。
+  # 这样 testStarted=false 的报告只表达“未执行”，不会把清理前的临时状态
+  # 误写成资源泄漏或伪造 resourceCleanup 成功证据。
+  Write-InfrastructureFailureReports `
+    -Message $infrastructureFailureMessage `
+    -FailureClass $infrastructureFailureClass
 }
 
 & python $verifier `

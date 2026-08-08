@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 import uuid
+import xml.etree.ElementTree as ET
 
 
 SCENARIOS = ("macos_open_panel_select", "macos_open_panel_cancel")
@@ -75,8 +76,41 @@ def _fallback_evidence(run_id: str, scenario: str, message: str) -> dict:
         "capabilityEvidence": {},
         "resources": {"baseline": {}, "final": {}, "thresholds": {}},
         "artifacts": [],
-        "extra": {"infrastructureFailure": message},
+        "extra": {
+            "infrastructureFailure": message,
+            "failureClass": "watchdog_interruption",
+            "resourceMeasurementStatus": "not_exercised_before_test_start",
+        },
     }
+
+
+def _report_pair_is_valid(
+    scenario_report: Path,
+    junit_report: Path,
+    *,
+    run_id: str,
+    scenario: str,
+) -> bool:
+    try:
+        payload = json.loads(scenario_report.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            return False
+        if payload.get("schemaVersion") != 2:
+            return False
+        if payload.get("runId") != run_id:
+            return False
+        if payload.get("scenario") != scenario:
+            return False
+        if payload.get("profile") != "platform":
+            return False
+        if payload.get("platform") != "macos":
+            return False
+        if payload.get("framework") != "integration_test+xcuitest":
+            return False
+        root = ET.parse(junit_report).getroot()
+        return root.tag in {"testsuite", "testsuites"}
+    except (OSError, ValueError, TypeError, json.JSONDecodeError, ET.ParseError):
+        return False
 
 
 def finalize(args: argparse.Namespace) -> int:
@@ -95,25 +129,35 @@ def finalize(args: argparse.Namespace) -> int:
     message = _watchdog_message(report_root, args.step_outcome)
     normalizer = root / "tool/test/normalize_integration_report.py"
     matrix = root / "tool/test/platform_capability_matrix.json"
-    had_missing_reports = False
+    finalization_failed = False
     for scenario in SCENARIOS:
         scenario_report = scenario_dir / f"{scenario}.json"
         junit_report = junit_dir / f"{scenario}.xml"
         if scenario_report.is_file() and junit_report.is_file():
             continue
-        had_missing_reports = True
         evidence = attachment_dir / f"lddc-evidence-{scenario}.json"
+        summary = raw_dir / f"{scenario}.xcresult.summary.json"
         _atomic_json(evidence, _fallback_evidence(run_id, scenario, message))
-        subprocess.run(
+        _atomic_json(
+            summary,
+            {
+                "totalTestCount": 0,
+                "passedTests": 0,
+                "failedTests": 1,
+                "skippedTests": 0,
+                "error": message,
+            },
+        )
+        completed = subprocess.run(
             [
                 sys.executable,
                 str(normalizer),
                 "--scenario-report",
                 str(scenario_report),
                 "--raw-report",
-                str(raw_dir / f"{scenario}.flutter.jsonl"),
+                str(summary),
                 "--raw-report-type",
-                "flutter-jsonl",
+                "xcresult-summary",
                 "--framework",
                 "integration_test+xcuitest",
                 "--exit-code",
@@ -135,15 +179,18 @@ def finalize(args: argparse.Namespace) -> int:
             ],
             check=False,
         )
+        if completed.returncode != 0:
+            finalization_failed = True
 
-    reports_complete = all(
-        (scenario_dir / f"{scenario}.json").is_file()
-        and (junit_dir / f"{scenario}.xml").is_file()
-        for scenario in SCENARIOS
-    )
-    if not reports_complete:
-        return 1
-    return 0 if args.step_outcome == "success" and not had_missing_reports else 1
+    for scenario in SCENARIOS:
+        if not _report_pair_is_valid(
+            scenario_dir / f"{scenario}.json",
+            junit_dir / f"{scenario}.xml",
+            run_id=run_id,
+            scenario=scenario,
+        ):
+            finalization_failed = True
+    return 1 if finalization_failed else 0
 
 
 def _parse_args() -> argparse.Namespace:

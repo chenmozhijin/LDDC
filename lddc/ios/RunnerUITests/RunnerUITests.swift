@@ -295,7 +295,7 @@ final class RunnerUITests: XCTestCase {
       "选择结果没有回到 Flutter 预览区域"
     )
     let preview = app.otherElements[previewIdentifier]
-    let lyricContent = preview.descendants(matching: .otherElements).matching(
+    let lyricContent = preview.descendants(matching: .other).matching(
       NSPredicate(format: "label == %@ OR value == %@", "Hello LDDC", "Hello LDDC")
     ).firstMatch
     try require(

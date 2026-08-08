@@ -329,7 +329,13 @@ def _normalize_native(args: argparse.Namespace) -> None:
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "steps": steps,
         "status": "passed" if passed else "failed",
-        "coverageStatus": "skipped" if skipped else "executed",
+        "coverageStatus": (
+            "notExercised"
+            if not test_started
+            else "skipped"
+            if skipped
+            else "executed"
+        ),
         "success": passed,
         "extra": evidence.get("extra", {}),
     }

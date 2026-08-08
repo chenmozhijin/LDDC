@@ -384,15 +384,24 @@ class LocalMatchDriver {
     final Finder tile = find.byKey(
       const ValueKey<String>('local_match_skip_existing_checkbox'),
     );
-    final CheckboxListTile tileWidget = tester.widget<CheckboxListTile>(tile);
-    final Widget title =
-        tileWidget.title ?? (throw StateError('“跳过已有歌词”选项缺少可点击标题'));
-    // key 继续标记整个 CheckboxListTile，用于确认业务控件唯一。
-    // Linux 的 RenderObject 命中树中，整行 Element 本身不一定是指针命中
-    // 节点，但用户看到的 title 位于真实 ListTile 手势区内。从当前
-    // CheckboxListTile 实例取出该 title 并严格检查 hit-test，不使用坐标，
-    // 也不绕过遮挡检查。
-    await tapVisible(tester, find.byWidget(title), reason: '等待“跳过已有歌词”选项行可点击');
+    if (tile.evaluate().length != 1) {
+      throw StateError('“跳过已有歌词”选项不存在或不唯一');
+    }
+    final Finder checkbox = find.descendant(
+      of: tile,
+      matching: find.byType(Checkbox),
+    );
+    if (checkbox.evaluate().length != 1) {
+      throw StateError('“跳过已有歌词”选项没有唯一的复选框控件');
+    }
+    final Checkbox checkboxWidget = tester.widget<Checkbox>(checkbox);
+    if (checkboxWidget.onChanged == null) {
+      throw StateError('“跳过已有歌词”选项当前不可操作');
+    }
+    // 标题文本只是 ListTile 的显示内容，在 Linux 真实命中树中不承担手势。
+    // 直接操作 CheckboxListTile 创建的唯一 Checkbox，既对应用户可见控件，
+    // 也继续经过 tapVisible 的滚动、唯一性和遮挡校验。
+    await tapVisible(tester, checkbox, reason: '等待“跳过已有歌词”复选框可点击');
   }
 
   Future<void> tapStartOrCancel() async {

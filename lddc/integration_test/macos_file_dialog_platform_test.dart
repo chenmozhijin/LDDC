@@ -100,7 +100,10 @@ void main() {
                   state.inputName.isEmpty &&
                   state.audioFileHandle == null;
             },
-            timeout: const Duration(seconds: 30),
+            // macOS hybrid 的原生动作预算由 runner 通过 test-only 配置传入。
+            // 普通 integration 场景仍保留各自的 30 秒边界；这里只避免 Flutter
+            // 在 XCUITest 尚处于系统面板操作时先退出并制造 Lost connection。
+            timeout: runtime.defaultStepTimeout,
             reason: _dialogAction == 'select'
                 ? '等待 NSOpenPanel 选择结果和嵌入歌词返回 Flutter'
                 : '等待 NSOpenPanel 取消且 Flutter 保持空输入',

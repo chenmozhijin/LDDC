@@ -22,6 +22,8 @@ import 'package:lddc/src/features/local_match/presentation/widgets/local_match_r
 import 'package:lddc/src/platform/android/saf/android_saf_lyrics_save_persistence.dart';
 import 'package:lddc/src/platform/drag_drop/drag_drop_port.dart';
 
+import '../../../integration_test/support/integration_drivers.dart';
+
 void main() {
   group('LocalMatchPageController', () {
     test('Android 初始和清空队列后都保持 SAF 目录模式', () {
@@ -916,6 +918,98 @@ void main() {
       expect(find.text('保存根目录'), findsNothing);
     });
 
+    testWidgets('桌面生产侧栏滚到底且存在持续提示时仍点击真实复选框', (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(1280, 720));
+      final GlobalKey<ScaffoldMessengerState> messengerKey =
+          GlobalKey<ScaffoldMessengerState>();
+      final ProviderContainer container = _createContainer(
+        capability: _desktopCapability(),
+        picker: _FakeLocalMatchInputPicker(
+          songFiles: const <PickedFileHandle>[
+            PickedFileHandle(name: 'demo.mp3', path: r'D:\music\demo.mp3'),
+          ],
+        ),
+        desktopGetInfosUseCase: _StubLocalMatchGetInfosUseCase(
+          resultBuilder: (List<String> inputPaths) => LocalMatchGetInfosResult(
+            entries: <LocalMatchSongEntry>[
+              LocalMatchSongEntry(
+                songInfo: SongInfo(
+                  source: Source.local,
+                  path: r'D:\music\demo.mp3',
+                  title: 'Demo',
+                  artist: SongArtist(<String>['Singer']),
+                  album: 'Album',
+                  durationMs: 209000,
+                ),
+                rootPath: r'D:\music',
+              ),
+            ],
+            errors: const <String>[],
+            cancelled: false,
+          ),
+        ),
+      );
+      addTearDown(container.dispose);
+      await container
+          .read(localMatchPageControllerProvider.notifier)
+          .addSongFiles();
+
+      await tester.pumpWidget(
+        _buildTestApp(
+          container,
+          locale: const Locale('en'),
+          scaffoldMessengerKey: messengerKey,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final Finder sidebar = find.byKey(
+        const ValueKey<String>('local_match_sidebar'),
+      );
+      final Finder sidebarScrollable = find.descendant(
+        of: sidebar,
+        matching: find.byType(Scrollable),
+      );
+      expect(sidebarScrollable, findsOneWidget);
+      final ScrollableState scrollableState = tester.state<ScrollableState>(
+        sidebarScrollable,
+      );
+      scrollableState.position.jumpTo(scrollableState.position.maxScrollExtent);
+      await tester.pump();
+
+      messengerKey.currentState!.showSnackBar(
+        const SnackBar(
+          duration: Duration(days: 1),
+          behavior: SnackBarBehavior.floating,
+          width: 320,
+          content: Text('Persistent status message'),
+        ),
+      );
+      await tester.pump();
+
+      final Finder tile = find.byKey(
+        const ValueKey<String>('local_match_skip_existing_checkbox'),
+      );
+      final Finder checkbox = find.descendant(
+        of: tile,
+        matching: find.byType(Checkbox),
+      );
+      expect(tile, findsOneWidget);
+      expect(checkbox, findsOneWidget);
+      expect(find.text('Disabled by default'), findsOneWidget);
+
+      await LocalMatchDriver(tester).toggleSkipExisting();
+      await tester.pump();
+
+      expect(checkbox.hitTestable(), findsOneWidget);
+      expect(
+        container.read(localMatchPageControllerProvider).skipExistingLyrics,
+        isTrue,
+      );
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('Android 实际窄屏下队列优先显示且规则展开不溢出', (WidgetTester tester) async {
       // 与 hosted Android emulator 报告的逻辑 viewport 一致，避免只在整数设计稿
       // 尺寸测试而漏掉 380 px 高度临界点触发的嵌入状态摘要。
@@ -1525,11 +1619,16 @@ void main() {
   });
 }
 
-Widget _buildTestApp(ProviderContainer container) {
+Widget _buildTestApp(
+  ProviderContainer container, {
+  Locale locale = const Locale('zh'),
+  GlobalKey<ScaffoldMessengerState>? scaffoldMessengerKey,
+}) {
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
-      locale: const Locale('zh'),
+      locale: locale,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: const Scaffold(body: LocalMatchPage()),

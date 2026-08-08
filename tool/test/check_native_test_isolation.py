@@ -13,6 +13,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def invalid_descendant_element_types(source: str) -> list[str]:
+    """返回 descendants(matching:) 中误用的集合属性名。"""
+
+    return re.findall(
+        r"descendants\s*\(\s*matching\s*:\s*\."
+        r"(otherElements|buttons|cells|staticTexts|links|sheets|touchBars)\b",
+        source,
+    )
+
+
 def _balanced_openstep(text: str) -> bool:
     braces = 0
     in_string = False
@@ -313,6 +323,12 @@ def failures() -> list[str]:
         problems.append("iOS Document Picker 禁止依赖 DocumentsApp 前台进程状态")
     if "modeTabBar.isHittable" in ios_ui_test or "waitForHittable(modeTabBar" in ios_ui_test:
         problems.append("iOS Document Picker 禁止要求 TabBar 父代理自身可命中")
+    invalid_descendant_types = invalid_descendant_element_types(ios_ui_test)
+    if invalid_descendant_types:
+        problems.append(
+            "iOS XCUITest descendants(matching:) 必须使用 XCUIElement.ElementType 单数枚举，"
+            f"禁止集合属性名 .{invalid_descendant_types[0]}"
+        )
     for forbidden in (
         "systemPickerRoots",
         "pickerElement(",
@@ -876,6 +892,7 @@ def failures() -> list[str]:
         "state.inputName == 'audio_sample.mp3'",
         "state.rawText.contains('Hello LDDC')",
         "Error.throwWithStackTrace(error, stackTrace)",
+        "timeout: runtime.defaultStepTimeout",
     ):
         if required not in macos_flutter_test:
             problems.append(f"macOS hybrid Flutter 单写状态机缺少: {required}")
@@ -884,6 +901,7 @@ def failures() -> list[str]:
         "state: 'native_ready'",
         "state: 'native_completed'",
         "state: 'native_failed'",
+        "timeout: const Duration(seconds: 30)",
     ):
         if forbidden in macos_flutter_test:
             problems.append(f"macOS hybrid Flutter 禁止旧双向握手状态: {forbidden}")
@@ -902,15 +920,15 @@ def failures() -> list[str]:
         "panel.root.cells[fixtureName]",
         "waitForExactlyOneHittableElement",
         'panel.application.sheets["GoToWindow"]',
-        "goToFolder.touchBars.buttons",
-        "waitForExactlyOneHittableElement(\n        in: goButtons",
-        'NSPredicate(format: "label == %@ OR identifier == %@", "Go", "Go")',
-        'goButton.click()',
+        'goToFolder.textFields["PathTextField"]',
+        "waitForHittableElement(pathField, timeout: 10)",
+        "waitForStringValue(pathField, equals: fixtureDirectory, timeout: 10)",
+        "pathField.typeKey(.return, modifierFlags: [])",
+        "waitForElementToDisappear(goToFolder, timeout: 10)",
         'lddc-macos-go-to-folder-accessibility.txt',
-        "firstHittableElement(pathFields, timeout: 10)",
         'pathField.click()',
-        'panel.application.typeKey("a", modifierFlags: [.command])',
-        "waitForSelectedElement(fixture",
+        'pathField.typeKey("a", modifierFlags: [.command])',
+        "waitForSelectedElement(fixtureCandidates",
         "openButton.isEnabled",
         'expectedState: "picker_requested"',
         'expectedState: "flutter_completed"',
@@ -934,6 +952,8 @@ def failures() -> list[str]:
         "lddc-open-lyrics",
         "pathField.typeText(fixturePath)",
         'panel.application.typeKey(.enter',
+        "goToFolder.touchBars",
+        "goButton.click()",
         "panel.root.outlineRows.firstMatch",
     ):
         if forbidden in macos_ui_tests:
@@ -958,6 +978,11 @@ def failures() -> list[str]:
         "$reportDrainAttempted = $true",
         '"flutter_failed_xcresult_drain_expired"',
         "reportDrainAttempted = $ReportDrainAttempted",
+        "$hybridNativeActionTimeoutSeconds = 90",
+        "LDDC_IT_STEP_TIMEOUT_MS=$($hybridNativeActionTimeoutSeconds * 1000)",
+        "Get-XcresultFailureMessage",
+        "Get-FlutterScenarioFailureMessage",
+        "Resolve-FallbackFailureMessage",
     ):
         if required not in macos_runner:
             problems.append(f"macOS hybrid runner 缺少协同或失败报告契约: {required}")
@@ -992,6 +1017,24 @@ def failures() -> list[str]:
     ios_runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
         encoding="utf-8"
     )
+    macos_finalizer = (
+        ROOT / "tool/test/finalize_macos_system_ui_reports.py"
+    ).read_text(encoding="utf-8")
+    for marker in (
+        "_report_pair_is_valid",
+        'payload.get("schemaVersion") != 2',
+        'payload.get("runId") != run_id',
+        'payload.get("scenario") != scenario',
+        'payload.get("profile") != "platform"',
+        'payload.get("platform") != "macos"',
+        'payload.get("framework") != "integration_test+xcuitest"',
+        "ET.parse(junit_report)",
+        "return 1 if finalization_failed else 0",
+    ):
+        if marker not in macos_finalizer:
+            problems.append(f"macOS report finalizer 缺少报告完整性契约: {marker}")
+    if 'args.step_outcome == "success"' in macos_finalizer:
+        problems.append("macOS report finalizer 禁止重复承担 system UI 业务结果门禁")
     ios_simulator_creator = (
         ROOT / "tool/test/create_ios_simulator.sh"
     ).read_text(encoding="utf-8")
@@ -1032,6 +1075,10 @@ def failures() -> list[str]:
         "TEST_RUNNER_LDDC_FIXTURE_BASE64",
         "Invoke-BoundedNativeCommand",
         'Phase "ios-xcuitest-build-for-testing"',
+        'Phase "ios-flutter-config"',
+        '@("build", "ios", "--debug", "--simulator", "--config-only")',
+        'Phase "ios-pod-install"',
+        '@("install", "--project-directory=ios")',
         'Phase "ios-xcresult-summary-$scenario"',
         'Phase "ios-xcresult-attachments-$scenario"',
         "$reportingErrors.Count -gt 0",
@@ -1047,6 +1094,10 @@ def failures() -> list[str]:
         "arch=$hostArchitecture",
         "Resolve-UniqueBuildArtifact",
         "iOS Xcode DerivedData 超出测试构建根",
+        'resourceMeasurementStatus = "not_exercised_before_test_start"',
+        '$activeInfrastructureFailureClass = "build_failure"',
+        "$infrastructureFailureMessage = $null",
+        "Write-InfrastructureFailureReports `\n    -Message $infrastructureFailureMessage",
     ):
         if required not in ios_runner:
             problems.append(f"iOS runner 缺少 Simulator 证据或串行测试契约: {required}")
@@ -1056,6 +1107,7 @@ def failures() -> list[str]:
         "& xcrun xcresulttool",
         'Filter "*.xctestrun" | Select-Object -First 1',
         'Filter "LDDC.app" | Select-Object -First 1',
+        "applicationProcessCount",
     ):
         if forbidden in ios_runner:
             problems.append(f"iOS 外部 Xcode/报告进程禁止绕过硬超时执行器: {forbidden}")
@@ -1129,6 +1181,11 @@ def failures() -> list[str]:
         ):
             if marker not in ios_job:
                 problems.append(f"iOS hosted job 缺少固定 runner/runtime 契约: {marker}")
+        simulator_index = ios_job.find("Create and boot a compatible iOS simulator")
+        system_ui_index = ios_job.find("Run iOS Document Picker automation")
+        release_index = ios_job.find("Build iOS release without codesigning")
+        if not (0 <= simulator_index < system_ui_index < release_index):
+            problems.append("iOS Document Picker 必须在 simulator 创建后、昂贵构建与业务阶段前执行")
     else:
         problems.append("iOS hosted job 边界无效")
     if "xcodebuild -version |" in workflow or "xcodebuild -version |" in ios_simulator_creator:
@@ -1152,6 +1209,19 @@ def failures() -> list[str]:
         re.search(r"\u7b49\u5f85.*SnackBar.*\u6d88\u5931", integration_drivers) is not None
     ):
         problems.append("Flutter 集成驱动禁止把全局 SnackBar 消失当作点击前置条件")
+    local_match_toggle = re.search(
+        r"Future<void> toggleSkipExisting\(\) async \{(?P<body>.*?)\n  \}",
+        integration_drivers,
+        re.DOTALL,
+    )
+    if local_match_toggle is None:
+        problems.append("Local Match 集成驱动缺少跳过已有歌词操作")
+    else:
+        toggle_body = local_match_toggle.group("body")
+        if "find.descendant(" not in toggle_body or "find.byType(Checkbox)" not in toggle_body:
+            problems.append("Local Match 跳过已有歌词必须点击 keyed tile 内唯一 Checkbox")
+        if ".title" in toggle_body or "find.byWidget(" in toggle_body:
+            problems.append("Local Match 跳过已有歌词禁止回退到动态标题 Widget")
     integration_sources = "\n".join(
         path.read_text(encoding="utf-8")
         for path in (ROOT / "lddc/integration_test").rglob("*.dart")

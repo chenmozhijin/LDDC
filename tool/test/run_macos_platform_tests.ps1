@@ -22,6 +22,7 @@ $fixtureSource = (Resolve-Path (Join-Path $appRoot "integration_test/fixtures/me
 $fixtureSize = (Get-Item -LiteralPath $fixtureSource).Length
 $fixtureSha256 = (Get-FileHash -LiteralPath $fixtureSource -Algorithm SHA256).Hash.ToLowerInvariant()
 $framework = "integration_test+xcuitest"
+$hybridNativeActionTimeoutSeconds = 90
 $flutterCommand = (Get-Command flutter -ErrorAction Stop).Source
 $hostArchitecture = (& /usr/bin/uname -m).Trim()
 if ($hostArchitecture -notin @("arm64", "x86_64")) {
@@ -500,7 +501,7 @@ function Start-SupervisedXcodeTest {
       "-destination", "platform=macOS,arch=$hostArchitecture",
       "-parallel-testing-enabled", "NO",
       "-test-timeouts-enabled", "YES",
-      "-maximum-test-execution-time-allowance", "60",
+      "-maximum-test-execution-time-allowance", "$hybridNativeActionTimeoutSeconds",
       "-only-testing:RunnerUITests/RunnerUITests/$Method",
       "-resultBundlePath", $ResultBundle
     ) `
@@ -547,6 +548,93 @@ function Test-PassingXcresultSummary {
   } catch {
     return $false
   }
+}
+
+function ConvertTo-SanitizedFailureMessage {
+  param([string]$Message)
+
+  if ([string]::IsNullOrWhiteSpace($Message)) {
+    return $null
+  }
+  $sanitized = $Message.Trim()
+  foreach ($replacement in @(
+      @($fixture, "<fixture>"),
+      @($hybridRoot, "<hybrid-root>"),
+      @($appRoot, "<app-root>"),
+      @($repoRoot, "<workspace>")
+    )) {
+    $source = [string]$replacement[0]
+    if (-not [string]::IsNullOrWhiteSpace($source)) {
+      $sanitized = $sanitized.Replace(
+        $source,
+        [string]$replacement[1],
+        [StringComparison]::OrdinalIgnoreCase
+      )
+    }
+  }
+  return $sanitized
+}
+
+function Get-XcresultFailureMessage {
+  param([Parameter(Mandatory = $true)][string]$SummaryPath)
+
+  if (-not (Test-Path -LiteralPath $SummaryPath -PathType Leaf)) {
+    return $null
+  }
+  try {
+    $summary = Get-Content -LiteralPath $SummaryPath -Raw | ConvertFrom-Json
+    foreach ($failure in @($summary.testFailures)) {
+      $failureText = [string]$failure.failureText
+      if (-not [string]::IsNullOrWhiteSpace($failureText)) {
+        return ConvertTo-SanitizedFailureMessage -Message $failureText
+      }
+    }
+  } catch {
+    return $null
+  }
+  return $null
+}
+
+function Get-FlutterScenarioFailureMessage {
+  param([Parameter(Mandatory = $true)][string]$ScenarioPath)
+
+  if (-not (Test-Path -LiteralPath $ScenarioPath -PathType Leaf)) {
+    return $null
+  }
+  try {
+    $scenarioPayload = Get-Content -LiteralPath $ScenarioPath -Raw | ConvertFrom-Json
+    foreach ($step in @($scenarioPayload.steps)) {
+      if ($step.success -ne $true -and -not [string]::IsNullOrWhiteSpace([string]$step.error)) {
+        return ConvertTo-SanitizedFailureMessage -Message ([string]$step.error)
+      }
+    }
+    if (-not [string]::IsNullOrWhiteSpace([string]$scenarioPayload.extra.error)) {
+      return ConvertTo-SanitizedFailureMessage -Message ([string]$scenarioPayload.extra.error)
+    }
+  } catch {
+    return $null
+  }
+  return $null
+}
+
+function Resolve-FallbackFailureMessage {
+  param(
+    [string]$RunnerFailureMessage,
+    [string]$XcresultFailureMessage,
+    [string]$FlutterFailureMessage,
+    [Parameter(Mandatory = $true)][int]$EvidenceCount
+  )
+
+  foreach ($candidate in @(
+      $RunnerFailureMessage,
+      $XcresultFailureMessage,
+      $FlutterFailureMessage
+    )) {
+    if (-not [string]::IsNullOrWhiteSpace($candidate)) {
+      return ConvertTo-SanitizedFailureMessage -Message $candidate
+    }
+  }
+  return "XCUITest hybrid evidence attachment 必须且只能有一个，实际为 $EvidenceCount"
 }
 
 function Write-FallbackEvidence {
@@ -790,7 +878,7 @@ try {
       "--dart-define=LDDC_MACOS_DIALOG_ACTION=$action",
       "--dart-define=LDDC_FIXTURE_SIZE=$fixtureSize",
       "--dart-define=LDDC_FIXTURE_SHA256=$fixtureSha256",
-      "--dart-define=LDDC_IT_STEP_TIMEOUT_MS=90000"
+      "--dart-define=LDDC_IT_STEP_TIMEOUT_MS=$($hybridNativeActionTimeoutSeconds * 1000)"
     )
 
     $flutterExitCode = 1
@@ -841,7 +929,7 @@ try {
         -Method $method `
         -ResultBundle $resultBundle `
         -LogPrefix (Join-Path $diagnosticsDir "$scenario.xcodebuild") `
-        -TimeoutSeconds ([Math]::Min(60, $remainingScenarioSeconds))
+        -TimeoutSeconds ([Math]::Min($hybridNativeActionTimeoutSeconds, $remainingScenarioSeconds))
 
       while ([DateTimeOffset]::UtcNow -lt $scenarioDeadline) {
         $activeFlutterHandle.Process.Refresh()
@@ -1001,14 +1089,17 @@ try {
     }
     if ($null -eq $evidencePath) {
       $fallbackEvidence = Join-Path $scenarioAttachments "lddc-evidence-$scenario.json"
+      $xcresultFailureMessage = Get-XcresultFailureMessage -SummaryPath $summaryPath
+      $flutterScenarioFailureMessage = Get-FlutterScenarioFailureMessage `
+        -ScenarioPath $containerScenarioPath
       Write-FallbackEvidence `
         -Path $fallbackEvidence `
         -Scenario $scenario `
-        -Message $(if ([string]::IsNullOrWhiteSpace($runnerFailureMessage)) {
-          "XCUITest hybrid evidence attachment 必须且只能有一个，实际为 $($evidenceCandidates.Count)"
-        } else {
-          $runnerFailureMessage
-        })
+        -Message (Resolve-FallbackFailureMessage `
+          -RunnerFailureMessage $runnerFailureMessage `
+          -XcresultFailureMessage $xcresultFailureMessage `
+          -FlutterFailureMessage $flutterScenarioFailureMessage `
+          -EvidenceCount $evidenceCandidates.Count)
       $evidencePath = Get-Item -LiteralPath $fallbackEvidence
     }
     # 每个受监督命令的 process group 才是 runner 真正拥有的进程边界。

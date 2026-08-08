@@ -532,6 +532,12 @@ jobs:
         id: simulator
         continue-on-error: true
         run: bash tool/test/create_ios_simulator.sh
+      - name: Run iOS Document Picker automation
+        id: system_ui
+        if: always() && steps.simulator.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: ./tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID
       - name: Build iOS release without codesigning
         id: release_build
         continue-on-error: true
@@ -606,12 +612,6 @@ jobs:
               -parallel-testing-enabled NO \
               -resultBundlePath "$result_path" \
               CODE_SIGNING_ALLOWED=NO
-      - name: Run iOS Document Picker automation
-        id: system_ui
-        if: always() && steps.debug_rebuild.outcome == 'success'
-        continue-on-error: true
-        shell: pwsh
-        run: ./tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID
       - name: Delete the CI iOS simulator
         id: simulator_cleanup
         if: always() && env.DEVICE_ID != ''
