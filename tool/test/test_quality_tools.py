@@ -516,7 +516,7 @@ class QualityToolTests(unittest.TestCase):
             encoding="utf-8"
         )
         for marker in (
-            "waitForStableFixtureCell(app: app",
+            "requireFixtureCell(app: app",
             'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
             'action: "document_picker_fixture_cell_tapped"',
             'action: "document_picker_fixture_cell_double_tap_reactivated"',

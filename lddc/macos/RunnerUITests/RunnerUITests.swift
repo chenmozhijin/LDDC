@@ -129,7 +129,11 @@ final class RunnerUITests: XCTestCase {
         "选中精确 fixture 后 NSOpenPanel 的打开按钮不可点击"
       )
       try require(openButton.isEnabled, "选中精确 fixture 后 NSOpenPanel 的打开按钮未启用")
-      openButton.click()
+      // AppKit 的 Column View 将文件暴露为 TextField 代理。先确认该代理已选中，
+      // 再向已选中的原生面板发送 Return，让 NSOpenPanel 自己提交当前 URL。
+      // 直接调用 TouchBar/按钮代理在 hosted XCUITest 中可能只关闭面板，
+      // 却没有把 selection 写入 panel.urls，最终会被 file_selector 解释为取消。
+      panel.application.typeKey(.return, modifierFlags: [])
     }
   }
 

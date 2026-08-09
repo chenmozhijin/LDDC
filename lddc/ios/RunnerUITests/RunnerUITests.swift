@@ -9,7 +9,9 @@ final class RunnerUITests: XCTestCase {
   private let appBundleIdentifier = "com.cmzj.lddc.platformtests"
   private let fixtureName = "audio_sample.mp3"
   private let fixtureAccessibilityName = "audio_sample, mp3"
-  private let fixtureLyricsAccessibilityValue = "[00:00.00]Hello LDDC"
+  // LRC 时间标签可能从两位毫秒规范化为三位；只约束时间点和正文，
+  // 避免把等价的格式化差异误报为读取失败。
+  private let fixtureLyricsAccessibilityPattern = #"^\[00:00\.\d{2,3}\]Hello LDDC$"#
   private let navigationIdentifier = "lddc.nav.open_lyrics"
   private let openSongIdentifier = "lddc.open_lyrics.open_song_file"
   private let convertIdentifier = "lddc.open_lyrics.convert"
@@ -252,7 +254,7 @@ final class RunnerUITests: XCTestCase {
     picker = try waitForSystemPicker(app: app, timeout: 5)
 
     if isFixtureDirectory(picker) {
-      let fixture = try requireStableFixtureCell(app: app, timeout: 15)
+      let fixture = try requireFixtureCell(app: app, timeout: 15)
       try selectFixture(fixture, app: app, actions: &actions)
       return
     }
@@ -266,7 +268,7 @@ final class RunnerUITests: XCTestCase {
       folder.tap()
     }
 
-    let fixture = try requireStableFixtureCell(app: app, timeout: 15)
+    let fixture = try requireFixtureCell(app: app, timeout: 15)
     try selectFixture(fixture, app: app, actions: &actions)
   }
 
@@ -279,13 +281,11 @@ final class RunnerUITests: XCTestCase {
     fixture.tap()
     addAction(&actions, capability: "filePicker", action: "document_picker_fixture_cell_tapped")
     let openSong = app.buttons[openSongIdentifier]
-    if !waitForHittable(openSong, timeout: 3) {
-      // iOS 26.5 的远程 Files 图标视图在从位置页进入目录后的第一次 typed
-      // 激活可能只建立项目选择，不完成 UIDocumentPicker 回调。此时重新解析
-      // 当前根节点和同一个精确 Cell，再执行用户可见的双击激活；这对应 Files
-      // 对已选中文件的标准交互，不使用坐标、图像或宽泛 selector，也不会在
-      // 已经返回 Flutter 时重复操作。
-      let retainedFixture = try requireStableFixtureCell(app: app, timeout: 5)
+    if !waitForHittable(openSong, timeout: 8) {
+      // iOS 26.5 的远程 Files 视图第一次单击可能只建立选中状态。
+      // 重新查询同一个 typed Cell 后执行一次用户可见的双击激活；不要求
+      // 远程 AX frame 连续完全相等，因为 view-service 刷新期间坐标会抖动。
+      let retainedFixture = try requireFixtureCell(app: app, timeout: 10)
       retainedFixture.doubleTap()
       addAction(
         &actions,
@@ -308,7 +308,7 @@ final class RunnerUITests: XCTestCase {
     let preview = app.otherElements[previewIdentifier]
     try require(
       waitForPreviewLyricsValue(app: app, preview: preview, timeout: 15),
-      "生产 TagLib 没有从 security-scoped fd 回读匿名内嵌歌词"
+      "预览没有显示规范化后的匿名内嵌歌词内容"
     )
   }
 
@@ -462,65 +462,24 @@ final class RunnerUITests: XCTestCase {
     )
   }
 
-  private func requireStableFixtureCell(
+  private func requireFixtureCell(
     app: XCUIApplication,
     timeout: TimeInterval
   ) throws -> XCUIElement {
-    guard let cell = waitForStableFixtureCell(app: app, timeout: timeout) else {
-      throw testFailure("系统文件界面没有可点击的 \(fixtureAccessibilityName) 文件单元格")
-    }
-    return cell
-  }
-
-  private func waitForStableFixtureCell(
-    app: XCUIApplication,
-    timeout: TimeInterval
-  ) -> XCUIElement? {
     let deadline = Date().addingTimeInterval(timeout)
-    var previousFrame: CGRect?
-    var stableSamples = 0
     repeat {
       // 每次重新解析远程 Picker 根。目录切换后旧 XCUIElement 可能继续存在于
       // snapshot，复用旧 root 会把新文件单元格错误归到上一页。
-      guard let picker = systemPickerContext(app: app) else {
-        previousFrame = nil
-        stableSamples = 0
-        Thread.sleep(forTimeInterval: 0.1)
-        continue
-      }
-      guard isFixtureDirectory(picker) else {
-        previousFrame = nil
-        stableSamples = 0
-        if timeout == 0 {
-          return nil
-        }
-        Thread.sleep(forTimeInterval: 0.1)
-        continue
-      }
-      guard let candidate = waitForFixtureCell(in: picker, timeout: 0) else {
-        previousFrame = nil
-        stableSamples = 0
-        if timeout == 0 {
-          return nil
-        }
-        Thread.sleep(forTimeInterval: 0.1)
-        continue
-      }
-      // Files 的目录切换由远程 view service 异步完成。只看到一次可命中节点
-      // 仍可能处于旧 snapshot；连续五次保持同一 frame 后再点击，避免在导航
-      // 动画中把真实单击交给即将失效的文件单元格。
-      if previousFrame == candidate.frame {
-        stableSamples += 1
-      } else {
-        previousFrame = candidate.frame
-        stableSamples = 1
-      }
-      if stableSamples >= 5 {
+      if let picker = systemPickerContext(app: app),
+         isFixtureDirectory(picker),
+         let candidate = waitForFixtureCell(in: picker, timeout: 0) {
+        // 只要求候选当前存在、可命中且启用。远程 view-service 的 frame
+        // 在刷新期间会抖动，不能把几何稳定性误当成文件不可操作。
         return candidate
       }
       Thread.sleep(forTimeInterval: 0.1)
     } while Date() < deadline
-    return nil
+    throw testFailure("系统文件界面没有可点击的 \(fixtureAccessibilityName) 文件单元格")
   }
 
   private func isFixtureDirectory(_ picker: SystemPickerContext) -> Bool {
@@ -688,21 +647,32 @@ final class RunnerUITests: XCTestCase {
     returnControl: XCUIElement?
   ) throws {
     let picker = try waitForSystemPicker(app: app, timeout: 5)
-    let cancelQueries = [
-      picker.application.buttons.matching(
-        NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")
-      ),
-      picker.application.otherElements.matching(
-        NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")
-      ),
-    ]
-    let existingCancelControls = pickerElements(
-      queries: cancelQueries,
+    let cancelPredicate = NSPredicate(
+      format: "label ==[c] %@ OR identifier ==[c] %@",
+      "Cancel",
+      "Cancel"
+    )
+    let cancelButtons = pickerElements(
+      queries: [picker.application.buttons.matching(cancelPredicate)],
       in: picker,
       requireHittable: false
     )
-    try require(existingCancelControls.count == 1, "系统 Picker 的 typed Cancel 控件不是唯一控件")
-    let cancel = existingCancelControls[0]
+    let cancel: XCUIElement
+    if cancelButtons.count == 1 {
+      // iOS 26.5 会把同一个物理按钮同时暴露为 Button 和包裹用 Other。
+      // Button 是唯一可操作语义，优先使用它，不能把两个 AX 代理相加计数。
+      cancel = cancelButtons[0]
+    } else if cancelButtons.isEmpty {
+      let cancelOthers = pickerElements(
+        queries: [picker.application.otherElements.matching(cancelPredicate)],
+        in: picker,
+        requireHittable: false
+      )
+      try require(cancelOthers.count == 1, "系统 Picker 的 typed Cancel 控件不是唯一控件")
+      cancel = cancelOthers[0]
+    } else {
+      throw testFailure("系统 Picker 的 typed Cancel Button 不是唯一控件")
+    }
     try require(waitForHittable(cancel, timeout: 3), "系统 Picker 的 typed Cancel 控件存在但不可点击")
     cancel.tap()
     if let returnControl {
@@ -733,7 +703,10 @@ final class RunnerUITests: XCTestCase {
     preview: XCUIElement,
     timeout: TimeInterval
   ) -> Bool {
-    let predicate = NSPredicate(format: "value == %@", fixtureLyricsAccessibilityValue)
+    let predicate = NSPredicate(
+      format: "value MATCHES %@",
+      fixtureLyricsAccessibilityPattern
+    )
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
       // iOS 26 的 Flutter 远程 AX snapshot 能在 app 级 typed query 中返回歌词
