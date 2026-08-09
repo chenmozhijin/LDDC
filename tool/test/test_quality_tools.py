@@ -519,6 +519,7 @@ class QualityToolTests(unittest.TestCase):
             "waitForStableFixtureCell(app: app",
             'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
             'action: "document_picker_fixture_cell_tapped"',
+            'action: "document_picker_fixture_cell_double_tap_reactivated"',
             "waitForPreviewLyricsValue(app: app, preview: preview",
             "preview.frame.contains(",
             "cancelSystemPicker(app: launchedApp, returnControl: openSong)",
@@ -529,6 +530,37 @@ class QualityToolTests(unittest.TestCase):
         # Flutter 业务控件重新可命中的正向证据，不能继续等待 stale 根消失。
         self.assertNotIn("waitForSystemPickerToClose(", source)
         self.assertNotIn("preview.descendants(matching:", source)
+
+    def test_ios_picker_state_machine_gate_rejects_disabled_and_unconverted_mutations(self) -> None:
+        checker = _load_native_isolation_checker()
+        source = (ROOT / "lddc/ios/RunnerUITests/RunnerUITests.swift").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(checker.ios_picker_state_machine_failures(source), [])
+
+        mutations = (
+            source.replace(
+                "try convertLoadedLyrics(app: launchedApp, actions: &actions)",
+                "// 受控 mutation：跳过转换",
+                1,
+            ),
+            source.replace(
+                "if element.exists, element.isHittable, element.isEnabled",
+                "if element.exists, element.isHittable",
+                1,
+            ),
+            source.replace("retainedFixture.doubleTap()", "retainedFixture.tap()", 1),
+            source.replace(
+                "picker.application.otherElements.matching(",
+                "picker.application.buttons.matching(",
+                1,
+            ),
+        )
+        for mutation in mutations:
+            self.assertNotEqual(
+                checker.ios_picker_state_machine_failures(mutation),
+                [],
+            )
 
     def test_apple_runners_require_unique_xcode_products(self) -> None:
         for relative in (

@@ -12,11 +12,15 @@ final class RunnerUITests: XCTestCase {
   private let fixtureLyricsAccessibilityValue = "[00:00.00]Hello LDDC"
   private let navigationIdentifier = "lddc.nav.open_lyrics"
   private let openSongIdentifier = "lddc.open_lyrics.open_song_file"
+  private let convertIdentifier = "lddc.open_lyrics.convert"
   private let saveFileIdentifier = "lddc.open_lyrics.save_file"
   private let saveTagIdentifier = "lddc.open_lyrics.save_tag"
   private let saveTagSucceededIdentifier = "lddc.open_lyrics.notice.saveTagSucceeded"
   private let saveTagFailedIdentifier = "lddc.open_lyrics.notice.saveTagFailed"
+  private let convertFailedIdentifier = "lddc.open_lyrics.notice.convertFailed"
   private let previewIdentifier = "lddc.open_lyrics.preview"
+  private let exportFileNameIdentifier = "DOCPicker.filenameTextField"
+  private let exportBaseName = "lddc_export"
   private let documentsBundleIdentifier = "com.apple.DocumentsApp"
   private let springBoardBundleIdentifier = "com.apple.springboard"
   private let documentBrowsingRootPrefix = "DOC.browsingRoot Source: "
@@ -43,6 +47,7 @@ final class RunnerUITests: XCTestCase {
       try selectSeededAudio(app: launchedApp, actions: &actions)
       addAction(&actions, capability: "nativeChannels", action: "flutter_picker_round_trip")
       addAction(&actions, capability: "media", action: "security_scoped_fd_read_embedded_lyrics")
+      try convertLoadedLyrics(app: launchedApp, actions: &actions)
 
       let saveTag = launchedApp.descendants(matching: .any)[saveTagIdentifier]
       try requireHittable(saveTag, in: launchedApp, message: "Flutter 未暴露可点击的写入歌曲标签按钮")
@@ -102,9 +107,13 @@ final class RunnerUITests: XCTestCase {
       let launchedApp = try launchApp()
       app = launchedApp
       try selectSeededAudio(app: launchedApp, actions: &actions)
+      try convertLoadedLyrics(app: launchedApp, actions: &actions)
       let picker = try openExportPicker(app: launchedApp)
+      try replaceExportBaseName(in: picker)
+      addAction(&actions, capability: "filePicker", action: "document_picker_export_name_replaced")
       let save = try requireTypedButton(named: "Save", in: picker, timeout: 15)
       save.tap()
+      addAction(&actions, capability: "filePicker", action: "document_picker_export_save_tapped")
       let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
       try require(launchedApp.wait(for: .runningForeground, timeout: 15), "导出后 LDDC 没有返回前台")
       try require(
@@ -133,6 +142,7 @@ final class RunnerUITests: XCTestCase {
       let launchedApp = try launchApp()
       app = launchedApp
       try selectSeededAudio(app: launchedApp, actions: &actions)
+      try convertLoadedLyrics(app: launchedApp, actions: &actions)
       _ = try openExportPicker(app: launchedApp)
       let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
       try cancelSystemPicker(app: launchedApp, returnControl: saveFile)
@@ -160,6 +170,7 @@ final class RunnerUITests: XCTestCase {
       let launchedApp = try launchApp()
       app = launchedApp
       try selectSeededAudio(app: launchedApp, actions: &actions)
+      try convertLoadedLyrics(app: launchedApp, actions: &actions)
       _ = try openExportPicker(app: launchedApp)
       launchedApp.terminate()
       try require(launchedApp.wait(for: .notRunning, timeout: 5), "导出中终止时 LDDC 未在超时内关闭")
@@ -212,13 +223,14 @@ final class RunnerUITests: XCTestCase {
 
   private func openDocumentPicker(app: XCUIApplication) throws -> SystemPickerContext {
     let navigation = app.buttons[navigationIdentifier]
-    try require(
-      navigation.waitForExistence(timeout: 15),
-      "Flutter 没有向 XCUITest 暴露打开歌词导航 identifier"
+    try requireHittable(
+      navigation,
+      in: app,
+      message: "Flutter 没有向 XCUITest 暴露可操作的打开歌词导航 identifier"
     )
     navigation.tap()
     let openSong = app.buttons[openSongIdentifier]
-    try require(openSong.waitForExistence(timeout: 15), "Flutter 没有暴露打开歌曲按钮 identifier")
+    try requireHittable(openSong, in: app, message: "Flutter 没有暴露可操作的打开歌曲按钮 identifier")
     openSong.tap()
     return try waitForSystemPicker(app: app, timeout: 15)
   }
@@ -263,21 +275,22 @@ final class RunnerUITests: XCTestCase {
     app: XCUIApplication,
     actions: inout [String: [[String: Any]]]
   ) throws {
-    try require(fixture.exists && fixture.isHittable, "匿名音频 fixture 不可点击")
+    try require(fixture.exists && fixture.isHittable && fixture.isEnabled, "匿名音频 fixture 不可点击")
     fixture.tap()
     addAction(&actions, capability: "filePicker", action: "document_picker_fixture_cell_tapped")
     let openSong = app.buttons[openSongIdentifier]
     if !waitForHittable(openSong, timeout: 3) {
       // iOS 26.5 的远程 Files 图标视图在从位置页进入目录后的第一次 typed
       // 激活可能只建立项目选择，不完成 UIDocumentPicker 回调。此时重新解析
-      // 当前根节点和同一个精确 Cell，再执行一次用户可见激活；不使用坐标、
-      // 图像或宽泛 selector，也不会在已经返回 Flutter 时重复点击。
+      // 当前根节点和同一个精确 Cell，再执行用户可见的双击激活；这对应 Files
+      // 对已选中文件的标准交互，不使用坐标、图像或宽泛 selector，也不会在
+      // 已经返回 Flutter 时重复操作。
       let retainedFixture = try requireStableFixtureCell(app: app, timeout: 5)
-      retainedFixture.tap()
+      retainedFixture.doubleTap()
       addAction(
         &actions,
         capability: "filePicker",
-        action: "document_picker_fixture_cell_reactivated"
+        action: "document_picker_fixture_cell_double_tap_reactivated"
       )
     }
     try require(
@@ -304,6 +317,63 @@ final class RunnerUITests: XCTestCase {
     try requireHittable(saveFile, in: app, message: "Flutter 未暴露可点击的歌词导出按钮")
     saveFile.tap()
     return try waitForSystemPicker(app: app, timeout: 15)
+  }
+
+  private func convertLoadedLyrics(
+    app: XCUIApplication,
+    actions: inout [String: [[String: Any]]]
+  ) throws {
+    let convert = app.descendants(matching: .any)[convertIdentifier]
+    try requireHittable(convert, in: app, message: "Flutter 未暴露已启用的歌词转换按钮")
+    convert.tap()
+
+    let saveFile = app.descendants(matching: .any)[saveFileIdentifier]
+    let saveTag = app.descendants(matching: .any)[saveTagIdentifier]
+    let convertFailed = app.descendants(matching: .any)[convertFailedIdentifier]
+    let deadline = Date().addingTimeInterval(20)
+    repeat {
+      if convertFailed.exists {
+        let rawMessage = [convertFailed.label, convertFailed.value as? String]
+          .compactMap { $0 }
+          .first { !$0.isEmpty } ?? "unknown"
+        throw testFailure("歌词转换返回失败提示: \(redactDynamicPaths(rawMessage))")
+      }
+      if saveFile.exists, saveFile.isEnabled, saveTag.exists, saveTag.isEnabled {
+        addAction(&actions, capability: "nativeChannels", action: "flutter_lyrics_conversion_completed")
+        return
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    throw testFailure("歌词转换后保存文件和写入标签按钮没有同时进入启用状态")
+  }
+
+  private func replaceExportBaseName(in picker: SystemPickerContext) throws {
+    let fileName = try requireUniquePickerElement(
+      queries: [
+        picker.application.textFields.matching(
+          NSPredicate(format: "identifier == %@", exportFileNameIdentifier)
+        ),
+      ],
+      in: picker,
+      timeout: 15,
+      description: "导出文件名输入框"
+    )
+    try require(fileName.isEnabled, "系统保存 Picker 的文件名输入框未启用")
+    fileName.tap()
+    let currentValue = fileName.value as? String ?? ""
+    // 系统保存器没有公开稳定的“全选”菜单 identifier。向已经聚焦的输入框
+    // 写入与当前值等长的 Delete 键，可以只清空该字段，不依赖坐标、长按菜单
+    // 或语言文案；最终值断言会拒绝任何未完整清空的结果。
+    if !currentValue.isEmpty {
+      fileName.typeText(
+        String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentValue.count)
+      )
+    }
+    fileName.typeText(exportBaseName)
+    try require(
+      waitForStringValue(fileName, equals: exportBaseName, timeout: 5),
+      "系统保存 Picker 没有接受脱敏导出文件名"
+    )
   }
 
   private func systemPickerContext(app: XCUIApplication) -> SystemPickerContext? {
@@ -578,7 +648,7 @@ final class RunnerUITests: XCTestCase {
   ) -> [XCUIElement] {
     queries.flatMap { $0.allElementsBoundByIndex }.filter {
       $0.exists
-        && (!requireHittable || $0.isHittable)
+        && (!requireHittable || ($0.isHittable && $0.isEnabled))
         && elementBelongsToPicker($0, picker: picker)
     }
   }
@@ -622,37 +692,40 @@ final class RunnerUITests: XCTestCase {
       picker.application.buttons.matching(
         NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")
       ),
+      picker.application.otherElements.matching(
+        NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")
+      ),
     ]
-    let existingCancelButtons = pickerElements(
+    let existingCancelControls = pickerElements(
       queries: cancelQueries,
       in: picker,
       requireHittable: false
     )
-    if !existingCancelButtons.isEmpty {
-      try require(existingCancelButtons.count == 1, "系统 Picker 的 typed Cancel 按钮不是唯一控件")
-      let cancel = existingCancelButtons[0]
-      try require(waitForHittable(cancel, timeout: 3), "系统 Picker 的 typed Cancel 按钮存在但不可点击")
-      cancel.tap()
-      if let returnControl {
-        try require(
-          waitForHittable(returnControl, timeout: 10),
-          "点击 Cancel 后 Flutter 页面没有恢复可操作状态"
-        )
-      }
-      return
-    }
-
-    // 只有 typed Cancel 按钮确实不存在时，紧凑 Picker 才允许下拉关闭。
-    // 按钮已经出现但暂时不可命中属于真实 UI 失败，不能通过另一条路径掩盖。
-    // 手势只作用于已确认的 typed Picker 根，不使用屏幕坐标或 sheet fallback。
-    try require(picker.root.exists && picker.root.isHittable, "系统 Picker 根节点不可操作")
-    picker.root.swipeDown()
+    try require(existingCancelControls.count == 1, "系统 Picker 的 typed Cancel 控件不是唯一控件")
+    let cancel = existingCancelControls[0]
+    try require(waitForHittable(cancel, timeout: 3), "系统 Picker 的 typed Cancel 控件存在但不可点击")
+    cancel.tap()
     if let returnControl {
       try require(
         waitForHittable(returnControl, timeout: 10),
-        "下拉后 Flutter 页面没有恢复可操作状态"
+        "点击 Cancel 后 Flutter 页面没有恢复可操作状态"
       )
     }
+  }
+
+  private func waitForStringValue(
+    _ element: XCUIElement,
+    equals expected: String,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if element.value as? String == expected {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return false
   }
 
   private func waitForPreviewLyricsValue(
@@ -718,7 +791,7 @@ final class RunnerUITests: XCTestCase {
   private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
-      if element.exists, element.isHittable {
+      if element.exists, element.isHittable, element.isEnabled {
         return true
       }
       Thread.sleep(forTimeInterval: 0.2)
@@ -748,14 +821,14 @@ final class RunnerUITests: XCTestCase {
     in app: XCUIApplication,
     message: String
   ) throws {
-    if element.waitForExistence(timeout: 3), element.isHittable {
+    if element.waitForExistence(timeout: 3), element.isHittable, element.isEnabled {
       return
     }
     let scrollView = app.scrollViews.firstMatch
     try require(scrollView.waitForExistence(timeout: 5), "Flutter 页面没有暴露可滚动语义容器")
     for _ in 0..<6 {
       scrollView.swipeUp()
-      if element.waitForExistence(timeout: 1), element.isHittable {
+      if element.waitForExistence(timeout: 1), element.isHittable, element.isEnabled {
         return
       }
     }

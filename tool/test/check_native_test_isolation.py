@@ -23,6 +23,67 @@ def invalid_descendant_element_types(source: str) -> list[str]:
     )
 
 
+def ios_picker_state_machine_failures(source: str) -> list[str]:
+    """校验 iOS 系统 Picker 场景不会跳过生产转换或点击禁用控件。"""
+
+    problems: list[str] = []
+    required_markers = (
+        "private func convertLoadedLyrics(",
+        'let convert = app.descendants(matching: .any)[convertIdentifier]',
+        "if saveFile.exists, saveFile.isEnabled, saveTag.exists, saveTag.isEnabled",
+        "picker.application.textFields.matching(",
+        'NSPredicate(format: "identifier == %@", exportFileNameIdentifier)',
+        "XCUIKeyboardKey.delete.rawValue",
+        "waitForStringValue(fileName, equals: exportBaseName",
+        'action: "document_picker_export_name_replaced"',
+        'action: "document_picker_export_save_tapped"',
+        "picker.application.otherElements.matching(",
+        "existingCancelControls.count == 1",
+        "retainedFixture.doubleTap()",
+        'action: "document_picker_fixture_cell_double_tap_reactivated"',
+        "if element.exists, element.isHittable, element.isEnabled",
+        "element.waitForExistence(timeout: 3), element.isHittable, element.isEnabled",
+        "(!requireHittable || ($0.isHittable && $0.isEnabled))",
+    )
+    for marker in required_markers:
+        if marker not in source:
+            problems.append(f"iOS Picker 状态机缺少强契约: {marker}")
+
+    scenario_contracts = (
+        ("testDocumentPickerSelectsSeededAudio", "saveTag.tap()"),
+        ("testDocumentPickerExportsLyricsFile", "openExportPicker(app: launchedApp)"),
+        (
+            "testDocumentPickerExportCancellationCleansTemporaryFile",
+            "openExportPicker(app: launchedApp)",
+        ),
+        ("testTerminatedExportIsCleanedOnNextLaunch", "openExportPicker(app: launchedApp)"),
+    )
+    for method, protected_action in scenario_contracts:
+        method_match = re.search(
+            rf"  func {re.escape(method)}\(\) throws \{{(?P<body>[\s\S]*?)(?=\n  (?:func|private func) )",
+            source,
+        )
+        if method_match is None:
+            problems.append(f"iOS Picker 状态机缺少场景方法: {method}")
+            continue
+        body = method_match.group("body")
+        conversion_index = body.find(
+            "try convertLoadedLyrics(app: launchedApp, actions: &actions)"
+        )
+        action_index = body.find(protected_action)
+        if conversion_index < 0 or action_index < 0 or conversion_index > action_index:
+            problems.append(f"iOS 场景 {method} 必须先完成生产歌词转换再执行保存动作")
+
+    for forbidden in (
+        "retainedFixture.tap()",
+        'action: "document_picker_fixture_cell_reactivated"',
+        "picker.root.swipeDown()",
+    ):
+        if forbidden in source:
+            problems.append(f"iOS Picker 状态机禁止旧 fallback: {forbidden}")
+    return problems
+
+
 def _balanced_openstep(text: str) -> bool:
     braces = 0
     in_string = False
@@ -312,7 +373,7 @@ def failures() -> list[str]:
         "waitForStableFixtureCell(app: app",
         'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
         'action: "document_picker_fixture_cell_tapped"',
-        'action: "document_picker_fixture_cell_reactivated"',
+        'action: "document_picker_fixture_cell_double_tap_reactivated"',
         "redactDynamicPaths",
         'requireTypedButton(named: "Browse"',
         'requireTypedButton(named: "Save"',
@@ -343,6 +404,7 @@ def failures() -> list[str]:
             "iOS XCUITest descendants(matching:) 必须使用 XCUIElement.ElementType 单数枚举，"
             f"禁止集合属性名 .{invalid_descendant_types[0]}"
         )
+    problems.extend(ios_picker_state_machine_failures(ios_ui_test))
     for forbidden in (
         "systemPickerRoots",
         "pickerElement(",
@@ -914,6 +976,7 @@ def failures() -> list[str]:
         "expect(completedState.inputName, 'audio_sample.mp3')",
         "expect(completedState.rawText, contains('Hello LDDC'))",
         "'noticeCode': failedState.notice?.code.name ?? 'null'",
+        "timeout: runtime.defaultStepTimeout",
         "Error.throwWithStackTrace(error, stackTrace)",
     ):
         if required not in macos_flutter_test:
@@ -966,6 +1029,8 @@ def failures() -> list[str]:
         ".activate()",
         "writeSyncState",
         "writeFailureState",
+        'expectedState: "flutter_completed"',
+        'state.state == "flutter_completed"',
         '"app_ready"',
         '"native_ready"',
         '"native_completed"',
@@ -1119,6 +1184,10 @@ def failures() -> list[str]:
         "arch=$hostArchitecture",
         "Resolve-UniqueBuildArtifact",
         "iOS Xcode DerivedData 超出测试构建根",
+        '$exportedFiles.Count -ne 1',
+        '.Extension.Equals(".lrc", [StringComparison]::OrdinalIgnoreCase)',
+        '$exportedText.Contains("Hello LDDC", [StringComparison]::Ordinal)',
+        'Get-FileHash -LiteralPath $exportedFile.FullName -Algorithm SHA256',
         'resourceMeasurementStatus = "not_exercised_before_test_start"',
         '$activeInfrastructureFailureClass = "build_failure"',
         "$infrastructureFailureMessage = $null",

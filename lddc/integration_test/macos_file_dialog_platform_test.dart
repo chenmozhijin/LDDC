@@ -82,10 +82,19 @@ void main() {
             state: 'picker_requested',
           );
           await openLyrics.openSongFile();
-          // controller 方法只有在生产文件选择回调、媒体读取和状态更新全部结束后
-          // 才会返回。这里再次轮询复合结果会把“回调已返回但结果无效”拖成超时，
-          // 还会让 runner 在诊断写入前终止 Flutter。直接检查终态可以立即区分
-          // 取消、空结果、媒体读取失败和成功选择，且不会延长业务等待边界。
+          // 驱动方法只负责点击 Flutter 按钮；真实 NSOpenPanel 由 XCUITest
+          // 并行操作。这里必须等待 controller 的终态，否则会在原生面板
+          // 尚未完成前把 isOpening=true 误判为业务失败。XCUITest 不再等待
+          // flutter_completed，runner 会在原生动作成功后等待本条件收敛，
+          // 因此不会形成两个进程互相等待的循环。
+          await pumpUntil(
+            tester,
+            () => !container.read(openLyricsPageControllerProvider).isOpening,
+            timeout: runtime.defaultStepTimeout,
+            reason: _dialogAction == 'select'
+                ? '等待 NSOpenPanel 选择结果返回 Flutter'
+                : '等待 NSOpenPanel 取消结果返回 Flutter',
+          );
           final OpenLyricsPageState completedState = container.read(
             openLyricsPageControllerProvider,
           );
