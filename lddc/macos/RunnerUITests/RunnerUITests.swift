@@ -174,14 +174,10 @@ final class RunnerUITests: XCTestCase {
       try operation(panel)
       try require(waitForPanelToClose(panel, timeout: 15), "NSOpenPanel 操作后没有关闭")
       nativeDialogClosed = true
-      // Flutter 的 90 秒 step 从打开面板前开始计时，而 XCTest 还包含附着应用、
-      // 发现 panel 和键盘导航开销。面板关闭后最多观察 20 秒，在同一个
-      // 90 秒业务边界内读取最终状态，并为 XCTest 附件与 evidence 留出收尾时间。
-      _ = try waitForSyncState(
-        scenario: scenario,
-        expectedState: "flutter_completed",
-        timeout: 20
-      )
+      // XCUITest 只证明真实面板动作已经完成并关闭。Flutter 回调、文件类型和
+      // 媒体结果由 integration_test 单独写入，runner 是两个进程的唯一汇合点。
+      // 在这里等待 flutter_completed 会形成循环依赖：Flutter 业务失败时 XCTest
+      // 先失败，runner 又会终止尚未来得及写诊断的 Flutter 进程。
       addAction(&actions, capability: "filePicker", action: action)
       addAction(&actions, capability: "resourceCleanup", action: "native_file_panel_closed")
     } catch let error {

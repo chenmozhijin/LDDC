@@ -82,32 +82,24 @@ void main() {
             state: 'picker_requested',
           );
           await openLyrics.openSongFile();
-          await pumpUntil(
-            tester,
-            () {
-              final OpenLyricsPageState state = container.read(
-                openLyricsPageControllerProvider,
-              );
-              if (_dialogAction == 'select') {
-                return !state.isOpening &&
-                    state.inputType == OpenLyricsInputType.songFile &&
-                    state.inputName == 'audio_sample.mp3' &&
-                    state.inputPath != null &&
-                    state.rawText.contains('Hello LDDC');
-              }
-              return !state.isOpening &&
-                  state.inputType == null &&
-                  state.inputName.isEmpty &&
-                  state.audioFileHandle == null;
-            },
-            // macOS hybrid 的原生动作预算由 runner 通过 test-only 配置传入。
-            // 普通 integration 场景仍保留各自的 30 秒边界；这里只避免 Flutter
-            // 在 XCUITest 尚处于系统面板操作时先退出并制造 Lost connection。
-            timeout: runtime.defaultStepTimeout,
-            reason: _dialogAction == 'select'
-                ? '等待 NSOpenPanel 选择结果和嵌入歌词返回 Flutter'
-                : '等待 NSOpenPanel 取消且 Flutter 保持空输入',
+          // controller 方法只有在生产文件选择回调、媒体读取和状态更新全部结束后
+          // 才会返回。这里再次轮询复合结果会把“回调已返回但结果无效”拖成超时，
+          // 还会让 runner 在诊断写入前终止 Flutter。直接检查终态可以立即区分
+          // 取消、空结果、媒体读取失败和成功选择，且不会延长业务等待边界。
+          final OpenLyricsPageState completedState = container.read(
+            openLyricsPageControllerProvider,
           );
+          expect(completedState.isOpening, isFalse);
+          if (_dialogAction == 'select') {
+            expect(completedState.inputType, OpenLyricsInputType.songFile);
+            expect(completedState.inputName, 'audio_sample.mp3');
+            expect(completedState.inputPath, isNotNull);
+            expect(completedState.rawText, contains('Hello LDDC'));
+          } else {
+            expect(completedState.inputType, isNull);
+            expect(completedState.inputName, isEmpty);
+            expect(completedState.audioFileHandle, isNull);
+          }
           // 只有业务结果已经收敛才发布 completed。面板关闭但
           // 没有返回文件的情况会在上方有界等待中失败，并写入
           // flutter_failed，避免 XCUITest 把“关闭”误报为“选择成功”。
@@ -138,6 +130,7 @@ void main() {
                     .toString(),
                 'audioFileHandlePresent': (failedState.audioFileHandle != null)
                     .toString(),
+                'noticeCode': failedState.notice?.code.name ?? 'null',
                 'rawTextContainsFixture': failedState.rawText
                     .contains('Hello LDDC')
                     .toString(),

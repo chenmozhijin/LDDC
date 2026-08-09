@@ -15,6 +15,7 @@ final class RunnerUITests: XCTestCase {
   private let saveFileIdentifier = "lddc.open_lyrics.save_file"
   private let saveTagIdentifier = "lddc.open_lyrics.save_tag"
   private let saveTagSucceededIdentifier = "lddc.open_lyrics.notice.saveTagSucceeded"
+  private let saveTagFailedIdentifier = "lddc.open_lyrics.notice.saveTagFailed"
   private let previewIdentifier = "lddc.open_lyrics.preview"
   private let documentsBundleIdentifier = "com.apple.DocumentsApp"
   private let springBoardBundleIdentifier = "com.apple.springboard"
@@ -46,8 +47,7 @@ final class RunnerUITests: XCTestCase {
       let saveTag = launchedApp.descendants(matching: .any)[saveTagIdentifier]
       try requireHittable(saveTag, in: launchedApp, message: "Flutter 未暴露可点击的写入歌曲标签按钮")
       saveTag.tap()
-      let saveSucceeded = launchedApp.descendants(matching: .any)[saveTagSucceededIdentifier]
-      try require(saveSucceeded.waitForExistence(timeout: 20), "读写 fd 升级后没有成功保存歌词标签")
+      try waitForSaveTagResult(app: launchedApp, timeout: 20)
       addAction(&actions, capability: "media", action: "read_write_fd_tag_saved")
 
       // 终止应用会触发 fd registry 与 security-scoped 资源清理；重新启动并再次
@@ -267,6 +267,19 @@ final class RunnerUITests: XCTestCase {
     fixture.tap()
     addAction(&actions, capability: "filePicker", action: "document_picker_fixture_cell_tapped")
     let openSong = app.buttons[openSongIdentifier]
+    if !waitForHittable(openSong, timeout: 3) {
+      // iOS 26.5 的远程 Files 图标视图在从位置页进入目录后的第一次 typed
+      // 激活可能只建立项目选择，不完成 UIDocumentPicker 回调。此时重新解析
+      // 当前根节点和同一个精确 Cell，再执行一次用户可见激活；不使用坐标、
+      // 图像或宽泛 selector，也不会在已经返回 Flutter 时重复点击。
+      let retainedFixture = try requireStableFixtureCell(app: app, timeout: 5)
+      retainedFixture.tap()
+      addAction(
+        &actions,
+        capability: "filePicker",
+        action: "document_picker_fixture_cell_reactivated"
+      )
+    }
     try require(
       waitForHittable(openSong, timeout: 15),
       "选择文件后 Flutter 打开歌曲动作没有恢复，Picker 回调尚未完成"
@@ -667,6 +680,39 @@ final class RunnerUITests: XCTestCase {
       Thread.sleep(forTimeInterval: 0.2)
     } while Date() < deadline
     return false
+  }
+
+  private func waitForSaveTagResult(
+    app: XCUIApplication,
+    timeout: TimeInterval
+  ) throws {
+    let succeeded = app.descendants(matching: .any)[saveTagSucceededIdentifier]
+    let failed = app.descendants(matching: .any)[saveTagFailedIdentifier]
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if succeeded.exists {
+        return
+      }
+      if failed.exists {
+        let rawMessage = [failed.label, failed.value as? String]
+          .compactMap { $0 }
+          .first { !$0.isEmpty } ?? "unknown"
+        throw testFailure(
+          "歌词标签写入返回失败提示: \(redactDynamicPaths(rawMessage))"
+        )
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    throw testFailure("读写 fd 升级后没有返回成功或失败提示")
+  }
+
+  private func redactDynamicPaths(_ value: String) -> String {
+    let redacted = value.replacingOccurrences(
+      of: #"(?:file://)?/(?:Users|private|var)/[^\s,;]+"#,
+      with: "<path>",
+      options: .regularExpression
+    )
+    return String(redacted.prefix(512))
   }
 
   private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
