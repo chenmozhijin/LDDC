@@ -446,6 +446,38 @@ function Wait-ForHybridState {
   return $state
 }
 
+function Assert-FlutterCompletionState {
+  param(
+    [Parameter(Mandatory = $true)]$State,
+    [Parameter(Mandatory = $true)][string]$Action
+  )
+
+  $diagnostics = $State.diagnostics
+  if ($null -eq $diagnostics) {
+    throw "Flutter completion marker 缺少结果 diagnostics"
+  }
+  if ($Action -eq "select") {
+    if ([string]$diagnostics.inputType -ne "songFile") {
+      throw "Flutter completion marker 的 inputType 不是 songFile"
+    }
+    if ([string]$diagnostics.inputName -ne "audio_sample.mp3") {
+      throw "Flutter completion marker 的 inputName 不匹配 fixture"
+    }
+    if ([string]$diagnostics.inputPathPresent -ne "True") {
+      throw "Flutter completion marker 缺少选中文件路径"
+    }
+    if ([string]$diagnostics.rawTextContainsFixture -ne "True") {
+      throw "Flutter completion marker 缺少 fixture 歌词正文证据"
+    }
+  } else {
+    if ([string]$diagnostics.inputType -ne "null" `
+        -or [string]$diagnostics.inputName -ne "" `
+        -or [string]$diagnostics.inputPathPresent -ne "False") {
+      throw "Flutter cancel completion marker 包含非空文件结果"
+    }
+  }
+}
+
 function Write-SanitizedHybridStateDiagnostic {
   param(
     [Parameter(Mandatory = $true)][string]$StatePath,
@@ -970,6 +1002,9 @@ try {
           if ($flutterCompletionState.success -ne $true) {
             throw "Flutter hybrid 完成状态缺少成功标记"
           }
+          Assert-FlutterCompletionState `
+            -State $flutterCompletionState `
+            -Action $action
         }
 
         if ($activeFlutterHandle.Process.HasExited -and $null -eq $flutterStatus) {

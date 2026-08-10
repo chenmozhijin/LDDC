@@ -1017,7 +1017,10 @@ def failures() -> list[str]:
         'pathField.typeKey("a", modifierFlags: [.command])',
         "waitForSelectedElement([fixture]",
         "openButton.isEnabled",
-        "panel.application.typeKey(.return, modifierFlags: [])",
+        "openButton.click()",
+        'recordAction("filePicker", "fixture_selected")',
+        'recordAction("filePicker", "open_button_clicked")',
+        "hasOpenPanel(panel.application)",
         'expectedState: "picker_requested"',
         'addAction(&actions, capability: "filePicker", action: action)',
         "attachedToExistingApplication",
@@ -1043,7 +1046,7 @@ def failures() -> list[str]:
         'panel.application.typeKey(.enter',
         "goToFolder.touchBars",
         "goButton.click()",
-        "openButton.click()",
+        "panel.application.typeKey(.return, modifierFlags: [])",
         "panel.root.outlineRows.firstMatch",
     ):
         if forbidden in macos_ui_tests:
@@ -1076,6 +1079,9 @@ def failures() -> list[str]:
         "diagnostics = $state.diagnostics",
         "$hybridNativeActionTimeoutSeconds + $xcodeReportDrainSeconds",
         'diagnostics=$diagnosticText',
+        "Assert-FlutterCompletionState",
+        "inputPathPresent",
+        "rawTextContainsFixture",
     ):
         if required not in macos_runner:
             problems.append(f"macOS hybrid runner 缺少协同或失败报告契约: {required}")

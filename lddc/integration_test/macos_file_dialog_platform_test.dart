@@ -117,6 +117,15 @@ void main() {
             scenario: scenarioName,
             state: 'flutter_completed',
             success: true,
+            diagnostics: <String, String>{
+              'inputType': completedState.inputType?.name ?? 'null',
+              'inputName': completedState.inputName,
+              'inputPathPresent':
+                  (completedState.inputPath?.isNotEmpty ?? false).toString(),
+              'rawTextContainsFixture': completedState.rawText
+                  .contains('Hello LDDC')
+                  .toString(),
+            },
           );
         } on Object catch (error, stackTrace) {
           final OpenLyricsPageState failedState = container.read(

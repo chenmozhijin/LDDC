@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -12,6 +13,19 @@ import subprocess
 import sys
 import time
 from typing import IO, Any
+
+
+@dataclass(frozen=True)
+class _GroupSnapshot:
+    """一次进程组采样的三态结果。"""
+
+    process_count: int | None
+    rss_bytes: int | None
+    error: str | None = None
+
+    @property
+    def available(self) -> bool:
+        return self.error is None
 
 
 def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -24,8 +38,8 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
     os.replace(staging, path)
 
 
-def _group_snapshot(process_group_id: int) -> tuple[int, int]:
-    """返回进程组当前进程数与 RSS 总和；采样失败时不伪造资源通过。"""
+def _group_snapshot(process_group_id: int) -> _GroupSnapshot:
+    """返回进程组采样结果；采样失败不能伪造成残留进程。"""
 
     try:
         completed = subprocess.run(
@@ -35,8 +49,12 @@ def _group_snapshot(process_group_id: int) -> tuple[int, int]:
             text=True,
             timeout=2,
         )
-    except (OSError, subprocess.SubprocessError):
-        return -1, -1
+    except (OSError, subprocess.SubprocessError) as error:
+        return _GroupSnapshot(
+            process_count=None,
+            rss_bytes=None,
+            error=f"{type(error).__name__}: {error}",
+        )
 
     process_count = 0
     rss_kib = 0
@@ -51,24 +69,42 @@ def _group_snapshot(process_group_id: int) -> tuple[int, int]:
         if pgid == process_group_id:
             process_count += 1
             rss_kib += rss
-    return process_count, rss_kib * 1024
+    return _GroupSnapshot(process_count, rss_kib * 1024)
 
 
 def _wait_until_process_and_group_empty(
     process: subprocess.Popen[bytes],
     process_group_id: int,
     timeout: float,
-) -> bool:
+) -> tuple[bool, bool]:
+    """等待进程退出并尽量确认进程组为空。
+
+    返回值的第二项表示采样是否曾不可用。采样不可用时不能证明没有后代，
+    但也不能把不可用的哨兵值当成一个真实的残留进程。
+    """
+
+    measurement_unavailable = False
     deadline = time.monotonic() + max(timeout, 0.0)
     while time.monotonic() < deadline:
         process_exited = process.poll() is not None
-        process_count, _ = _group_snapshot(process_group_id)
-        if process_exited and process_count == 0:
-            return True
+        snapshot = _group_snapshot(process_group_id)
+        if not snapshot.available:
+            measurement_unavailable = True
+        elif process_exited and snapshot.process_count == 0:
+            return True, measurement_unavailable
+        if process_exited and not snapshot.available:
+            # leader 已退出但无法读取进程组时继续等待到 grace 边界；
+            # 若仍无法确认为空，调用方会再发 SIGKILL，避免把后代进程遗留在 CI。
+            pass
         time.sleep(0.05)
     process_exited = process.poll() is not None
-    process_count, _ = _group_snapshot(process_group_id)
-    return process_exited and process_count == 0
+    snapshot = _group_snapshot(process_group_id)
+    if not snapshot.available:
+        measurement_unavailable = True
+    return (
+        process_exited and snapshot.available and snapshot.process_count == 0,
+        measurement_unavailable,
+    )
 
 
 def _signal_group(process_group_id: int, value: signal.Signals) -> bool:
@@ -83,14 +119,23 @@ def _stop_group(
     process: subprocess.Popen[bytes],
     process_group_id: int,
     grace_seconds: float,
-) -> tuple[bool, bool]:
+) -> tuple[bool, bool, bool]:
     terminate_sent = _signal_group(process_group_id, signal.SIGTERM)
-    if _wait_until_process_and_group_empty(process, process_group_id, grace_seconds):
-        return terminate_sent, False
+    stopped, measurement_unavailable = _wait_until_process_and_group_empty(
+        process,
+        process_group_id,
+        grace_seconds,
+    )
+    if stopped:
+        return terminate_sent, False, measurement_unavailable
 
     kill_sent = _signal_group(process_group_id, signal.SIGKILL)
-    _wait_until_process_and_group_empty(process, process_group_id, grace_seconds)
-    return terminate_sent, kill_sent
+    _, kill_measurement_unavailable = _wait_until_process_and_group_empty(
+        process,
+        process_group_id,
+        grace_seconds,
+    )
+    return terminate_sent, kill_sent, measurement_unavailable or kill_measurement_unavailable
 
 
 def _normalized_exit_code(return_code: int | None) -> int:
@@ -133,6 +178,16 @@ def run_supervised(args: argparse.Namespace) -> int:
     peak_rss_bytes: int | None = None
     peak_process_count: int | None = None
     error: str | None = None
+    measurement_status = "available"
+    measurement_errors: list[str] = []
+
+    def observe(snapshot: _GroupSnapshot) -> None:
+        nonlocal measurement_status
+        if snapshot.available:
+            return
+        measurement_status = "unavailable"
+        if snapshot.error is not None and snapshot.error not in measurement_errors:
+            measurement_errors.append(snapshot.error)
 
     def remember_signal(value: int, _frame: object) -> None:
         nonlocal interrupted_signal
@@ -158,18 +213,26 @@ def run_supervised(args: argparse.Namespace) -> int:
             now = time.monotonic()
             if interrupted_signal is not None or now >= deadline:
                 timed_out = interrupted_signal is None
-                terminate_sent, kill_sent = _stop_group(
+                terminate_sent, kill_sent, stop_measurement_unavailable = _stop_group(
                     process,
                     process_group_id,
                     args.grace,
                 )
+                if stop_measurement_unavailable:
+                    measurement_status = "unavailable"
                 break
             if now >= next_sample:
-                process_count, rss_bytes = _group_snapshot(process_group_id)
-                if process_count >= 0:
-                    peak_process_count = max(peak_process_count or 0, process_count)
-                if rss_bytes >= 0:
-                    peak_rss_bytes = max(peak_rss_bytes or 0, rss_bytes)
+                snapshot = _group_snapshot(process_group_id)
+                observe(snapshot)
+                if snapshot.available:
+                    peak_process_count = max(
+                        peak_process_count or 0,
+                        snapshot.process_count or 0,
+                    )
+                    peak_rss_bytes = max(
+                        peak_rss_bytes or 0,
+                        snapshot.rss_bytes or 0,
+                    )
                 next_sample = now + 1
             if now >= next_heartbeat:
                 elapsed = round(now - started_monotonic, 1)
@@ -184,18 +247,22 @@ def run_supervised(args: argparse.Namespace) -> int:
             time.sleep(0.1)
 
         # 主进程正常退出后也必须清理由它留在同一组内的后代，不能只看 leader。
-        final_count, _ = _group_snapshot(process_group_id)
-        if final_count > 0:
-            residual_term, residual_kill = _stop_group(
+        final_snapshot = _group_snapshot(process_group_id)
+        observe(final_snapshot)
+        if final_snapshot.available and (final_snapshot.process_count or 0) > 0:
+            residual_term, residual_kill, residual_measurement_unavailable = _stop_group(
                 process,
                 process_group_id,
                 args.grace,
             )
             terminate_sent = terminate_sent or residual_term
             kill_sent = kill_sent or residual_kill
-        final_count, final_rss_bytes = _group_snapshot(process_group_id)
-        if final_count != 0:
-            error = f"进程组仍残留 {final_count} 个进程"
+            if residual_measurement_unavailable:
+                measurement_status = "unavailable"
+        final_snapshot = _group_snapshot(process_group_id)
+        observe(final_snapshot)
+        if final_snapshot.available and (final_snapshot.process_count or 0) > 0:
+            error = f"进程组仍残留 {final_snapshot.process_count} 个进程"
 
         if timed_out:
             exit_code = 124
@@ -220,8 +287,10 @@ def run_supervised(args: argparse.Namespace) -> int:
             "exitCode": exit_code,
             "peakProcessCount": peak_process_count,
             "peakRssBytes": peak_rss_bytes,
-            "finalProcessCount": final_count,
-            "finalRssBytes": final_rss_bytes if final_rss_bytes >= 0 else None,
+            "finalProcessCount": final_snapshot.process_count,
+            "finalRssBytes": final_snapshot.rss_bytes,
+            "resourceMeasurementStatus": measurement_status,
+            "resourceMeasurementErrors": measurement_errors,
             "error": error,
         }
         _atomic_write_json(status_path, payload)
@@ -229,7 +298,7 @@ def run_supervised(args: argparse.Namespace) -> int:
     except BaseException as caught:
         error = f"{type(caught).__name__}: {caught}"
         if process is not None and process_group_id is not None:
-            terminate_sent, kill_sent = _stop_group(
+            terminate_sent, kill_sent, _ = _stop_group(
                 process,
                 process_group_id,
                 args.grace,
@@ -253,6 +322,8 @@ def run_supervised(args: argparse.Namespace) -> int:
                 "peakRssBytes": peak_rss_bytes,
                 "finalProcessCount": None,
                 "finalRssBytes": None,
+                "resourceMeasurementStatus": "unavailable",
+                "resourceMeasurementErrors": [],
                 "error": error,
             },
         )

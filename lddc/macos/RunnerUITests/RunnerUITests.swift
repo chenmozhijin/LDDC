@@ -42,7 +42,7 @@ final class RunnerUITests: XCTestCase {
     try runScenario(
       scenario: "macos_open_panel_select",
       action: "ns_open_panel_select_audio"
-    ) { panel in
+    ) { panel, recordAction in
       guard let fixturePath = ProcessInfo.processInfo.environment["LDDC_FIXTURE_PATH"] else {
         throw failure("缺少 fixture path")
       }
@@ -123,17 +123,19 @@ final class RunnerUITests: XCTestCase {
         waitForSelectedElement([fixture], timeout: 10),
         "NSOpenPanel 点击 fixture 后没有进入选中状态"
       )
+      recordAction("filePicker", "fixture_selected")
       let openButton = panel.root.buttons["Open"]
       try require(
         waitForHittableElement(openButton, timeout: 10),
         "选中精确 fixture 后 NSOpenPanel 的打开按钮不可点击"
       )
       try require(openButton.isEnabled, "选中精确 fixture 后 NSOpenPanel 的打开按钮未启用")
-      // AppKit 的 Column View 将文件暴露为 TextField 代理。先确认该代理已选中，
-      // 再向已选中的原生面板发送 Return，让 NSOpenPanel 自己提交当前 URL。
-      // 直接调用 TouchBar/按钮代理在 hosted XCUITest 中可能只关闭面板，
-      // 却没有把 selection 写入 panel.urls，最终会被 file_selector 解释为取消。
-      panel.application.typeKey(.return, modifierFlags: [])
+      // 目录和文件候选已经通过精确 AX 查询并确认选中。此处点击同一面板
+      // 的 typed Open 按钮，避免把应用根窗口的 Return 误当成 NSOpenPanel
+      // 的确认动作；如果 AppKit 没有把 URL 交给生产 completion handler，
+      // Flutter 侧的 completion marker 会保留真实 null 结果。
+      openButton.click()
+      recordAction("filePicker", "open_button_clicked")
     }
   }
 
@@ -141,17 +143,18 @@ final class RunnerUITests: XCTestCase {
     try runScenario(
       scenario: "macos_open_panel_cancel",
       action: "ns_open_panel_cancel"
-    ) { panel in
+    ) { panel, recordAction in
       let cancelButton = panel.root.buttons["Cancel"]
       try require(cancelButton.waitForExistence(timeout: 10), "NSOpenPanel 没有可访问的取消按钮")
       cancelButton.click()
+      recordAction("filePicker", "cancel_button_clicked")
     }
   }
 
   private func runScenario(
     scenario: String,
     action: String,
-    operation: (PanelHandle) throws -> Void
+    operation: (PanelHandle, (String, String) -> Void) throws -> Void
   ) throws {
     var actions: [String: [[String: Any]]] = [:]
     var failureValue: Error?
@@ -175,7 +178,10 @@ final class RunnerUITests: XCTestCase {
       activePanel = panel
       panelOwnerIdentifier = panel.ownerIdentifier
       panelUsedNewProcess = panel.wasNewProcess
-      try operation(panel)
+      let recordAction: (String, String) -> Void = { capability, action in
+        addAction(&actions, capability: capability, action: action)
+      }
+      try operation(panel, recordAction)
       try require(waitForPanelToClose(panel, timeout: 15), "NSOpenPanel 操作后没有关闭")
       nativeDialogClosed = true
       // XCUITest 只证明真实面板动作已经完成并关闭。Flutter 回调、文件类型和
@@ -319,12 +325,25 @@ final class RunnerUITests: XCTestCase {
   private func waitForPanelToClose(_ panel: PanelHandle, timeout: TimeInterval) -> Bool {
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
-      if panel.application.state == .notRunning || !hasOpenPanelControls(panel.root) {
+      if panel.application.state == .notRunning || !hasOpenPanel(panel.application) {
         return true
       }
       Thread.sleep(forTimeInterval: 0.2)
     } while Date() < deadline
     return false
+  }
+
+  private func hasOpenPanel(_ application: XCUIApplication) -> Bool {
+    let sheet = application.sheets["open-panel"]
+    if sheet.exists {
+      return true
+    }
+    let firstSheet = application.sheets.firstMatch
+    if firstSheet.exists && hasOpenPanelControls(firstSheet) {
+      return true
+    }
+    let firstWindow = application.windows.firstMatch
+    return firstWindow.exists && hasOpenPanelControls(firstWindow)
   }
 
   private func firstHittableElement(

@@ -142,6 +142,51 @@ function Invoke-BoundedNativeCommand {
   return $exitCode
 }
 
+function Read-BoundedCommandStatus {
+  param([Parameter(Mandatory = $true)][string]$Phase)
+
+  $safePhase = $Phase -replace '[^A-Za-z0-9._-]', '-'
+  $statusPath = Join-Path $rawDir "$safePhase.supervisor.json"
+  if (-not (Test-Path -LiteralPath $statusPath -PathType Leaf)) {
+    return $null
+  }
+  try {
+    return Get-Content -LiteralPath $statusPath -Raw | ConvertFrom-Json
+  } catch {
+    return $null
+  }
+}
+
+function Format-BoundedCommandFailure {
+  param(
+    [Parameter(Mandatory = $true)][string]$Phase,
+    [Parameter(Mandatory = $true)][int]$ExitCode
+  )
+
+  $status = Read-BoundedCommandStatus -Phase $Phase
+  if ($null -eq $status) {
+    return "$Phase 监督器没有可解析的状态，exit=$ExitCode"
+  }
+  $measurementStatus = [string]$status.resourceMeasurementStatus
+  $measurementErrors = if ($null -ne $status.resourceMeasurementErrors) {
+    (@($status.resourceMeasurementErrors) -join " | ")
+  } else {
+    ""
+  }
+  $commandError = [string]$status.error
+  $details = @(
+    "exit=$([int]$status.exitCode)",
+    "measurement=$measurementStatus"
+  )
+  if (-not [string]::IsNullOrWhiteSpace($commandError)) {
+    $details += "error=$commandError"
+  }
+  if (-not [string]::IsNullOrWhiteSpace($measurementErrors)) {
+    $details += "measurementErrors=$measurementErrors"
+  }
+  return "$Phase 失败: $($details -join ', ')"
+}
+
 function Invoke-BoundedXcodeTest {
   param(
     [Parameter(Mandatory = $true)]
@@ -578,7 +623,7 @@ try {
     -StdoutPath (Join-Path $rawDir "pod-install.stdout.log") `
     -StderrPath (Join-Path $rawDir "pod-install.stderr.log")
   if ($podInstallExitCode -ne 0) {
-    throw "iOS CocoaPods 解析失败，exit=$podInstallExitCode"
+    throw (Format-BoundedCommandFailure -Phase "iOS CocoaPods" -ExitCode $podInstallExitCode)
   }
   $buildExitCode = Invoke-BoundedNativeCommand `
     -Phase "ios-xcuitest-build-for-testing" `
