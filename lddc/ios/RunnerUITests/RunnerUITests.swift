@@ -23,6 +23,7 @@ final class RunnerUITests: XCTestCase {
   private let previewIdentifier = "lddc.open_lyrics.preview"
   private let exportFileNameIdentifier = "DOCPicker.filenameTextField"
   private let exportBaseName = "lddc_export"
+  private let keyboardTutorialMessage = "Speed up your typing by sliding your finger across the letters to compose a word."
   private let documentsBundleIdentifier = "com.apple.DocumentsApp"
   private let springBoardBundleIdentifier = "com.apple.springboard"
   private let documentBrowsingRootPrefix = "DOC.browsingRoot Source: "
@@ -113,7 +114,11 @@ final class RunnerUITests: XCTestCase {
       let picker = try openExportPicker(app: launchedApp)
       try replaceExportBaseName(in: picker)
       addAction(&actions, capability: "filePicker", action: "document_picker_export_name_replaced")
-      let save = try requireTypedButton(named: "Save", in: picker, timeout: 15)
+      try dismissKeyboardTutorialIfPresented(in: picker, actions: &actions)
+      // 系统教学层关闭会刷新远程 Document Picker 的 AX snapshot，必须重新解析
+      // typed 根节点后再查询 Save，不能继续复用遮罩出现前的陈旧元素代理。
+      let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)
+      let save = try requireTypedButton(named: "Save", in: resumedPicker, timeout: 15)
       save.tap()
       addAction(&actions, capability: "filePicker", action: "document_picker_export_save_tapped")
       let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
@@ -282,15 +287,20 @@ final class RunnerUITests: XCTestCase {
     addAction(&actions, capability: "filePicker", action: "document_picker_fixture_cell_tapped")
     let openSong = app.buttons[openSongIdentifier]
     if !waitForHittable(openSong, timeout: 8) {
-      // iOS 26.5 的远程 Files 视图第一次单击可能只建立选中状态。
-      // 重新查询同一个 typed Cell 后执行一次用户可见的双击激活；不要求
-      // 远程 AX frame 连续完全相等，因为 view-service 刷新期间坐标会抖动。
-      let retainedFixture = try requireFixtureCell(app: app, timeout: 10)
+      // 第一次单击在图标视图中可能只建立选中状态。必须先证明当前文件确实
+      // 已选中，再重新查询同一个 typed Cell 并执行一次用户可见的双击激活；
+      // 终止场景已经证明该交互能完成远程 Picker 回调。若没有进入选中态则
+      // 直接失败，不能用无条件 doubleTap 掩盖丢失的第一次动作。
+      try require(
+        waitForSelectedFixture(app: app, timeout: 5),
+        "第一次点击匿名音频 fixture 后没有进入选中状态"
+      )
+      let retainedFixture = try requireFixtureCell(app: app, timeout: 5)
       retainedFixture.doubleTap()
       addAction(
         &actions,
         capability: "filePicker",
-        action: "document_picker_fixture_cell_double_tap_reactivated"
+        action: "document_picker_selected_fixture_double_tap_activated"
       )
     }
     try require(
@@ -307,7 +317,7 @@ final class RunnerUITests: XCTestCase {
     )
     let preview = app.otherElements[previewIdentifier]
     try require(
-      waitForPreviewLyricsValue(app: app, preview: preview, timeout: 15),
+      waitForPreviewLyricsValue(preview: preview, timeout: 15),
       "预览没有显示规范化后的匿名内嵌歌词内容"
     )
   }
@@ -374,6 +384,33 @@ final class RunnerUITests: XCTestCase {
       waitForStringValue(fileName, equals: exportBaseName, timeout: 5),
       "系统保存 Picker 没有接受脱敏导出文件名"
     )
+  }
+
+  private func dismissKeyboardTutorialIfPresented(
+    in picker: SystemPickerContext,
+    actions: inout [String: [[String: Any]]]
+  ) throws {
+    let message = picker.application.staticTexts[keyboardTutorialMessage]
+    let continueButton = picker.application.buttons["Continue"]
+    let tutorialAppeared = message.waitForExistence(timeout: 2)
+      || continueButton.waitForExistence(timeout: 0)
+    guard tutorialAppeared else {
+      return
+    }
+    // 新建 Simulator 首次聚焦文本框时，系统键盘会显示教学遮罩并禁用 Save。
+    // 诊断 hierarchy 已确认遮罩提供唯一 typed Continue Button；只在精确文案
+    // 存在时点击该按钮，避免把应用或 Picker 中其他同名按钮当成系统教学层。
+    let continueButtons = picker.application.buttons.matching(
+      NSPredicate(format: "label == %@ OR identifier == %@", "Continue", "Continue")
+    ).allElementsBoundByIndex.filter {
+      $0.exists && $0.isHittable && $0.isEnabled
+    }
+    try require(continueButtons.count == 1, "系统键盘教学层的 Continue Button 不是唯一可点击控件")
+    continueButtons[0].tap()
+    // 远程 Document Picker 可能继续保留已关闭教学层的陈旧 AX 元素代理。
+    // 调用方会重新解析 typed Picker，并以 Save 唯一、可命中且已启用作为
+    // 正向完成证据，避免把系统的 snapshot 延迟误判成教学层仍未关闭。
+    addAction(&actions, capability: "filePicker", action: "keyboard_tutorial_dismissed")
   }
 
   private func systemPickerContext(app: XCUIApplication) -> SystemPickerContext? {
@@ -480,6 +517,19 @@ final class RunnerUITests: XCTestCase {
       Thread.sleep(forTimeInterval: 0.1)
     } while Date() < deadline
     throw testFailure("系统文件界面没有可点击的 \(fixtureAccessibilityName) 文件单元格")
+  }
+
+  private func waitForSelectedFixture(app: XCUIApplication, timeout: TimeInterval) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if let picker = systemPickerContext(app: app),
+         let fixture = waitForFixtureCell(in: picker, timeout: 0),
+         fixture.isSelected {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return false
   }
 
   private func isFixtureDirectory(_ picker: SystemPickerContext) -> Bool {
@@ -699,29 +749,17 @@ final class RunnerUITests: XCTestCase {
   }
 
   private func waitForPreviewLyricsValue(
-    app: XCUIApplication,
     preview: XCUIElement,
     timeout: TimeInterval
   ) -> Bool {
-    let predicate = NSPredicate(
-      format: "value MATCHES %@",
-      fixtureLyricsAccessibilityPattern
-    )
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
-      // iOS 26 的 Flutter 远程 AX snapshot 能在 app 级 typed query 中返回歌词
-      // Other，但从父 preview 执行 descendants 查询会丢失同一节点。这里保持
-      // 精确值与唯一性，并用 frame 证明节点确实属于预览区域。
-      let candidates = app.otherElements.matching(predicate).allElementsBoundByIndex.filter {
-        $0.exists && preview.frame.contains(
-          CGPoint(x: $0.frame.midX, y: $0.frame.midY)
-        )
-      }
-      if candidates.count == 1 {
+      // 预览根节点由 Flutter 直接暴露有界 value。不要再查询视觉文本子节点：
+      // iOS 远程 AX 会把长文本显示为省略值，导致完整歌词已经读取成功却假红。
+      if preview.exists,
+         let value = preview.value as? String,
+         value.range(of: fixtureLyricsAccessibilityPattern, options: .regularExpression) != nil {
         return true
-      }
-      if candidates.count > 1 {
-        return false
       }
       Thread.sleep(forTimeInterval: 0.2)
     } while Date() < deadline

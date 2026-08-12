@@ -511,6 +511,40 @@ class QualityToolTests(unittest.TestCase):
             runner,
         )
 
+    def test_macos_hybrid_gate_rejects_missing_edges_and_implicit_self(self) -> None:
+        checker = _load_native_isolation_checker()
+        flutter_source = (
+            ROOT / "lddc/integration_test/macos_file_dialog_platform_test.dart"
+        ).read_text(encoding="utf-8")
+        ui_test_source = (
+            ROOT / "lddc/macos/RunnerUITests/RunnerUITests.swift"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(
+            checker.macos_hybrid_source_failures(flutter_source, ui_test_source),
+            [],
+        )
+
+        mutations = (
+            (flutter_source.replace("operationEdges.started", "true", 1), ui_test_source),
+            (flutter_source.replace("operationEdges.completed", "true", 1), ui_test_source),
+            (
+                flutter_source,
+                ui_test_source.replace(
+                    "self.addAction(&actions, capability: capability, action: action)",
+                    "addAction(&actions, capability: capability, action: action)",
+                    1,
+                ),
+            ),
+        )
+        for mutated_flutter, mutated_ui_test in mutations:
+            self.assertNotEqual(
+                checker.macos_hybrid_source_failures(
+                    mutated_flutter,
+                    mutated_ui_test,
+                ),
+                [],
+            )
+
     def test_ios_picker_uses_positive_flutter_round_trip_and_stable_fixture(self) -> None:
         source = (ROOT / "lddc/ios/RunnerUITests/RunnerUITests.swift").read_text(
             encoding="utf-8"
@@ -519,9 +553,13 @@ class QualityToolTests(unittest.TestCase):
             "requireFixtureCell(app: app",
             'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
             'action: "document_picker_fixture_cell_tapped"',
-            'action: "document_picker_fixture_cell_double_tap_reactivated"',
-            "waitForPreviewLyricsValue(app: app, preview: preview",
-            "preview.frame.contains(",
+            "waitForSelectedFixture(app: app, timeout: 5)",
+            'action: "document_picker_selected_fixture_double_tap_activated"',
+            "waitForPreviewLyricsValue(preview: preview",
+            "let value = preview.value as? String",
+            "private func dismissKeyboardTutorialIfPresented(",
+            'action: "keyboard_tutorial_dismissed"',
+            "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
             "cancelSystemPicker(app: launchedApp, returnControl: openSong)",
             "cancelSystemPicker(app: launchedApp, returnControl: saveFile)",
         ):
@@ -529,6 +567,7 @@ class QualityToolTests(unittest.TestCase):
         # iOS 26 会短暂保留已关闭 remote view 的 AX 根；关闭门禁必须使用
         # Flutter 业务控件重新可命中的正向证据，不能继续等待 stale 根消失。
         self.assertNotIn("waitForSystemPickerToClose(", source)
+        self.assertNotIn("waitForKeyboardTutorialToDisappear(", source)
         self.assertNotIn("preview.descendants(matching:", source)
 
     def test_ios_picker_state_machine_gate_rejects_disabled_and_unconverted_mutations(self) -> None:
@@ -550,6 +589,16 @@ class QualityToolTests(unittest.TestCase):
                 1,
             ),
             source.replace("retainedFixture.doubleTap()", "retainedFixture.tap()", 1),
+            source.replace(
+                "waitForSelectedFixture(app: app, timeout: 5)",
+                "true",
+                1,
+            ),
+            source.replace(
+                "try dismissKeyboardTutorialIfPresented(in: picker, actions: &actions)",
+                "// 受控 mutation：不处理首次键盘教学层",
+                1,
+            ),
             source.replace(
                 "picker.application.otherElements.matching(",
                 "picker.application.buttons.matching(",

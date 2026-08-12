@@ -179,7 +179,7 @@ final class RunnerUITests: XCTestCase {
       panelOwnerIdentifier = panel.ownerIdentifier
       panelUsedNewProcess = panel.wasNewProcess
       let recordAction: (String, String) -> Void = { capability, action in
-        addAction(&actions, capability: capability, action: action)
+        self.addAction(&actions, capability: capability, action: action)
       }
       try operation(panel, recordAction)
       try require(waitForPanelToClose(panel, timeout: 15), "NSOpenPanel 操作后没有关闭")

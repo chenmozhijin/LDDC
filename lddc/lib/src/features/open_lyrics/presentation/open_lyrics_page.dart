@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -257,6 +259,8 @@ String _openLyricsNoticeText(BuildContext context, OpenLyricsNotice notice) {
 class _PreviewCard extends StatelessWidget {
   const _PreviewCard({required this.state, required this.contentHeight});
 
+  static const int _semanticsPreviewLimit = 256;
+
   final OpenLyricsPageState state;
   final double? contentHeight;
 
@@ -331,6 +335,11 @@ class _PreviewCard extends StatelessWidget {
                 child: Semantics(
                   identifier: AppSemanticsIdentifiers.openLyricsPreview,
                   container: true,
+                  // Flutter 的可滚动歌词正文会在 iOS 远程 AX snapshot 中被视觉截断，
+                  // 读屏用户也无法从预览容器直接获知当前内容。把首个非空行作为
+                  // 有界 value 暴露在稳定根节点上，既保留完整子语义供逐行阅读，
+                  // 也避免把整份歌词复制进 semantics tree 造成额外内存开销。
+                  value: _previewSemanticsValue(state.previewText),
                   child: Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -376,6 +385,23 @@ class _PreviewCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String? _previewSemanticsValue(String text) {
+    for (final String rawLine in LineSplitter.split(text)) {
+      final String line = rawLine.trim();
+      if (line.isEmpty) {
+        continue;
+      }
+      final List<String> boundedGraphemes = line.characters
+          .take(_semanticsPreviewLimit + 1)
+          .toList(growable: false);
+      if (boundedGraphemes.length <= _semanticsPreviewLimit) {
+        return line;
+      }
+      return boundedGraphemes.take(_semanticsPreviewLimit).join();
+    }
+    return null;
   }
 }
 

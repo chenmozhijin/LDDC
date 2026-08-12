@@ -36,12 +36,20 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         "XCUIKeyboardKey.delete.rawValue",
         "waitForStringValue(fileName, equals: exportBaseName",
         'action: "document_picker_export_name_replaced"',
+        "private func dismissKeyboardTutorialIfPresented(",
+        'private let keyboardTutorialMessage = "Speed up your typing by sliding your finger across the letters to compose a word."',
+        "let tutorialAppeared = message.waitForExistence(timeout: 2)",
+        'action: "keyboard_tutorial_dismissed"',
+        "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
+        'let save = try requireTypedButton(named: "Save", in: resumedPicker, timeout: 15)',
         'action: "document_picker_export_save_tapped"',
         "picker.application.otherElements.matching(",
         "let cancelButtons = pickerElements(",
         "if cancelButtons.count == 1",
+        "waitForSelectedFixture(app: app, timeout: 5)",
         "retainedFixture.doubleTap()",
-        'action: "document_picker_fixture_cell_double_tap_reactivated"',
+        'action: "document_picker_selected_fixture_double_tap_activated"',
+        "let value = preview.value as? String",
         "if element.exists, element.isHittable, element.isEnabled",
         "element.waitForExistence(timeout: 3), element.isHittable, element.isEnabled",
         "(!requireHittable || ($0.isHittable && $0.isEnabled))",
@@ -75,13 +83,65 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         if conversion_index < 0 or action_index < 0 or conversion_index > action_index:
             problems.append(f"iOS 场景 {method} 必须先完成生产歌词转换再执行保存动作")
 
+    export_match = re.search(
+        r"  func testDocumentPickerExportsLyricsFile\(\) throws \{"
+        r"(?P<body>[\s\S]*?)(?=\n  (?:func|private func) )",
+        source,
+    )
+    if export_match is not None:
+        export_body = export_match.group("body")
+        ordered_markers = (
+            "try replaceExportBaseName(in: picker)",
+            "try dismissKeyboardTutorialIfPresented(in: picker, actions: &actions)",
+            "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
+            'let save = try requireTypedButton(named: "Save", in: resumedPicker, timeout: 15)',
+            "save.tap()",
+        )
+        marker_positions = [export_body.find(marker) for marker in ordered_markers]
+        if any(position < 0 for position in marker_positions) or marker_positions != sorted(
+            marker_positions
+        ):
+            problems.append("iOS 导出必须先改名、关闭首次键盘教学层，再点击已启用的 Save")
+
     for forbidden in (
         "retainedFixture.tap()",
         'action: "document_picker_fixture_cell_reactivated"',
+        'action: "document_picker_fixture_cell_double_tap_reactivated"',
         "picker.root.swipeDown()",
+        "waitForKeyboardTutorialToDisappear(",
     ):
         if forbidden in source:
             problems.append(f"iOS Picker 状态机禁止旧 fallback: {forbidden}")
+    return problems
+
+
+def macos_hybrid_source_failures(flutter_source: str, ui_test_source: str) -> list[str]:
+    """校验 macOS hybrid 的单向握手和 Swift 逃逸闭包契约。"""
+
+    problems: list[str] = []
+    for marker in (
+        "OperationEdgeTracker",
+        "operationEdges.started",
+        "state: 'picker_requested'",
+        "operationEdges.completed",
+        "state: 'flutter_completed'",
+        "stateSubscription.close()",
+    ):
+        if marker not in flutter_source:
+            problems.append(f"macOS hybrid Flutter 缺少边沿握手契约: {marker}")
+    ordered_flutter_markers = (
+        "operationEdges.started",
+        "state: 'picker_requested'",
+        "operationEdges.completed",
+        "state: 'flutter_completed'",
+    )
+    marker_positions = [flutter_source.find(marker) for marker in ordered_flutter_markers]
+    if any(position < 0 for position in marker_positions) or marker_positions != sorted(
+        marker_positions
+    ):
+        problems.append("macOS hybrid 必须先观察打开边沿、发布请求，再观察完成边沿并发布结果")
+    if "self.addAction(&actions, capability: capability, action: action)" not in ui_test_source:
+        problems.append("macOS XCUITest 逃逸闭包调用实例方法时必须显式使用 self")
     return problems
 
 
@@ -296,6 +356,9 @@ def failures() -> list[str]:
     ios_app_delegate = (ROOT / "lddc/ios/Runner/AppDelegate.swift").read_text(
         encoding="utf-8"
     )
+    open_lyrics_page = (
+        ROOT / "lddc/lib/src/features/open_lyrics/presentation/open_lyrics_page.dart"
+    ).read_text(encoding="utf-8")
     ios_unit_tests = (ROOT / "lddc/ios/RunnerTests/RunnerTests.swift").read_text(
         encoding="utf-8"
     )
@@ -374,16 +437,18 @@ def failures() -> list[str]:
         "requireFixtureCell(app: app",
         'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
         'action: "document_picker_fixture_cell_tapped"',
-        'action: "document_picker_fixture_cell_double_tap_reactivated"',
+        'action: "document_picker_selected_fixture_double_tap_activated"',
         "redactDynamicPaths",
         'requireTypedButton(named: "Browse"',
         'requireTypedButton(named: "Save"',
         'private let previewIdentifier = "lddc.open_lyrics.preview"',
         'app.otherElements[previewIdentifier]',
         'private let fixtureLyricsAccessibilityPattern = #"^\\[00:00\\.\\d{2,3}\\]Hello LDDC$"#',
-        'format: "value MATCHES %@"',
-        "waitForPreviewLyricsValue(app: app, preview: preview",
-        "preview.frame.contains(",
+        "waitForPreviewLyricsValue(preview: preview",
+        "let value = preview.value as? String",
+        "private func dismissKeyboardTutorialIfPresented(",
+        'action: "keyboard_tutorial_dismissed"',
+        "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
         "cancelSystemPicker(app: launchedApp, returnControl: openSong)",
         "cancelSystemPicker(app: launchedApp, returnControl: saveFile)",
         '"On My iPhone"',
@@ -406,6 +471,15 @@ def failures() -> list[str]:
             f"禁止集合属性名 .{invalid_descendant_types[0]}"
         )
     problems.extend(ios_picker_state_machine_failures(ios_ui_test))
+    for marker in (
+        "identifier: AppSemanticsIdentifiers.openLyricsPreview",
+        "value: _previewSemanticsValue(state.previewText)",
+        "static const int _semanticsPreviewLimit = 256",
+        "LineSplitter.split(text)",
+        ".take(_semanticsPreviewLimit + 1)",
+    ):
+        if marker not in open_lyrics_page:
+            problems.append(f"Flutter 歌词预览缺少稳定且有界的结果语义: {marker}")
     for forbidden in (
         "systemPickerRoots",
         "pickerElement(",
@@ -424,6 +498,7 @@ def failures() -> list[str]:
         '"nativeWindowCount"',
         "waitForSystemPickerToClose(",
         "preview.descendants(matching:",
+        "app.otherElements.matching(predicate).allElementsBoundByIndex",
     ):
         if forbidden in ios_ui_test:
             problems.append(f"iOS Document Picker 禁止宽泛选择或 sheet fallback: {forbidden}")
@@ -969,7 +1044,12 @@ def failures() -> list[str]:
     macos_flutter_test = (
         ROOT / "lddc/integration_test/macos_file_dialog_platform_test.dart"
     ).read_text(encoding="utf-8")
+    problems.extend(macos_hybrid_source_failures(macos_flutter_test, macos_ui_tests))
     for required in (
+        "OperationEdgeTracker",
+        "operationEdges.started",
+        "operationEdges.completed",
+        "stateSubscription.close()",
         "state: 'picker_requested'",
         "state: 'flutter_completed'",
         "state: 'flutter_failed'",
@@ -1022,6 +1102,7 @@ def failures() -> list[str]:
         'recordAction("filePicker", "open_button_clicked")',
         "hasOpenPanel(panel.application)",
         'expectedState: "picker_requested"',
+        "self.addAction(&actions, capability: capability, action: action)",
         'addAction(&actions, capability: "filePicker", action: action)',
         "attachedToExistingApplication",
         "usedExactApplicationURL",

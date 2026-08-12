@@ -12,6 +12,7 @@ import 'package:path/path.dart' as p;
 import 'support/integration_drivers.dart';
 import 'support/integration_harness.dart';
 import 'support/integration_reporter.dart';
+import 'support/operation_edge_tracker.dart';
 
 const String _dialogAction = String.fromEnvironment('LDDC_MACOS_DIALOG_ACTION');
 const String _workspaceRoot = String.fromEnvironment('LDDC_IT_WORKSPACE_ROOT');
@@ -72,24 +73,40 @@ void main() {
       );
 
       await reporter.runStep('open_production_ns_open_panel', () async {
+        final OperationEdgeTracker operationEdges = OperationEdgeTracker();
+        final stateSubscription = container.listen<OpenLyricsPageState>(
+          openLyricsPageControllerProvider,
+          (OpenLyricsPageState? previous, OpenLyricsPageState next) {
+            operationEdges.observe(
+              wasActive: previous?.isOpening ?? false,
+              isActive: next.isOpening,
+            );
+          },
+          fireImmediately: true,
+        );
         try {
-          // hybrid 状态位于 LDDC App Sandbox 容器内，只能由
-          // Flutter 应用进程写入。XCUITest 只读该状态并操作已经
-          // 打开的系统面板，避免跨沙箱写入导致 EPERM。
+          await openLyrics.openSongFile();
+          // 点击驱动只保证 Flutter 的 onTap 已执行，不能用初始即为 false 的
+          // isOpening 判断操作完成。先观察 controller 的 false -> true 边沿，
+          // 再发布 picker_requested，runner 才会启动 XCUITest 操作真实面板。
+          await pumpUntil(
+            tester,
+            () => operationEdges.started,
+            timeout: runtime.defaultStepTimeout,
+            reason: '等待 Flutter controller 进入文件选择状态',
+          );
+          // hybrid 状态位于 LDDC App Sandbox 容器内，只能由 Flutter 应用进程
+          // 写入。XCUITest 只读该状态并操作已经打开的系统面板，避免跨沙箱写入。
           await _writeHybridState(
             runId: runtime.runId,
             scenario: scenarioName,
             state: 'picker_requested',
           );
-          await openLyrics.openSongFile();
-          // 驱动方法只负责点击 Flutter 按钮；真实 NSOpenPanel 由 XCUITest
-          // 并行操作。这里必须等待 controller 的终态，否则会在原生面板
-          // 尚未完成前把 isOpening=true 误判为业务失败。XCUITest 不再等待
-          // flutter_completed，runner 会在原生动作成功后等待本条件收敛，
-          // 因此不会形成两个进程互相等待的循环。
+          // 完成条件必须来自同一次操作的 true -> false 边沿。这样既不会在
+          // 原生面板开始前提前通过，也能把 controller 未收口准确报告为超时。
           await pumpUntil(
             tester,
-            () => !container.read(openLyricsPageControllerProvider).isOpening,
+            () => operationEdges.completed,
             timeout: runtime.defaultStepTimeout,
             reason: _dialogAction == 'select'
                 ? '等待 NSOpenPanel 选择结果返回 Flutter'
@@ -158,6 +175,8 @@ void main() {
             // 状态记录失败不能覆盖原始业务异常。
           }
           Error.throwWithStackTrace(error, stackTrace);
+        } finally {
+          stateSubscription.close();
         }
       });
 

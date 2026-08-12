@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -416,6 +417,83 @@ void main() {
       find.bySemanticsIdentifier(AppSemanticsIdentifiers.openLyricsPreview),
       findsOneWidget,
     );
+    final SemanticsNode preview = tester.getSemantics(
+      find.bySemanticsIdentifier(AppSemanticsIdentifiers.openLyricsPreview),
+    );
+    expect(preview.getSemanticsData().value, '[00:00.00]Hello LDDC');
+  });
+
+  testWidgets('预览根语义只暴露有界的首个非空行', (WidgetTester tester) async {
+    final String longLine = List<String>.filled(300, 'A').join();
+    final _FakeOpenLyricsInputPicker picker = _FakeOpenLyricsInputPicker(
+      pickedLyricsFile: _MemoryPickedFileHandle(
+        name: 'long.lrc',
+        path: r'D:\long.lrc',
+        bytes: _lyricsFileBytes('\n$longLine\n[00:01.00]第二行不会复制到根语义'),
+      ),
+    );
+    final ProviderContainer container = _createContainer(
+      picker: picker,
+      lyricsApi: _FakeLyricsApi(lyrics: _buildLyrics()),
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildTestApp(container));
+    await container
+        .read(openLyricsPageControllerProvider.notifier)
+        .openLyricsFile();
+    await tester.pumpAndSettle();
+
+    final SemanticsNode preview = tester.getSemantics(
+      find.bySemanticsIdentifier(AppSemanticsIdentifiers.openLyricsPreview),
+    );
+    expect(preview.getSemanticsData().value, longLine.substring(0, 256));
+  });
+
+  testWidgets('预览根语义截断不会切开 Unicode grapheme', (WidgetTester tester) async {
+    final String longLine =
+        '${List<String>.filled(255, 'A').join()}👨‍👩‍👧‍👦B';
+    final _FakeOpenLyricsInputPicker picker = _FakeOpenLyricsInputPicker(
+      pickedLyricsFile: _MemoryPickedFileHandle(
+        name: 'unicode.lrc',
+        path: r'D:\unicode.lrc',
+        bytes: _lyricsFileBytes('\n$longLine\n[00:01.00]有效歌词结构'),
+      ),
+    );
+    final ProviderContainer container = _createContainer(
+      picker: picker,
+      lyricsApi: _FakeLyricsApi(lyrics: _buildLyrics()),
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildTestApp(container));
+    await container
+        .read(openLyricsPageControllerProvider.notifier)
+        .openLyricsFile();
+    await tester.pumpAndSettle();
+
+    final SemanticsNode preview = tester.getSemantics(
+      find.bySemanticsIdentifier(AppSemanticsIdentifiers.openLyricsPreview),
+    );
+    expect(
+      preview.getSemanticsData().value,
+      '${List<String>.filled(255, 'A').join()}👨‍👩‍👧‍👦',
+    );
+  });
+
+  testWidgets('空白预览不会向稳定根节点复制空语义值', (WidgetTester tester) async {
+    final ProviderContainer container = _createContainer(
+      picker: _FakeOpenLyricsInputPicker(),
+      lyricsApi: _FakeLyricsApi(lyrics: _buildLyrics()),
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(_buildTestApp(container));
+
+    final SemanticsNode preview = tester.getSemantics(
+      find.bySemanticsIdentifier(AppSemanticsIdentifiers.openLyricsPreview),
+    );
+    expect(preview.getSemanticsData().value, isEmpty);
   });
 
   group('OpenLyricsPage', () {
