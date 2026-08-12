@@ -66,15 +66,15 @@ class QMAPI(CloudAPI):
         )
         self.comm = {
             "ct": 11,
-            "cv": "2111",
-            "v": "2111",
+            "cv": "1003006",
+            "v": "1003006",
             # "QIMEI36": ""
             # "QIMEI": "",
             "os_ver": "15",
             "phonetype": "24122RKC7C",  # REDMI K80 Pro https://mifirm.net/model/miro.ttt
             "rom": f"Redmi/miro/miro:15/AE3A.240806.005/OS2.0.10{random.choice(['5', '4', '2'])}.0.VOMCNXM:user/release-keys",
             # "aid"
-            "tmeAppID": "qqmusic",
+            "tmeAppID": "qqmusiclight",
             "nettype": "NETWORK_WIFI",
             # "uid"
             # "sid"
@@ -193,7 +193,7 @@ class QMAPI(CloudAPI):
             "grp": 1,
         }
         data = self.request(
-            "DoSearchForQQMusicDesktop",
+            "DoSearchForQQMusicLite",
             "music.search.SearchCgiService",
             param,
         )
@@ -202,7 +202,7 @@ class QMAPI(CloudAPI):
         match search_type:
             case SearchType.SONG:
                 return APIResultList(
-                    self.format_songinfos(data["body"]["song"]["list"]),
+                    self.format_songinfos(data["body"]["item_song"]),
                     SearchInfo(
                         source=self.source,
                         keyword=keyword,
@@ -211,8 +211,8 @@ class QMAPI(CloudAPI):
                     ),
                     (
                         start_index,
-                        start_index + len(data["body"]["song"]["list"]) - 1,
-                        data["meta"]["sum"] if len(data["body"]["song"]["list"]) == pagesize else start_index + len(data["body"]["song"]["list"]),
+                        start_index + len(data["body"]["item_song"]) - 1,
+                        data["meta"]["sum"] if len(data["body"]["item_song"]) == pagesize else start_index + len(data["body"]["item_song"]),
                     ),
                 )
 
@@ -222,20 +222,20 @@ class QMAPI(CloudAPI):
                         SongListInfo(
                             source=self.source,
                             type=SongListType.ALBUM,
-                            id=str(album["albumID"]),
-                            mid=album["albumMID"],
-                            title=album["albumName"],
-                            imgurl=album["albumPic"],
-                            songcount=album["song_count"],
+                            id=str(album["id"]),
+                            mid=album["albummid"],
+                            title=album["name"],
+                            imgurl=album["pic"],
+                            songcount=None,  # Lite版的搜索结果不含歌曲数量
                             publishtime=int(
-                                datetime.strptime(album["publicTime"], "%Y-%m-%d")
+                                datetime.strptime(album["publish_date"], "%Y-%m-%d")
                                 .replace(tzinfo=timezone(timedelta(hours=8)))
                                 .astimezone(timezone.utc)
                                 .timestamp(),
                             ),
-                            author=album["singerName"],
+                            author=album["singer"],
                         )
-                        for album in data["body"]["album"]["list"]
+                        for album in data["body"]["item_album"]
                     ],
                     SearchInfo(
                         source=self.source,
@@ -245,44 +245,10 @@ class QMAPI(CloudAPI):
                     ),
                     (
                         start_index,
-                        start_index + len(data["body"]["album"]["list"]) - 1,
-                        data["meta"]["sum"] if len(data["body"]["album"]["list"]) == pagesize else start_index + len(data["body"]["album"]["list"]),
+                        start_index + len(data["body"]["item_album"]) - 1,
+                        data["meta"]["sum"] if len(data["body"]["item_album"]) == pagesize else start_index + len(data["body"]["item_album"]),
                     ),
                 )
-
-            # Lite版的结果处理
-            #  return APIResultList(
-            #          [
-            #              SongListInfo(
-            #                  source=self.source,
-            #                  type=SongListType.ALBUM,
-            #                  id=album["id"],
-            #                  mid=album["albummid"],
-            #                  title=album["name"],
-            #                  imgurl=album["pic"],
-            #                  songcount=None,
-            #                  publishtime=int(
-            #                      datetime.strptime(album["publish_date"], "%Y-%m-%d")
-            #                      .replace(tzinfo=timezone(timedelta(hours=8)))
-            #                      .astimezone(timezone.utc)
-            #                      .timestamp(),
-            #                  ),
-            #                  author=album["singer"],
-            #              )
-            #              for album in data["body"]["item_album"]
-            #          ],
-            #          SearchInfo(
-            #              source=self.source,
-            #              keyword=keyword,
-            #              search_type=search_type,
-            #              page=page,
-            #          ),
-            #          (
-            #              start_index,
-            #              start_index + len(data["body"]["item_album"]) - 1,
-            #              data["meta"]["sum"] if len(data["body"]["item_album"]) == pagesize else start_index + len(data["body"]["item_album"]),
-            #          ),
-            #      )
 
             case SearchType.SONGLIST:
                 return APIResultList(
@@ -302,7 +268,7 @@ class QMAPI(CloudAPI):
                             ),
                             author=songlist["nickname"],
                         )
-                        for songlist in data["body"]["songlist"]["list"]
+                        for songlist in data["body"]["item_songlist"]
                     ],
                     SearchInfo(
                         source=self.source,
@@ -312,8 +278,8 @@ class QMAPI(CloudAPI):
                     ),
                     (
                         start_index,
-                        start_index + len(data["body"]["songlist"]["list"]) - 1,
-                        data["meta"]["sum"] if len(data["body"]["songlist"]["list"]) == pagesize else start_index + len(data["body"]["songlist"]["list"]),
+                        start_index + len(data["body"]["item_songlist"]) - 1,
+                        data["meta"]["sum"] if len(data["body"]["item_songlist"]) == pagesize else start_index + len(data["body"]["item_songlist"]),
                     ),
                 )
 
