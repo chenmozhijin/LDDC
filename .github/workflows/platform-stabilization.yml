@@ -18,6 +18,7 @@ env:
 
 jobs:
   macos-open-panel:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: macos-26
     timeout-minutes: 45
     env:
@@ -102,7 +103,7 @@ jobs:
       - run: flutter pub get
       - name: Keep Apple dependency resolution on CocoaPods
         run: flutter config --no-enable-swift-package-manager
-      - name: Create and boot the iOS simulator
+      - name: Create the isolated iOS simulator
         run: bash tool/test/create_ios_simulator.sh
       - name: Run iOS Document Picker only
         shell: pwsh
@@ -131,6 +132,11 @@ jobs:
           uname -a > "$context_dir/uname.txt" 2>&1
           xcodebuild -version > "$context_dir/xcode-version.txt" 2>&1
           xcrun simctl list devices --json > "$context_dir/simulator-devices.json" 2>&1
+          xcrun xcdevice list --timeout 5 > "$context_dir/xcdevice-list.json" 2>&1
+          xcodebuild -workspace lddc/ios/Runner.xcworkspace \
+            -scheme RunnerPlatformTests \
+            -configuration PlatformTest \
+            -showdestinations > "$context_dir/showdestinations.txt" 2>&1
           if [[ -n "$DEVICE_ID" ]]; then
             xcrun simctl io "$DEVICE_ID" screenshot "$context_dir/final-screen.png" \
               > "$context_dir/screenshot.log" 2>&1

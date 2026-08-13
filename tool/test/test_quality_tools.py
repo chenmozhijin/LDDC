@@ -708,9 +708,65 @@ class QualityToolTests(unittest.TestCase):
         )
         self.assertIn('if [[ -n "${GITHUB_ENV:-}" ]]', creator)
         self.assertIn("run_ios_platform_tests.ps1 -Device", creator)
+        self.assertNotIn('xcrun simctl boot "$udid"', creator)
+        self.assertIn("platform runner owns boot and cleanup", creator)
         # ERR trap 必须覆盖报告和环境交接；成功后才能把清理责任交给调用方。
         self.assertGreater(creator.rfind("trap - ERR"), creator.find('>"$report_path"'))
         self.assertGreater(creator.rfind("trap - ERR"), creator.find('>>"$GITHUB_ENV"'))
+
+    def test_ios_build_is_decoupled_from_dynamic_destination(self) -> None:
+        runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
+            encoding="utf-8"
+        )
+        workflow = (
+            ROOT / ".github/workflows/platform-stabilization.yml"
+        ).read_text(encoding="utf-8")
+        build_match = re.search(
+            r'Phase "ios-xcuitest-build-for-testing"[\s\S]{0,1200}?if \(\$buildExitCode -ne 0\)',
+            runner,
+        )
+        self.assertIsNotNone(build_match)
+        build_source = build_match.group(0)
+        self.assertIn('"-destination", "generic/platform=iOS Simulator"', build_source)
+        self.assertNotIn("id=$Device", build_source)
+        for marker in (
+            "Invoke-XcodeDestinationProbe",
+            "Wait-XcodeDestinationReady",
+            '@("xcdevice", "list", "--timeout", "5")',
+            '"-showdestinations"',
+            "Restart-SimulatorForDestinationRegistration",
+            '"destination_registration_failure"',
+            "Set-DestinationProbeMetadata -Probe $destinationProbe",
+        ):
+            self.assertIn(marker, runner)
+        self.assertLess(
+            runner.find('Wait-XcodeDestinationReady -Stage "initial"'),
+            runner.find(
+                "foreach ($entry in $scenarios)",
+                runner.find('Wait-XcodeDestinationReady -Stage "initial"'),
+            ),
+        )
+        self.assertIn("if: github.event_name == 'workflow_dispatch'", workflow)
+        self.assertIn("xcrun xcdevice list --timeout 5", workflow)
+        self.assertIn("-showdestinations", workflow)
+
+    def test_ios_dynamic_destination_mutations_are_rejected(self) -> None:
+        checker = _load_native_isolation_checker()
+        source = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(checker.ios_destination_contract_failures(source), [])
+        mutations = (
+            source.replace(
+                '"-destination", "generic/platform=iOS Simulator"',
+                '"-destination", "platform=iOS Simulator,id=$Device,arch=$hostArchitecture"',
+                1,
+            ),
+            source.replace("Wait-XcodeDestinationReady", "Wait-SimctlOnlyReady"),
+            source.replace('"destination_registration_failure"', '"build_failure"', 1),
+        )
+        for mutation in mutations:
+            self.assertNotEqual(checker.ios_destination_contract_failures(mutation), [])
 
     def test_ios_element_type_gate_rejects_collection_property_mutation(self) -> None:
         checker = _load_native_isolation_checker()

@@ -70,9 +70,6 @@ cleanup_failed_device() {
   xcrun simctl delete "$udid" >/dev/null 2>&1 || true
 }
 trap cleanup_failed_device ERR
-xcrun simctl boot "$udid"
-xcrun simctl bootstatus "$udid" -b
-
 jq -n \
   --arg udid "$udid" \
   --arg runtime "$runtime" \
@@ -102,4 +99,4 @@ fi
 # 设备元数据和调用方交接全部成功后，才把清理所有权交给 workflow 或本地开发者。
 # 此前任一步骤失败都会由 ERR trap 删除本次创建的唯一模拟器。
 trap - ERR
-echo "Created iOS simulator: $model $runtime_version ($udid)"
+echo "Created iOS simulator: $model $runtime_version ($udid); platform runner owns boot and cleanup"

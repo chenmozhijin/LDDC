@@ -131,6 +131,44 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
     return problems
 
 
+def ios_destination_contract_failures(source: str) -> list[str]:
+    """校验 iOS 构建与动态 Simulator discovery 已解耦。"""
+
+    problems: list[str] = []
+    for marker in (
+        '"-destination", "generic/platform=iOS Simulator"',
+        "Invoke-XcodeDestinationProbe",
+        "Wait-XcodeDestinationReady",
+        '@("xcdevice", "list", "--timeout", "5")',
+        '"-showdestinations"',
+        "Restart-SimulatorForDestinationRegistration",
+        '"destination_registration_failure"',
+        "Set-DestinationProbeMetadata -Probe $destinationProbe",
+    ):
+        if marker not in source:
+            problems.append(f"iOS destination discovery 缺少强契约: {marker}")
+
+    build_block = re.search(
+        r'Phase "ios-xcuitest-build-for-testing"[\s\S]{0,1200}?'
+        r"if \(\$buildExitCode -ne 0\)",
+        source,
+    )
+    if build_block is None:
+        problems.append("iOS runner 无法定位 build-for-testing 有界构建块")
+    else:
+        build_source = build_block.group(0)
+        if '"-destination", "generic/platform=iOS Simulator"' not in build_source:
+            problems.append("iOS build-for-testing 必须使用 generic Simulator，禁止依赖动态 UDID")
+        if "id=$Device" in build_source:
+            problems.append("iOS build-for-testing 禁止绑定尚未被 Xcode 发现的动态 UDID")
+
+    probe_index = source.find('Wait-XcodeDestinationReady -Stage "initial"')
+    test_loop_index = source.find("foreach ($entry in $scenarios)", probe_index)
+    if not (0 <= probe_index < test_loop_index):
+        problems.append("iOS Xcode destination 就绪门禁必须发生在任何 XCTest 场景之前")
+    return problems
+
+
 def macos_hybrid_source_failures(flutter_source: str, ui_test_source: str) -> list[str]:
     """校验 macOS hybrid 的单向握手和 Swift 逃逸闭包契约。"""
 
@@ -1326,6 +1364,16 @@ def failures() -> list[str]:
         "iOS hosted Xcode 漂移",
         "iOS Simulator runtime 漂移",
         "arch=$hostArchitecture",
+        '"-destination", "generic/platform=iOS Simulator"',
+        "Wait-XcodeDestinationReady",
+        "Invoke-XcodeDestinationProbe",
+        '@("xcdevice", "list", "--timeout", "5")',
+        '"-showdestinations"',
+        "Restart-SimulatorForDestinationRegistration",
+        '"destination_registration_failure"',
+        'showDestinationsVisible = Test-TextContainsDeviceId',
+        'xcdeviceVisible = Test-TextContainsDeviceId',
+        'Set-DestinationProbeMetadata -Probe $destinationProbe',
         "Resolve-UniqueBuildArtifact",
         "iOS Xcode DerivedData 超出测试构建根",
         '[ValidateSet("ios_document_picker_export_cancel")]',
@@ -1348,6 +1396,7 @@ def failures() -> list[str]:
     ):
         if required not in ios_runner:
             problems.append(f"iOS runner 缺少 Simulator 证据或串行测试契约: {required}")
+    problems.extend(ios_destination_contract_failures(ios_runner))
     for forbidden in (
         "& xcodebuild build-for-testing",
         "& xcodebuild test-without-building",

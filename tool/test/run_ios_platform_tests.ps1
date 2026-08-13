@@ -51,6 +51,13 @@ $simulatorMetadata = [ordered]@{
   xcodeVersion = $xcodeVersion
   configuredLanguage = "unknown"
   configuredLocale = "unknown"
+  destinationDiscovery = [ordered]@{
+    ready = $false
+    stage = "not_started"
+    attempt = 0
+    xcdeviceVisible = $false
+    showDestinationsVisible = $false
+  }
 }
 if (-not [IO.Path]::IsPathRooted($ReportDir)) {
   $ReportDir = Join-Path $appRoot $ReportDir
@@ -273,6 +280,13 @@ function Get-SimulatorMetadata {
           state = [string]$deviceInfo.state
           hostArchitecture = $hostArchitecture
           xcodeVersion = $xcodeVersion
+          destinationDiscovery = [ordered]@{
+            ready = $false
+            stage = "not_started"
+            attempt = 0
+            xcdeviceVisible = $false
+            showDestinationsVisible = $false
+          }
         }
       }
     }
@@ -316,6 +330,148 @@ function Ensure-SimulatorBooted {
   $finalState = Get-SimulatorState
   if ($finalState -ne "Booted") {
     throw "iOS Simulator 在 $Stage 等待后仍不是 Booted: $finalState"
+  }
+}
+
+function Test-TextContainsDeviceId {
+  param(
+    [AllowEmptyString()]
+    [string]$Text
+  )
+
+  return -not [string]::IsNullOrWhiteSpace($Text) `
+    -and $Text.Contains($Device, [StringComparison]::OrdinalIgnoreCase)
+}
+
+function Invoke-XcodeDestinationProbe {
+  param(
+    [Parameter(Mandatory = $true)][string]$Stage,
+    [Parameter(Mandatory = $true)][int]$Attempt
+  )
+
+  $safeStage = $Stage -replace '[^A-Za-z0-9._-]', '-'
+  $prefix = "destination-$safeStage-attempt-$Attempt"
+  $xcdeviceStdout = Join-Path $rawDir "$prefix.xcdevice.stdout.json"
+  $xcdeviceStderr = Join-Path $rawDir "$prefix.xcdevice.stderr.log"
+  $destinationsStdout = Join-Path $rawDir "$prefix.showdestinations.stdout.log"
+  $destinationsStderr = Join-Path $rawDir "$prefix.showdestinations.stderr.log"
+  $probePath = Join-Path $rawDir "$prefix.json"
+
+  # simctl 的 Booted 只代表 CoreSimulator 已完成启动，不代表 Xcode 的
+  # destination discovery 已经注册该设备。xcdevice 与当前 scheme 的
+  # showdestinations 必须同时看见相同 UDID，才允许启动真实 XCTest。
+  $xcdeviceExitCode = Invoke-BoundedNativeCommand `
+    -Phase "ios-xcdevice-$safeStage-$Attempt" `
+    -FilePath "xcrun" `
+    -Arguments @("xcdevice", "list", "--timeout", "5") `
+    -TimeoutSeconds 20 `
+    -StdoutPath $xcdeviceStdout `
+    -StderrPath $xcdeviceStderr
+  $destinationsExitCode = Invoke-BoundedNativeCommand `
+    -Phase "ios-showdestinations-$safeStage-$Attempt" `
+    -FilePath "xcodebuild" `
+    -Arguments @(
+      "-workspace", "ios/Runner.xcworkspace",
+      "-scheme", "RunnerPlatformTests",
+      "-configuration", "PlatformTest",
+      "-showdestinations"
+    ) `
+    -TimeoutSeconds 30 `
+    -StdoutPath $destinationsStdout `
+    -StderrPath $destinationsStderr
+
+  $xcdeviceText = if (Test-Path -LiteralPath $xcdeviceStdout -PathType Leaf) {
+    Get-Content -LiteralPath $xcdeviceStdout -Raw
+  } else {
+    ""
+  }
+  if (Test-Path -LiteralPath $xcdeviceStderr -PathType Leaf) {
+    $xcdeviceText += Get-Content -LiteralPath $xcdeviceStderr -Raw
+  }
+  $destinationsText = if (Test-Path -LiteralPath $destinationsStdout -PathType Leaf) {
+    Get-Content -LiteralPath $destinationsStdout -Raw
+  } else {
+    ""
+  }
+  if (Test-Path -LiteralPath $destinationsStderr -PathType Leaf) {
+    $destinationsText += Get-Content -LiteralPath $destinationsStderr -Raw
+  }
+  $state = Get-SimulatorState
+  $probe = [ordered]@{
+    stage = $Stage
+    attempt = $Attempt
+    checkedAt = [DateTimeOffset]::UtcNow.ToString("O")
+    deviceId = $Device
+    simctlState = $state
+    xcdeviceExitCode = $xcdeviceExitCode
+    xcdeviceVisible = Test-TextContainsDeviceId -Text $xcdeviceText
+    showDestinationsExitCode = $destinationsExitCode
+    showDestinationsVisible = Test-TextContainsDeviceId -Text $destinationsText
+  }
+  $probe["ready"] = $probe.simctlState -eq "Booted" `
+    -and $probe.xcdeviceExitCode -eq 0 `
+    -and $probe.xcdeviceVisible `
+    -and $probe.showDestinationsExitCode -eq 0 `
+    -and $probe.showDestinationsVisible
+  [IO.File]::WriteAllText(
+    $probePath,
+    ($probe | ConvertTo-Json -Depth 10),
+    [Text.UTF8Encoding]::new($false)
+  )
+  return $probe
+}
+
+function Wait-XcodeDestinationReady {
+  param(
+    [Parameter(Mandatory = $true)][string]$Stage,
+    [ValidateRange(1, 12)][int]$MaxAttempts = 6,
+    [ValidateRange(1, 10)][int]$DelaySeconds = 2
+  )
+
+  $lastProbe = $null
+  for ($attempt = 1; $attempt -le $MaxAttempts; $attempt += 1) {
+    $lastProbe = Invoke-XcodeDestinationProbe -Stage $Stage -Attempt $attempt
+    if ($lastProbe.ready) {
+      return $lastProbe
+    }
+    if ($attempt -lt $MaxAttempts) {
+      Start-Sleep -Seconds $DelaySeconds
+    }
+  }
+  return $lastProbe
+}
+
+function Set-DestinationProbeMetadata {
+  param($Probe)
+
+  if ($null -eq $Probe) {
+    return
+  }
+  $simulatorMetadata["destinationDiscovery"] = [ordered]@{
+    ready = [bool]$Probe.ready
+    stage = [string]$Probe.stage
+    attempt = [int]$Probe.attempt
+    xcdeviceVisible = [bool]$Probe.xcdeviceVisible
+    showDestinationsVisible = [bool]$Probe.showDestinationsVisible
+  }
+}
+
+function Restart-SimulatorForDestinationRegistration {
+  param([Parameter(Mandatory = $true)][string]$Stage)
+
+  # 只重启调用方明确传入并负责清理的同一个设备。禁止在 runner 内新建第二个
+  # UDID，否则 workflow 仍会清理旧设备并泄漏新设备。该恢复只发生在任何
+  # XCTest 尚未开始之前，且全程只允许一次。
+  $state = Get-SimulatorState
+  if ($state -in @("Booted", "Booting")) {
+    Invoke-RequiredSimctl -Stage "$Stage/shutdown" -CommandArguments @("shutdown", $Device) | Out-Null
+  } elseif ($state -ne "Shutdown") {
+    throw "iOS Simulator 在 destination 恢复前处于不可恢复状态: $state"
+  }
+  Invoke-RequiredSimctl -Stage "$Stage/boot" -CommandArguments @("boot", $Device) | Out-Null
+  Invoke-RequiredSimctl -Stage "$Stage/bootstatus" -CommandArguments @("bootstatus", $Device, "-b") | Out-Null
+  if ((Get-SimulatorState) -ne "Booted") {
+    throw "iOS Simulator destination 恢复后仍未完成启动"
   }
 }
 
@@ -625,21 +781,15 @@ try {
       "Process"
     )
   }
-  Ensure-SimulatorBooted -Stage "runner-entry"
+  # 编译测试产物只依赖固定的 iOS Simulator SDK，不绑定刚创建的临时
+  # UDID。这样 CoreSimulator 已 Booted、但 Xcode destination discovery
+  # 尚未注册设备时，不会在 build-for-testing 阶段产生误导性的 exit 70。
   $simulatorMetadata = Get-SimulatorMetadata
   $expectedRuntimeVersion = [string]$env:LDDC_IOS_RUNTIME_VERSION
   if (-not [string]::IsNullOrWhiteSpace($expectedRuntimeVersion) `
       -and $simulatorMetadata.runtimeVersion -ne $expectedRuntimeVersion) {
     throw "iOS Simulator runtime 漂移：actual=$($simulatorMetadata.runtimeVersion) expected=$expectedRuntimeVersion"
   }
-  Invoke-RequiredSimctl `
-    -Stage "locale/languages" `
-    -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLanguages", "-array", "en") | Out-Null
-  Invoke-RequiredSimctl `
-    -Stage "locale/region" `
-    -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLocale", "en_US") | Out-Null
-  $simulatorMetadata.configuredLanguage = "en"
-  $simulatorMetadata.configuredLocale = "en_US"
   $activeInfrastructureFailureClass = "build_failure"
   # Document Picker 已被前移到其它完整 Flutter 构建之前。首次 checkout 中
   # 只有 pub 依赖，尚无 Generated.xcconfig 与 Pods；先执行 config-only 和
@@ -672,7 +822,7 @@ try {
       "-workspace", "ios/Runner.xcworkspace",
       "-scheme", "RunnerPlatformTests",
       "-configuration", "PlatformTest",
-      "-destination", "platform=iOS Simulator,id=$Device,arch=$hostArchitecture",
+      "-destination", "generic/platform=iOS Simulator",
       "-parallel-testing-enabled", "NO",
       "-derivedDataPath", $derivedData,
       "CODE_SIGNING_ALLOWED=NO"
@@ -682,6 +832,32 @@ try {
     -StderrPath (Join-Path $rawDir "build-for-testing.stderr.log")
   if ($buildExitCode -ne 0) {
     throw "iOS build-for-testing 失败，exit=$buildExitCode"
+  }
+  $activeInfrastructureFailureClass = "destination_registration_failure"
+
+  Ensure-SimulatorBooted -Stage "before-destination-discovery"
+  $simulatorMetadata.state = Get-SimulatorState
+  Invoke-RequiredSimctl `
+    -Stage "locale/languages" `
+    -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLanguages", "-array", "en") | Out-Null
+  Invoke-RequiredSimctl `
+    -Stage "locale/region" `
+    -CommandArguments @("spawn", $Device, "defaults", "write", "NSGlobalDomain", "AppleLocale", "en_US") | Out-Null
+  $simulatorMetadata.configuredLanguage = "en"
+  $simulatorMetadata.configuredLocale = "en_US"
+  $destinationProbe = Wait-XcodeDestinationReady -Stage "initial"
+  Set-DestinationProbeMetadata -Probe $destinationProbe
+  if ($null -eq $destinationProbe -or -not $destinationProbe.ready) {
+    Restart-SimulatorForDestinationRegistration -Stage "destination-registration-recovery"
+    $simulatorMetadata.state = Get-SimulatorState
+    $destinationProbe = Wait-XcodeDestinationReady -Stage "recovery"
+    Set-DestinationProbeMetadata -Probe $destinationProbe
+  }
+  if ($null -eq $destinationProbe -or -not $destinationProbe.ready) {
+    throw (
+      "iOS Simulator 已由 simctl 启动，但 xcdevice 或 RunnerPlatformTests " +
+      "showdestinations 在一次有界重启后仍未发现设备 $Device"
+    )
   }
   $activeInfrastructureFailureClass = "test_infrastructure_failure"
 
