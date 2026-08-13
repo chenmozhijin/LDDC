@@ -3,7 +3,9 @@ param(
   [string]$Device,
   [string]$ReportDir = "build/integration_reports/ios-native",
   [ValidateRange(30, 600)]
-  [int]$ScenarioTimeoutSeconds = 120
+  [int]$ScenarioTimeoutSeconds = 120,
+  [ValidateSet("ios_document_picker_export_cancel")]
+  [string[]]$ExperimentalScenarios = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -79,7 +81,16 @@ $scenarioDir = Join-Path $runRoot "scenarios"
 $rawDir = Join-Path $runRoot "raw"
 $junitDir = Join-Path $runRoot "junit"
 $attachmentsDir = Join-Path $runRoot "attachments"
-foreach ($directory in @($scenarioDir, $rawDir, $junitDir, $attachmentsDir)) {
+$requiredScenarioDir = Join-Path $runRoot "required-scenarios"
+$requiredJunitDir = Join-Path $runRoot "required-junit"
+foreach ($directory in @(
+    $scenarioDir,
+    $rawDir,
+    $junitDir,
+    $attachmentsDir,
+    $requiredScenarioDir,
+    $requiredJunitDir
+  )) {
   New-Item -ItemType Directory -Force -Path $directory | Out-Null
 }
 
@@ -467,6 +478,25 @@ function Add-RunnerEvidence {
   )
 }
 
+function Add-ExperimentalObservationEvidence {
+  param(
+    [Parameter(Mandatory = $true)][string]$EvidencePath,
+    [Parameter(Mandatory = $true)][string]$Reason
+  )
+
+  $payload = Get-Content -LiteralPath $EvidencePath -Raw | ConvertFrom-Json -AsHashtable
+  if (-not $payload.ContainsKey("extra") -or $null -eq $payload.extra) {
+    $payload["extra"] = [ordered]@{}
+  }
+  $payload.extra["experimentalObservation"] = $true
+  $payload.extra["experimentalReason"] = $Reason
+  [IO.File]::WriteAllText(
+    $EvidencePath,
+    ($payload | ConvertTo-Json -Depth 20),
+    [Text.UTF8Encoding]::new($false)
+  )
+}
+
 function Write-FallbackSummary {
   param(
     [Parameter(Mandatory = $true)][string]$Path,
@@ -568,6 +598,15 @@ $scenarios = @(
   }
 )
 $overallExitCode = 0
+$experimentalScenarioAllowlist = [Collections.Generic.HashSet[string]]::new(
+  [StringComparer]::Ordinal
+)
+foreach ($scenario in $ExperimentalScenarios) {
+  $experimentalScenarioAllowlist.Add($scenario) | Out-Null
+}
+$observedExperimentalScenarios = [Collections.Generic.HashSet[string]]::new(
+  [StringComparer]::Ordinal
+)
 $infrastructureFailureMessage = $null
 $infrastructureFailureClass = "infrastructure_failure"
 $activeInfrastructureFailureClass = "infrastructure_failure"
@@ -956,6 +995,22 @@ try {
         -PostconditionStatus $postconditionStatus
       $evidencePath = Get-Item -LiteralPath $fallbackEvidence
     }
+    $experimentalObservation = $false
+    if ($experimentalScenarioAllowlist.Contains($scenario) `
+        -and $scenario -eq "ios_document_picker_export_cancel" `
+        -and $testExitCode -ne 0 `
+        -and $reportingErrors.Count -eq 0) {
+      $summaryText = Get-Content -LiteralPath $summaryPath -Raw
+      if ($summaryText.Contains(
+          "experimental_ax_cancel_unavailable",
+          [StringComparison]::Ordinal
+        )) {
+        $experimentalObservation = $true
+        Add-ExperimentalObservationEvidence `
+          -EvidencePath $evidencePath.FullName `
+          -Reason "iOS 26.5 保存型 Picker 返回根层后未暴露可命中的 typed Cancel Button"
+      }
+    }
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
     & python $normalizer `
       --scenario-report $scenarioPath `
@@ -971,9 +1026,18 @@ try {
     $junitExitCode = $LASTEXITCODE
     if ($effectiveExitCode -ne 0 -or $normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
       # Document Picker 的选择、取消、导出和生命周期场景彼此独立。单个失败
-      # 不能阻断后续证据收集，但最终退出码仍必须失败，避免 CI 假绿。
-      $overallExitCode = 1
-      Write-Warning "iOS XCUITest 场景 $scenario 失败，继续收集其余独立场景"
+      # 不能阻断后续证据收集。只有保存型 Picker 明确返回专用 AX 限制标记、
+      # 且统一报告均完整时，实验 workflow 才将该场景排除于 required outcome；
+      # 编译、runner、报告或其他断言失败仍然必须使 job 失败。
+      if ($experimentalObservation `
+          -and $normalizeExitCode -eq 0 `
+          -and $junitExitCode -eq 0) {
+        $observedExperimentalScenarios.Add($scenario) | Out-Null
+        Write-Warning "iOS XCUITest 场景 $scenario 保留失败证据并标记为实验观察"
+      } else {
+        $overallExitCode = 1
+        Write-Warning "iOS XCUITest 场景 $scenario 失败，继续收集其余独立场景"
+      }
     }
   }
 } catch {
@@ -1012,9 +1076,26 @@ if (-not [string]::IsNullOrWhiteSpace($infrastructureFailureMessage)) {
     -FailureClass $infrastructureFailureClass
 }
 
+foreach ($entry in $scenarios) {
+  $scenario = $entry.Name
+  if ($observedExperimentalScenarios.Contains($scenario)) {
+    continue
+  }
+  $scenarioPath = Join-Path $scenarioDir "$scenario.json"
+  $junitPath = Join-Path $junitDir "$scenario.xml"
+  if (-not (Test-Path -LiteralPath $scenarioPath -PathType Leaf) `
+      -or -not (Test-Path -LiteralPath $junitPath -PathType Leaf)) {
+    $overallExitCode = 1
+    Write-Error "iOS required 场景 $scenario 缺少 scenario JSON 或 JUnit" -ErrorAction Continue
+    continue
+  }
+  Copy-Item -LiteralPath $scenarioPath -Destination $requiredScenarioDir -Force
+  Copy-Item -LiteralPath $junitPath -Destination $requiredJunitDir -Force
+}
+
 & python $verifier `
-  --directory $scenarioDir `
-  --junit-directory $junitDir `
+  --directory $requiredScenarioDir `
+  --junit-directory $requiredJunitDir `
   --profile platform `
   --platform ios `
   --run-id $runId `

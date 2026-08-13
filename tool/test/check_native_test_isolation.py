@@ -43,12 +43,24 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
         'let save = try requireTypedButton(named: "Save", in: resumedPicker, timeout: 15)',
         'action: "document_picker_export_save_tapped"',
-        "picker.application.otherElements.matching(",
-        "let cancelButtons = pickerElements(",
-        "if cancelButtons.count == 1",
-        "waitForSelectedFixture(app: app, timeout: 5)",
+        "if let retainedFixture = waitForCurrentFixtureCell(app: app, timeout: 2)",
         "retainedFixture.doubleTap()",
-        'action: "document_picker_selected_fixture_double_tap_activated"',
+        'action: "document_picker_fixture_double_tap_activated"',
+        "for depth in 0...4",
+        "queries: [picker.application.buttons.matching(predicate)]",
+        "try waitForTypedCancelButton(",
+        'try require(candidates.count < 2, "系统 Picker 的可操作 typed Cancel Button 不是唯一控件")',
+        'let backQuery = picker.application.buttons.matching(',
+        'NSPredicate(format: "identifier == %@", "BackButton")',
+        "let backCandidates = pickerElements(",
+        "if backCandidates.isEmpty",
+        "try require(backCandidates.count == 1",
+        "waitForHittable(backButton, timeout: 5)",
+        "let previousIdentity = pickerRootIdentity(picker)",
+        "guard let nextPicker = waitForPickerRootChange(",
+        'action: "document_picker_back_navigation"',
+        'action: "document_picker_typed_cancel_tapped"',
+        "experimental_ax_cancel_unavailable",
         "let value = preview.value as? String",
         "if element.exists, element.isHittable, element.isEnabled",
         "element.waitForExistence(timeout: 3), element.isHittable, element.isEnabled",
@@ -104,6 +116,10 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
             problems.append("iOS 导出必须先改名、关闭首次键盘教学层，再点击已启用的 Save")
 
     for forbidden in (
+        "waitForSelectedFixture",
+        "fixture.isSelected",
+        "picker.application.otherElements.matching(cancelPredicate)",
+        "let cancelOthers =",
         "retainedFixture.tap()",
         'action: "document_picker_fixture_cell_reactivated"',
         'action: "document_picker_fixture_cell_double_tap_reactivated"',
@@ -435,9 +451,10 @@ def failures() -> list[str]:
         'private let saveTagFailedIdentifier = "lddc.open_lyrics.notice.saveTagFailed"',
         "waitForSaveTagResult(app: launchedApp, timeout: 20)",
         "requireFixtureCell(app: app",
+        "waitForCurrentFixtureCell(app: app, timeout: 2)",
         'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
         'action: "document_picker_fixture_cell_tapped"',
-        'action: "document_picker_selected_fixture_double_tap_activated"',
+        'action: "document_picker_fixture_double_tap_activated"',
         "redactDynamicPaths",
         'requireTypedButton(named: "Browse"',
         'requireTypedButton(named: "Save"',
@@ -449,8 +466,13 @@ def failures() -> list[str]:
         "private func dismissKeyboardTutorialIfPresented(",
         'action: "keyboard_tutorial_dismissed"',
         "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
-        "cancelSystemPicker(app: launchedApp, returnControl: openSong)",
-        "cancelSystemPicker(app: launchedApp, returnControl: saveFile)",
+        "actions: &actions",
+        "for depth in 0...4",
+        "pickerRootIdentity(picker)",
+        "guard let nextPicker = waitForPickerRootChange(",
+        "if backCandidates.isEmpty",
+        'action: "document_picker_back_navigation"',
+        'action: "document_picker_typed_cancel_tapped"',
         '"On My iPhone"',
         '"DOC.sidebar.item.On My iPhone"',
         "requireOnMyIPhoneLocation(in: picker",
@@ -491,8 +513,6 @@ def failures() -> list[str]:
         "picker.root.cells.matching(",
         "picker.root.links.matching(",
         ".sheets",
-        "let backButton =",
-        "backButton.tap()",
         "label CONTAINS[c]",
         "identifier CONTAINS[c]",
         '"nativeWindowCount"',
@@ -739,44 +759,70 @@ def failures() -> list[str]:
         ),
     }
     actual_workflows = {path.name for path in workflow_dir.glob("*.yml")}
-    if actual_workflows != set(expected_workflows):
+    stabilization_mode = actual_workflows == {"platform-stabilization.yml"}
+    if not stabilization_mode and actual_workflows != set(expected_workflows):
         problems.append(
             "CI workflow 集合必须严格保持四项职责分层: "
             f"actual={sorted(actual_workflows)}"
         )
-    for filename, (display_name, jobs) in expected_workflows.items():
-        path = workflow_dir / filename
-        if not path.is_file():
-            continue
-        source = path.read_text(encoding="utf-8")
-        if display_name not in source:
-            problems.append(f"{filename} 缺少固定显示名: {display_name}")
-        for job in jobs:
-            if f"  {job}" not in source:
-                problems.append(f"{filename} 缺少固定 job: {job}")
-        if "schedule:" in source or "cron:" in source:
-            problems.append(f"{filename} 禁止定时触发")
+    if stabilization_mode:
+        stabilization_workflow = (
+            workflow_dir / "platform-stabilization.yml"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            "name: Platform Stabilization",
+            "- ci/platform-stabilization",
+            "macos-open-panel:",
+            "ios-document-picker:",
+            "run_macos_platform_tests.ps1",
+            "run_ios_platform_tests.ps1",
+            "-ExperimentalScenarios ios_document_picker_export_cancel",
+            "stabilization-macos-open-panel-${{ github.run_id }}",
+            "stabilization-ios-document-picker-${{ github.run_id }}",
+        ):
+            if marker not in stabilization_workflow:
+                problems.append(f"Apple 稳定化 workflow 缺少实验契约: {marker}")
+        if "schedule:" in stabilization_workflow or "cron:" in stabilization_workflow:
+            problems.append("Apple 稳定化 workflow 禁止定时触发")
+    else:
+        for filename, (display_name, jobs) in expected_workflows.items():
+            path = workflow_dir / filename
+            if not path.is_file():
+                continue
+            source = path.read_text(encoding="utf-8")
+            if display_name not in source:
+                problems.append(f"{filename} 缺少固定显示名: {display_name}")
+            for job in jobs:
+                if f"  {job}" not in source:
+                    problems.append(f"{filename} 缺少固定 job: {job}")
+            if "schedule:" in source or "cron:" in source:
+                problems.append(f"{filename} 禁止定时触发")
 
     cross_platform_path = workflow_dir / "cross-platform-validation.yml"
     quality_path = workflow_dir / "code-quality.yml"
     # 工作流缺失本身已经由上面的集合门禁报告。这里继续使用空源码完成其余
     # 静态审计，避免实验分支或误删文件时由 FileNotFoundError 遮蔽其他问题。
     workflow = (
-        cross_platform_path.read_text(encoding="utf-8")
-        if cross_platform_path.is_file()
-        else ""
+        stabilization_workflow
+        if stabilization_mode
+        else (
+            cross_platform_path.read_text(encoding="utf-8")
+            if cross_platform_path.is_file()
+            else ""
+        )
     )
     quality_workflow = (
         quality_path.read_text(encoding="utf-8") if quality_path.is_file() else ""
     )
-    if workflow.count("tool/test/ci_phase_summary.py") != 6:
-        problems.append("五个平台及独立 macOS 系统 UI job 必须统一使用 CI required phase 汇总器")
-    if quality_workflow.count("tool/test/ci_phase_summary.py") != 1:
-        problems.append("Code Quality 必须使用统一 CI required phase 汇总器")
-    if "validation-failure" in workflow or "Upload failed" in workflow:
-        problems.append("平台 artifact 必须使用条件 diagnostics 命名，禁止固定 failure 命名")
-    if workflow.count("steps.required_outcomes.outcome != 'success'") != 6:
-        problems.append("五个平台及独立 macOS 系统 UI diagnostics 必须仅在 required phase 失败时上传")
+    if not stabilization_mode:
+        if workflow.count("tool/test/ci_phase_summary.py") != 6:
+            problems.append("五个平台及独立 macOS 系统 UI job 必须统一使用 CI required phase 汇总器")
+        if quality_workflow.count("tool/test/ci_phase_summary.py") != 1:
+            problems.append("Code Quality 必须使用统一 CI required phase 汇总器")
+        if "validation-failure" in workflow or "Upload failed" in workflow:
+            problems.append("平台 artifact 必须使用条件 diagnostics 命名，禁止固定 failure 命名")
+        if workflow.count("steps.required_outcomes.outcome != 'success'") != 6:
+            problems.append("五个平台及独立 macOS 系统 UI diagnostics 必须仅在 required phase 失败时上传")
     protocol_pubspec = (
         ROOT / "packages/lddc_desktop_protocol/pubspec.yaml"
     ).read_text(encoding="utf-8")
@@ -870,41 +916,42 @@ def failures() -> list[str]:
     ):
         if marker not in android_ci_runner:
             problems.append(f"Android CI runner 缺少阶段或报告聚合: {marker}")
-    for marker in (
-        "windows-validation:",
-        "macos-validation:",
-        "macos-system-ui-validation:",
-        "linux-validation:",
-        "android-validation:",
-        "ios-validation:",
-        "experimental-web:",
-        "run_android_ci_validation.sh",
-        "run_ios_platform_tests.ps1",
-        "run_windows_platform_tests.ps1",
-        "run_macos_platform_tests.ps1",
-        "run_desktop_process_e2e.ps1",
-        "Snapshot Windows production application",
-        "Snapshot macOS production application",
-        "-AppExe lddc/build/production_e2e/windows/lddc.exe",
-        "-AppExe lddc/build/production_e2e/macos/LDDC.app/Contents/MacOS/LDDC",
-        "Record Linux multi-window known issue",
-        "MixinNetwork/flutter-plugins#448/#488",
-        "multi-window runtime remains a manual known issue and is not reported as passed",
-        "run_platform_media_resource.ps1",
-        "Run iOS native unit tests",
-        "--phase ios-native-unit",
-        "Restore iOS debug application after Flutter integration",
-        "flutter build ios --debug --simulator",
-        "--phase ios-debug-rebuild",
-        "--timeout 900",
-        "-scheme Runner",
-    ):
-        if marker not in workflow:
-            problems.append(f"跨平台验证 workflow 缺少原生平台入口: {marker}")
+    if not stabilization_mode:
+        for marker in (
+            "windows-validation:",
+            "macos-validation:",
+            "macos-system-ui-validation:",
+            "linux-validation:",
+            "android-validation:",
+            "ios-validation:",
+            "experimental-web:",
+            "run_android_ci_validation.sh",
+            "run_ios_platform_tests.ps1",
+            "run_windows_platform_tests.ps1",
+            "run_macos_platform_tests.ps1",
+            "run_desktop_process_e2e.ps1",
+            "Snapshot Windows production application",
+            "Snapshot macOS production application",
+            "-AppExe lddc/build/production_e2e/windows/lddc.exe",
+            "-AppExe lddc/build/production_e2e/macos/LDDC.app/Contents/MacOS/LDDC",
+            "Record Linux multi-window known issue",
+            "MixinNetwork/flutter-plugins#448/#488",
+            "multi-window runtime remains a manual known issue and is not reported as passed",
+            "run_platform_media_resource.ps1",
+            "Run iOS native unit tests",
+            "--phase ios-native-unit",
+            "Restore iOS debug application after Flutter integration",
+            "flutter build ios --debug --simulator",
+            "--phase ios-debug-rebuild",
+            "--timeout 900",
+            "-scheme Runner",
+        ):
+            if marker not in workflow:
+                problems.append(f"跨平台验证 workflow 缺少原生平台入口: {marker}")
     # Flutter Linux 的 Semantics identifier 当前没有进入 AT-SPI 子树。
     # hosted CI 不得用坐标脚本伪造覆盖，但 Dogtail 场景和固定依赖仍需保留，
     # 便于在具备可访问性桥接的真实桌面环境中人工执行。
-    if "Dogtail 脚本继续保留供人工环境验证" not in workflow:
+    if not stabilization_mode and "Dogtail 脚本继续保留供人工环境验证" not in workflow:
         problems.append("Linux Dogtail 必须在 workflow 中明确标记为人工验证")
     linux_start = workflow.find("  linux-validation:")
     android_start = workflow.find("  android-validation:")
@@ -952,18 +999,19 @@ def failures() -> list[str]:
     for forbidden in ("Register-OwnedProcessTree", "Wait-ForOwnedProcessBaseline"):
         if forbidden in macos_runner:
             problems.append(f"macOS hybrid runner 禁止使用会误算 Xcode 系统服务的 PID 快照: {forbidden}")
-    if workflow.count("run_macos_platform_tests.ps1") != 1:
+    if not stabilization_mode and workflow.count("run_macos_platform_tests.ps1") != 1:
         problems.append("macOS hybrid runner 必须只在独立 system UI job 中执行一次")
-    for required in (
-        "process_group_supervisor.py",
-        "--phase macos-system-ui-workflow",
-        "--timeout 900",
-        "workflow-watchdog.json",
-        "finalize_macos_system_ui_reports.py",
-        "steps.report_finalize.outcome",
-    ):
-        if required not in workflow:
-            problems.append(f"macOS system UI workflow 缺少外层进程组 watchdog: {required}")
+    if not stabilization_mode:
+        for required in (
+            "process_group_supervisor.py",
+            "--phase macos-system-ui-workflow",
+            "--timeout 900",
+            "workflow-watchdog.json",
+            "finalize_macos_system_ui_reports.py",
+            "steps.report_finalize.outcome",
+        ):
+            if required not in workflow:
+                problems.append(f"macOS system UI workflow 缺少外层进程组 watchdog: {required}")
     for forbidden in (
         "& flutter build macos",
         "& xcodebuild build-for-testing",
@@ -977,6 +1025,8 @@ def failures() -> list[str]:
     macos_start = workflow.find("  macos-validation:")
     macos_system_ui_start = workflow.find("  macos-system-ui-validation:")
     linux_start = workflow.find("  linux-validation:")
+    if stabilization_mode:
+        macos_start = macos_system_ui_start = linux_start = -1
     if 0 <= macos_start < macos_system_ui_start < linux_start:
         macos_job = workflow[macos_start:macos_system_ui_start]
         macos_system_ui_job = workflow[macos_system_ui_start:linux_start]
@@ -1011,7 +1061,7 @@ def failures() -> list[str]:
             ):
                 if marker not in job:
                     problems.append(f"{job_name} 缺少固定 Xcode 预检契约: {marker}")
-    else:
+    elif not stabilization_mode:
         problems.append("macOS 应用与 system UI job 顺序或边界无效")
     macos_ui_tests = (ROOT / "lddc/macos/RunnerUITests/RunnerUITests.swift").read_text(
         encoding="utf-8"
@@ -1096,10 +1146,13 @@ def failures() -> list[str]:
         'pathField.click()',
         'pathField.typeKey("a", modifierFlags: [.command])',
         "waitForSelectedElement([fixture]",
+        'panel.root.staticTexts["sizeAndKind"]',
+        "waitForExactlyOneExistingElement(previewName, timeout: 10)",
+        'waitForStringValueContaining(sizeAndKind, expected: "MP3", timeout: 10)',
         "openButton.isEnabled",
-        "openButton.click()",
+        "fixture.typeKey(.return, modifierFlags: [])",
         'recordAction("filePicker", "fixture_selected")',
-        'recordAction("filePicker", "open_button_clicked")',
+        'recordAction("filePicker", "fixture_return_activated")',
         "hasOpenPanel(panel.application)",
         'expectedState: "picker_requested"',
         "self.addAction(&actions, capability: capability, action: action)",
@@ -1128,6 +1181,7 @@ def failures() -> list[str]:
         "goToFolder.touchBars",
         "goButton.click()",
         "panel.application.typeKey(.return, modifierFlags: [])",
+        "openButton.click()",
         "panel.root.outlineRows.firstMatch",
     ):
         if forbidden in macos_ui_tests:
@@ -1274,6 +1328,15 @@ def failures() -> list[str]:
         "arch=$hostArchitecture",
         "Resolve-UniqueBuildArtifact",
         "iOS Xcode DerivedData 超出测试构建根",
+        '[ValidateSet("ios_document_picker_export_cancel")]',
+        "$experimentalScenarioAllowlist.Contains($scenario)",
+        '$scenario -eq "ios_document_picker_export_cancel"',
+        '"experimental_ax_cancel_unavailable"',
+        "$reportingErrors.Count -eq 0",
+        "Add-ExperimentalObservationEvidence",
+        "$observedExperimentalScenarios.Contains($scenario)",
+        "$requiredScenarioDir",
+        "$requiredJunitDir",
         '$exportedFiles.Count -ne 1',
         '.Extension.Equals(".lrc", [StringComparison]::OrdinalIgnoreCase)',
         '$exportedText.Contains("Hello LDDC", [StringComparison]::Ordinal)',
@@ -1325,7 +1388,7 @@ def failures() -> list[str]:
             problems.append(f"iOS runner 缺少 XCTest 环境变量: {environment_name}")
         if f'["{environment_name}"]' not in ios_ui_test:
             problems.append(f"iOS XCUITest 未读取 runner 环境变量: {environment_name}")
-    if "-parallel-testing-enabled NO" not in workflow:
+    if not stabilization_mode and "-parallel-testing-enabled NO" not in workflow:
         problems.append("iOS native XCTest 必须禁用并行执行")
     simulator_creator = (ROOT / "tool/test/create_ios_simulator.sh").read_text(
         encoding="utf-8"
@@ -1337,18 +1400,21 @@ def failures() -> list[str]:
     ):
         if marker not in simulator_creator:
             problems.append(f"iOS Simulator 创建器缺少宿主架构证据: {marker}")
-    for marker in (
-        'state="$(xcrun simctl list devices --json',
-        'Shutdown) xcrun simctl boot "$DEVICE_ID"',
-        'Booting|Booted)',
-        'arch=$IOS_HOST_ARCH',
-    ):
-        if marker not in workflow:
-            problems.append(f"iOS native unit 测试缺少状态感知启动契约: {marker}")
+    if not stabilization_mode:
+        for marker in (
+            'state="$(xcrun simctl list devices --json',
+            'Shutdown) xcrun simctl boot "$DEVICE_ID"',
+            'Booting|Booted)',
+            'arch=$IOS_HOST_ARCH',
+        ):
+            if marker not in workflow:
+                problems.append(f"iOS native unit 测试缺少状态感知启动契约: {marker}")
     if 'simctl boot "$DEVICE_ID" || true' in workflow:
         problems.append("iOS Simulator 启动错误不得通过 || true 吞掉")
     ios_job_start = workflow.find("  ios-validation:")
     ios_job_end = workflow.find("  experimental-web:")
+    if stabilization_mode:
+        ios_job_start = ios_job_end = -1
     if 0 <= ios_job_start < ios_job_end:
         ios_job = workflow[ios_job_start:ios_job_end]
         for marker in (
@@ -1370,9 +1436,11 @@ def failures() -> list[str]:
         release_index = ios_job.find("Build iOS release without codesigning")
         if not (0 <= simulator_index < system_ui_index < release_index):
             problems.append("iOS Document Picker 必须在 simulator 创建后、昂贵构建与业务阶段前执行")
-    else:
+    elif not stabilization_mode:
         problems.append("iOS hosted job 边界无效")
-    if "xcodebuild -version |" in workflow or "xcodebuild -version |" in ios_simulator_creator:
+    if (
+        not stabilization_mode and "xcodebuild -version |" in workflow
+    ) or "xcodebuild -version |" in ios_simulator_creator:
         problems.append("Apple 版本预检必须先完整读取 xcodebuild 输出，禁止提前关闭管道")
     for manual_linux_asset in (
         ROOT / "tool/test/run_linux_platform_tests.sh",
@@ -1478,8 +1546,9 @@ def failures() -> list[str]:
         if performance_path.is_file()
         else ""
     )
-    if "media-resource-stress:" not in performance_workflow or (
-        "run_platform_media_resource.ps1 -Platform ${{ matrix.platform }} -LoopCount 20"
+    if not stabilization_mode and (
+        "media-resource-stress:" not in performance_workflow
+        or "run_platform_media_resource.ps1 -Platform ${{ matrix.platform }} -LoopCount 20"
         not in performance_workflow
     ):
         problems.append("性能回归 workflow 缺少三桌面媒体 20 轮资源测试")

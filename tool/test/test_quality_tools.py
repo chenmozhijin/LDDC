@@ -553,15 +553,19 @@ class QualityToolTests(unittest.TestCase):
             "requireFixtureCell(app: app",
             'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
             'action: "document_picker_fixture_cell_tapped"',
-            "waitForSelectedFixture(app: app, timeout: 5)",
-            'action: "document_picker_selected_fixture_double_tap_activated"',
+            "if let retainedFixture = waitForCurrentFixtureCell(app: app, timeout: 2)",
+            'action: "document_picker_fixture_double_tap_activated"',
             "waitForPreviewLyricsValue(preview: preview",
             "let value = preview.value as? String",
             "private func dismissKeyboardTutorialIfPresented(",
             'action: "keyboard_tutorial_dismissed"',
             "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
-            "cancelSystemPicker(app: launchedApp, returnControl: openSong)",
-            "cancelSystemPicker(app: launchedApp, returnControl: saveFile)",
+            "for depth in 0...4",
+            "try waitForTypedCancelButton(",
+            'NSPredicate(format: "identifier == %@", "BackButton")',
+            "if backCandidates.isEmpty",
+            "guard let nextPicker = waitForPickerRootChange(",
+            'action: "document_picker_typed_cancel_tapped"',
         ):
             self.assertIn(marker, source)
         # iOS 26 会短暂保留已关闭 remote view 的 AX 根；关闭门禁必须使用
@@ -590,8 +594,8 @@ class QualityToolTests(unittest.TestCase):
             ),
             source.replace("retainedFixture.doubleTap()", "retainedFixture.tap()", 1),
             source.replace(
-                "waitForSelectedFixture(app: app, timeout: 5)",
-                "true",
+                "if let retainedFixture = waitForCurrentFixtureCell(app: app, timeout: 2)",
+                "// 受控 mutation：不再证明 Picker 仍存在",
                 1,
             ),
             source.replace(
@@ -600,8 +604,23 @@ class QualityToolTests(unittest.TestCase):
                 1,
             ),
             source.replace(
-                "picker.application.otherElements.matching(",
-                "picker.application.buttons.matching(",
+                "queries: [picker.application.buttons.matching(predicate)]",
+                "queries: [picker.application.otherElements.matching(predicate)]",
+                1,
+            ),
+            source.replace(
+                'try require(candidates.count < 2, "系统 Picker 的可操作 typed Cancel Button 不是唯一控件")',
+                "// 受控 mutation：允许重复 Cancel",
+                1,
+            ),
+            source.replace(
+                "guard let nextPicker = waitForPickerRootChange(",
+                "guard let nextPicker = ignorePickerRootChange(",
+                1,
+            ),
+            source.replace(
+                "if backCandidates.isEmpty",
+                "if false",
                 1,
             ),
         )
@@ -610,6 +629,28 @@ class QualityToolTests(unittest.TestCase):
                 checker.ios_picker_state_machine_failures(mutation),
                 [],
             )
+
+    def test_macos_open_panel_requires_native_return_activation(self) -> None:
+        checker = _load_native_isolation_checker()
+        flutter_source = (
+            ROOT / "lddc/integration_test/macos_file_dialog_platform_test.dart"
+        ).read_text(encoding="utf-8")
+        source = (ROOT / "lddc/macos/RunnerUITests/RunnerUITests.swift").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(
+            checker.macos_hybrid_source_failures(flutter_source, source),
+            [],
+        )
+        for marker in (
+            'panel.root.staticTexts["sizeAndKind"]',
+            "waitForExactlyOneExistingElement(previewName, timeout: 10)",
+            'waitForStringValueContaining(sizeAndKind, expected: "MP3", timeout: 10)',
+            "fixture.typeKey(.return, modifierFlags: [])",
+            'recordAction("filePicker", "fixture_return_activated")',
+        ):
+            self.assertIn(marker, source)
+        self.assertNotIn("openButton.click()", source)
 
     def test_apple_runners_require_unique_xcode_products(self) -> None:
         for relative in (
@@ -631,6 +672,35 @@ class QualityToolTests(unittest.TestCase):
             ios_runner,
         )
         self.assertIn("iOS Xcode DerivedData 超出测试构建根", ios_runner)
+
+    def test_ios_experimental_cancel_is_explicit_and_narrow(self) -> None:
+        runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
+            encoding="utf-8"
+        )
+        workflow = (
+            ROOT / ".github/workflows/platform-stabilization.yml"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            '[ValidateSet("ios_document_picker_export_cancel")]',
+            "$experimentalScenarioAllowlist.Contains($scenario)",
+            '$scenario -eq "ios_document_picker_export_cancel"',
+            '"experimental_ax_cancel_unavailable"',
+            "$reportingErrors.Count -eq 0",
+            "Add-ExperimentalObservationEvidence",
+            "$observedExperimentalScenarios.Contains($scenario)",
+            "$requiredScenarioDir",
+            "$requiredJunitDir",
+        ):
+            self.assertIn(marker, runner)
+        self.assertIn(
+            "-ExperimentalScenarios ios_document_picker_export_cancel",
+            workflow,
+        )
+        self.assertIn("[string[]]$ExperimentalScenarios = @()", runner)
+        self.assertNotIn(
+            '[string[]]$ExperimentalScenarios = @("ios_document_picker_export_cancel")',
+            runner,
+        )
 
     def test_ios_simulator_creator_supports_local_and_ci_ownership(self) -> None:
         creator = (ROOT / "tool/test/create_ios_simulator.sh").read_text(

@@ -117,7 +117,9 @@ jobs:
             --status lddc/build/integration_reports/ios-native/stabilization-supervisor/status.json `
             --stdout lddc/build/integration_reports/ios-native/stabilization-supervisor/stdout.log `
             --stderr lddc/build/integration_reports/ios-native/stabilization-supervisor/stderr.log `
-            -- pwsh -NoLogo -NoProfile -File tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID
+            -- pwsh -NoLogo -NoProfile -File tool/test/run_ios_platform_tests.ps1 `
+              -Device $env:DEVICE_ID `
+              -ExperimentalScenarios ios_document_picker_export_cancel
           exit $LASTEXITCODE
       - name: Capture iOS failure context
         if: failure()

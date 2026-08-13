@@ -124,18 +124,30 @@ final class RunnerUITests: XCTestCase {
         "NSOpenPanel 点击 fixture 后没有进入选中状态"
       )
       recordAction("filePicker", "fixture_selected")
+      let previewName = panel.root.staticTexts.matching(
+        NSPredicate(format: "value == %@", fixtureName)
+      )
+      try require(
+        waitForExactlyOneExistingElement(previewName, timeout: 10),
+        "NSOpenPanel 预览区没有唯一显示已选 fixture 文件名"
+      )
+      let sizeAndKind = panel.root.staticTexts["sizeAndKind"]
+      try require(
+        waitForStringValueContaining(sizeAndKind, expected: "MP3", timeout: 10),
+        "NSOpenPanel 预览区没有识别匿名 fixture 的 MP3 元数据"
+      )
       let openButton = panel.root.buttons["Open"]
       try require(
         waitForHittableElement(openButton, timeout: 10),
         "选中精确 fixture 后 NSOpenPanel 的打开按钮不可点击"
       )
       try require(openButton.isEnabled, "选中精确 fixture 后 NSOpenPanel 的打开按钮未启用")
-      // 目录和文件候选已经通过精确 AX 查询并确认选中。此处点击同一面板
-      // 的 typed Open 按钮，避免把应用根窗口的 Return 误当成 NSOpenPanel
-      // 的确认动作；如果 AppKit 没有把 URL 交给生产 completion handler，
-      // Flutter 侧的 completion marker 会保留真实 null 结果。
-      openButton.click()
-      recordAction("filePicker", "open_button_clicked")
+      // Hosted 诊断证明点击 Column View 的 TextField 后再点击 Open 只形成视觉
+      // 选中，AppKit 没有稳定把该节点写入 panel.urls。对已经精确选中并完成
+      // 预览校验的文件节点发送 Return，让原生列视图执行文件激活和面板确认；
+      // Flutter 仍会从生产 file_selector 回调验证最终 URL、正文和摘要。
+      fixture.typeKey(.return, modifierFlags: [])
+      recordAction("filePicker", "fixture_return_activated")
     }
   }
 
@@ -402,6 +414,41 @@ final class RunnerUITests: XCTestCase {
     timeout: TimeInterval
   ) -> Bool {
     firstHittableElement([element], timeout: timeout) != nil
+  }
+
+  private func waitForExactlyOneExistingElement(
+    _ query: XCUIElementQuery,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      let candidates = query.allElementsBoundByIndex.filter { $0.exists }
+      if candidates.count == 1 {
+        return true
+      }
+      if candidates.count > 1 {
+        return false
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return false
+  }
+
+  private func waitForStringValueContaining(
+    _ element: XCUIElement,
+    expected: String,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if element.exists,
+         let value = element.value as? String,
+         value.localizedCaseInsensitiveContains(expected) {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return false
   }
 
   private func waitForSelectedElement(
