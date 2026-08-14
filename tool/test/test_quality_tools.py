@@ -550,26 +550,31 @@ class QualityToolTests(unittest.TestCase):
             encoding="utf-8"
         )
         for marker in (
-            "requireFixtureCell(app: app",
-            'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
+            "private enum SystemPickerDestination: Equatable",
+            "private func navigatePickerToFixtureDirectory(",
+            "private func navigatePickerToOnMyIPhone(",
+            "private func normalizePickerToBrowseRoot(",
+            "private func waitForPickerDestination(",
+            "requireFixtureCell(in: picker, timeout: 15)",
+            "returnControl: openSong,",
             'action: "document_picker_fixture_cell_tapped"',
-            "if let retainedFixture = waitForCurrentFixtureCell(app: app, timeout: 2)",
-            'action: "document_picker_fixture_double_tap_activated"',
+            'action: "document_picker_select_audio"',
             "waitForPreviewLyricsValue(preview: preview",
             "let value = preview.value as? String",
             "private func dismissKeyboardTutorialIfPresented(",
             'action: "keyboard_tutorial_dismissed"',
             "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
-            "for depth in 0...4",
+            'let save = try requireEnabledTypedButton(named: "Save", in: resumedPicker, timeout: 15)',
             "try waitForTypedCancelButton(",
-            'NSPredicate(format: "identifier == %@", "BackButton")',
-            "if backCandidates.isEmpty",
-            "guard let nextPicker = waitForPickerRootChange(",
+            "let picker = try normalizePickerToBrowseRoot(app: app)",
             'action: "document_picker_typed_cancel_tapped"',
         ):
             self.assertIn(marker, source)
-        # iOS 26 会短暂保留已关闭 remote view 的 AX 根；关闭门禁必须使用
-        # Flutter 业务控件重新可命中的正向证据，不能继续等待 stale 根消失。
+        self.assertNotIn("isFixtureDirectory(", source)
+        self.assertNotIn("waitForCurrentFixtureCell(", source)
+        self.assertNotIn(".doubleTap()", source)
+        self.assertNotIn("pickerRootIdentity(", source)
+        self.assertNotIn("waitForPickerRootChange(", source)
         self.assertNotIn("waitForSystemPickerToClose(", source)
         self.assertNotIn("waitForKeyboardTutorialToDisappear(", source)
         self.assertNotIn("preview.descendants(matching:", source)
@@ -592,10 +597,28 @@ class QualityToolTests(unittest.TestCase):
                 "if element.exists, element.isHittable",
                 1,
             ),
-            source.replace("retainedFixture.doubleTap()", "retainedFixture.tap()", 1),
             source.replace(
-                "if let retainedFixture = waitForCurrentFixtureCell(app: app, timeout: 2)",
-                "// 受控 mutation：不再证明 Picker 仍存在",
+                "let picker = try navigatePickerToFixtureDirectory(app: app)",
+                "let picker = try waitForSystemPicker(app: app, timeout: 5)",
+                1,
+            ),
+            source.replace(
+                "waitForPickerDismissal(\n"
+                "        app: app,\n"
+                "        returnControl: openSong,\n"
+                "        timeout: 15\n"
+                "      )",
+                "waitForPickerDismissal(\n"
+                "        app: app,\n"
+                "        returnControl: nil,\n"
+                "        timeout: 15\n"
+                "      )",
+                1,
+            ),
+            source.replace("fixture.tap()", "fixture.doubleTap()", 1),
+            source.replace(
+                "let picker = try navigatePickerToOnMyIPhone(app: launchedApp)",
+                "let picker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
                 1,
             ),
             source.replace(
@@ -604,8 +627,8 @@ class QualityToolTests(unittest.TestCase):
                 1,
             ),
             source.replace(
-                "queries: [picker.application.buttons.matching(predicate)]",
-                "queries: [picker.application.otherElements.matching(predicate)]",
+                "try waitForTypedCancelButton(",
+                "try waitForUnsafeCancelButton(",
                 1,
             ),
             source.replace(
@@ -614,19 +637,95 @@ class QualityToolTests(unittest.TestCase):
                 1,
             ),
             source.replace(
-                "guard let nextPicker = waitForPickerRootChange(",
-                "guard let nextPicker = ignorePickerRootChange(",
+                "let picker = try normalizePickerToBrowseRoot(app: app)",
+                "let picker = try waitForSystemPicker(app: app, timeout: 5)",
                 1,
             ),
             source.replace(
-                "if backCandidates.isEmpty",
-                "if false",
+                "_ = try normalizePickerToBrowseRoot(app: launchedApp)\n"
+                "      launchedApp.terminate()",
+                "launchedApp.terminate()",
                 1,
             ),
         )
         for mutation in mutations:
             self.assertNotEqual(
                 checker.ios_picker_state_machine_failures(mutation),
+                [],
+            )
+
+    def test_ios_export_witness_gate_rejects_missing_hash_cleanup_and_path_leaks(self) -> None:
+        checker = _load_native_isolation_checker()
+        app_delegate = (ROOT / "lddc/ios/Runner/AppDelegate.swift").read_text(
+            encoding="utf-8"
+        )
+        runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(
+            checker.ios_export_witness_failures(app_delegate, runner),
+            [],
+        )
+        mutations = (
+            (
+                app_delegate.replace("SHA256.hash(data: data)", "Data(data)", 1),
+                runner,
+            ),
+            (
+                app_delegate.replace(
+                    'payload["cleanupSucceeded"] = true',
+                    'payload["cleanupSucceeded"] = false',
+                    1,
+                ),
+                runner,
+            ),
+            (
+                app_delegate.replace(
+                    '"fileName": exportedURL.lastPathComponent,',
+                    '"path": exportedURL.path,',
+                    1,
+                ),
+                runner,
+            ),
+            (
+                app_delegate.replace(
+                    '"fileName": exportedURL.lastPathComponent,',
+                    '"url": exportedURL.absoluteString,',
+                    1,
+                ),
+                runner,
+            ),
+            (
+                app_delegate.replace(
+                    '"fileName": exportedURL.lastPathComponent,',
+                    '"identifier": exportedURL.absoluteString,',
+                    1,
+                ),
+                runner,
+            ),
+            (
+                app_delegate,
+                runner.replace(
+                    '[Security.Cryptography.SHA256]::HashData($exportedBytes)',
+                    '$witness.sha256',
+                    1,
+                ),
+            ),
+            (
+                app_delegate,
+                runner.replace(
+                    "Remove-Item -LiteralPath $preScenarioWitness -Force -ErrorAction SilentlyContinue",
+                    "# 受控 mutation：保留上一场景 witness",
+                    1,
+                ),
+            ),
+        )
+        for mutated_app_delegate, mutated_runner in mutations:
+            self.assertNotEqual(
+                checker.ios_export_witness_failures(
+                    mutated_app_delegate,
+                    mutated_runner,
+                ),
                 [],
             )
 

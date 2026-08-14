@@ -2,6 +2,9 @@ import Flutter
 import UIKit
 import Darwin
 import UniformTypeIdentifiers
+#if LDDC_PLATFORM_TEST
+import CryptoKit
+#endif
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -95,6 +98,93 @@ private enum IOSPlatformTestFixtureSeeder {
   private static func seedError(_ message: String) -> NSError {
     NSError(
       domain: "LDDCPlatformTestFixtureSeeder",
+      code: 1,
+      userInfo: [NSLocalizedDescriptionKey: message]
+    )
+  }
+}
+
+/// 只在 PlatformTest app 中记录真实导出 URL 的可验证摘要。
+///
+/// 保存目标位于系统 LocalStorage provider 时，宿主无法通过应用 data container
+/// 直接读取用户文件。观察器在 delegate 收到最终 URL 的同一时刻读取文件，并把
+/// 不含路径的最小 witness 写回测试容器；正式构建完全不包含这段代码。
+private enum IOSPlatformExportWitnessRecorder {
+  static let witnessFileName = ".lddc_platform_export_witness.json"
+
+  static func record(
+    exportedURL: URL,
+    fileManager: FileManager = .default
+  ) {
+    let startedAccessing = exportedURL.startAccessingSecurityScopedResource()
+    defer {
+      if startedAccessing {
+        exportedURL.stopAccessingSecurityScopedResource()
+      }
+    }
+
+    var payload: [String: Any]
+    do {
+      let data = try Data(contentsOf: exportedURL, options: [.mappedIfSafe])
+      let digest = SHA256.hash(data: data)
+        .map { String(format: "%02x", $0) }
+        .joined()
+      payload = [
+        "schemaVersion": 1,
+        "fileName": exportedURL.lastPathComponent,
+        "size": data.count,
+        "sha256": digest,
+        "utf8Base64": data.base64EncodedString(),
+        "success": true,
+      ]
+    } catch {
+      payload = [
+        "schemaVersion": 1,
+        "fileName": exportedURL.lastPathComponent,
+        "size": 0,
+        "sha256": "",
+        "utf8Base64": "",
+        "success": false,
+        "errorClass": String(reflecting: type(of: error)),
+      ]
+    }
+
+    do {
+      try fileManager.removeItem(at: exportedURL)
+      payload["cleanupSucceeded"] = true
+    } catch {
+      // 测试输出已经完成读取和摘要后应立即删除，避免污染同一 Simulator 的后续
+      // 取消场景。删除失败只进入 witness，不改变生产 delegate 的完成语义。
+      payload["cleanupSucceeded"] = false
+      payload["cleanupErrorClass"] = String(reflecting: type(of: error))
+    }
+
+    do {
+      guard let documents = fileManager.urls(
+        for: .documentDirectory,
+        in: .userDomainMask
+      ).first else {
+        throw witnessError("无法解析 PlatformTest Documents 目录")
+      }
+      let witnessURL = documents.appendingPathComponent(
+        witnessFileName,
+        isDirectory: false
+      )
+      let data = try JSONSerialization.data(
+        withJSONObject: payload,
+        options: [.prettyPrinted, .sortedKeys]
+      )
+      try data.write(to: witnessURL, options: .atomic)
+    } catch {
+      // witness 只用于测试后验，写入失败不能改变真实保存回调；runner 会因文件
+      // 缺失而让场景失败。日志只记录错误类型，禁止输出用户路径或 URL。
+      NSLog("LDDC PlatformTest export witness failed: \(type(of: error))")
+    }
+  }
+
+  private static func witnessError(_ message: String) -> NSError {
+    NSError(
+      domain: "LDDCPlatformExportWitness",
       code: 1,
       userInfo: [NSLocalizedDescriptionKey: message]
     )
@@ -648,6 +738,9 @@ private final class IOSSearchAudioTagPlugin: NSObject,
       return
     }
 
+    #if LDDC_PLATFORM_TEST
+    IOSPlatformExportWitnessRecorder.record(exportedURL: url)
+    #endif
     // iOS 单文件导出返回用户最终确认的目标 URL，仅用于成功提示，不再回写桌面目录状态。
     let savePath = url.isFileURL ? url.path : url.absoluteString
     finishPendingRequest(with: savePath)

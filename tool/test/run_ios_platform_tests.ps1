@@ -27,6 +27,7 @@ $fixture = Join-Path $appRoot "integration_test/fixtures/media/audio_sample.mp3"
 $fixtureSize = (Get-Item -LiteralPath $fixture).Length
 $fixtureSha256 = (Get-FileHash -LiteralPath $fixture -Algorithm SHA256).Hash.ToLowerInvariant()
 $fixtureBase64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($fixture))
+$exportWitnessFileName = ".lddc_platform_export_witness.json"
 $hostArchitecture = ((& uname -m 2>$null) -join "").Trim()
 if ($LASTEXITCODE -ne 0 -or $hostArchitecture -notin @("arm64", "x86_64")) {
   throw "无法确定 iOS hosted 宿主架构: $hostArchitecture"
@@ -883,6 +884,14 @@ try {
     $retryCheckSummaryPath = Join-Path $rawDir "$scenario.retry-check.summary.json"
     $retryPerformed = $false
     Ensure-SimulatorBooted -Stage "before-$scenario"
+    # 每个场景启动前删除旧 witness，避免上一轮异常中断留下的成功摘要被当前
+    # 场景误用。测试 app 启动时仍会再次重置容器，两层清理共同覆盖 Xcode
+    # 复用既有容器和重新安装应用这两种行为。
+    $preScenarioContainer = Get-PlatformTestContainer
+    $preScenarioWitness = Join-Path `
+      (Join-Path $preScenarioContainer "Documents") `
+      $exportWitnessFileName
+    Remove-Item -LiteralPath $preScenarioWitness -Force -ErrorAction SilentlyContinue
     $testExitCode = Invoke-BoundedXcodeTest `
       -XcTestRun $xctestrun.FullName `
       -Method $method `
@@ -1074,36 +1083,53 @@ try {
             )
           }
         } elseif ($scenario -eq "ios_document_picker_export") {
-          $exportedFiles = @(
-            Get-ChildItem -LiteralPath $postTestDocuments -File `
-              | Where-Object { $_.Extension.Equals(".lrc", [StringComparison]::OrdinalIgnoreCase) }
-          )
-          if ($exportedFiles.Count -ne 1) {
-            $message = "iOS 导出场景应生成且只生成一个 LRC，实际为 $($exportedFiles.Count)"
-            Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
-            $effectiveExitCode = 1
-            $postconditionStatus = "failed"
-          } else {
-            $exportedFile = $exportedFiles[0]
-            if ($exportedFile.Name -match '^[0-9a-fA-F-]{36}-') {
-              $message = "iOS 导出文件名泄露了内部临时 UUID"
-              Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
-              $effectiveExitCode = 1
-              $postconditionStatus = "failed"
+          $exportWitness = Join-Path $postTestDocuments $exportWitnessFileName
+          try {
+            if (-not (Test-Path -LiteralPath $exportWitness -PathType Leaf)) {
+              throw "iOS 导出成功后没有生成 PlatformTest witness"
             }
-            $exportedText = Get-Content -LiteralPath $exportedFile.FullName -Raw
-            if (-not $exportedText.Contains("Hello LDDC", [StringComparison]::Ordinal)) {
-              $message = "iOS 导出文件缺少预期歌词正文"
-              Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
-              $effectiveExitCode = 1
-              $postconditionStatus = "failed"
+            $witness = Get-Content -LiteralPath $exportWitness -Raw | ConvertFrom-Json
+            foreach ($forbiddenWitnessField in @("path", "url", "identifier")) {
+              if ($null -ne $witness.PSObject.Properties[$forbiddenWitnessField]) {
+                throw "iOS 导出 witness 含有禁止字段: $forbiddenWitnessField"
+              }
+            }
+            if ([int]$witness.schemaVersion -ne 1) {
+              throw "iOS 导出 witness schemaVersion 无效"
+            }
+            if ($witness.success -ne $true) {
+              throw "iOS 导出 witness 未能读取最终用户文件，errorClass=$($witness.errorClass)"
+            }
+            if ($witness.cleanupSucceeded -ne $true) {
+              throw "iOS 导出 witness 未能清理匿名测试输出，errorClass=$($witness.cleanupErrorClass)"
+            }
+            if ([string]$witness.fileName -cne "lddc_export.lrc") {
+              throw "iOS 导出最终文件名错误: $($witness.fileName)"
+            }
+            $exportedBytes = [Convert]::FromBase64String([string]$witness.utf8Base64)
+            if ([int64]$witness.size -ne $exportedBytes.LongLength) {
+              throw "iOS 导出 witness 大小与实际字节不一致"
+            }
+            $computedSha256 = [Convert]::ToHexString(
+              [Security.Cryptography.SHA256]::HashData($exportedBytes)
+            ).ToLowerInvariant()
+            if ([string]$witness.sha256 -cne $computedSha256) {
+              throw "iOS 导出 witness SHA-256 与实际字节不一致"
+            }
+            $exportedText = [Text.Encoding]::UTF8.GetString($exportedBytes)
+            if (-not [regex]::IsMatch(
+                $exportedText,
+                '^\[00:00\.\d{2,3}\]Hello LDDC(?:\r?\n)?$',
+                [Text.RegularExpressions.RegexOptions]::CultureInvariant
+              )) {
+              throw "iOS 导出文件正文不符合匿名单行 LRC 契约"
             }
             $evidencePayload = Get-Content -LiteralPath $evidencePath.FullName -Raw | ConvertFrom-Json
             $evidencePayload.artifacts = @(
               [ordered]@{
-                name = $exportedFile.Name
-                size = $exportedFile.Length
-                sha256 = (Get-FileHash -LiteralPath $exportedFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+                name = [string]$witness.fileName
+                size = [int64]$witness.size
+                sha256 = $computedSha256
               }
             )
             [IO.File]::WriteAllText(
@@ -1111,10 +1137,28 @@ try {
               ($evidencePayload | ConvertTo-Json -Depth 20),
               [Text.UTF8Encoding]::new($false)
             )
-            # 导出产物已完成正文与摘要验证，删除测试容器副本，防止影响后续取消场景。
-            Remove-Item -LiteralPath $exportedFile.FullName -Force
+          } catch {
+            # witness 属于导出业务后验。解析、摘要或正文不一致必须保留为当前
+            # 场景失败，不能落入外层 runner-metadata catch 后伪装成报告设施错误。
+            $message = $_.Exception.Message
+            Add-PostconditionFailure `
+              -EvidencePath $evidencePath.FullName `
+              -SummaryPath $summaryPath `
+              -Message $message
+            $effectiveExitCode = 1
+            $postconditionStatus = "failed"
+          } finally {
+            Remove-Item -LiteralPath $exportWitness -Force -ErrorAction SilentlyContinue
           }
         } elseif ($scenario -in @("ios_document_picker_export_cancel", "ios_document_picker_export_termination")) {
+          $unexpectedWitness = Join-Path $postTestDocuments $exportWitnessFileName
+          if (Test-Path -LiteralPath $unexpectedWitness -PathType Leaf) {
+            $message = "iOS 取消或终止导出后残留了成功导出 witness"
+            Add-PostconditionFailure -EvidencePath $evidencePath.FullName -SummaryPath $summaryPath -Message $message
+            $effectiveExitCode = 1
+            $postconditionStatus = "failed"
+            Remove-Item -LiteralPath $unexpectedWitness -Force -ErrorAction SilentlyContinue
+          }
           $unexpectedExports = @(
             Get-ChildItem -LiteralPath $postTestDocuments -File `
               | Where-Object { $_.Extension.Equals(".lrc", [StringComparison]::OrdinalIgnoreCase) }

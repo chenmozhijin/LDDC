@@ -24,7 +24,7 @@ def invalid_descendant_element_types(source: str) -> list[str]:
 
 
 def ios_picker_state_machine_failures(source: str) -> list[str]:
-    """校验 iOS 系统 Picker 场景不会跳过生产转换或点击禁用控件。"""
+    """校验 iOS 系统 Picker 使用确定页面状态和真实完成结果。"""
 
     problems: list[str] = []
     required_markers = (
@@ -40,25 +40,26 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         'private let keyboardTutorialMessage = "Speed up your typing by sliding your finger across the letters to compose a word."',
         "let tutorialAppeared = message.waitForExistence(timeout: 2)",
         'action: "keyboard_tutorial_dismissed"',
+        "let picker = try navigatePickerToOnMyIPhone(app: launchedApp)",
         "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
-        'let save = try requireTypedButton(named: "Save", in: resumedPicker, timeout: 15)',
+        'let save = try requireEnabledTypedButton(named: "Save", in: resumedPicker, timeout: 15)',
         'action: "document_picker_export_save_tapped"',
-        "if let retainedFixture = waitForCurrentFixtureCell(app: app, timeout: 2)",
-        "retainedFixture.doubleTap()",
-        'action: "document_picker_fixture_double_tap_activated"',
-        "for depth in 0...4",
+        "private enum SystemPickerDestination: Equatable",
+        "private func navigatePickerToFixtureDirectory(",
+        "private func navigatePickerToOnMyIPhone(",
+        "private func normalizePickerToBrowseRoot(",
+        "private func waitForPickerDestination(",
+        "private func waitForPickerDismissal(",
+        "let picker = try navigatePickerToFixtureDirectory(app: app)",
+        "try requireFixtureCell(in: picker, timeout: 15)",
+        "returnControl: openSong,",
+        "returnControl: returnControl,",
+        'action: "document_picker_fixture_cell_tapped"',
+        'action: "document_picker_select_audio"',
         "queries: [picker.application.buttons.matching(predicate)]",
         "try waitForTypedCancelButton(",
         'try require(candidates.count < 2, "系统 Picker 的可操作 typed Cancel Button 不是唯一控件")',
-        'let backQuery = picker.application.buttons.matching(',
-        'NSPredicate(format: "identifier == %@", "BackButton")',
-        "let backCandidates = pickerElements(",
-        "if backCandidates.isEmpty",
-        "try require(backCandidates.count == 1",
-        "waitForHittable(backButton, timeout: 5)",
-        "let previousIdentity = pickerRootIdentity(picker)",
-        "guard let nextPicker = waitForPickerRootChange(",
-        'action: "document_picker_back_navigation"',
+        "let picker = try normalizePickerToBrowseRoot(app: app)",
         'action: "document_picker_typed_cancel_tapped"',
         "experimental_ax_cancel_unavailable",
         "let value = preview.value as? String",
@@ -69,6 +70,30 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
     for marker in required_markers:
         if marker not in source:
             problems.append(f"iOS Picker 状态机缺少强契约: {marker}")
+
+    select_match = re.search(
+        r"  private func selectFixture\([\s\S]*?\n  \}"
+        r"(?=\n\n  private func openExportPicker)",
+        source,
+    )
+    if select_match is None:
+        problems.append("iOS Picker 状态机缺少确定性的文件选择方法")
+    else:
+        select_body = select_match.group(0)
+        ordered_markers = (
+            "let openSong = app.buttons[openSongIdentifier]",
+            "fixture.tap()",
+            "waitForPickerDismissal(",
+            "returnControl: openSong,",
+            "app.wait(for: .runningForeground, timeout: 15)",
+            "waitForPreviewLyricsValue(preview: preview, timeout: 15)",
+            'action: "document_picker_select_audio"',
+        )
+        marker_positions = [select_body.find(marker) for marker in ordered_markers]
+        if any(position < 0 for position in marker_positions) or marker_positions != sorted(
+            marker_positions
+        ):
+            problems.append("iOS 文件选择必须在单击后证明 Picker 退出、Flutter 恢复和预览成功")
 
     scenario_contracts = (
         ("testDocumentPickerSelectsSeededAudio", "saveTag.tap()"),
@@ -103,10 +128,11 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
     if export_match is not None:
         export_body = export_match.group("body")
         ordered_markers = (
+            "let picker = try navigatePickerToOnMyIPhone(app: launchedApp)",
             "try replaceExportBaseName(in: picker)",
             "try dismissKeyboardTutorialIfPresented(in: picker, actions: &actions)",
             "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
-            'let save = try requireTypedButton(named: "Save", in: resumedPicker, timeout: 15)',
+            'let save = try requireEnabledTypedButton(named: "Save", in: resumedPicker, timeout: 15)',
             "save.tap()",
         )
         marker_positions = [export_body.find(marker) for marker in ordered_markers]
@@ -115,9 +141,32 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         ):
             problems.append("iOS 导出必须先改名、关闭首次键盘教学层，再点击已启用的 Save")
 
+    termination_match = re.search(
+        r"  func testTerminatedExportIsCleanedOnNextLaunch\(\) throws \{"
+        r"(?P<body>[\s\S]*?)(?=\n  (?:func|private func) )",
+        source,
+    )
+    if termination_match is not None:
+        termination_body = termination_match.group("body")
+        ordered_markers = (
+            "_ = try openExportPicker(app: launchedApp)",
+            "_ = try normalizePickerToBrowseRoot(app: launchedApp)",
+            "launchedApp.terminate()",
+        )
+        marker_positions = [termination_body.find(marker) for marker in ordered_markers]
+        if any(position < 0 for position in marker_positions) or marker_positions != sorted(
+            marker_positions
+        ):
+            problems.append("iOS 导出终止场景必须先归一化到 Browse 根页再终止应用")
+
     for forbidden in (
         "waitForSelectedFixture",
         "fixture.isSelected",
+        "isFixtureDirectory(",
+        "waitForCurrentFixtureCell(",
+        ".doubleTap()",
+        "pickerRootIdentity(",
+        "waitForPickerRootChange(",
         "picker.application.otherElements.matching(cancelPredicate)",
         "let cancelOthers =",
         "retainedFixture.tap()",
@@ -128,6 +177,50 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
     ):
         if forbidden in source:
             problems.append(f"iOS Picker 状态机禁止旧 fallback: {forbidden}")
+    return problems
+
+
+def ios_export_witness_failures(app_delegate: str, runner: str) -> list[str]:
+    """校验 PlatformTest 外部导出 witness 不泄漏路径且可独立验真。"""
+
+    problems: list[str] = []
+    for marker in (
+        "private enum IOSPlatformExportWitnessRecorder",
+        'static let witnessFileName = ".lddc_platform_export_witness.json"',
+        "import CryptoKit",
+        "SHA256.hash(data: data)",
+        '"utf8Base64": data.base64EncodedString()',
+        'payload["cleanupSucceeded"] = true',
+        "IOSPlatformExportWitnessRecorder.record(exportedURL: url)",
+    ):
+        if marker not in app_delegate:
+            problems.append(f"iOS PlatformTest 导出 witness 缺少: {marker}")
+    witness_match = re.search(
+        r"private enum IOSPlatformExportWitnessRecorder \{(?P<body>[\s\S]*?)\n\}\n#endif",
+        app_delegate,
+    )
+    if witness_match is None:
+        problems.append("iOS 导出 witness 必须位于 LDDC_PLATFORM_TEST 条件编译块")
+    else:
+        witness_body = witness_match.group("body")
+        for forbidden_field in ('"path":', '"url":', '"identifier":'):
+            if forbidden_field in witness_body:
+                problems.append(f"iOS 导出 witness 禁止保存路径或标识字段: {forbidden_field}")
+
+    for marker in (
+        '$exportWitnessFileName = ".lddc_platform_export_witness.json"',
+        '$witness = Get-Content -LiteralPath $exportWitness -Raw | ConvertFrom-Json',
+        'foreach ($forbiddenWitnessField in @("path", "url", "identifier"))',
+        '[Convert]::FromBase64String([string]$witness.utf8Base64)',
+        '[Security.Cryptography.SHA256]::HashData($exportedBytes)',
+        '$witness.cleanupSucceeded -ne $true',
+        '[string]$witness.fileName -cne "lddc_export.lrc"',
+        '$preScenarioWitness = Join-Path',
+        "Remove-Item -LiteralPath $preScenarioWitness -Force -ErrorAction SilentlyContinue",
+        "Remove-Item -LiteralPath $exportWitness -Force -ErrorAction SilentlyContinue",
+    ):
+        if marker not in runner:
+            problems.append(f"iOS runner 导出 witness 验证缺少: {marker}")
     return problems
 
 
@@ -488,14 +581,16 @@ def failures() -> list[str]:
         'private let fixtureAccessibilityName = "audio_sample, mp3"',
         'private let saveTagFailedIdentifier = "lddc.open_lyrics.notice.saveTagFailed"',
         "waitForSaveTagResult(app: launchedApp, timeout: 20)",
-        "requireFixtureCell(app: app",
-        "waitForCurrentFixtureCell(app: app, timeout: 2)",
-        'rootIdentifier.hasSuffix(", Title: \\(platformTestDisplayName)")',
+        "private enum SystemPickerDestination: Equatable",
+        "private func navigatePickerToFixtureDirectory(",
+        "private func navigatePickerToOnMyIPhone(",
+        "private func normalizePickerToBrowseRoot(",
+        "private func waitForPickerDestination(",
+        "requireFixtureCell(in: picker, timeout: 15)",
         'action: "document_picker_fixture_cell_tapped"',
-        'action: "document_picker_fixture_double_tap_activated"',
+        'action: "document_picker_select_audio"',
         "redactDynamicPaths",
-        'requireTypedButton(named: "Browse"',
-        'requireTypedButton(named: "Save"',
+        'requireEnabledTypedButton(named: "Save"',
         'private let previewIdentifier = "lddc.open_lyrics.preview"',
         'app.otherElements[previewIdentifier]',
         'private let fixtureLyricsAccessibilityPattern = #"^\\[00:00\\.\\d{2,3}\\]Hello LDDC$"#',
@@ -505,15 +600,10 @@ def failures() -> list[str]:
         'action: "keyboard_tutorial_dismissed"',
         "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
         "actions: &actions",
-        "for depth in 0...4",
-        "pickerRootIdentity(picker)",
-        "guard let nextPicker = waitForPickerRootChange(",
-        "if backCandidates.isEmpty",
-        'action: "document_picker_back_navigation"',
         'action: "document_picker_typed_cancel_tapped"',
         '"On My iPhone"',
         '"DOC.sidebar.item.On My iPhone"',
-        "requireOnMyIPhoneLocation(in: picker",
+        "requireOnMyIPhoneLocation(in: browseRoot",
         'private let platformTestDisplayName = "LDDC Platform Tests"',
         "if documents.state != .notRunning",
         "executionTimeAllowance = 120",
@@ -589,6 +679,7 @@ def failures() -> list[str]:
     ios_runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
         encoding="utf-8"
     )
+    problems.extend(ios_export_witness_failures(ios_app_delegate, ios_runner))
     for marker in (
         '"-test-timeouts-enabled", "YES"',
         '"-maximum-test-execution-time-allowance", "$ScenarioTimeoutSeconds"',
@@ -1385,10 +1476,12 @@ def failures() -> list[str]:
         "$observedExperimentalScenarios.Contains($scenario)",
         "$requiredScenarioDir",
         "$requiredJunitDir",
-        '$exportedFiles.Count -ne 1',
-        '.Extension.Equals(".lrc", [StringComparison]::OrdinalIgnoreCase)',
-        '$exportedText.Contains("Hello LDDC", [StringComparison]::Ordinal)',
-        'Get-FileHash -LiteralPath $exportedFile.FullName -Algorithm SHA256',
+        '$exportWitnessFileName = ".lddc_platform_export_witness.json"',
+        '$witness = Get-Content -LiteralPath $exportWitness -Raw | ConvertFrom-Json',
+        '[Convert]::FromBase64String([string]$witness.utf8Base64)',
+        '[Security.Cryptography.SHA256]::HashData($exportedBytes)',
+        '$witness.cleanupSucceeded -ne $true',
+        '"lddc_export.lrc"',
         'resourceMeasurementStatus = "not_exercised_before_test_start"',
         '$activeInfrastructureFailureClass = "build_failure"',
         "$infrastructureFailureMessage = $null",

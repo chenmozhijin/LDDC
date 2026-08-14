@@ -5,6 +5,12 @@ private struct SystemPickerContext {
   let root: XCUIElement
 }
 
+private enum SystemPickerDestination: Equatable {
+  case browseRoot
+  case onMyIPhone
+  case fixtureDirectory
+}
+
 final class RunnerUITests: XCTestCase {
   private let appBundleIdentifier = "com.cmzj.lddc.platformtests"
   private let fixtureName = "audio_sample.mp3"
@@ -115,14 +121,15 @@ final class RunnerUITests: XCTestCase {
       app = launchedApp
       try selectSeededAudio(app: launchedApp, actions: &actions)
       try convertLoadedLyrics(app: launchedApp, actions: &actions)
-      let picker = try openExportPicker(app: launchedApp)
+      _ = try openExportPicker(app: launchedApp)
+      let picker = try navigatePickerToOnMyIPhone(app: launchedApp)
       try replaceExportBaseName(in: picker)
       addAction(&actions, capability: "filePicker", action: "document_picker_export_name_replaced")
       try dismissKeyboardTutorialIfPresented(in: picker, actions: &actions)
       // 系统教学层关闭会刷新远程 Document Picker 的 AX snapshot，必须重新解析
       // typed 根节点后再查询 Save，不能继续复用遮罩出现前的陈旧元素代理。
       let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)
-      let save = try requireTypedButton(named: "Save", in: resumedPicker, timeout: 15)
+      let save = try requireEnabledTypedButton(named: "Save", in: resumedPicker, timeout: 15)
       save.tap()
       addAction(&actions, capability: "filePicker", action: "document_picker_export_save_tapped")
       let saveFile = launchedApp.descendants(matching: .any)[saveFileIdentifier]
@@ -187,6 +194,7 @@ final class RunnerUITests: XCTestCase {
       try selectSeededAudio(app: launchedApp, actions: &actions)
       try convertLoadedLyrics(app: launchedApp, actions: &actions)
       _ = try openExportPicker(app: launchedApp)
+      _ = try normalizePickerToBrowseRoot(app: launchedApp)
       launchedApp.terminate()
       try require(launchedApp.wait(for: .notRunning, timeout: 5), "导出中终止时 LDDC 未在超时内关闭")
 
@@ -254,34 +262,9 @@ final class RunnerUITests: XCTestCase {
     app: XCUIApplication,
     actions: inout [String: [[String: Any]]]
   ) throws {
-    var picker = try openDocumentPicker(app: app)
-    // Files 会跨场景记住上次目录。直接点击刚打开时缓存的文件单元格在
-    // iOS 26.5 上只会选中项目而不会完成 Document Picker 回调；先点击
-    // typed Browse 让远程文档视图完成模式切换，再按当前 typed 页面继续。
-    let browse = try requireBrowseButton(in: picker, timeout: 15)
-    browse.tap()
-    try require(
-      waitForBrowseDestination(app: app, timeout: 15),
-      "点击 Browse 后没有进入可访问的位置或目录页"
-    )
-    picker = try waitForSystemPicker(app: app, timeout: 5)
-
-    if isFixtureDirectory(picker) {
-      let fixture = try requireFixtureCell(app: app, timeout: 15)
-      try selectFixture(fixture, app: app, actions: &actions)
-      return
-    }
-    if let folder = waitForPlatformTestFolder(in: picker, timeout: 1) {
-      folder.tap()
-    } else {
-      let onMyIPhone = try requireOnMyIPhoneLocation(in: picker, timeout: 15)
-      onMyIPhone.tap()
-      picker = try waitForSystemPicker(app: app, timeout: 5)
-      let folder = try requirePlatformTestFolder(in: picker, timeout: 15)
-      folder.tap()
-    }
-
-    let fixture = try requireFixtureCell(app: app, timeout: 15)
+    _ = try openDocumentPicker(app: app)
+    let picker = try navigatePickerToFixtureDirectory(app: app)
+    let fixture = try requireFixtureCell(in: picker, timeout: 15)
     try selectFixture(fixture, app: app, actions: &actions)
   }
 
@@ -291,31 +274,22 @@ final class RunnerUITests: XCTestCase {
     actions: inout [String: [[String: Any]]]
   ) throws {
     try require(fixture.exists && fixture.isHittable && fixture.isEnabled, "匿名音频 fixture 不可点击")
+    let openSong = app.buttons[openSongIdentifier]
     fixture.tap()
     addAction(&actions, capability: "filePicker", action: "document_picker_fixture_cell_tapped")
-    let openSong = app.buttons[openSongIdentifier]
-    if !waitForHittable(openSong, timeout: 8) {
-      // 远程 Document Picker 的 Cell 不保证暴露 isSelected。第一次单击后先以
-      // Flutter 是否恢复作为结果证据；尚未完成回调时，只在同一 typed Picker
-      // 仍存在的前提下重新解析唯一文件 Cell，并执行一次受控双击完成激活。
-      // 该路径不依赖陈旧 XCUIElement，也不会把第二次动作伪装成首次点击成功。
-      if let retainedFixture = waitForCurrentFixtureCell(app: app, timeout: 2) {
-        retainedFixture.doubleTap()
-        addAction(
-          &actions,
-          capability: "filePicker",
-          action: "document_picker_fixture_double_tap_activated"
-        )
-      }
-    }
+    try require(
+      waitForPickerDismissal(
+        app: app,
+        returnControl: openSong,
+        timeout: 15
+      ),
+      "单击匿名音频后系统 Picker 没有关闭，文件回调未完成"
+    )
+    try require(app.wait(for: .runningForeground, timeout: 15), "选择文件后 LDDC 没有返回前台")
     try require(
       waitForHittable(openSong, timeout: 15),
       "选择文件后 Flutter 打开歌曲动作没有恢复，Picker 回调尚未完成"
     )
-    // 原生文件选择动作在 Picker 关闭后已经完成，先记录证据再验证 Flutter
-    // 预览，避免后置语义断言失败时把真实选择动作错误报告为零动作。
-    addAction(&actions, capability: "filePicker", action: "document_picker_select_audio")
-    try require(app.wait(for: .runningForeground, timeout: 15), "选择文件后 LDDC 没有返回前台")
     try require(
       app.otherElements[previewIdentifier].waitForExistence(timeout: 15),
       "选择结果没有回到 Flutter 预览区域"
@@ -325,6 +299,9 @@ final class RunnerUITests: XCTestCase {
       waitForPreviewLyricsValue(preview: preview, timeout: 15),
       "预览没有显示规范化后的匿名内嵌歌词内容"
     )
+    // 只有 Picker 关闭、应用回到前台、Flutter 控件恢复且匿名歌词确实出现后，
+    // 才能把系统动作记录为完成。单击动作本身不能证明 delegate 已经回调。
+    addAction(&actions, capability: "filePicker", action: "document_picker_select_audio")
   }
 
   private func openExportPicker(app: XCUIApplication) throws -> SystemPickerContext {
@@ -460,32 +437,210 @@ final class RunnerUITests: XCTestCase {
     throw testFailure("系统文件界面没有暴露 typed Document Picker 根节点")
   }
 
-  private func requireTypedButton(
+  private func requireEnabledTypedButton(
     named name: String,
     in picker: SystemPickerContext,
     timeout: TimeInterval
   ) throws -> XCUIElement {
-    try requireUniquePickerElement(
+    let predicate = NSPredicate(
+      format: "label ==[c] %@ OR identifier ==[c] %@",
+      name,
+      name
+    )
+    let deadline = Date().addingTimeInterval(timeout)
+    var sawCandidate = false
+    var sawDisabled = false
+    repeat {
+      let candidates = pickerElements(
+        queries: [picker.application.buttons.matching(predicate)],
+        in: picker,
+        requireHittable: false
+      )
+      try require(candidates.count < 2, "系统文件界面的 \(name) 按钮存在多个 typed 候选")
+      if let candidate = candidates.first {
+        sawCandidate = true
+        if !candidate.isEnabled {
+          sawDisabled = true
+        } else if candidate.isHittable {
+          return candidate
+        }
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    if !sawCandidate {
+      throw testFailure("系统文件界面没有找到 typed \(name) 按钮")
+    }
+    if sawDisabled {
+      throw testFailure("系统文件界面的 typed \(name) 按钮存在但未启用")
+    }
+    throw testFailure("系统文件界面的 typed \(name) 按钮已启用但不可命中")
+  }
+
+  private func navigatePickerToFixtureDirectory(
+    app: XCUIApplication
+  ) throws -> SystemPickerContext {
+    let browseRoot = try normalizePickerToBrowseRoot(app: app)
+    let onMyIPhone = try requireOnMyIPhoneLocation(in: browseRoot, timeout: 10)
+    onMyIPhone.tap()
+    guard let localRoot = waitForPickerDestination(
+      app: app,
+      destination: .onMyIPhone,
+      timeout: 10
+    ) else {
+      throw testFailure("点击 On My iPhone 后没有进入本机文件根目录")
+    }
+    let folder = try requirePlatformTestFolder(in: localRoot, timeout: 10)
+    folder.tap()
+    guard let fixtureDirectory = waitForPickerDestination(
+      app: app,
+      destination: .fixtureDirectory,
+      timeout: 10
+    ) else {
+      throw testFailure("点击测试目录后没有进入匿名 fixture 目录")
+    }
+    return fixtureDirectory
+  }
+
+  private func navigatePickerToOnMyIPhone(
+    app: XCUIApplication
+  ) throws -> SystemPickerContext {
+    let browseRoot = try normalizePickerToBrowseRoot(app: app)
+    let onMyIPhone = try requireOnMyIPhoneLocation(in: browseRoot, timeout: 10)
+    onMyIPhone.tap()
+    guard let localRoot = waitForPickerDestination(
+      app: app,
+      destination: .onMyIPhone,
+      timeout: 10
+    ) else {
+      throw testFailure("点击 On My iPhone 后没有进入可写的本机文件根目录")
+    }
+    return localRoot
+  }
+
+  private func normalizePickerToBrowseRoot(
+    app: XCUIApplication
+  ) throws -> SystemPickerContext {
+    var picker = try waitForSystemPicker(app: app, timeout: 5)
+    if let browseTab = waitForBrowseTabButton(in: picker, timeout: 2) {
+      browseTab.tap()
+      picker = try waitForSystemPicker(app: app, timeout: 5)
+    }
+
+    for _ in 0..<4 {
+      if pickerDestination(picker) == .browseRoot {
+        return picker
+      }
+      guard let backButton = waitForBackButton(in: picker, timeout: 5) else {
+        throw testFailure("系统 Picker 既不在 Browse 根页，也没有唯一可操作的 BackButton")
+      }
+      let expectedDestination: SystemPickerDestination
+      switch backButton.label {
+      case "On My iPhone":
+        expectedDestination = .onMyIPhone
+      case "Browse":
+        expectedDestination = .browseRoot
+      default:
+        throw testFailure("系统 Picker BackButton 指向未知父页面: \(backButton.label)")
+      }
+      backButton.tap()
+      guard let parent = waitForPickerDestination(
+        app: app,
+        destination: expectedDestination,
+        timeout: 10
+      ) else {
+        throw testFailure("系统 Picker 点击 BackButton 后没有进入预期父页面")
+      }
+      picker = parent
+    }
+    throw testFailure("系统 Picker 在四次有界返回后仍未进入 Browse 根页")
+  }
+
+  private func pickerDestination(
+    _ picker: SystemPickerContext
+  ) -> SystemPickerDestination? {
+    if waitForOnMyIPhoneLocation(in: picker, timeout: 0) != nil {
+      return .browseRoot
+    }
+    if hasPickerTitle("On My iPhone", in: picker),
+       waitForPlatformTestFolder(in: picker, timeout: 0) != nil {
+      return .onMyIPhone
+    }
+    if waitForFixtureCell(in: picker, timeout: 0) != nil,
+       waitForBackButton(in: picker, label: "On My iPhone", timeout: 0) != nil {
+      return .fixtureDirectory
+    }
+    return nil
+  }
+
+  private func waitForPickerDestination(
+    app: XCUIApplication,
+    destination: SystemPickerDestination,
+    timeout: TimeInterval
+  ) -> SystemPickerContext? {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if let picker = systemPickerContext(app: app), pickerDestination(picker) == destination {
+        return picker
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return nil
+  }
+
+  private func waitForBrowseTabButton(
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    waitForUniquePickerElement(
       queries: [
         picker.application.buttons.matching(
-          NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", name, name)
+          NSPredicate(
+            format: "label ==[c] %@ AND identifier != %@",
+            "Browse",
+            "BackButton"
+          )
         ),
       ],
       in: picker,
-      timeout: timeout,
-      description: "\(name) 按钮"
+      timeout: timeout
     )
   }
 
-  private func requireBrowseButton(
+  private func waitForBackButton(
     in picker: SystemPickerContext,
+    label: String? = nil,
     timeout: TimeInterval
-  ) throws -> XCUIElement {
-    // iOS 26.5 的 hosted hierarchy 明确把 Browse 暴露为宿主应用中的 typed
-    // Button，但 picker.root.buttons 无法跨 remote view-service 查询边界解析它。
-    // 从根节点所属 application 查询，再验证元素中心仍位于 Picker 根范围内，
-    // 可以证明控件归属而不使用坐标点击或 SpringBoard fallback。
-    try requireTypedButton(named: "Browse", in: picker, timeout: timeout)
+  ) -> XCUIElement? {
+    let predicate: NSPredicate
+    if let label {
+      predicate = NSPredicate(
+        format: "identifier == %@ AND label ==[c] %@",
+        "BackButton",
+        label
+      )
+    } else {
+      predicate = NSPredicate(format: "identifier == %@", "BackButton")
+    }
+    return waitForUniquePickerElement(
+      queries: [picker.application.buttons.matching(predicate)],
+      in: picker,
+      timeout: timeout
+    )
+  }
+
+  private func hasPickerTitle(
+    _ title: String,
+    in picker: SystemPickerContext
+  ) -> Bool {
+    !pickerElements(
+      queries: [
+        picker.application.staticTexts.matching(
+          NSPredicate(format: "label ==[c] %@", title)
+        ),
+      ],
+      in: picker,
+      requireHittable: false
+    ).isEmpty
   }
 
   private func waitForFixtureCell(
@@ -505,53 +660,13 @@ final class RunnerUITests: XCTestCase {
   }
 
   private func requireFixtureCell(
-    app: XCUIApplication,
+    in picker: SystemPickerContext,
     timeout: TimeInterval
   ) throws -> XCUIElement {
-    let deadline = Date().addingTimeInterval(timeout)
-    repeat {
-      // 每次重新解析远程 Picker 根。目录切换后旧 XCUIElement 可能继续存在于
-      // snapshot，复用旧 root 会把新文件单元格错误归到上一页。
-      if let picker = systemPickerContext(app: app),
-         isFixtureDirectory(picker),
-         let candidate = waitForFixtureCell(in: picker, timeout: 0) {
-        // 只要求候选当前存在、可命中且启用。远程 view-service 的 frame
-        // 在刷新期间会抖动，不能把几何稳定性误当成文件不可操作。
-        return candidate
-      }
-      Thread.sleep(forTimeInterval: 0.1)
-    } while Date() < deadline
-    throw testFailure("系统文件界面没有可点击的 \(fixtureAccessibilityName) 文件单元格")
-  }
-
-  private func waitForCurrentFixtureCell(
-    app: XCUIApplication,
-    timeout: TimeInterval
-  ) -> XCUIElement? {
-    let deadline = Date().addingTimeInterval(timeout)
-    repeat {
-      guard let picker = systemPickerContext(app: app) else {
-        // Picker 已关闭时让调用方继续等待 Flutter 回调，不能再次激活文件。
-        return nil
-      }
-      if isFixtureDirectory(picker),
-         let candidate = waitForFixtureCell(in: picker, timeout: 0) {
-        return candidate
-      }
-      Thread.sleep(forTimeInterval: 0.1)
-    } while Date() < deadline
-    return nil
-  }
-
-  private func isFixtureDirectory(_ picker: SystemPickerContext) -> Bool {
-    let rootIdentifier = picker.root.identifier
-    if rootIdentifier.hasSuffix(", Title: \(platformTestDisplayName)") {
-      return true
+    guard let fixture = waitForFixtureCell(in: picker, timeout: timeout) else {
+      throw testFailure("系统文件界面没有可点击的 \(fixtureAccessibilityName) 文件单元格")
     }
-    // 旧系统只暴露无标题的 Browse View 根；此时必须同时看到精确 fixture，
-    // 不能把任意 Files 目录误判为测试目录。
-    return rootIdentifier == "Browse View (Picker)"
-      && waitForFixtureCell(in: picker, timeout: 0) != nil
+    return fixture
   }
 
   private func waitForPlatformTestFolder(
@@ -581,22 +696,6 @@ final class RunnerUITests: XCTestCase {
       throw testFailure("系统文件界面没有可点击的 \(platformTestDisplayName) 目录单元格")
     }
     return folder
-  }
-
-  private func waitForBrowseDestination(app: XCUIApplication, timeout: TimeInterval) -> Bool {
-    let deadline = Date().addingTimeInterval(timeout)
-    repeat {
-      if let picker = systemPickerContext(app: app) {
-        let location = waitForOnMyIPhoneLocation(in: picker, timeout: 0)
-        if location != nil
-          || waitForFixtureCell(in: picker, timeout: 0) != nil
-          || waitForPlatformTestFolder(in: picker, timeout: 0) != nil {
-          return true
-        }
-      }
-      Thread.sleep(forTimeInterval: 0.2)
-    } while Date() < deadline
-    return false
   }
 
   private func waitForOnMyIPhoneLocation(
@@ -708,77 +807,41 @@ final class RunnerUITests: XCTestCase {
     returnControl: XCUIElement?,
     actions: inout [String: [[String: Any]]]
   ) throws {
-    var picker = try waitForSystemPicker(app: app, timeout: 5)
+    let picker = try normalizePickerToBrowseRoot(app: app)
     let cancelPredicate = NSPredicate(
       format: "label ==[c] %@ OR identifier ==[c] %@",
       "Cancel",
       "Cancel"
     )
-    for depth in 0...4 {
-      if let cancel = try waitForTypedCancelButton(
-        in: picker,
-        predicate: cancelPredicate,
-        timeout: depth == 0 ? 2 : 5
-      ) {
-        cancel.tap()
-        addAction(
-          &actions,
-          capability: "filePicker",
-          action: "document_picker_typed_cancel_tapped"
-        )
-        if let returnControl {
-          try require(
-            waitForHittable(returnControl, timeout: 10),
-            "点击 Cancel 后 Flutter 页面没有恢复可操作状态"
-          )
-        }
-        return
-      }
-      if depth == 4 {
-        break
-      }
-
-      // 保存型 Picker 的 Other("Cancel") 与 More 共享 frame，是不可操作的 AX
-      // 包裹节点。只允许使用精确 BackButton 逐层返回，并在每次页面转换后重新
-      // 解析 typed Picker；这样不会误触 More、标题菜单或陈旧的远程元素代理。
-      let previousIdentity = pickerRootIdentity(picker)
-      let backQuery = picker.application.buttons.matching(
-        NSPredicate(format: "identifier == %@", "BackButton")
+    guard let cancel = try waitForTypedCancelButton(
+      in: picker,
+      predicate: cancelPredicate,
+      timeout: 5
+    ) else {
+      throw testFailure(
+        "experimental_ax_cancel_unavailable: 系统保存 Picker 已返回 Browse 根页，但没有唯一、启用且可命中的 typed Cancel Button"
       )
-      let backCandidates = pickerElements(
-        queries: [backQuery],
-        in: picker,
-        requireHittable: false
-      )
-      if backCandidates.isEmpty {
-        throw testFailure(
-          "experimental_ax_cancel_unavailable: 系统保存 Picker 已无 BackButton，且当前根层没有唯一、启用且可命中的 typed Cancel Button"
-        )
-      }
-      try require(backCandidates.count == 1, "系统保存 Picker 的 BackButton 不是唯一 typed 控件")
-      let backButton = backCandidates[0]
-      try require(
-        waitForHittable(backButton, timeout: 5),
-        "系统保存 Picker 的 BackButton 存在但不可操作"
-      )
-      backButton.tap()
-      addAction(
-        &actions,
-        capability: "filePicker",
-        action: "document_picker_back_navigation"
-      )
-      guard let nextPicker = waitForPickerRootChange(
-        app: app,
-        previousIdentity: previousIdentity,
-        timeout: 5
-      ) else {
-        throw testFailure("系统保存 Picker 点击 BackButton 后页面标识没有发生变化")
-      }
-      picker = nextPicker
     }
-    throw testFailure(
-      "experimental_ax_cancel_unavailable: 系统保存 Picker 返回四层后仍没有唯一、启用且可命中的 typed Cancel Button"
+    cancel.tap()
+    addAction(
+      &actions,
+      capability: "filePicker",
+      action: "document_picker_typed_cancel_tapped"
     )
+    try require(
+      waitForPickerDismissal(
+        app: app,
+        returnControl: returnControl,
+        timeout: 10
+      ),
+      "点击 Cancel 后系统 Picker 没有关闭"
+    )
+    if let returnControl {
+      try require(
+        waitForHittable(returnControl, timeout: 10),
+        "点击 Cancel 后 Flutter 页面没有恢复可操作状态"
+      )
+    }
   }
 
   private func waitForTypedCancelButton(
@@ -797,26 +860,6 @@ final class RunnerUITests: XCTestCase {
         return candidates[0]
       }
       try require(candidates.count < 2, "系统 Picker 的可操作 typed Cancel Button 不是唯一控件")
-      Thread.sleep(forTimeInterval: 0.1)
-    } while Date() < deadline
-    return nil
-  }
-
-  private func pickerRootIdentity(_ picker: SystemPickerContext) -> String {
-    return "\(picker.root.identifier)|\(picker.root.label)"
-  }
-
-  private func waitForPickerRootChange(
-    app: XCUIApplication,
-    previousIdentity: String,
-    timeout: TimeInterval
-  ) -> SystemPickerContext? {
-    let deadline = Date().addingTimeInterval(timeout)
-    repeat {
-      if let candidate = systemPickerContext(app: app),
-         pickerRootIdentity(candidate) != previousIdentity {
-        return candidate
-      }
       Thread.sleep(forTimeInterval: 0.1)
     } while Date() < deadline
     return nil
@@ -907,6 +950,31 @@ final class RunnerUITests: XCTestCase {
         return true
       }
       Thread.sleep(forTimeInterval: 0.2)
+    } while Date() < deadline
+    return false
+  }
+
+  private func waitForPickerDismissal(
+    app: XCUIApplication,
+    returnControl: XCUIElement?,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if systemPickerContext(app: app) == nil {
+        return true
+      }
+      // iOS 远程 Files 服务可能短暂保留已关闭页面的旧 AX 根。只有宿主应用内的
+      // Picker 根已经消失，并且此前被系统界面遮挡的 Flutter 控件重新可命中，
+      // 才把该旧根视为陈旧快照；这不会接受仍覆盖在应用上的 Picker。
+      if typedSystemPickerRoot(in: app) == nil,
+         let returnControl,
+         returnControl.exists,
+         returnControl.isHittable,
+         returnControl.isEnabled {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.1)
     } while Date() < deadline
     return false
   }
