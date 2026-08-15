@@ -55,6 +55,10 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         "returnControl: openSong,",
         "returnControl: returnControl,",
         'action: "document_picker_fixture_cell_tapped"',
+        "pickerDestination(retainedPicker) == .fixtureDirectory",
+        "try requireFixtureCell(in: retainedPicker, timeout: 2)",
+        "retainedFixture.doubleTap()",
+        'action: "document_picker_fixture_cell_double_tapped"',
         'action: "document_picker_select_audio"',
         "queries: [picker.application.buttons.matching(predicate)]",
         "try waitForTypedCancelButton(",
@@ -83,8 +87,14 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         ordered_markers = (
             "let openSong = app.buttons[openSongIdentifier]",
             "fixture.tap()",
-            "waitForPickerDismissal(",
-            "returnControl: openSong,",
+            "if !waitForPickerDismissal(",
+            "timeout: 3",
+            "let retainedPicker = systemPickerContext(app: app)",
+            "pickerDestination(retainedPicker) == .fixtureDirectory",
+            "try requireFixtureCell(in: retainedPicker, timeout: 2)",
+            "retainedFixture.doubleTap()",
+            'action: "document_picker_fixture_cell_double_tapped"',
+            "timeout: 10",
             "app.wait(for: .runningForeground, timeout: 15)",
             "waitForPreviewLyricsValue(preview: preview, timeout: 15)",
             'action: "document_picker_select_audio"',
@@ -93,7 +103,14 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         if any(position < 0 for position in marker_positions) or marker_positions != sorted(
             marker_positions
         ):
-            problems.append("iOS 文件选择必须在单击后证明 Picker 退出、Flutter 恢复和预览成功")
+            problems.append(
+                "iOS 文件选择必须在首次单击未返回时重新解析同一 typed Cell、"
+                "受控双击，并最终证明 Picker 退出、Flutter 恢复和预览成功"
+            )
+        if select_body.count("waitForPickerDismissal(") != 2:
+            problems.append("iOS 文件选择必须恰好执行单击阶段和最终阶段两次 Picker 关闭等待")
+        if select_body.count("returnControl: openSong,") != 2:
+            problems.append("iOS 文件选择的两次 Picker 关闭等待都必须绑定 Flutter 返回控件")
 
     scenario_contracts = (
         ("testDocumentPickerSelectsSeededAudio", "saveTag.tap()"),
@@ -164,7 +181,6 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         "fixture.isSelected",
         "isFixtureDirectory(",
         "waitForCurrentFixtureCell(",
-        ".doubleTap()",
         "pickerRootIdentity(",
         "waitForPickerRootChange(",
         "picker.application.otherElements.matching(cancelPredicate)",

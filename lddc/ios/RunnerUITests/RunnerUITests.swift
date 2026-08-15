@@ -277,13 +277,43 @@ final class RunnerUITests: XCTestCase {
     let openSong = app.buttons[openSongIdentifier]
     fixture.tap()
     addAction(&actions, capability: "filePicker", action: "document_picker_fixture_cell_tapped")
+
+    // iOS 26.5 的远程 Files 图标视图会把同一个 typed Cell 的首次 tap
+    // 随机解释为“仅选中”或“直接激活”。先给正常单击三秒完成回调；如果
+    // Picker 仍停留在匿名 fixture 目录，必须重新解析当前 AX snapshot 中
+    // 唯一、启用且可命中的同名 Cell，再执行一次受控双击。这里不能复用
+    // 首次点击前的 XCUIElement，否则目录刷新后可能操作陈旧代理。
+    if !waitForPickerDismissal(
+      app: app,
+      returnControl: openSong,
+      timeout: 3
+    ), let retainedPicker = systemPickerContext(app: app) {
+      try require(
+        pickerDestination(retainedPicker) == .fixtureDirectory,
+        "首次单击未返回 Flutter 时，系统 Picker 已离开匿名 fixture 目录"
+      )
+      let retainedFixture = try requireFixtureCell(in: retainedPicker, timeout: 2)
+      try require(
+        retainedFixture.exists && retainedFixture.isHittable && retainedFixture.isEnabled,
+        "首次单击未完成回调，重新解析的匿名音频 fixture 不可点击"
+      )
+      retainedFixture.doubleTap()
+      addAction(
+        &actions,
+        capability: "filePicker",
+        action: "document_picker_fixture_cell_double_tapped"
+      )
+    }
+
+    // 三秒单击等待、两秒重新解析和十秒最终等待共享原有十五秒预算，
+    // 不通过延长业务超时掩盖 Files 远程界面的激活差异。
     try require(
       waitForPickerDismissal(
         app: app,
         returnControl: openSong,
-        timeout: 15
+        timeout: 10
       ),
-      "单击匿名音频后系统 Picker 没有关闭，文件回调未完成"
+      "单击或受控双击匿名音频后系统 Picker 没有关闭，文件回调未完成"
     )
     try require(app.wait(for: .runningForeground, timeout: 15), "选择文件后 LDDC 没有返回前台")
     try require(

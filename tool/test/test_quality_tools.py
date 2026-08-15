@@ -558,6 +558,10 @@ class QualityToolTests(unittest.TestCase):
             "requireFixtureCell(in: picker, timeout: 15)",
             "returnControl: openSong,",
             'action: "document_picker_fixture_cell_tapped"',
+            "pickerDestination(retainedPicker) == .fixtureDirectory",
+            "try requireFixtureCell(in: retainedPicker, timeout: 2)",
+            "retainedFixture.doubleTap()",
+            'action: "document_picker_fixture_cell_double_tapped"',
             'action: "document_picker_select_audio"',
             "waitForPreviewLyricsValue(preview: preview",
             "let value = preview.value as? String",
@@ -572,7 +576,6 @@ class QualityToolTests(unittest.TestCase):
             self.assertIn(marker, source)
         self.assertNotIn("isFixtureDirectory(", source)
         self.assertNotIn("waitForCurrentFixtureCell(", source)
-        self.assertNotIn(".doubleTap()", source)
         self.assertNotIn("pickerRootIdentity(", source)
         self.assertNotIn("waitForPickerRootChange(", source)
         self.assertNotIn("waitForSystemPickerToClose(", source)
@@ -603,19 +606,38 @@ class QualityToolTests(unittest.TestCase):
                 1,
             ),
             source.replace(
-                "waitForPickerDismissal(\n"
-                "        app: app,\n"
-                "        returnControl: openSong,\n"
-                "        timeout: 15\n"
-                "      )",
-                "waitForPickerDismissal(\n"
-                "        app: app,\n"
-                "        returnControl: nil,\n"
-                "        timeout: 15\n"
-                "      )",
+                "if !waitForPickerDismissal(\n"
+                "      app: app,\n"
+                "      returnControl: openSong,\n"
+                "      timeout: 3\n"
+                "    )",
+                "if !waitForPickerDismissal(\n"
+                "      app: app,\n"
+                "      returnControl: nil,\n"
+                "      timeout: 3\n"
+                "    )",
                 1,
             ),
             source.replace("fixture.tap()", "fixture.doubleTap()", 1),
+            source.replace(
+                "pickerDestination(retainedPicker) == .fixtureDirectory",
+                "pickerDestination(retainedPicker) == .browseRoot",
+                1,
+            ),
+            source.replace(
+                "retainedFixture.doubleTap()",
+                "retainedFixture.tap()",
+                1,
+            ),
+            source.replace(
+                "        timeout: 10\n"
+                "      ),\n"
+                "      \"单击或受控双击匿名音频后系统 Picker 没有关闭，文件回调未完成\"",
+                "        timeout: 0\n"
+                "      ),\n"
+                "      \"单击或受控双击匿名音频后系统 Picker 没有关闭，文件回调未完成\"",
+                1,
+            ),
             source.replace(
                 "let picker = try navigatePickerToOnMyIPhone(app: launchedApp)",
                 "let picker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
@@ -648,11 +670,15 @@ class QualityToolTests(unittest.TestCase):
                 1,
             ),
         )
-        for mutation in mutations:
-            self.assertNotEqual(
-                checker.ios_picker_state_machine_failures(mutation),
-                [],
-            )
+        for index, mutation in enumerate(mutations):
+            with self.subTest(index=index):
+                # 替换表达式本身也必须命中当前源码，避免源码缩进或结构变化后
+                # mutation 静默退化为原文，令防回归测试产生假绿。
+                self.assertNotEqual(mutation, source)
+                self.assertNotEqual(
+                    checker.ios_picker_state_machine_failures(mutation),
+                    [],
+                )
 
     def test_ios_export_witness_gate_rejects_missing_hash_cleanup_and_path_leaks(self) -> None:
         checker = _load_native_isolation_checker()
