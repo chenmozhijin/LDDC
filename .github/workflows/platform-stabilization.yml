@@ -15,14 +15,119 @@ concurrency:
 
 env:
   FLUTTER_VERSION: 3.47.0-0.2.pre
+  LDDC_XCODE_VERSION: '26.6'
+  LDDC_IOS_RUNTIME_VERSION: '26.5'
 
 jobs:
-  macos-open-panel:
-    if: github.event_name == 'workflow_dispatch'
+  ios-required:
     runs-on: macos-26
-    timeout-minutes: 45
-    env:
-      LDDC_XCODE_VERSION: '26.6'
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select pinned Xcode and runtime
+        run: |
+          developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"
+          test -d "$developer_dir"
+          sudo xcode-select --switch "$developer_dir"
+          test "$(xcodebuild -version | awk '/^Xcode / { print $2 }')" = "$LDDC_XCODE_VERSION"
+          xcrun simctl list runtimes available -j | jq -e --arg version "$LDDC_IOS_RUNTIME_VERSION" \
+            '[.runtimes[] | select(.isAvailable == true and .platform == "iOS" and .version == $version)] | length > 0'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - run: flutter pub get
+      - name: Keep Apple dependency resolution on CocoaPods
+        run: flutter config --no-enable-swift-package-manager
+      - name: Create isolated simulator
+        run: bash tool/test/create_ios_simulator.sh
+      - name: Run required iOS picker cancel gate
+        id: ios_picker_cancel
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          & ./tool/test/run_ios_platform_tests.ps1 `
+            -Device $env:DEVICE_ID `
+            -Scenarios ios_document_picker_cancel `
+            -PreserveBuildProducts
+      - name: Run required iOS native contract tests
+        id: ios_native_contracts
+        continue-on-error: true
+        run: |
+          mkdir -p \
+            lddc/build/integration_reports/ios-native/native-contracts \
+            lddc/build/native_test_derived_data
+          xctestruns=()
+          while IFS= read -r item; do xctestruns+=("$item"); done < <(
+            find lddc/build/native_test_derived_data -type f -name '*.xctestrun' -print
+          )
+          if [ "${#xctestruns[@]}" -ne 1 ]; then
+            rm -rf lddc/build/native_test_derived_data
+            (cd lddc && flutter build ios --debug --simulator --config-only)
+            pod install --project-directory=lddc/ios
+            xcodebuild build-for-testing \
+              -workspace lddc/ios/Runner.xcworkspace \
+              -scheme RunnerPlatformTests \
+              -configuration PlatformTest \
+              -destination 'generic/platform=iOS Simulator' \
+              -derivedDataPath lddc/build/native_test_derived_data/native-contracts \
+              -parallel-testing-enabled NO \
+              CODE_SIGNING_ALLOWED=NO
+            xctestruns=()
+            while IFS= read -r item; do xctestruns+=("$item"); done < <(
+              find lddc/build/native_test_derived_data -type f -name '*.xctestrun' -print
+            )
+          fi
+          test "${#xctestruns[@]}" -eq 1
+          xcodebuild test-without-building \
+            -xctestrun "${xctestruns[0]}" \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID" \
+            -only-testing:RunnerTests \
+            -resultBundlePath lddc/build/integration_reports/ios-native/native-contracts/RunnerTests.xcresult \
+            -parallel-testing-enabled NO
+      - name: Run required Flutter file and media business contracts
+        id: ios_file_adapter
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          & ./tool/test/run_apple_component_contracts.ps1 `
+            -Platform ios `
+            -Device $env:DEVICE_ID `
+            -ReportDir build/integration_reports/ios-native/component-contracts
+      - name: Clean required iOS build products
+        if: always()
+        run: rm -rf lddc/build/native_test_derived_data
+      - name: Delete stabilization simulator
+        if: always() && env.DEVICE_ID != ''
+        run: |
+          xcrun simctl shutdown "$DEVICE_ID" || true
+          xcrun simctl delete "$DEVICE_ID"
+      - name: Upload iOS required diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stabilization-ios-required-${{ github.run_id }}
+          path: lddc/build/integration_reports/ios-native/**
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Finalize required iOS outcome
+        if: always()
+        shell: pwsh
+        run: |
+          $failed = @(
+            '${{ steps.ios_picker_cancel.outcome }}',
+            '${{ steps.ios_native_contracts.outcome }}',
+            '${{ steps.ios_file_adapter.outcome }}'
+          ) | Where-Object { $_ -ne 'success' }
+          if ($failed.Count -gt 0) {
+            throw "iOS required 分层门禁存在失败: $($failed -join ', ')"
+          }
+
+  ios-files-observation:
+    continue-on-error: true
+    runs-on: macos-26
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v7
       - name: Select pinned Xcode
@@ -39,62 +144,46 @@ jobs:
       - run: flutter pub get
       - name: Keep Apple dependency resolution on CocoaPods
         run: flutter config --no-enable-swift-package-manager
-      - name: Run macOS OpenPanel hybrid only
+      - name: Create isolated simulator
+        run: bash tool/test/create_ios_simulator.sh
+      - name: Run full Files navigation observation
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force `
-            -Path lddc/build/integration_reports/macos-native/stabilization-supervisor | Out-Null
-          python tool/test/process_group_supervisor.py `
-            --phase stabilization-macos-open-panel `
-            --timeout 2100 `
-            --grace 15 `
-            --cwd $PWD.Path `
-            --status lddc/build/integration_reports/macos-native/stabilization-supervisor/status.json `
-            --stdout lddc/build/integration_reports/macos-native/stabilization-supervisor/stdout.log `
-            --stderr lddc/build/integration_reports/macos-native/stabilization-supervisor/stderr.log `
-            -- pwsh -NoLogo -NoProfile -File tool/test/run_macos_platform_tests.ps1
-          exit $LASTEXITCODE
-      - name: Capture macOS failure context
-        if: failure()
+          $scenarios = @(
+            'ios_document_picker_select'
+            'ios_document_picker_export'
+            'ios_document_picker_export_cancel'
+            'ios_document_picker_export_termination'
+          )
+          & ./tool/test/run_ios_platform_tests.ps1 `
+            -Device $env:DEVICE_ID `
+            -Scenarios $scenarios `
+            -ObservationScenarios $scenarios
+      - name: Delete observation simulator
+        if: always() && env.DEVICE_ID != ''
         run: |
-          set +e
-          context_dir='lddc/build/integration_reports/macos-native/stabilization-host'
-          mkdir -p "$context_dir"
-          sw_vers > "$context_dir/sw-vers.txt" 2>&1
-          uname -a > "$context_dir/uname.txt" 2>&1
-          xcodebuild -version > "$context_dir/xcode-version.txt" 2>&1
-          flutter doctor -v > "$context_dir/flutter-doctor.txt" 2>&1
-          ps -axo pid,ppid,stat,rss,etime,comm > "$context_dir/processes.txt" 2>&1
-          /usr/bin/log show --last 20m --style compact \
-            --predicate 'process == "LDDC" OR process == "RunnerUITests-Runner" OR process CONTAINS "OpenAndSavePanel"' \
-            > "$context_dir/system.log" 2>&1
-          exit 0
-      - name: Upload macOS OpenPanel diagnostics
+          xcrun simctl shutdown "$DEVICE_ID" || true
+          xcrun simctl delete "$DEVICE_ID"
+      - name: Upload iOS observation diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: stabilization-macos-open-panel-${{ github.run_id }}
-          path: lddc/build/integration_reports/macos-native/**
+          name: stabilization-ios-files-observation-${{ github.run_id }}
+          path: lddc/build/integration_reports/ios-native/**
           if-no-files-found: warn
           retention-days: 3
 
-  ios-document-picker:
+  macos-required:
     runs-on: macos-26
-    timeout-minutes: 60
-    env:
-      LDDC_XCODE_VERSION: '26.6'
-      LDDC_IOS_RUNTIME_VERSION: '26.5'
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v7
-      - name: Select pinned Xcode and runtime
+      - name: Select pinned Xcode
         run: |
           developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"
           test -d "$developer_dir"
           sudo xcode-select --switch "$developer_dir"
           test "$(xcodebuild -version | awk '/^Xcode / { print $2 }')" = "$LDDC_XCODE_VERSION"
-          xcrun simctl list runtimes available -j | jq -e \
-            --arg version "$LDDC_IOS_RUNTIME_VERSION" \
-            '[.runtimes[] | select(.isAvailable == true and .platform == "iOS" and .version == $version)] | length > 0'
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -103,62 +192,122 @@ jobs:
       - run: flutter pub get
       - name: Keep Apple dependency resolution on CocoaPods
         run: flutter config --no-enable-swift-package-manager
-      - name: Create the isolated iOS simulator
-        run: bash tool/test/create_ios_simulator.sh
-      - name: Run iOS Document Picker only
+      - name: Run required macOS panel cancel gate
+        id: macos_panel_cancel
+        continue-on-error: true
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force `
-            -Path lddc/build/integration_reports/ios-native/stabilization-supervisor | Out-Null
-          python tool/test/process_group_supervisor.py `
-            --phase stabilization-ios-document-picker `
-            --timeout 3000 `
-            --grace 15 `
-            --cwd $PWD.Path `
-            --status lddc/build/integration_reports/ios-native/stabilization-supervisor/status.json `
-            --stdout lddc/build/integration_reports/ios-native/stabilization-supervisor/stdout.log `
-            --stderr lddc/build/integration_reports/ios-native/stabilization-supervisor/stderr.log `
-            -- pwsh -NoLogo -NoProfile -File tool/test/run_ios_platform_tests.ps1 `
-              -Device $env:DEVICE_ID `
-              -ExperimentalScenarios ios_document_picker_export_cancel
-          exit $LASTEXITCODE
-      - name: Capture iOS failure context
-        if: failure()
+          foreach ($iteration in 1..3) {
+            $arguments = @(
+              '-NoLogo', '-NoProfile', '-File',
+              'tool/test/run_macos_platform_tests.ps1',
+              '-Scenarios', 'macos_open_panel_cancel'
+            )
+            if ($iteration -eq 3) {
+              $arguments += '-PreserveBuildProducts'
+            }
+            & pwsh @arguments
+            if ($LASTEXITCODE -ne 0) {
+              throw "macOS OpenPanel 第 $iteration 次取消门禁失败"
+            }
+          }
+      - name: Run required macOS native contract tests
+        id: macos_native_contracts
+        continue-on-error: true
         run: |
-          set +e
-          context_dir='lddc/build/integration_reports/ios-native/stabilization-host'
-          mkdir -p "$context_dir"
-          sw_vers > "$context_dir/sw-vers.txt" 2>&1
-          uname -a > "$context_dir/uname.txt" 2>&1
-          xcodebuild -version > "$context_dir/xcode-version.txt" 2>&1
-          xcrun simctl list devices --json > "$context_dir/simulator-devices.json" 2>&1
-          xcrun xcdevice list --timeout 5 > "$context_dir/xcdevice-list.json" 2>&1
-          xcodebuild -workspace lddc/ios/Runner.xcworkspace \
-            -scheme RunnerPlatformTests \
-            -configuration PlatformTest \
-            -showdestinations > "$context_dir/showdestinations.txt" 2>&1
-          if [[ -n "$DEVICE_ID" ]]; then
-            xcrun simctl io "$DEVICE_ID" screenshot "$context_dir/final-screen.png" \
-              > "$context_dir/screenshot.log" 2>&1
-            xcrun simctl spawn "$DEVICE_ID" log show --last 30m --style compact \
-              --predicate 'process == "LDDC" OR process == "Runner" OR process == "fileproviderd" OR process == "documentmanagerd"' \
-              > "$context_dir/simulator-system.log" 2>&1
-          else
-            printf 'DEVICE_ID was not created; simulator-specific diagnostics were not applicable.\n' \
-              > "$context_dir/simulator-not-created.txt"
+          mkdir -p \
+            lddc/build/integration_reports/macos-native/native-contracts \
+            lddc/build/native_test_derived_data
+          xctestruns=()
+          while IFS= read -r item; do xctestruns+=("$item"); done < <(
+            find lddc/build/native_test_derived_data -type f -name '*.xctestrun' -print
+          )
+          if [ "${#xctestruns[@]}" -ne 1 ]; then
+            rm -rf lddc/build/native_test_derived_data
+            (cd lddc && flutter build macos --debug --config-only)
+            pod install --project-directory=lddc/macos
+            xcodebuild build-for-testing \
+              -workspace lddc/macos/Runner.xcworkspace \
+              -scheme RunnerPlatformTests \
+              -configuration Debug \
+              -destination "platform=macOS,arch=$(uname -m)" \
+              -derivedDataPath lddc/build/native_test_derived_data/native-contracts \
+              -parallel-testing-enabled NO
+            xctestruns=()
+            while IFS= read -r item; do xctestruns+=("$item"); done < <(
+              find lddc/build/native_test_derived_data -type f -name '*.xctestrun' -print
+            )
           fi
-          ps -axo pid,ppid,stat,rss,etime,comm > "$context_dir/host-processes.txt" 2>&1
-          exit 0
-      - name: Delete the stabilization simulator
-        if: always() && env.DEVICE_ID != ''
+          test "${#xctestruns[@]}" -eq 1
+          xcodebuild test-without-building \
+            -xctestrun "${xctestruns[0]}" \
+            -destination "platform=macOS,arch=$(uname -m)" \
+            -only-testing:RunnerTests \
+            -resultBundlePath lddc/build/integration_reports/macos-native/native-contracts/RunnerTests.xcresult \
+            -parallel-testing-enabled NO
+      - name: Run required macOS file and media business contracts
+        id: macos_file_adapter
+        continue-on-error: true
+        shell: pwsh
         run: |
-          xcrun simctl shutdown "$DEVICE_ID" || true
-          xcrun simctl delete "$DEVICE_ID"
-      - name: Upload iOS Document Picker diagnostics
+          & ./tool/test/run_apple_component_contracts.ps1 `
+            -Platform macos `
+            -ReportDir build/integration_reports/macos-native/component-contracts
+      - name: Clean required macOS build products
+        if: always()
+        run: rm -rf lddc/build/native_test_derived_data
+      - name: Upload macOS required diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: stabilization-ios-document-picker-${{ github.run_id }}
-          path: lddc/build/integration_reports/ios-native/**
+          name: stabilization-macos-required-${{ github.run_id }}
+          path: lddc/build/integration_reports/macos-native/**
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Finalize required macOS outcome
+        if: always()
+        shell: pwsh
+        run: |
+          $failed = @(
+            '${{ steps.macos_panel_cancel.outcome }}',
+            '${{ steps.macos_native_contracts.outcome }}',
+            '${{ steps.macos_file_adapter.outcome }}'
+          ) | Where-Object { $_ -ne 'success' }
+          if ($failed.Count -gt 0) {
+            throw "macOS required 分层门禁存在失败: $($failed -join ', ')"
+          }
+
+  macos-finder-observation:
+    continue-on-error: true
+    runs-on: macos-26
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select pinned Xcode
+        run: |
+          developer_dir="/Applications/Xcode_${LDDC_XCODE_VERSION}.app/Contents/Developer"
+          test -d "$developer_dir"
+          sudo xcode-select --switch "$developer_dir"
+          test "$(xcodebuild -version | awk '/^Xcode / { print $2 }')" = "$LDDC_XCODE_VERSION"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: beta
+          cache: true
+      - run: flutter pub get
+      - name: Keep Apple dependency resolution on CocoaPods
+        run: flutter config --no-enable-swift-package-manager
+      - name: Run full Finder selection observation
+        shell: pwsh
+        run: |
+          & ./tool/test/run_macos_platform_tests.ps1 `
+            -Scenarios macos_open_panel_select `
+            -ObservationScenarios macos_open_panel_select
+      - name: Upload macOS observation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: stabilization-macos-finder-observation-${{ github.run_id }}
+          path: lddc/build/integration_reports/macos-native/**
           if-no-files-found: warn
           retention-days: 3

@@ -1,11 +1,14 @@
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:file_selector/file_selector.dart' as selector;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 import 'package:lddc/src/platform/files/app_file_picker.dart';
+import 'package:path/path.dart' as p;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -93,6 +96,140 @@ void main() {
       expect(fileDialog.lastPickFileInitialDirectory, root.path);
       expect(fileDialog.lastPickFileAllowedExtensions, audioFileExtensions);
     });
+
+    test('macOS 文件结果适配器保留真实 XFile 的名称、内容、大小和摘要', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      final Directory root = await Directory.systemTemp.createTemp(
+        'lddc-macos-picker-adapter-',
+      );
+      addTearDown(() async {
+        if (root.existsSync()) {
+          await root.delete(recursive: true);
+        }
+      });
+      final List<int> expectedBytes = '[00:00.00]Hello LDDC'.codeUnits;
+      final File songFile = File(
+        '${root.path}${Platform.pathSeparator}audio_sample.mp3',
+      )..writeAsBytesSync(expectedBytes);
+      final AppFilePickerImpl picker = AppFilePickerImpl(
+        fileDialog: _FakeFileDialog(
+          pickFileResult: selector.XFile(songFile.path),
+        ),
+      );
+
+      final PickedAudioFileHandle? selected = await picker.pickAudioFile(
+        initialDirectory: root.path,
+      );
+
+      expect(selected, isNotNull);
+      expect(selected?.name, 'audio_sample.mp3');
+      expect(selected?.path, songFile.path);
+      final List<int> actualBytes = await selected!.readAsBytes();
+      expect(actualBytes, expectedBytes);
+      expect(actualBytes, hasLength(songFile.lengthSync()));
+      expect(sha256.convert(actualBytes), sha256.convert(expectedBytes));
+    });
+
+    test('macOS 文件结果适配器保留取消和底层错误语义', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      final AppFilePickerImpl cancelled = AppFilePickerImpl(
+        fileDialog: _FakeFileDialog(),
+      );
+      expect(await cancelled.pickAudioFile(), isNull);
+
+      final StateError expectedError = StateError('native picker failed');
+      final AppFilePickerImpl failed = AppFilePickerImpl(
+        fileDialog: _FakeFileDialog(pickFileError: expectedError),
+      );
+      await expectLater(failed.pickAudioFile(), throwsA(same(expectedError)));
+    });
+
+    test('Apple 分层文件组件通过真实 TagLib 完成读取、转换、写回和重新打开', () async {
+      final File trackedFixture = File(
+        p.join(
+          Directory.current.path,
+          'integration_test',
+          'fixtures',
+          'media',
+          'audio_sample.mp3',
+        ),
+      );
+      expect(trackedFixture.existsSync(), isTrue);
+      final String trackedHash = sha256
+          .convert(await trackedFixture.readAsBytes())
+          .toString();
+      final Directory root = await Directory.systemTemp.createTemp(
+        'lddc-apple-file-component-',
+      );
+      addTearDown(() async {
+        if (root.existsSync()) {
+          await root.delete(recursive: true);
+        }
+      });
+      final File workingCopy = await trackedFixture.copy(
+        p.join(root.path, 'audio_sample.mp3'),
+      );
+      final AppFilePickerImpl picker = AppFilePickerImpl(
+        fileDialog: _FakeFileDialog(
+          pickFileResult: selector.XFile(workingCopy.path),
+        ),
+      );
+
+      final PickedAudioFileHandle? selected = await picker.pickAudioFile();
+      expect(selected, isNotNull);
+      expect(selected?.name, 'audio_sample.mp3');
+      expect(selected?.path, workingCopy.path);
+      final String selectedPath =
+          selected!.targetPath ?? (throw StateError('文件结果适配器没有提供可用目标路径'));
+
+      final LocalMatchMediaGateway gateway =
+          createDefaultLocalMatchMediaGateway();
+      final List<SongInfo> infos = await gateway.readAudioSongInfos(
+        selectedPath,
+      );
+      expect(infos, hasLength(1));
+      final String? originalLyrics = await gateway.readAudioLyricsText(
+        songPath: selectedPath,
+      );
+      expect(originalLyrics, contains('Hello LDDC'));
+
+      final ParsedLyricsPayload parsed = LyricsParser().parseText(
+        '[00:00.00]Hello LDDC\n[00:01.00]Component round trip\n',
+        path: 'component.lrc',
+      );
+      final Lyrics lyrics = Lyrics(
+        songInfo: infos.single,
+        source: Source.local,
+        data: parsed.lyricsData,
+        types: const <String, LyricsType>{'orig': LyricsType.lineByLine},
+        tags: parsed.tags,
+      );
+      final String converted = const LyricsConverter().convert(
+        lyrics: lyrics,
+        langs: const <String>['orig'],
+        format: LyricsFormat.lineByLineLrc,
+      );
+      expect(converted, contains('[00:01.000]Component round trip'));
+
+      await gateway.writeLyricsTag(
+        songPath: selectedPath,
+        lyricsText: converted,
+        lyrics: lyrics,
+        id3Version: Id3Version.v24,
+      );
+      final String? reopenedLyrics = await createDefaultLocalMatchMediaGateway()
+          .readAudioLyricsText(songPath: selectedPath);
+      expect(reopenedLyrics, contains('Component round trip'));
+      expect(
+        sha256.convert(await workingCopy.readAsBytes()).toString(),
+        isNot(trackedHash),
+      );
+      expect(
+        sha256.convert(await trackedFixture.readAsBytes()).toString(),
+        trackedHash,
+        reason: '真实组件测试只能修改临时副本，不能污染 tracked fixture',
+      );
+    }, skip: !Platform.isMacOS);
 
     test('桌面端选择普通文件时返回可读取字节的文件句柄', () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.windows;
@@ -502,12 +639,14 @@ class _FakeFileDialog implements AppFileDialog {
   _FakeFileDialog({
     this.pickDirectoryResult,
     this.pickFileResult,
+    this.pickFileError,
     this.pickFilesResult = const <selector.XFile>[],
     this.pickSaveLocationResult,
   });
 
   final String? pickDirectoryResult;
   final selector.XFile? pickFileResult;
+  final Object? pickFileError;
   final List<selector.XFile> pickFilesResult;
   final selector.FileSaveLocation? pickSaveLocationResult;
 
@@ -534,6 +673,10 @@ class _FakeFileDialog implements AppFileDialog {
   }) async {
     lastPickFileInitialDirectory = initialDirectory;
     lastPickFileAllowedExtensions = allowedExtensions;
+    final Object? error = pickFileError;
+    if (error != null) {
+      throw error;
+    }
     return pickFileResult;
   }
 

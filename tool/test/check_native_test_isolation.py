@@ -55,17 +55,14 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         "returnControl: openSong,",
         "returnControl: returnControl,",
         'action: "document_picker_fixture_cell_tapped"',
-        "pickerDestination(retainedPicker) == .fixtureDirectory",
-        "try requireFixtureCell(in: retainedPicker, timeout: 2)",
-        "retainedFixture.doubleTap()",
-        'action: "document_picker_fixture_cell_double_tapped"',
         'action: "document_picker_select_audio"',
         "queries: [picker.application.buttons.matching(predicate)]",
         "try waitForTypedCancelButton(",
         'try require(candidates.count < 2, "系统 Picker 的可操作 typed Cancel Button 不是唯一控件")',
         "let picker = try normalizePickerToBrowseRoot(app: app)",
         'action: "document_picker_typed_cancel_tapped"',
-        "experimental_ax_cancel_unavailable",
+        "for iteration in 1...3",
+        'action: "document_picker_cancel_iteration_\\(iteration)"',
         "let value = preview.value as? String",
         "if element.exists, element.isHittable, element.isEnabled",
         "element.waitForExistence(timeout: 3), element.isHittable, element.isEnabled",
@@ -87,14 +84,7 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         ordered_markers = (
             "let openSong = app.buttons[openSongIdentifier]",
             "fixture.tap()",
-            "if !waitForPickerDismissal(",
-            "timeout: 3",
-            "let retainedPicker = systemPickerContext(app: app)",
-            "pickerDestination(retainedPicker) == .fixtureDirectory",
-            "try requireFixtureCell(in: retainedPicker, timeout: 2)",
-            "retainedFixture.doubleTap()",
-            'action: "document_picker_fixture_cell_double_tapped"',
-            "timeout: 10",
+            "timeout: 15",
             "app.wait(for: .runningForeground, timeout: 15)",
             "waitForPreviewLyricsValue(preview: preview, timeout: 15)",
             'action: "document_picker_select_audio"',
@@ -104,13 +94,13 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
             marker_positions
         ):
             problems.append(
-                "iOS 文件选择必须在首次单击未返回时重新解析同一 typed Cell、"
-                "受控双击，并最终证明 Picker 退出、Flutter 恢复和预览成功"
+                "iOS Files observation 必须只执行一次精确点击，并最终证明 "
+                "Picker 退出、Flutter 恢复和预览成功"
             )
-        if select_body.count("waitForPickerDismissal(") != 2:
-            problems.append("iOS 文件选择必须恰好执行单击阶段和最终阶段两次 Picker 关闭等待")
-        if select_body.count("returnControl: openSong,") != 2:
-            problems.append("iOS 文件选择的两次 Picker 关闭等待都必须绑定 Flutter 返回控件")
+        if select_body.count("waitForPickerDismissal(") != 1:
+            problems.append("iOS Files observation 必须恰好执行一次 Picker 关闭等待")
+        if select_body.count("returnControl: openSong,") != 1:
+            problems.append("iOS Files observation 的 Picker 关闭等待必须绑定 Flutter 返回控件")
 
     scenario_contracts = (
         ("testDocumentPickerSelectsSeededAudio", "saveTag.tap()"),
@@ -186,6 +176,9 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         "picker.application.otherElements.matching(cancelPredicate)",
         "let cancelOthers =",
         "retainedFixture.tap()",
+        "retainedFixture.doubleTap()",
+        ".doubleTap()",
+        'action: "document_picker_fixture_cell_double_tapped"',
         'action: "document_picker_fixture_cell_reactivated"',
         'action: "document_picker_fixture_cell_double_tap_reactivated"',
         "picker.root.swipeDown()",
@@ -237,6 +230,42 @@ def ios_export_witness_failures(app_delegate: str, runner: str) -> list[str]:
     ):
         if marker not in runner:
             problems.append(f"iOS runner 导出 witness 验证缺少: {marker}")
+    return problems
+
+
+def ios_delegate_contract_failures(app_delegate: str, unit_tests: str) -> list[str]:
+    """校验 iOS delegate 只转发事件，资源状态由单一协调器拥有。"""
+
+    problems: list[str] = []
+    for marker in (
+        "final class IOSDocumentPickerRequestCoordinator",
+        "private var pendingResult: FlutterResult?",
+        "private var pendingAction: IOSSearchFilePendingAction?",
+        "private var pendingExportFileURL: URL?",
+        "requestCoordinator.completePickedDocuments(",
+        "requestCoordinator.cancel()",
+        "requestCoordinator.terminate()",
+    ):
+        if marker not in app_delegate:
+            problems.append(f"iOS delegate 协调器缺少契约: {marker}")
+    plugin_start = app_delegate.find("private final class IOSSearchAudioTagPlugin")
+    plugin_body = app_delegate[plugin_start:] if plugin_start >= 0 else ""
+    for forbidden in (
+        "private var pendingResult:",
+        "private var pendingAction:",
+        "private var pendingExportFileURL:",
+    ):
+        if forbidden in plugin_body:
+            problems.append(f"iOS UIKit delegate 禁止重复拥有请求状态: {forbidden}")
+    for marker in (
+        "testDocumentPickerCoordinatorReturnsReadableFileAndReleasesScope",
+        "testDocumentPickerCoordinatorRejectsBusyAndInvalidSelection",
+        "testDocumentPickerCoordinatorReportsDescriptorOpenFailure",
+        "testDocumentPickerCoordinatorPreparesAndCompletesExport",
+        "testDocumentPickerCoordinatorUpgradesWritableDescriptorAndTerminatesCleanly",
+    ):
+        if marker not in unit_tests:
+            problems.append(f"iOS RunnerTests 缺少 delegate/FD 契约: {marker}")
     return problems
 
 
@@ -486,9 +515,27 @@ def failures() -> list[str]:
         test_action = scheme.getroot().find("TestAction")
         if test_action is None or test_action.get("buildConfiguration") != "PlatformTest":
             problems.append("iOS UI scheme 必须使用 PlatformTest 配置")
-        testable = scheme.getroot().find(".//TestableReference")
-        if testable is None or testable.get("parallelizable") != "NO":
-            problems.append("iOS UI tests 必须禁用并行执行")
+        testables = scheme.getroot().findall(".//TestableReference")
+        testable_names = [
+            reference.get("BuildableName")
+            for testable in testables
+            for reference in testable.findall("BuildableReference")
+        ]
+        build_names = [
+            reference.get("BuildableName")
+            for reference in scheme.getroot().findall(
+                ".//BuildActionEntry/BuildableReference"
+            )
+        ]
+        for target_name in ("RunnerTests.xctest", "RunnerUITests.xctest"):
+            if testable_names.count(target_name) != 1 or build_names.count(target_name) != 1:
+                problems.append(
+                    f"iOS PlatformTest scheme 必须且只能构建并执行一次 {target_name}"
+                )
+        if not testables or any(
+            testable.get("parallelizable") != "NO" for testable in testables
+        ):
+            problems.append("iOS PlatformTest tests 必须全部禁用并行执行")
         if scheme.getroot().find(".//EnvironmentVariables") is not None:
             problems.append("iOS UI scheme 禁止保留未生效的 build-setting 环境映射")
     except ET.ParseError as error:
@@ -529,6 +576,7 @@ def failures() -> list[str]:
         problems.append("iOS RunnerTests 必须导入实际 Swift 模块 LDDC")
     if "@testable import Runner" in ios_unit_tests:
         problems.append("iOS RunnerTests 禁止导入旧模板模块 Runner")
+    problems.extend(ios_delegate_contract_failures(ios_app_delegate, ios_unit_tests))
     for marker in (
         "let errorValue: Any = failure.map",
         '"error": errorValue,',
@@ -765,9 +813,27 @@ def failures() -> list[str]:
             ROOT
             / "lddc/macos/Runner.xcodeproj/xcshareddata/xcschemes/RunnerPlatformTests.xcscheme"
         )
-        testable = macos_scheme.getroot().find(".//TestableReference")
-        if testable is None or testable.get("parallelizable") != "NO":
-            problems.append("macOS UI tests 必须禁用并行执行")
+        testables = macos_scheme.getroot().findall(".//TestableReference")
+        testable_names = [
+            reference.get("BuildableName")
+            for testable in testables
+            for reference in testable.findall("BuildableReference")
+        ]
+        build_names = [
+            reference.get("BuildableName")
+            for reference in macos_scheme.getroot().findall(
+                ".//BuildActionEntry/BuildableReference"
+            )
+        ]
+        for target_name in ("RunnerTests.xctest", "RunnerUITests.xctest"):
+            if testable_names.count(target_name) != 1 or build_names.count(target_name) != 1:
+                problems.append(
+                    f"macOS PlatformTest scheme 必须且只能构建并执行一次 {target_name}"
+                )
+        if not testables or any(
+            testable.get("parallelizable") != "NO" for testable in testables
+        ):
+            problems.append("macOS PlatformTest tests 必须全部禁用并行执行")
         if macos_scheme.getroot().find(".//EnvironmentVariables") is not None:
             problems.append("macOS UI scheme 禁止保留未生效的 build-setting 环境映射")
     except ET.ParseError as error:
@@ -917,18 +983,95 @@ def failures() -> list[str]:
         for marker in (
             "name: Platform Stabilization",
             "- ci/platform-stabilization",
-            "macos-open-panel:",
-            "ios-document-picker:",
+            "ios-required:",
+            "ios-files-observation:",
+            "macos-required:",
+            "macos-finder-observation:",
             "run_macos_platform_tests.ps1",
             "run_ios_platform_tests.ps1",
-            "-ExperimentalScenarios ios_document_picker_export_cancel",
-            "stabilization-macos-open-panel-${{ github.run_id }}",
-            "stabilization-ios-document-picker-${{ github.run_id }}",
+            "-Scenarios ios_document_picker_cancel",
+            "$scenarios = @(",
+            "'ios_document_picker_export_termination'",
+            "-ObservationScenarios $scenarios",
+            "-ObservationScenarios macos_open_panel_select",
+            "foreach ($iteration in 1..3)",
+            "-only-testing:RunnerTests",
+            "run_apple_component_contracts.ps1",
+            "-PreserveBuildProducts",
+            "test-without-building",
+            "find lddc/build/native_test_derived_data",
+            "flutter build ios --debug --simulator --config-only",
+            "flutter build macos --debug --config-only",
+            "Clean required iOS build products",
+            "Clean required macOS build products",
+            "-Platform ios",
+            "-Device $env:DEVICE_ID",
+            "-ReportDir build/integration_reports/ios-native/component-contracts",
+            "-Platform macos",
+            "-ReportDir build/integration_reports/macos-native/component-contracts",
+            "stabilization-macos-required-${{ github.run_id }}",
+            "stabilization-ios-required-${{ github.run_id }}",
         ):
             if marker not in stabilization_workflow:
                 problems.append(f"Apple 稳定化 workflow 缺少实验契约: {marker}")
         if "schedule:" in stabilization_workflow or "cron:" in stabilization_workflow:
             problems.append("Apple 稳定化 workflow 禁止定时触发")
+        if "mapfile" in stabilization_workflow:
+            problems.append("Apple 稳定化 workflow 禁止使用 macOS Bash 3.2 不支持的 mapfile")
+        apple_component_test = (
+            ROOT / "lddc/test/platform/files/app_file_picker_test.dart"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            "Apple 分层文件组件通过真实 TagLib 完成读取、转换、写回和重新打开",
+            "createDefaultLocalMatchMediaGateway()",
+            "LyricsConverter",
+            "trackedHash",
+        ):
+            if marker not in apple_component_test:
+                problems.append(f"Apple 文件组件 required 测试缺少: {marker}")
+        ios_media_contract = (
+            ROOT / "lddc/integration_test/ios_media_business_round_trip_test.dart"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            "expect(Platform.isIOS, isTrue",
+            "LDDC_APPLE_COMPONENT_FIXTURE_BASE64",
+            "PickedAudioFileHandle(",
+            "createDefaultLocalMatchMediaGateway()",
+            "FD 所有权和幂等关闭由 RunnerTests",
+        ):
+            if marker not in ios_media_contract:
+                problems.append(f"iOS 媒体业务 required 场景缺少: {marker}")
+        apple_component_runner = (
+            ROOT / "tool/test/run_apple_component_contracts.ps1"
+        ).read_text(encoding="utf-8")
+        for marker in (
+            '[string]$Device = ""',
+            'if (-not $IsMacOS)',
+            '"integration_test/ios_media_business_round_trip_test.dart"',
+            '"-d", $Device',
+            '--raw-report-type dart-jsonl',
+            'framework = $framework',
+            'executionPlatform = if ($Platform -eq "ios") { "ios_simulator" }',
+        ):
+            if marker not in apple_component_runner:
+                problems.append(f"Apple 文件组件 runner 缺少真实平台标识: {marker}")
+        if 'framework = "flutter_test"' in apple_component_runner:
+            problems.append("Apple 文件组件 runner 禁止把 iOS Simulator 报告固定成 flutter_test")
+        for runner_path in (
+            ROOT / "tool/test/run_ios_platform_tests.ps1",
+            ROOT / "tool/test/run_macos_platform_tests.ps1",
+        ):
+            runner_source = runner_path.read_text(encoding="utf-8")
+            for marker in (
+                "[switch]$PreserveBuildProducts",
+                "-not $PreserveBuildProducts",
+                "$observationFailureDetected = $false",
+                "$requiredReports.Count -eq 0 -and $observationFailureDetected",
+            ):
+                if marker not in runner_source:
+                    problems.append(
+                        f"{runner_path.name} 必须让独立 observation job 保留非零退出码: {marker}"
+                    )
     else:
         for filename, (display_name, jobs) in expected_workflows.items():
             path = workflow_dir / filename
@@ -1483,13 +1626,10 @@ def failures() -> list[str]:
         'Set-DestinationProbeMetadata -Probe $destinationProbe',
         "Resolve-UniqueBuildArtifact",
         "iOS Xcode DerivedData 超出测试构建根",
-        '[ValidateSet("ios_document_picker_export_cancel")]',
-        "$experimentalScenarioAllowlist.Contains($scenario)",
-        '$scenario -eq "ios_document_picker_export_cancel"',
-        '"experimental_ax_cancel_unavailable"',
-        "$reportingErrors.Count -eq 0",
-        "Add-ExperimentalObservationEvidence",
-        "$observedExperimentalScenarios.Contains($scenario)",
+        "[string[]]$Scenarios = @()",
+        "[string[]]$ObservationScenarios = @()",
+        "$observationFilter.Contains($scenario)",
+        "Add-ObservationEvidence",
         "$requiredScenarioDir",
         "$requiredJunitDir",
         '$exportWitnessFileName = ".lddc_platform_export_witness.json"',

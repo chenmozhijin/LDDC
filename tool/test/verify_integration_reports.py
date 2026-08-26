@@ -15,6 +15,7 @@ from capability_matrix import (
     CapabilityMatrixError,
     load_matrix,
     resolve_contract,
+    resolve_gate,
 )
 
 
@@ -72,8 +73,10 @@ def _verify_capabilities(
         if expected_state["required"]:
             if expected_state["mode"] == "notExercised":
                 failures.append(f"{report_name}: required 能力 {name} 不能 notExercised")
-            if expected_state["mode"] == "real" and not evidence:
-                failures.append(f"{report_name}: {name}=real 但没有真实调用证据")
+            if expected_state["mode"] in {"real", "componentVerified"} and not evidence:
+                failures.append(
+                    f"{report_name}: {name}={expected_state['mode']} 但没有能力证据"
+                )
     return failures
 
 
@@ -307,9 +310,22 @@ def main() -> int:
                 scenario=scenario,
                 framework=framework,
             )
+            expected_gate = resolve_gate(
+                matrix,
+                profile=args.profile,
+                platform=args.platform,
+                scenario=scenario,
+                framework=framework,
+            )
         except CapabilityMatrixError as error:
             failures.append(f"{path.name}: {error}")
             continue
+        if payload.get("gate") != expected_gate:
+            failures.append(
+                f"{path.name}: gate={payload.get('gate')} 与矩阵 {expected_gate} 不一致"
+            )
+        if expected_gate != "required":
+            failures.append(f"{path.name}: observation 场景不得进入 required verifier")
         failures.extend(
             _verify_capabilities(payload, expected=expected, report_name=path.name)
         )

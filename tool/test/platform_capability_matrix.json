@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "profiles": {
     "offline": {
       "network": {
@@ -205,6 +205,60 @@
     {
       "profile": "platform",
       "platform": "ios",
+      "scenario": "ios_media_business_round_trip",
+      "framework": "integration_test",
+      "gate": "required",
+      "capabilities": {
+        "filePicker": {
+          "mode": "componentVerified",
+          "required": true,
+          "applicable": true,
+          "reason": "确定性文件句柄边界必须与生产文件结果适配器完成名称、路径和字节映射"
+        },
+        "media": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "临时音频副本必须通过生产 TagLib 完成歌词读取、Converter 转换、标签写回和重新打开回读"
+        },
+        "nativeChannels": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "iOS MethodChannel、security-scoped URL 与 FD 生命周期由 RunnerTests 独立阻断验证"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "macos",
+      "scenario": "macos_file_result_adapter",
+      "framework": "flutter_test",
+      "gate": "required",
+      "capabilities": {
+        "filePicker": {
+          "mode": "componentVerified",
+          "required": true,
+          "applicable": true,
+          "reason": "AppFileDialog 注入的真实临时 XFile 必须保留名称、路径、字节、大小和摘要"
+        },
+        "media": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "临时音频副本必须通过生产 TagLib 完成歌词读取、Converter 转换、标签写回和重新打开回读"
+        },
+        "nativeChannels": {
+          "mode": "notApplicable",
+          "required": false,
+          "applicable": false,
+          "reason": "真实 NSOpenPanel 的打开与取消由独立 hybrid required 场景验证"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "ios",
       "scenario": "platform_capability_smoke",
       "framework": "integration_test",
       "capabilities": {}
@@ -344,6 +398,7 @@
       "platform": "ios",
       "scenario": "ios_document_picker_select",
       "framework": "xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -370,6 +425,7 @@
       "platform": "ios",
       "scenario": "ios_document_picker_cancel",
       "framework": "xcuitest",
+      "gate": "required",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -390,6 +446,7 @@
       "platform": "ios",
       "scenario": "ios_document_picker_export",
       "framework": "xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -416,6 +473,7 @@
       "platform": "ios",
       "scenario": "ios_document_picker_export_cancel",
       "framework": "xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -442,6 +500,7 @@
       "platform": "ios",
       "scenario": "ios_document_picker_export_termination",
       "framework": "xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -468,6 +527,7 @@
       "platform": "macos",
       "scenario": "macos_open_panel_select",
       "framework": "integration_test+xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -506,6 +566,7 @@
       "platform": "macos",
       "scenario": "macos_open_panel_cancel",
       "framework": "integration_test+xcuitest",
+      "gate": "required",
       "capabilities": {
         "filePicker": {
           "mode": "real",

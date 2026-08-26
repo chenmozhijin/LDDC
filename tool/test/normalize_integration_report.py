@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from capability_matrix import MATRIX_PATH, load_matrix, resolve_contract
+from capability_matrix import MATRIX_PATH, load_matrix, resolve_contract, resolve_gate
 
 
 def _flutter_jsonl_started(path: Path) -> bool:
@@ -94,6 +94,16 @@ def _real_action_count(capabilities: object) -> int:
     return count
 
 
+def _scenario_gate(args: argparse.Namespace) -> str:
+    return resolve_gate(
+        load_matrix(args.matrix),
+        profile=args.profile,
+        platform=args.platform,
+        scenario=args.scenario,
+        framework=args.framework,
+    )
+
+
 def _write_atomic(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -126,6 +136,7 @@ def _write_infrastructure_failure(args: argparse.Namespace, error: Exception) ->
         "profile": args.profile,
         "platform": args.platform,
         "framework": args.framework,
+        "gate": _scenario_gate(args),
         "capabilities": {},
         "resources": {"baseline": {}, "final": {}, "thresholds": {}},
         "runner": {
@@ -255,6 +266,13 @@ def _payload_from_external_evidence(args: argparse.Namespace) -> dict[str, Any]:
         "profile": evidence["profile"],
         "platform": evidence["platform"],
         "framework": evidence["framework"],
+        "gate": resolve_gate(
+            load_matrix(args.matrix),
+            profile=evidence["profile"],
+            platform=evidence["platform"],
+            scenario=evidence["scenario"],
+            framework=evidence["framework"],
+        ),
         "capabilities": {
             name: {**state, "evidence": []}
             for name, state in expected_capabilities.items()
@@ -344,6 +362,13 @@ def _normalize_flutter(args: argparse.Namespace) -> None:
         if not args.evidence.is_file():
             raise SystemExit("联合场景缺少外部 evidence JSON")
         _merge_external_evidence(payload, args.evidence, args.framework)
+    payload["gate"] = resolve_gate(
+        load_matrix(args.matrix),
+        profile=str(payload.get("profile", "")),
+        platform=str(payload.get("platform", "")),
+        scenario=str(payload.get("scenario", "")),
+        framework=str(payload.get("framework", "")),
+    )
     test_started = _flutter_jsonl_started(args.raw_report)
     steps = payload.get("steps")
     step_failed = not isinstance(steps, list) or any(
@@ -425,6 +450,13 @@ def _normalize_native(args: argparse.Namespace) -> None:
         "profile": evidence["profile"],
         "platform": evidence["platform"],
         "framework": evidence["framework"],
+        "gate": resolve_gate(
+            load_matrix(args.matrix),
+            profile=evidence["profile"],
+            platform=evidence["platform"],
+            scenario=evidence["scenario"],
+            framework=evidence["framework"],
+        ),
         "capabilities": capabilities,
         "resources": evidence.get(
             "resources", {"baseline": {}, "final": {}, "thresholds": {}}

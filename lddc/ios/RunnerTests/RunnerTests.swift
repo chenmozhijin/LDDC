@@ -7,6 +7,179 @@ import Darwin
 @testable import LDDC
 
 final class RunnerTests: XCTestCase {
+  func testDocumentPickerCoordinatorReturnsReadableFileAndReleasesScope() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("lddc-ios-picker-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let fileURL = directory.appendingPathComponent("audio_sample.mp3")
+    let expected = Data("Hello LDDC".utf8)
+    try expected.write(to: fileURL, options: .atomic)
+
+    var stoppedURLs: [URL] = []
+    let registry = IOSOpenedAudioFileRegistry(
+      stopAccessing: { url in stoppedURLs.append(url) }
+    )
+    let coordinator = IOSDocumentPickerRequestCoordinator(
+      openedFiles: registry,
+      startAccessing: { _ in true }
+    )
+    var returned: Any?
+    XCTAssertTrue(coordinator.begin(action: .pickAudioFile) { returned = $0 })
+    coordinator.completePickedDocuments([fileURL])
+
+    let value = try XCTUnwrap(returned as? [String: Any])
+    XCTAssertEqual(value["name"] as? String, "audio_sample.mp3")
+    XCTAssertEqual(value["canRead"] as? Bool, true)
+    XCTAssertEqual(value["canWrite"] as? Bool, false)
+    let fd = Int32(try XCTUnwrap(value["fileDescriptor"] as? Int))
+    XCTAssertEqual(coordinator.openFileDescriptorCount, 1)
+    var bytes = [UInt8](repeating: 0, count: expected.count)
+    let readCount = bytes.withUnsafeMutableBytes { buffer in
+      Darwin.read(fd, buffer.baseAddress, buffer.count)
+    }
+    XCTAssertEqual(readCount, expected.count)
+    XCTAssertEqual(Data(bytes), expected)
+
+    coordinator.close(fileDescriptor: fd)
+    coordinator.close(fileDescriptor: fd)
+    XCTAssertEqual(coordinator.openFileDescriptorCount, 0)
+    XCTAssertEqual(stoppedURLs, [fileURL])
+  }
+
+  func testDocumentPickerCoordinatorRejectsBusyAndInvalidSelection() throws {
+    let coordinator = IOSDocumentPickerRequestCoordinator()
+    var firstResult: Any? = "unset"
+    var busyResult: Any?
+    XCTAssertTrue(coordinator.begin(action: .pickAudioFile) { firstResult = $0 })
+    XCTAssertFalse(coordinator.begin(action: .saveTextFile) { busyResult = $0 })
+    XCTAssertEqual((busyResult as? FlutterError)?.code, "busy")
+    XCTAssertEqual(coordinator.pendingRequestCount, 1)
+    coordinator.cancel()
+    XCTAssertNil(firstResult)
+    XCTAssertEqual(coordinator.pendingRequestCount, 0)
+
+    var invalidResult: Any?
+    XCTAssertTrue(coordinator.begin(action: .pickAudioFile) { invalidResult = $0 })
+    coordinator.completePickedDocuments([URL(string: "https://example.invalid/audio.mp3")!])
+    XCTAssertEqual((invalidResult as? FlutterError)?.code, "open_fd_failed")
+    XCTAssertEqual(coordinator.pendingRequestCount, 0)
+
+    var repeatedCallbackResult: Any? = "unset"
+    XCTAssertTrue(coordinator.begin(action: .pickAudioFile) { repeatedCallbackResult = $0 })
+    coordinator.cancel()
+    coordinator.completePickedDocuments([URL(fileURLWithPath: "/tmp/ignored.mp3")])
+    XCTAssertNil(repeatedCallbackResult)
+    XCTAssertEqual(coordinator.pendingRequestCount, 0)
+
+    var emptySelectionResult: Any? = "unset"
+    XCTAssertTrue(coordinator.begin(action: .pickAudioFile) { emptySelectionResult = $0 })
+    coordinator.completePickedDocuments([])
+    XCTAssertNil(emptySelectionResult)
+    XCTAssertEqual(coordinator.pendingRequestCount, 0)
+  }
+
+  func testDocumentPickerCoordinatorReportsDescriptorOpenFailure() throws {
+    var stoppedURLs: [URL] = []
+    let coordinator = IOSDocumentPickerRequestCoordinator(
+      startAccessing: { _ in true },
+      stopAccessing: { stoppedURLs.append($0) },
+      openDescriptor: { _, _ in -1 }
+    )
+    var returned: Any?
+    XCTAssertTrue(coordinator.begin(action: .pickAudioFile) { returned = $0 })
+
+    coordinator.completePickedDocuments([URL(fileURLWithPath: "/tmp/missing.mp3")])
+
+    XCTAssertEqual((returned as? FlutterError)?.code, "open_fd_failed")
+    XCTAssertEqual(coordinator.pendingRequestCount, 0)
+    XCTAssertEqual(coordinator.openFileDescriptorCount, 0)
+    XCTAssertEqual(stoppedURLs, [URL(fileURLWithPath: "/tmp/missing.mp3")])
+  }
+
+  func testDocumentPickerCoordinatorPreparesAndCompletesExport() throws {
+    let root = FileManager.default.temporaryDirectory
+      .appendingPathComponent("lddc-ios-picker-export-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let store = IOSPendingExportFileStore(rootDirectory: root)
+    let coordinator = IOSDocumentPickerRequestCoordinator(
+      pendingExportFileStore: store
+    )
+    let expected = Data("[00:00.00]Hello LDDC".utf8)
+    var returned: Any?
+    XCTAssertTrue(coordinator.begin(action: .saveTextFile) { returned = $0 })
+    let source = try coordinator.prepareExport(fileName: "lddc_export.lrc", bytes: expected)
+    XCTAssertEqual(try Data(contentsOf: source), expected)
+    let destination = root.deletingLastPathComponent()
+      .appendingPathComponent("lddc-export-result-\(UUID().uuidString).lrc")
+    try expected.write(to: destination, options: .atomic)
+    defer { try? FileManager.default.removeItem(at: destination) }
+    var observedURL: URL?
+    coordinator.completePickedDocuments([destination]) { observedURL = $0 }
+
+    XCTAssertEqual(returned as? String, destination.path)
+    XCTAssertEqual(observedURL, destination)
+    XCTAssertEqual(coordinator.pendingRequestCount, 0)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: source.deletingLastPathComponent().path))
+
+    var cancelledResult: Any? = "unset"
+    XCTAssertTrue(coordinator.begin(action: .saveTextFile) { cancelledResult = $0 })
+    let cancelledSource = try coordinator.prepareExport(
+      fileName: "cancelled.lrc",
+      bytes: expected
+    )
+    coordinator.cancel()
+    XCTAssertNil(cancelledResult)
+    XCTAssertFalse(
+      FileManager.default.fileExists(atPath: cancelledSource.deletingLastPathComponent().path)
+    )
+  }
+
+  func testDocumentPickerCoordinatorUpgradesWritableDescriptorAndTerminatesCleanly() throws {
+    let fileURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("lddc-ios-write-\(UUID().uuidString).mp3")
+    try Data([1, 2, 3]).write(to: fileURL, options: .atomic)
+    defer { try? FileManager.default.removeItem(at: fileURL) }
+    let coordinator = IOSDocumentPickerRequestCoordinator()
+    var returned: Any?
+    coordinator.openAudioFileForWrite(
+      identifier: fileURL.absoluteString,
+      path: nil
+    ) { returned = $0 }
+    let value = try XCTUnwrap(returned as? [String: Any])
+    XCTAssertEqual(value["canWrite"] as? Bool, true)
+    XCTAssertEqual(coordinator.openFileDescriptorCount, 1)
+    XCTAssertTrue(coordinator.begin(action: .pickAudioFile) { _ in })
+    coordinator.terminate()
+    XCTAssertEqual(coordinator.openFileDescriptorCount, 0)
+    XCTAssertEqual(coordinator.pendingRequestCount, 0)
+  }
+
+  func testDocumentPickerCoordinatorCleansInterruptedExportOnTerminationAndNextInit() throws {
+    let root = FileManager.default.temporaryDirectory
+      .appendingPathComponent("lddc-ios-interrupted-export-\(UUID().uuidString)", isDirectory: true)
+    defer { try? FileManager.default.removeItem(at: root) }
+    let store = IOSPendingExportFileStore(rootDirectory: root)
+    let coordinator = IOSDocumentPickerRequestCoordinator(
+      pendingExportFileStore: store
+    )
+    XCTAssertTrue(coordinator.begin(action: .saveTextFile) { _ in })
+    let pending = try coordinator.prepareExport(
+      fileName: "interrupted.lrc",
+      bytes: Data("[00:00.00]Hello LDDC".utf8)
+    )
+    XCTAssertTrue(FileManager.default.fileExists(atPath: pending.path))
+
+    coordinator.terminate()
+    XCTAssertFalse(FileManager.default.fileExists(atPath: pending.deletingLastPathComponent().path))
+
+    let stale = try store.create(fileName: "stale.lrc")
+    try Data("stale".utf8).write(to: stale, options: .atomic)
+    XCTAssertTrue(FileManager.default.fileExists(atPath: stale.path))
+    _ = IOSDocumentPickerRequestCoordinator(pendingExportFileStore: store)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: root.path))
+  }
+
   func testReleaseMetadataMatchesBundle() {
     let info = Bundle.main.infoDictionary
 

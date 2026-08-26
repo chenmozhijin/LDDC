@@ -96,7 +96,11 @@ def _resolved_capabilities(
 
 
 def _complete_scenario_report(
-    *, profile: str, platform: str, scenario: str
+    *,
+    profile: str,
+    platform: str,
+    scenario: str,
+    framework: str = "integration_test",
 ) -> dict[str, object]:
     return {
         "schemaVersion": 2,
@@ -104,7 +108,8 @@ def _complete_scenario_report(
         "scenario": scenario,
         "profile": profile,
         "platform": platform,
-        "framework": "integration_test",
+        "framework": framework,
+        "gate": "required",
         "steps": [{"step": "opened", "success": True}],
         "status": "passed",
         "coverageStatus": "executed",
@@ -113,6 +118,7 @@ def _complete_scenario_report(
             profile=profile,
             platform=platform,
             scenario=scenario,
+            framework=framework,
         ),
         "resources": {"baseline": {}, "final": {}, "thresholds": {}},
         "runner": {
@@ -558,10 +564,6 @@ class QualityToolTests(unittest.TestCase):
             "requireFixtureCell(in: picker, timeout: 15)",
             "returnControl: openSong,",
             'action: "document_picker_fixture_cell_tapped"',
-            "pickerDestination(retainedPicker) == .fixtureDirectory",
-            "try requireFixtureCell(in: retainedPicker, timeout: 2)",
-            "retainedFixture.doubleTap()",
-            'action: "document_picker_fixture_cell_double_tapped"',
             'action: "document_picker_select_audio"',
             "waitForPreviewLyricsValue(preview: preview",
             "let value = preview.value as? String",
@@ -572,6 +574,8 @@ class QualityToolTests(unittest.TestCase):
             "try waitForTypedCancelButton(",
             "let picker = try normalizePickerToBrowseRoot(app: app)",
             'action: "document_picker_typed_cancel_tapped"',
+            "for iteration in 1...3",
+            'action: "document_picker_cancel_iteration_\\(iteration)"',
         ):
             self.assertIn(marker, source)
         self.assertNotIn("isFixtureDirectory(", source)
@@ -581,6 +585,7 @@ class QualityToolTests(unittest.TestCase):
         self.assertNotIn("waitForSystemPickerToClose(", source)
         self.assertNotIn("waitForKeyboardTutorialToDisappear(", source)
         self.assertNotIn("preview.descendants(matching:", source)
+        self.assertNotIn(".doubleTap()", source)
 
     def test_ios_picker_state_machine_gate_rejects_disabled_and_unconverted_mutations(self) -> None:
         checker = _load_native_isolation_checker()
@@ -606,36 +611,18 @@ class QualityToolTests(unittest.TestCase):
                 1,
             ),
             source.replace(
-                "if !waitForPickerDismissal(\n"
-                "      app: app,\n"
-                "      returnControl: openSong,\n"
-                "      timeout: 3\n"
-                "    )",
-                "if !waitForPickerDismissal(\n"
-                "      app: app,\n"
-                "      returnControl: nil,\n"
-                "      timeout: 3\n"
-                "    )",
+                "returnControl: openSong,\n        timeout: 15",
+                "returnControl: nil,\n        timeout: 15",
                 1,
             ),
             source.replace("fixture.tap()", "fixture.doubleTap()", 1),
             source.replace(
-                "pickerDestination(retainedPicker) == .fixtureDirectory",
-                "pickerDestination(retainedPicker) == .browseRoot",
-                1,
-            ),
-            source.replace(
-                "retainedFixture.doubleTap()",
-                "retainedFixture.tap()",
-                1,
-            ),
-            source.replace(
-                "        timeout: 10\n"
+                "        timeout: 15\n"
                 "      ),\n"
-                "      \"单击或受控双击匿名音频后系统 Picker 没有关闭，文件回调未完成\"",
+                "      \"单击匿名音频后系统 Picker 没有关闭，记录 Files AX 激活观察失败\"",
                 "        timeout: 0\n"
                 "      ),\n"
-                "      \"单击或受控双击匿名音频后系统 Picker 没有关闭，文件回调未完成\"",
+                "      \"单击匿名音频后系统 Picker 没有关闭，记录 Files AX 激活观察失败\"",
                 1,
             ),
             source.replace(
@@ -755,6 +742,38 @@ class QualityToolTests(unittest.TestCase):
                 [],
             )
 
+    def test_ios_delegate_contract_gate_rejects_duplicate_state_and_missing_tests(self) -> None:
+        checker = _load_native_isolation_checker()
+        app_delegate = (ROOT / "lddc/ios/Runner/AppDelegate.swift").read_text(
+            encoding="utf-8"
+        )
+        unit_tests = (ROOT / "lddc/ios/RunnerTests/RunnerTests.swift").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(
+            checker.ios_delegate_contract_failures(app_delegate, unit_tests),
+            [],
+        )
+        duplicated_state = app_delegate.replace(
+            "private var activePicker: UIDocumentPickerViewController?",
+            "private var activePicker: UIDocumentPickerViewController?\n"
+            "  private var pendingResult: FlutterResult?",
+            1,
+        )
+        missing_test = unit_tests.replace(
+            "testDocumentPickerCoordinatorReportsDescriptorOpenFailure",
+            "removedDescriptorOpenFailureContract",
+            1,
+        )
+        self.assertNotEqual(
+            checker.ios_delegate_contract_failures(duplicated_state, unit_tests),
+            [],
+        )
+        self.assertNotEqual(
+            checker.ios_delegate_contract_failures(app_delegate, missing_test),
+            [],
+        )
+
     def test_macos_open_panel_requires_native_return_activation(self) -> None:
         checker = _load_native_isolation_checker()
         flutter_source = (
@@ -798,7 +817,7 @@ class QualityToolTests(unittest.TestCase):
         )
         self.assertIn("iOS Xcode DerivedData 超出测试构建根", ios_runner)
 
-    def test_ios_experimental_cancel_is_explicit_and_narrow(self) -> None:
+    def test_apple_stabilization_separates_required_and_observation_gates(self) -> None:
         runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
             encoding="utf-8"
         )
@@ -806,26 +825,121 @@ class QualityToolTests(unittest.TestCase):
             ROOT / ".github/workflows/platform-stabilization.yml"
         ).read_text(encoding="utf-8")
         for marker in (
-            '[ValidateSet("ios_document_picker_export_cancel")]',
-            "$experimentalScenarioAllowlist.Contains($scenario)",
-            '$scenario -eq "ios_document_picker_export_cancel"',
-            '"experimental_ax_cancel_unavailable"',
-            "$reportingErrors.Count -eq 0",
-            "Add-ExperimentalObservationEvidence",
-            "$observedExperimentalScenarios.Contains($scenario)",
+            "[string[]]$ObservationScenarios = @()",
+            "$observationFilter.Contains($scenario)",
+            "Add-ObservationEvidence",
             "$requiredScenarioDir",
             "$requiredJunitDir",
+            "$observationFailureDetected = $false",
+            "$requiredReports.Count -eq 0 -and $observationFailureDetected",
         ):
             self.assertIn(marker, runner)
+        macos_runner = (
+            ROOT / "tool/test/run_macos_platform_tests.ps1"
+        ).read_text(encoding="utf-8")
+        self.assertIn("$observationFailureDetected = $false", macos_runner)
+        self.assertIn("[switch]$PreserveBuildProducts", runner)
+        self.assertIn("[switch]$PreserveBuildProducts", macos_runner)
         self.assertIn(
-            "-ExperimentalScenarios ios_document_picker_export_cancel",
-            workflow,
+            "$requiredReports.Count -eq 0 -and $observationFailureDetected",
+            macos_runner,
         )
-        self.assertIn("[string[]]$ExperimentalScenarios = @()", runner)
-        self.assertNotIn(
-            '[string[]]$ExperimentalScenarios = @("ios_document_picker_export_cancel")',
-            runner,
+        for marker in (
+            "ios-required:",
+            "ios-files-observation:",
+            "macos-required:",
+            "macos-finder-observation:",
+            "-ObservationScenarios",
+            "run_apple_component_contracts.ps1",
+            "-Device $env:DEVICE_ID",
+            "-PreserveBuildProducts",
+            "-ReportDir build/integration_reports/ios-native/component-contracts",
+            "-ReportDir build/integration_reports/macos-native/component-contracts",
+            "test-without-building",
+            "find lddc/build/native_test_derived_data",
+            "flutter build ios --debug --simulator --config-only",
+            "flutter build macos --debug --config-only",
+        ):
+            self.assertIn(marker, workflow)
+        self.assertNotIn("-ExperimentalScenarios", workflow)
+        self.assertNotIn("mapfile", workflow)
+        self.assertIn('while IFS= read -r item; do xctestruns+=("$item")', workflow)
+
+        matrix = json.loads(
+            (ROOT / "tool/test/platform_capability_matrix.json").read_text(
+                encoding="utf-8"
+            )
         )
+        gates = {
+            contract.get("scenario"): contract.get("gate", "required")
+            for contract in matrix["contracts"]
+            if contract.get("platform") in {"ios", "macos"}
+        }
+        for scenario in (
+            "ios_document_picker_cancel",
+            "ios_media_business_round_trip",
+            "macos_open_panel_cancel",
+            "macos_file_result_adapter",
+        ):
+            self.assertEqual(gates[scenario], "required")
+        for scenario in (
+            "ios_document_picker_select",
+            "ios_document_picker_export",
+            "ios_document_picker_export_cancel",
+            "ios_document_picker_export_termination",
+            "macos_open_panel_select",
+        ):
+            self.assertEqual(gates[scenario], "observation")
+        ios_media_contract = next(
+            contract
+            for contract in matrix["contracts"]
+            if contract.get("scenario") == "ios_media_business_round_trip"
+        )
+        self.assertEqual(ios_media_contract["framework"], "integration_test")
+
+        ios_media_test = (
+            ROOT / "lddc/integration_test/ios_media_business_round_trip_test.dart"
+        ).read_text(encoding="utf-8")
+        self.assertIn("expect(Platform.isIOS, isTrue", ios_media_test)
+        self.assertIn("FD 所有权和幂等关闭由 RunnerTests", ios_media_test)
+        component_runner = (
+            ROOT / "tool/test/run_apple_component_contracts.ps1"
+        ).read_text(encoding="utf-8")
+        self.assertIn("if (-not $IsMacOS)", component_runner)
+        self.assertIn('"-d", $Device', component_runner)
+        self.assertIn("--raw-report-type dart-jsonl", component_runner)
+        self.assertIn('executionPlatform = if ($Platform -eq "ios")', component_runner)
+
+    def test_apple_platform_schemes_include_native_and_ui_test_targets(self) -> None:
+        for platform in ("ios", "macos"):
+            scheme = ET.parse(
+                ROOT
+                / f"lddc/{platform}/Runner.xcodeproj/xcshareddata/xcschemes/RunnerPlatformTests.xcscheme"
+            )
+            testables = scheme.getroot().findall(".//TestableReference")
+            testable_names = [
+                reference.get("BuildableName")
+                for testable in testables
+                for reference in testable.findall("BuildableReference")
+            ]
+            build_names = [
+                reference.get("BuildableName")
+                for reference in scheme.getroot().findall(
+                    ".//BuildActionEntry/BuildableReference"
+                )
+            ]
+            self.assertCountEqual(
+                testable_names,
+                ["RunnerTests.xctest", "RunnerUITests.xctest"],
+            )
+            self.assertEqual(testable_names.count("RunnerTests.xctest"), 1)
+            self.assertEqual(testable_names.count("RunnerUITests.xctest"), 1)
+            self.assertEqual(build_names.count("RunnerTests.xctest"), 1)
+            self.assertEqual(build_names.count("RunnerUITests.xctest"), 1)
+            self.assertTrue(testables)
+            self.assertTrue(
+                all(testable.get("parallelizable") == "NO" for testable in testables)
+            )
 
     def test_ios_simulator_creator_supports_local_and_ci_ownership(self) -> None:
         creator = (ROOT / "tool/test/create_ios_simulator.sh").read_text(
@@ -871,9 +985,14 @@ class QualityToolTests(unittest.TestCase):
                 runner.find('Wait-XcodeDestinationReady -Stage "initial"'),
             ),
         )
-        self.assertIn("if: github.event_name == 'workflow_dispatch'", workflow)
-        self.assertIn("xcrun xcdevice list --timeout 5", workflow)
-        self.assertIn("-showdestinations", workflow)
+        for marker in (
+            "runs-on: macos-26",
+            "LDDC_XCODE_VERSION: '26.6'",
+            "LDDC_IOS_RUNTIME_VERSION: '26.5'",
+            "ios-required:",
+            "ios-files-observation:",
+        ):
+            self.assertIn(marker, workflow)
 
     def test_ios_dynamic_destination_mutations_are_rejected(self) -> None:
         checker = _load_native_isolation_checker()
@@ -1119,7 +1238,43 @@ class QualityToolTests(unittest.TestCase):
 
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("filePicker", result.stderr)
-            self.assertIn("没有真实调用证据", result.stderr)
+            self.assertIn("没有能力证据", result.stderr)
+
+    def test_integration_report_verifier_requires_component_verified_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            payload = _complete_scenario_report(
+                profile="platform",
+                platform="ios",
+                scenario="ios_media_business_round_trip",
+                framework="integration_test",
+            )
+            (root / "scenario.json").write_text(
+                json.dumps(payload),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "tool/test/verify_integration_reports.py"),
+                    "--directory",
+                    str(root),
+                    "--profile",
+                    "platform",
+                    "--platform",
+                    "ios",
+                    "--run-id",
+                    "quality-test-run",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("filePicker=componentVerified", result.stderr)
+            self.assertIn("没有能力证据", result.stderr)
 
     def test_platform_capability_matrix_is_platform_and_scenario_specific(self) -> None:
         android = _resolved_capabilities(

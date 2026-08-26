@@ -4,8 +4,23 @@ param(
   [string]$ReportDir = "build/integration_reports/ios-native",
   [ValidateRange(30, 600)]
   [int]$ScenarioTimeoutSeconds = 120,
-  [ValidateSet("ios_document_picker_export_cancel")]
-  [string[]]$ExperimentalScenarios = @()
+  [ValidateSet(
+    "ios_document_picker_select",
+    "ios_document_picker_cancel",
+    "ios_document_picker_export",
+    "ios_document_picker_export_cancel",
+    "ios_document_picker_export_termination"
+  )]
+  [string[]]$Scenarios = @(),
+  [ValidateSet(
+    "ios_document_picker_select",
+    "ios_document_picker_cancel",
+    "ios_document_picker_export",
+    "ios_document_picker_export_cancel",
+    "ios_document_picker_export_termination"
+  )]
+  [string[]]$ObservationScenarios = @(),
+  [switch]$PreserveBuildProducts
 )
 
 $ErrorActionPreference = "Stop"
@@ -635,7 +650,7 @@ function Add-RunnerEvidence {
   )
 }
 
-function Add-ExperimentalObservationEvidence {
+function Add-ObservationEvidence {
   param(
     [Parameter(Mandatory = $true)][string]$EvidencePath,
     [Parameter(Mandatory = $true)][string]$Reason
@@ -732,7 +747,7 @@ function Write-InfrastructureFailureReports {
   }
 }
 
-$scenarios = @(
+$allScenarios = @(
   @{
     Name = "ios_document_picker_select"
     Method = "testDocumentPickerSelectsSeededAudio"
@@ -754,16 +769,51 @@ $scenarios = @(
     Method = "testTerminatedExportIsCleanedOnNextLaunch"
   }
 )
-$overallExitCode = 0
-$experimentalScenarioAllowlist = [Collections.Generic.HashSet[string]]::new(
+$scenarioFilter = [Collections.Generic.HashSet[string]]::new(
   [StringComparer]::Ordinal
 )
-foreach ($scenario in $ExperimentalScenarios) {
-  $experimentalScenarioAllowlist.Add($scenario) | Out-Null
+foreach ($scenario in $Scenarios) {
+  $scenarioFilter.Add($scenario) | Out-Null
 }
-$observedExperimentalScenarios = [Collections.Generic.HashSet[string]]::new(
+$observationFilter = [Collections.Generic.HashSet[string]]::new(
   [StringComparer]::Ordinal
 )
+foreach ($scenario in $ObservationScenarios) {
+  $observationFilter.Add($scenario) | Out-Null
+}
+$matrixResolver = Join-Path $repoRoot "tool/test/capability_matrix.py"
+$scenarios = if ($scenarioFilter.Count -eq 0) {
+  @($allScenarios)
+} else {
+  @($allScenarios | Where-Object { $scenarioFilter.Contains($_.Name) })
+}
+if ($scenarios.Count -eq 0) {
+  throw "没有选择任何 iOS Document Picker 场景"
+}
+foreach ($entry in $scenarios) {
+  $gateOutput = @(& python $matrixResolver `
+      --matrix $matrix `
+      --profile platform `
+      --platform ios `
+      --scenario $entry.Name `
+      --framework xcuitest `
+      --gate)
+  $gateExitCode = $LASTEXITCODE
+  $expectedGate = ($gateOutput -join "`n").Trim()
+  if ($gateExitCode -ne 0 -or $expectedGate -notin @("required", "observation")) {
+    throw "无法解析 iOS 场景 $($entry.Name) 的 gate"
+  }
+  $declaredObservation = $observationFilter.Contains($entry.Name)
+  if ($ObservationScenarios.Count -gt 0 `
+      -and (($expectedGate -eq "observation") -ne $declaredObservation)) {
+    throw "iOS 场景 $($entry.Name) 的 runner gate 与能力矩阵不一致"
+  }
+  if ($expectedGate -eq "observation") {
+    $observationFilter.Add($entry.Name) | Out-Null
+  }
+}
+$overallExitCode = 0
+$observationFailureDetected = $false
 $infrastructureFailureMessage = $null
 $infrastructureFailureClass = "infrastructure_failure"
 $activeInfrastructureFailureClass = "infrastructure_failure"
@@ -1215,21 +1265,11 @@ try {
         -PostconditionStatus $postconditionStatus
       $evidencePath = Get-Item -LiteralPath $fallbackEvidence
     }
-    $experimentalObservation = $false
-    if ($experimentalScenarioAllowlist.Contains($scenario) `
-        -and $scenario -eq "ios_document_picker_export_cancel" `
-        -and $testExitCode -ne 0 `
-        -and $reportingErrors.Count -eq 0) {
-      $summaryText = Get-Content -LiteralPath $summaryPath -Raw
-      if ($summaryText.Contains(
-          "experimental_ax_cancel_unavailable",
-          [StringComparison]::Ordinal
-        )) {
-        $experimentalObservation = $true
-        Add-ExperimentalObservationEvidence `
-          -EvidencePath $evidencePath.FullName `
-          -Reason "iOS 26.5 保存型 Picker 返回根层后未暴露可命中的 typed Cancel Button"
-      }
+    $experimentalObservation = $observationFilter.Contains($scenario)
+    if ($experimentalObservation -and $testExitCode -ne 0) {
+      Add-ObservationEvidence `
+        -EvidencePath $evidencePath.FullName `
+        -Reason "完整 Files 导航属于 observation，失败保留原始 XCTest 和 AX 证据"
     }
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
     & python $normalizer `
@@ -1245,15 +1285,11 @@ try {
     & python $junitConverter --input $summaryPath --output $junitPath --scenario $scenario
     $junitExitCode = $LASTEXITCODE
     if ($effectiveExitCode -ne 0 -or $normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
-      # Document Picker 的选择、取消、导出和生命周期场景彼此独立。单个失败
-      # 不能阻断后续证据收集。只有保存型 Picker 明确返回专用 AX 限制标记、
-      # 且统一报告均完整时，实验 workflow 才将该场景排除于 required outcome；
-      # 编译、runner、报告或其他断言失败仍然必须使 job 失败。
-      if ($experimentalObservation `
-          -and $normalizeExitCode -eq 0 `
-          -and $junitExitCode -eq 0) {
-        $observedExperimentalScenarios.Add($scenario) | Out-Null
-        Write-Warning "iOS XCUITest 场景 $scenario 保留失败证据并标记为实验观察"
+      # observation 只是不阻断 required 汇总，绝不把失败改写为成功；
+      # 缺少 scenario/JUnit、normalizer 或 runner 报告错误仍然使本次 job 失败。
+      if ($experimentalObservation -and $normalizeExitCode -eq 0 -and $junitExitCode -eq 0) {
+        $observationFailureDetected = $true
+        Write-Warning "iOS observation 场景 $scenario 失败，保留原始证据且不阻断 required"
       } else {
         $overallExitCode = 1
         Write-Warning "iOS XCUITest 场景 $scenario 失败，继续收集其余独立场景"
@@ -1270,7 +1306,7 @@ try {
   & xcrun simctl terminate $Device com.apple.DocumentsApp 2>$null
   & xcrun simctl uninstall $Device com.cmzj.lddc.platformtests 2>$null
   try {
-    if (Test-Path -LiteralPath $derivedData -PathType Container) {
+    if (-not $PreserveBuildProducts -and (Test-Path -LiteralPath $derivedData -PathType Container)) {
       Remove-Item -LiteralPath $derivedData -Recurse -Force
     }
   } catch {
@@ -1298,7 +1334,7 @@ if (-not [string]::IsNullOrWhiteSpace($infrastructureFailureMessage)) {
 
 foreach ($entry in $scenarios) {
   $scenario = $entry.Name
-  if ($observedExperimentalScenarios.Contains($scenario)) {
+  if ($observationFilter.Contains($scenario)) {
     continue
   }
   $scenarioPath = Join-Path $scenarioDir "$scenario.json"
@@ -1313,14 +1349,25 @@ foreach ($entry in $scenarios) {
   Copy-Item -LiteralPath $junitPath -Destination $requiredJunitDir -Force
 }
 
-& python $verifier `
-  --directory $requiredScenarioDir `
-  --junit-directory $requiredJunitDir `
-  --profile platform `
-  --platform ios `
-  --run-id $runId `
-  --matrix $matrix
-if ($LASTEXITCODE -ne 0) {
+$requiredReports = @(
+  Get-ChildItem -LiteralPath $requiredScenarioDir -File -ErrorAction SilentlyContinue
+)
+if ($requiredReports.Count -gt 0) {
+  & python $verifier `
+    --directory $requiredScenarioDir `
+    --junit-directory $requiredJunitDir `
+    --profile platform `
+    --platform ios `
+    --run-id $runId `
+    --matrix $matrix
+  if ($LASTEXITCODE -ne 0) {
+    $overallExitCode = 1
+  }
+}
+
+if ($requiredReports.Count -eq 0 -and $observationFailureDetected) {
+  # 独立 observation job 自身必须保持失败，workflow 通过 job 级
+  # continue-on-error 取消其阻断性；runner 不能把真实 Files 导航失败改写成成功。
   $overallExitCode = 1
 }
 

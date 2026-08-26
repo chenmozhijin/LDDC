@@ -340,9 +340,238 @@ final class IOSPendingExportFileStore {
   }
 }
 
-private enum IOSSearchFilePendingAction {
+enum IOSSearchFilePendingAction: Equatable {
   case pickAudioFile
   case saveTextFile
+}
+
+/// 管理 Document Picker 请求、Flutter 回调和文件资源所有权。
+///
+/// UIKit delegate 只负责把系统事件转发到这里。状态机不依赖 accessibility 或
+/// 测试通道，因此 RunnerTests 可以直接验证生产回调、FD、取消和导出清理契约。
+final class IOSDocumentPickerRequestCoordinator {
+  typealias StartAccessing = (URL) -> Bool
+  typealias StopAccessing = (URL) -> Void
+  typealias OpenDescriptor = (URL, Int32) -> Int32
+  typealias ExportObserver = (URL) -> Void
+
+  private var pendingResult: FlutterResult?
+  private var pendingAction: IOSSearchFilePendingAction?
+  private var pendingExportFileURL: URL?
+  private let openedFiles: IOSOpenedAudioFileRegistry
+  private let pendingExportFileStore: IOSPendingExportFileStore
+  private let startAccessing: StartAccessing
+  private let stopAccessing: StopAccessing
+  private let openDescriptor: OpenDescriptor
+
+  init(
+    openedFiles: IOSOpenedAudioFileRegistry = IOSOpenedAudioFileRegistry(),
+    pendingExportFileStore: IOSPendingExportFileStore = IOSPendingExportFileStore(),
+    startAccessing: @escaping StartAccessing = { url in
+      url.startAccessingSecurityScopedResource()
+    },
+    stopAccessing: @escaping StopAccessing = { url in
+      url.stopAccessingSecurityScopedResource()
+    },
+    openDescriptor: @escaping OpenDescriptor = { url, flags in
+      Darwin.open(url.path, flags)
+    }
+  ) {
+    self.openedFiles = openedFiles
+    self.pendingExportFileStore = pendingExportFileStore
+    self.startAccessing = startAccessing
+    self.stopAccessing = stopAccessing
+    self.openDescriptor = openDescriptor
+    pendingExportFileStore.cleanupStaleExports()
+  }
+
+  var pendingRequestCount: Int { pendingResult == nil ? 0 : 1 }
+  var openFileDescriptorCount: Int { openedFiles.count }
+
+  @discardableResult
+  func begin(action: IOSSearchFilePendingAction, result: @escaping FlutterResult) -> Bool {
+    guard pendingResult == nil else {
+      result(
+        FlutterError(
+          code: "busy",
+          message: action == .pickAudioFile
+            ? "已有 iOS 音频选择请求未完成"
+            : "已有 iOS 文件保存请求未完成",
+          details: nil
+        )
+      )
+      return false
+    }
+    pendingAction = action
+    pendingResult = result
+    return true
+  }
+
+  func prepareExport(fileName: String, bytes: Data) throws -> URL {
+    let exportFileURL = try pendingExportFileStore.create(fileName: fileName)
+    do {
+      try bytes.write(to: exportFileURL, options: .atomic)
+      pendingExportFileURL = exportFileURL
+      return exportFileURL
+    } catch {
+      pendingExportFileStore.cleanup(fileURL: exportFileURL)
+      throw error
+    }
+  }
+
+  func completePickedDocuments(
+    _ urls: [URL],
+    exportObserver: ExportObserver? = nil
+  ) {
+    switch pendingAction {
+    case .pickAudioFile:
+      completePickedAudio(urls)
+    case .saveTextFile:
+      completeSavedText(urls, exportObserver: exportObserver)
+    case .none:
+      return
+    }
+  }
+
+  func cancel() {
+    finish(with: nil)
+  }
+
+  func failCurrentRequest(_ error: FlutterError) {
+    finish(with: error)
+  }
+
+  func openAudioFileForWrite(
+    identifier: String?,
+    path: String?,
+    result: @escaping FlutterResult
+  ) {
+    guard let url = IOSSearchFileArguments.resolveAudioFileURL(
+      identifier: identifier,
+      path: path
+    ) else {
+      result(
+        FlutterError(
+          code: "invalid_argument",
+          message: "音频写入升级缺少有效 identifier/path",
+          details: nil
+        )
+      )
+      return
+    }
+    openAudioFileURL(url, flags: O_RDWR, canWrite: true, result: result)
+  }
+
+  func close(fileDescriptor: Int32) {
+    openedFiles.close(fileDescriptor: fileDescriptor)
+  }
+
+  func closeAll() {
+    openedFiles.closeAll()
+  }
+
+  func terminate() {
+    pendingResult = nil
+    pendingAction = nil
+    cleanupPendingExportFile()
+    openedFiles.closeAll()
+  }
+
+  private func completePickedAudio(_ urls: [URL]) {
+    guard let url = urls.first else {
+      finish(with: nil)
+      return
+    }
+    guard url.isFileURL else {
+      finish(
+        with: FlutterError(
+          code: "open_fd_failed",
+          message: "选择的文件不是本地文件 URL",
+          details: nil
+        )
+      )
+      return
+    }
+    openAudioFileURL(url, flags: O_RDONLY, canWrite: false) { value in
+      self.finish(with: value)
+    }
+  }
+
+  private func completeSavedText(_ urls: [URL], exportObserver: ExportObserver?) {
+    guard let url = urls.first else {
+      finish(with: nil)
+      return
+    }
+    exportObserver?(url)
+    finish(with: url.isFileURL ? url.path : url.absoluteString)
+  }
+
+  private func openAudioFileURL(
+    _ url: URL,
+    flags: Int32,
+    canWrite: Bool,
+    result: @escaping FlutterResult
+  ) {
+    let startedAccessing = startAccessing(url)
+    let fileDescriptor = openDescriptor(url, flags)
+    if fileDescriptor < 0 {
+      if startedAccessing {
+        stopAccessing(url)
+      }
+      result(
+        FlutterError(
+          code: "open_fd_failed",
+          message: "打开音频文件失败：\(String(cString: strerror(errno)))",
+          details: nil
+        )
+      )
+      return
+    }
+    guard openedFiles.register(
+      fileDescriptor: fileDescriptor,
+      url: url,
+      startedAccessingSecurityScopedResource: startedAccessing
+    ) else {
+      _ = Darwin.close(fileDescriptor)
+      if startedAccessing {
+        stopAccessing(url)
+      }
+      result(
+        FlutterError(
+          code: "fd_registry_conflict",
+          message: "iOS 文件描述符所有权冲突",
+          details: nil
+        )
+      )
+      return
+    }
+    result([
+      "name": url.lastPathComponent,
+      "path": url.path,
+      "identifier": url.absoluteString,
+      "fileDescriptor": Int(fileDescriptor),
+      "fileDescriptorNameHint": url.lastPathComponent,
+      "canRead": true,
+      "canWrite": canWrite,
+    ])
+  }
+
+  private func finish(with value: Any?) {
+    let completedAction = pendingAction
+    let result = pendingResult
+    pendingAction = nil
+    pendingResult = nil
+    if completedAction == .saveTextFile {
+      cleanupPendingExportFile()
+    }
+    result?(value)
+  }
+
+  private func cleanupPendingExportFile() {
+    guard let pendingExportFileURL else { return }
+    pendingExportFileStore.cleanup(fileURL: pendingExportFileURL)
+    self.pendingExportFileURL = nil
+  }
 }
 
 private final class IOSSearchAudioTagPlugin: NSObject,
@@ -354,19 +583,12 @@ private final class IOSSearchAudioTagPlugin: NSObject,
   private static let channelName = "lddc/ios_search_audio_tag"
 
   private let channel: FlutterMethodChannel
-  private var pendingResult: FlutterResult?
-  private var pendingAction: IOSSearchFilePendingAction?
   private var activePicker: UIDocumentPickerViewController?
-  private var pendingExportFileURL: URL?
-  private let openedFiles = IOSOpenedAudioFileRegistry()
-  private let pendingExportFileStore = IOSPendingExportFileStore()
+  private let requestCoordinator = IOSDocumentPickerRequestCoordinator()
 
   private init(channel: FlutterMethodChannel) {
     self.channel = channel
     super.init()
-    // 上一次进程可能在系统导出界面中被直接终止；初始化时清理遗留目录，
-    // 使下一次启动成为确定性的资源回收边界。
-    pendingExportFileStore.cleanupStaleExports()
     NotificationCenter.default.addObserver(
       self,
       selector: #selector(handleAppWillTerminate),
@@ -377,8 +599,7 @@ private final class IOSSearchAudioTagPlugin: NSObject,
 
   deinit {
     NotificationCenter.default.removeObserver(self)
-    closeAllOpenedFiles()
-    cleanupPendingExportFile()
+    requestCoordinator.terminate()
   }
 
   static func register(with registrar: FlutterPluginRegistrar) {
@@ -401,7 +622,7 @@ private final class IOSSearchAudioTagPlugin: NSObject,
     case "closeFd":
       handleCloseFd(call: call, result: result)
     case "closeAllOpenedFiles":
-      closeAllOpenedFiles()
+      requestCoordinator.closeAll()
       result(nil)
     default:
       result(FlutterMethodNotImplemented)
@@ -409,17 +630,6 @@ private final class IOSSearchAudioTagPlugin: NSObject,
   }
 
   private func handlePickAudioFile(call: FlutterMethodCall, result: @escaping FlutterResult) {
-    guard pendingResult == nil else {
-      result(
-        FlutterError(
-          code: "busy",
-          message: "已有 iOS 音频选择请求未完成",
-          details: nil
-        )
-      )
-      return
-    }
-
     guard let presenter = topViewController() else {
       result(
         FlutterError(
@@ -430,9 +640,9 @@ private final class IOSSearchAudioTagPlugin: NSObject,
       )
       return
     }
-
-    pendingResult = result
-    pendingAction = .pickAudioFile
+    guard requestCoordinator.begin(action: .pickAudioFile, result: result) else {
+      return
+    }
     let picker = buildAudioPicker(arguments: call.arguments as? [String: Any])
     picker.delegate = self
     picker.allowsMultipleSelection = false
@@ -442,17 +652,6 @@ private final class IOSSearchAudioTagPlugin: NSObject,
   }
 
   private func handleSaveTextFile(call: FlutterMethodCall, result: @escaping FlutterResult) {
-    guard pendingResult == nil else {
-      result(
-        FlutterError(
-          code: "busy",
-          message: "已有 iOS 文件保存请求未完成",
-          details: nil
-        )
-      )
-      return
-    }
-
     guard let presenter = topViewController() else {
       result(
         FlutterError(
@@ -500,12 +699,14 @@ private final class IOSSearchAudioTagPlugin: NSObject,
       return
     }
 
+    guard requestCoordinator.begin(action: .saveTextFile, result: result) else {
+      return
+    }
     do {
-      let exportFileURL = try createExportFileURL(fileName: fileName)
-      pendingExportFileURL = exportFileURL
-      try bytes.write(to: exportFileURL, options: .atomic)
-      pendingResult = result
-      pendingAction = .saveTextFile
+      let exportFileURL = try requestCoordinator.prepareExport(
+        fileName: fileName,
+        bytes: bytes
+      )
       let picker = buildExportPicker(
         exportFileURL: exportFileURL,
         arguments: arguments
@@ -516,8 +717,7 @@ private final class IOSSearchAudioTagPlugin: NSObject,
       activePicker = picker
       presenter.present(picker, animated: true)
     } catch {
-      cleanupPendingExportFile()
-      result(
+      requestCoordinator.failCurrentRequest(
         FlutterError(
           code: "write_failed",
           message: "准备导出文件失败：\(error.localizedDescription)",
@@ -543,7 +743,7 @@ private final class IOSSearchAudioTagPlugin: NSObject,
 
     let fileDescriptor = Int32(fdValue)
     // 注册表只关闭自己登记的 fd；未知或重复 fd 不会触发 Darwin.close。
-    openedFiles.close(fileDescriptor: fileDescriptor)
+    requestCoordinator.close(fileDescriptor: fileDescriptor)
     result(nil)
   }
 
@@ -561,19 +761,11 @@ private final class IOSSearchAudioTagPlugin: NSObject,
       )
       return
     }
-    let rawIdentifier = arguments["identifier"] as? String
-    let rawPath = arguments["path"] as? String
-    guard let url = resolveAudioFileURL(identifier: rawIdentifier, path: rawPath) else {
-      result(
-        FlutterError(
-          code: "invalid_argument",
-          message: "音频写入升级缺少有效 identifier/path",
-          details: nil
-        )
-      )
-      return
-    }
-    openAudioFileURL(url, flags: O_RDWR, canWrite: true, result: result)
+    requestCoordinator.openAudioFileForWrite(
+      identifier: arguments["identifier"] as? String,
+      path: arguments["path"] as? String,
+      result: result
+    )
   }
 
   private func buildAudioPicker(arguments: [String: Any]?) -> UIDocumentPickerViewController {
@@ -630,147 +822,35 @@ private final class IOSSearchAudioTagPlugin: NSObject,
   }
 
   func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-    finishPendingRequest(with: nil)
+    finishPickerUI()
+    requestCoordinator.cancel()
   }
 
   func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
-    finishPendingRequest(with: nil)
+    finishPickerUI()
+    requestCoordinator.cancel()
   }
 
   func documentPicker(
     _ controller: UIDocumentPickerViewController,
     didPickDocumentsAt urls: [URL]
   ) {
-    switch pendingAction {
-    case .pickAudioFile:
-      handlePickedAudioFile(urls: urls)
-    case .saveTextFile:
-      handleSavedTextFile(urls: urls)
-    case .none:
-      return
-    }
-  }
-
-  private func handlePickedAudioFile(urls: [URL]) {
-    guard let url = urls.first else {
-      finishPendingRequest(with: nil)
-      return
-    }
-
-    guard url.isFileURL else {
-      finishPendingRequest(
-        with: FlutterError(
-          code: "open_fd_failed",
-          message: "选择的文件不是本地文件 URL",
-          details: nil
-        )
-      )
-      return
-    }
-
-    openAudioFileURL(url, flags: O_RDONLY, canWrite: false) { value in
-      self.finishPendingRequest(with: value)
-    }
-  }
-
-  private func openAudioFileURL(
-    _ url: URL,
-    flags: Int32,
-    canWrite: Bool,
-    result: @escaping FlutterResult
-  ) {
-    let startedAccessing = url.startAccessingSecurityScopedResource()
-    let fileDescriptor = Darwin.open(url.path, flags)
-    if fileDescriptor < 0 {
-      if startedAccessing {
-        url.stopAccessingSecurityScopedResource()
-      }
-      let errorMessage = String(cString: strerror(errno))
-      result(
-        FlutterError(
-          code: "open_fd_failed",
-          message: "打开音频文件失败：\(errorMessage)",
-          details: nil
-        )
-      )
-      return
-    }
-
-    // iOS 侧必须保留 fd 与 security-scoped 生命周期，Dart 业务完成后再显式释放。
-    guard
-      openedFiles.register(
-        fileDescriptor: fileDescriptor,
-        url: url,
-        startedAccessingSecurityScopedResource: startedAccessing
-      )
-    else {
-      // 相同整数仍在注册表中说明所有权冲突；立即关闭新句柄并回收访问权，
-      // 不能把一个 fd 同时交给两个 Dart 会话。
-      _ = Darwin.close(fileDescriptor)
-      if startedAccessing {
-        url.stopAccessingSecurityScopedResource()
-      }
-      result(
-        FlutterError(
-          code: "fd_registry_conflict",
-          message: "iOS 文件描述符所有权冲突",
-          details: nil
-        )
-      )
-      return
-    }
-    result(
-      [
-        "name": url.lastPathComponent,
-        "path": url.path,
-        "identifier": url.absoluteString,
-        "fileDescriptor": Int(fileDescriptor),
-        "fileDescriptorNameHint": url.lastPathComponent,
-        "canRead": true,
-        "canWrite": canWrite,
-      ]
-    )
-  }
-
-  private func handleSavedTextFile(urls: [URL]) {
-    guard let url = urls.first else {
-      finishPendingRequest(with: nil)
-      return
-    }
-
+    finishPickerUI()
     #if LDDC_PLATFORM_TEST
-    IOSPlatformExportWitnessRecorder.record(exportedURL: url)
+    requestCoordinator.completePickedDocuments(
+      urls,
+      exportObserver: { url in
+        IOSPlatformExportWitnessRecorder.record(exportedURL: url)
+      }
+    )
+    #else
+    requestCoordinator.completePickedDocuments(urls)
     #endif
-    // iOS 单文件导出返回用户最终确认的目标 URL，仅用于成功提示，不再回写桌面目录状态。
-    let savePath = url.isFileURL ? url.path : url.absoluteString
-    finishPendingRequest(with: savePath)
   }
 
-  private func finishPendingRequest(with value: Any?) {
+  private func finishPickerUI() {
     activePicker?.dismiss(animated: true)
     activePicker = nil
-    let completedAction = pendingAction
-    pendingAction = nil
-    if completedAction == .saveTextFile {
-      cleanupPendingExportFile()
-    }
-    guard let result = pendingResult else {
-      return
-    }
-    pendingResult = nil
-    result(value)
-  }
-
-  private func createExportFileURL(fileName: String) throws -> URL {
-    return try pendingExportFileStore.create(fileName: fileName)
-  }
-
-  private func cleanupPendingExportFile() {
-    guard let exportFileURL = pendingExportFileURL else {
-      return
-    }
-    pendingExportFileStore.cleanup(fileURL: exportFileURL)
-    pendingExportFileURL = nil
   }
 
   private func extractBytes(_ value: Any?) -> Data? {
@@ -805,20 +885,9 @@ private final class IOSSearchAudioTagPlugin: NSObject,
     return nil
   }
 
-  private func resolveAudioFileURL(identifier: String?, path: String?) -> URL? {
-    return IOSSearchFileArguments.resolveAudioFileURL(identifier: identifier, path: path)
-  }
-
   @objc private func handleAppWillTerminate() {
-    closeAllOpenedFiles()
     activePicker = nil
-    pendingAction = nil
-    pendingResult = nil
-    cleanupPendingExportFile()
-  }
-
-  private func closeAllOpenedFiles() {
-    openedFiles.closeAll()
+    requestCoordinator.terminate()
   }
 
   private func topViewController() -> UIViewController? {

@@ -6,6 +6,9 @@
             <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="97C146ED1CF9000F007C117D" BuildableName="LDDC.app" BlueprintName="Runner" ReferencedContainer="container:Runner.xcodeproj" />
          </BuildActionEntry>
          <BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="NO">
+            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="331C8080294A63A400263BE5" BuildableName="RunnerTests.xctest" BlueprintName="RunnerTests" ReferencedContainer="container:Runner.xcodeproj" />
+         </BuildActionEntry>
+         <BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="NO">
             <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="A10000000000000000000001" BuildableName="RunnerUITests.xctest" BlueprintName="RunnerUITests" ReferencedContainer="container:Runner.xcodeproj" />
          </BuildActionEntry>
       </BuildActionEntries>
@@ -15,6 +18,9 @@
          <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="97C146ED1CF9000F007C117D" BuildableName="LDDC.app" BlueprintName="Runner" ReferencedContainer="container:Runner.xcodeproj" />
       </MacroExpansion>
       <Testables>
+         <TestableReference skipped="NO" parallelizable="NO">
+            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="331C8080294A63A400263BE5" BuildableName="RunnerTests.xctest" BlueprintName="RunnerTests" ReferencedContainer="container:Runner.xcodeproj" />
+         </TestableReference>
          <TestableReference skipped="NO" parallelizable="NO">
             <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="A10000000000000000000001" BuildableName="RunnerUITests.xctest" BlueprintName="RunnerUITests" ReferencedContainer="container:Runner.xcodeproj" />
          </TestableReference>
