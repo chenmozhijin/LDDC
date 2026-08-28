@@ -23,6 +23,28 @@ def invalid_descendant_element_types(source: str) -> list[str]:
     )
 
 
+def validated_powershell_parameter_reassignments(source: str) -> list[str]:
+    """返回脚本主体中被大小写不敏感地重新赋值的验证参数。"""
+
+    validated_names = {
+        match.group(1).casefold(): match.group(1)
+        for match in re.finditer(
+            r"\[(?:ValidateSet|ValidateRange)\s*\(.*?\)\]\s*"
+            # PowerShell 数组类型写作 [string[]]，不能用遇到第一个右方括号
+            # 就停止的表达式，否则会漏掉本次造成四个 job 失败的 Scenarios 参数。
+            r"\[[^\r\n]+\]\s*\$(\w+)",
+            source,
+            flags=re.DOTALL,
+        )
+    }
+    reassigned = {
+        validated_names[match.group(1).casefold()]
+        for match in re.finditer(r"(?im)^\s*\$(\w+)\s*=", source)
+        if match.group(1).casefold() in validated_names
+    }
+    return sorted(reassigned, key=str.casefold)
+
+
 def ios_picker_state_machine_failures(source: str) -> list[str]:
     """校验 iOS 系统 Picker 使用确定页面状态和真实完成结果。"""
 
@@ -301,7 +323,9 @@ def ios_destination_contract_failures(source: str) -> list[str]:
             problems.append("iOS build-for-testing 禁止绑定尚未被 Xcode 发现的动态 UDID")
 
     probe_index = source.find('Wait-XcodeDestinationReady -Stage "initial"')
-    test_loop_index = source.find("foreach ($entry in $scenarios)", probe_index)
+    test_loop_index = source.find(
+        "foreach ($entry in $selectedScenarioEntries)", probe_index
+    )
     if not (0 <= probe_index < test_loop_index):
         problems.append("iOS Xcode destination 就绪门禁必须发生在任何 XCTest 场景之前")
     return problems
@@ -995,7 +1019,8 @@ def failures() -> list[str]:
             "-ObservationScenarios $scenarios",
             "-ObservationScenarios macos_open_panel_select",
             "foreach ($iteration in 1..3)",
-            "-only-testing:RunnerTests",
+            "-only-testing:RunnerTests/IOSDocumentPickerCoordinatorTests",
+            "-only-testing:RunnerTests/IOSDocumentPickerResourceTests",
             "run_apple_component_contracts.ps1",
             "-PreserveBuildProducts",
             "test-without-building",
@@ -1026,6 +1051,7 @@ def failures() -> list[str]:
             "createDefaultLocalMatchMediaGateway()",
             "LyricsConverter",
             "trackedHash",
+            "debugDefaultTargetPlatformOverride = TargetPlatform.macOS",
         ):
             if marker not in apple_component_test:
                 problems.append(f"Apple 文件组件 required 测试缺少: {marker}")
@@ -1041,6 +1067,26 @@ def failures() -> list[str]:
         ):
             if marker not in ios_media_contract:
                 problems.append(f"iOS 媒体业务 required 场景缺少: {marker}")
+        ios_native_tests = (
+            ROOT / "lddc/ios/RunnerTests/RunnerTests.swift"
+        ).read_text(encoding="utf-8")
+        native_class_markers = (
+            "final class IOSDocumentPickerCoordinatorTests: XCTestCase",
+            "final class RunnerTests: XCTestCase",
+            "final class IOSDocumentPickerResourceTests: XCTestCase",
+        )
+        native_class_positions = [
+            ios_native_tests.find(marker) for marker in native_class_markers
+        ]
+        if any(position < 0 for position in native_class_positions) or (
+            native_class_positions != sorted(native_class_positions)
+        ):
+            problems.append("iOS 原生 required 契约与发布元数据测试必须分属独立 XCTest 类")
+        metadata_index = ios_native_tests.find("func testReleaseMetadataMatchesBundle()")
+        if not (
+            native_class_positions[1] < metadata_index < native_class_positions[2]
+        ):
+            problems.append("iOS 发布元数据测试不得进入 PlatformTest required 契约类")
         apple_component_runner = (
             ROOT / "tool/test/run_apple_component_contracts.ps1"
         ).read_text(encoding="utf-8")
@@ -1052,6 +1098,11 @@ def failures() -> list[str]:
             '--raw-report-type dart-jsonl',
             'framework = $framework',
             'executionPlatform = if ($Platform -eq "ios") { "ios_simulator" }',
+            "Ensure-IosSimulatorVisibleToFlutter",
+            "simctl bootstatus",
+            "flutter devices --machine",
+            "$filePickerEvidence = @()",
+            "$mediaEvidence = @()",
         ):
             if marker not in apple_component_runner:
                 problems.append(f"Apple 文件组件 runner 缺少真实平台标识: {marker}")
@@ -1062,6 +1113,13 @@ def failures() -> list[str]:
             ROOT / "tool/test/run_macos_platform_tests.ps1",
         ):
             runner_source = runner_path.read_text(encoding="utf-8")
+            for parameter in validated_powershell_parameter_reassignments(
+                runner_source
+            ):
+                problems.append(
+                    f"{runner_path.name} 禁止重新赋值带验证器的参数（PowerShell "
+                    f"变量名不区分大小写）: {parameter}"
+                )
             for marker in (
                 "[switch]$PreserveBuildProducts",
                 "-not $PreserveBuildProducts",
@@ -1628,6 +1686,7 @@ def failures() -> list[str]:
         "iOS Xcode DerivedData 超出测试构建根",
         "[string[]]$Scenarios = @()",
         "[string[]]$ObservationScenarios = @()",
+        "$selectedScenarioEntries = if ($scenarioFilter.Count -eq 0)",
         "$observationFilter.Contains($scenario)",
         "Add-ObservationEvidence",
         "$requiredScenarioDir",

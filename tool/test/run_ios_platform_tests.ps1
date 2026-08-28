@@ -720,7 +720,7 @@ function Write-InfrastructureFailureReports {
     [string]$FailureClass = "infrastructure_failure"
   )
 
-  foreach ($entry in $scenarios) {
+  foreach ($entry in $selectedScenarioEntries) {
     $scenario = $entry.Name
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
     $junitPath = Join-Path $junitDir "$scenario.xml"
@@ -782,15 +782,15 @@ foreach ($scenario in $ObservationScenarios) {
   $observationFilter.Add($scenario) | Out-Null
 }
 $matrixResolver = Join-Path $repoRoot "tool/test/capability_matrix.py"
-$scenarios = if ($scenarioFilter.Count -eq 0) {
+$selectedScenarioEntries = if ($scenarioFilter.Count -eq 0) {
   @($allScenarios)
 } else {
   @($allScenarios | Where-Object { $scenarioFilter.Contains($_.Name) })
 }
-if ($scenarios.Count -eq 0) {
+if ($selectedScenarioEntries.Count -eq 0) {
   throw "没有选择任何 iOS Document Picker 场景"
 }
-foreach ($entry in $scenarios) {
+foreach ($entry in $selectedScenarioEntries) {
   $gateOutput = @(& python $matrixResolver `
       --matrix $matrix `
       --profile platform `
@@ -926,7 +926,7 @@ try {
   Invoke-RequiredSimctl `
     -Stage "install-platform-test-app" `
     -CommandArguments @("install", $Device, $appBundle.FullName) | Out-Null
-  foreach ($entry in $scenarios) {
+  foreach ($entry in $selectedScenarioEntries) {
     $scenario = $entry.Name
     $method = $entry.Method
     $scenarioStartedAt = [DateTimeOffset]::UtcNow
@@ -1332,7 +1332,7 @@ if (-not [string]::IsNullOrWhiteSpace($infrastructureFailureMessage)) {
     -FailureClass $infrastructureFailureClass
 }
 
-foreach ($entry in $scenarios) {
+foreach ($entry in $selectedScenarioEntries) {
   $scenario = $entry.Name
   if ($observationFilter.Contains($scenario)) {
     continue

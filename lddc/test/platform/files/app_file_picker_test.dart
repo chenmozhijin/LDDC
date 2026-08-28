@@ -145,6 +145,10 @@ void main() {
     });
 
     test('Apple 分层文件组件通过真实 TagLib 完成读取、转换、写回和重新打开', () async {
+      // flutter_test 默认模拟 Android，即使测试进程实际运行在 macOS 也不会自动
+      // 切换 defaultTargetPlatform。这里显式声明 macOS，确保被测实现走注入的
+      // AppFileDialog，而不是误调用 Android MethodChannel；tearDown 会恢复全局值。
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       final File trackedFixture = File(
         p.join(
           Directory.current.path,

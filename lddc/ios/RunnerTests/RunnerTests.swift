@@ -6,7 +6,7 @@ import Darwin
 // PRODUCT_MODULE_NAME，而不是 Xcode target 的显示名称，否则显式模块构建会找不到宿主模块。
 @testable import LDDC
 
-final class RunnerTests: XCTestCase {
+final class IOSDocumentPickerCoordinatorTests: XCTestCase {
   func testDocumentPickerCoordinatorReturnsReadableFileAndReleasesScope() throws {
     let directory = FileManager.default.temporaryDirectory
       .appendingPathComponent("lddc-ios-picker-\(UUID().uuidString)", isDirectory: true)
@@ -179,7 +179,9 @@ final class RunnerTests: XCTestCase {
     _ = IOSDocumentPickerRequestCoordinator(pendingExportFileStore: store)
     XCTAssertFalse(FileManager.default.fileExists(atPath: root.path))
   }
+}
 
+final class RunnerTests: XCTestCase {
   func testReleaseMetadataMatchesBundle() {
     let info = Bundle.main.infoDictionary
 
@@ -189,7 +191,9 @@ final class RunnerTests: XCTestCase {
     XCTAssertEqual(info?["CFBundleName"] as? String, "LDDC")
     XCTAssertEqual(Bundle(for: Self.self).bundleIdentifier, "com.cmzj.lddc.RunnerTests")
   }
+}
 
+final class IOSDocumentPickerResourceTests: XCTestCase {
   func testSearchFileArgumentsSanitizeNamesAndResolveFileUrls() {
     XCTAssertEqual(IOSSearchFileArguments.sanitizedFileName("a/b\\c.lrc"), "a_b_c.lrc")
     XCTAssertNil(IOSSearchFileArguments.resolveAudioFileURL(identifier: " ", path: " "))

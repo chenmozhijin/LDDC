@@ -61,11 +61,79 @@ if ($Platform -eq "ios" -and [string]::IsNullOrWhiteSpace($Device)) {
   throw "iOS 文件和媒体 required 场景必须显式指定 Simulator device"
 }
 
+function Get-IosSimulatorRecord {
+  param([Parameter(Mandatory = $true)][string]$DeviceId)
+
+  $simctlOutput = @(& xcrun simctl list devices --json)
+  if ($LASTEXITCODE -ne 0) {
+    throw "无法读取 iOS Simulator 设备状态"
+  }
+  $payload = ($simctlOutput -join "`n") | ConvertFrom-Json
+  foreach ($runtime in $payload.devices.PSObject.Properties) {
+    foreach ($candidate in @($runtime.Value)) {
+      if ([string]$candidate.udid -eq $DeviceId) {
+        return $candidate
+      }
+    }
+  }
+  return $null
+}
+
+function Ensure-IosSimulatorVisibleToFlutter {
+  param([Parameter(Mandatory = $true)][string]$DeviceId)
+
+  $simulator = Get-IosSimulatorRecord -DeviceId $DeviceId
+  if ($null -eq $simulator) {
+    throw "找不到指定的 iOS Simulator: $DeviceId"
+  }
+  $state = [string]$simulator.state
+  if ($state -eq "Shutdown") {
+    & xcrun simctl boot $DeviceId
+    if ($LASTEXITCODE -ne 0) {
+      throw "启动 iOS Simulator 失败: $DeviceId"
+    }
+  } elseif ($state -notin @("Booting", "Booted")) {
+    throw "iOS Simulator 状态不可用于测试: id=$DeviceId state=$state"
+  }
+
+  & xcrun simctl bootstatus $DeviceId -b
+  if ($LASTEXITCODE -ne 0) {
+    throw "等待 iOS Simulator 启动完成失败: $DeviceId"
+  }
+
+  # 组件 runner 必须自行确认 Flutter 能发现目标设备，不能依赖前一个测试步骤
+  # 恰好启动过模拟器。这样单独运行本脚本和 CI continue-on-error 后续收集都
+  # 使用同一设备契约，不会把“设备尚未注册”误报成媒体业务失败。
+  $deadline = [DateTimeOffset]::UtcNow.AddSeconds(60)
+  $lastFlutterDevices = ""
+  do {
+    $deviceLines = @(& flutter devices --machine)
+    $deviceExitCode = $LASTEXITCODE
+    $lastFlutterDevices = ($deviceLines -join "`n").Trim()
+    if ($deviceExitCode -eq 0 -and -not [string]::IsNullOrWhiteSpace($lastFlutterDevices)) {
+      try {
+        $flutterDevices = @($lastFlutterDevices | ConvertFrom-Json)
+        if (@($flutterDevices | Where-Object { [string]$_.id -eq $DeviceId }).Count -eq 1) {
+          return
+        }
+      } catch {
+        # Flutter 设备发现仍在收敛时可能没有产生完整 JSON；在固定截止时间内重试。
+      }
+    }
+    Start-Sleep -Seconds 2
+  } while ([DateTimeOffset]::UtcNow -lt $deadline)
+
+  throw "Flutter 在 60 秒内没有发现 iOS Simulator: id=$DeviceId devices=$lastFlutterDevices"
+}
+
 $testExitCode = 1
 $testError = $null
 Push-Location $appRoot
 try {
   try {
+    if ($Platform -eq "ios") {
+      Ensure-IosSimulatorVisibleToFlutter -DeviceId $Device
+    }
     $arguments = @("test", $testTarget)
     if ($Platform -eq "ios") {
       $arguments += @(
@@ -94,15 +162,15 @@ try {
 }
 
 $success = $testExitCode -eq 0
-$filePickerEvidence = if ($success) {
-  @([ordered]@{ action = "deterministic_file_handle_component_verified" })
-} else {
-  @()
-}
-$mediaEvidence = if ($success) {
-  @([ordered]@{ action = "production_taglib_read_convert_write_reopen" })
-} else {
-  @()
+$filePickerEvidence = @()
+$mediaEvidence = @()
+if ($success) {
+  $filePickerEvidence = @(
+    [ordered]@{ action = "deterministic_file_handle_component_verified" }
+  )
+  $mediaEvidence = @(
+    [ordered]@{ action = "production_taglib_read_convert_write_reopen" }
+  )
 }
 $evidence = [ordered]@{
   runId = $runId

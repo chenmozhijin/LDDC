@@ -119,13 +119,13 @@ $scenarioFilter = [Collections.Generic.HashSet[string]]::new([StringComparer]::O
 foreach ($scenario in $Scenarios) { $scenarioFilter.Add($scenario) | Out-Null }
 $observationFilter = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 foreach ($scenario in $ObservationScenarios) { $observationFilter.Add($scenario) | Out-Null }
-$scenarios = if ($scenarioFilter.Count -eq 0) {
+$selectedScenarioEntries = if ($scenarioFilter.Count -eq 0) {
   @($allScenarios)
 } else {
   @($allScenarios | Where-Object { $scenarioFilter.Contains($_.Name) })
 }
-if ($scenarios.Count -eq 0) { throw "没有选择任何 macOS OpenPanel 场景" }
-foreach ($entry in $scenarios) {
+if ($selectedScenarioEntries.Count -eq 0) { throw "没有选择任何 macOS OpenPanel 场景" }
+foreach ($entry in $selectedScenarioEntries) {
   $gateOutput = @(& python $matrixResolver `
       --matrix $matrix `
       --profile platform `
@@ -822,7 +822,7 @@ function Write-InfrastructureFailureReports {
     [switch]$Overwrite
   )
 
-  foreach ($entry in $scenarios) {
+  foreach ($entry in $selectedScenarioEntries) {
     $scenario = $entry.Name
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
     $junitPath = Join-Path $junitDir "$scenario.xml"
@@ -925,7 +925,7 @@ try {
     -Filter "*.xctestrun" `
     -Description "macOS RunnerPlatformTests xctestrun"
 
-  foreach ($entry in $scenarios) {
+  foreach ($entry in $selectedScenarioEntries) {
     $scenario = $entry.Name
     $action = $entry.Action
     $method = $entry.Method
@@ -1292,7 +1292,7 @@ try {
   }
 }
 
-foreach ($entry in $scenarios) {
+foreach ($entry in $selectedScenarioEntries) {
   if ($observationFilter.Contains($entry.Name)) { continue }
   $scenarioPath = Join-Path $scenarioDir "$($entry.Name).json"
   $junitPath = Join-Path $junitDir "$($entry.Name).xml"

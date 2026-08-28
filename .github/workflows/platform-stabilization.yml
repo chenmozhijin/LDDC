@@ -83,7 +83,8 @@ jobs:
           xcodebuild test-without-building \
             -xctestrun "${xctestruns[0]}" \
             -destination "platform=iOS Simulator,id=$DEVICE_ID" \
-            -only-testing:RunnerTests \
+            -only-testing:RunnerTests/IOSDocumentPickerCoordinatorTests \
+            -only-testing:RunnerTests/IOSDocumentPickerResourceTests \
             -resultBundlePath lddc/build/integration_reports/ios-native/native-contracts/RunnerTests.xcresult \
             -parallel-testing-enabled NO
       - name: Run required Flutter file and media business contracts

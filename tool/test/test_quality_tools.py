@@ -817,6 +817,29 @@ class QualityToolTests(unittest.TestCase):
         )
         self.assertIn("iOS Xcode DerivedData 超出测试构建根", ios_runner)
 
+    def test_apple_runners_do_not_reassign_validated_parameters(self) -> None:
+        checker = _load_native_isolation_checker()
+        for relative in (
+            "tool/test/run_macos_platform_tests.ps1",
+            "tool/test/run_ios_platform_tests.ps1",
+        ):
+            runner = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertEqual(
+                checker.validated_powershell_parameter_reassignments(runner),
+                [],
+                relative,
+            )
+            mutation = runner.replace(
+                "$selectedScenarioEntries = if",
+                "$scenarios = if",
+                1,
+            )
+            self.assertEqual(
+                checker.validated_powershell_parameter_reassignments(mutation),
+                ["Scenarios"],
+                relative,
+            )
+
     def test_apple_stabilization_separates_required_and_observation_gates(self) -> None:
         runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
             encoding="utf-8"
@@ -859,6 +882,8 @@ class QualityToolTests(unittest.TestCase):
             "find lddc/build/native_test_derived_data",
             "flutter build ios --debug --simulator --config-only",
             "flutter build macos --debug --config-only",
+            "-only-testing:RunnerTests/IOSDocumentPickerCoordinatorTests",
+            "-only-testing:RunnerTests/IOSDocumentPickerResourceTests",
         ):
             self.assertIn(marker, workflow)
         self.assertNotIn("-ExperimentalScenarios", workflow)
@@ -909,6 +934,16 @@ class QualityToolTests(unittest.TestCase):
         self.assertIn('"-d", $Device', component_runner)
         self.assertIn("--raw-report-type dart-jsonl", component_runner)
         self.assertIn('executionPlatform = if ($Platform -eq "ios")', component_runner)
+        self.assertIn("Ensure-IosSimulatorVisibleToFlutter", component_runner)
+        self.assertIn("simctl bootstatus", component_runner)
+        self.assertIn("flutter devices --machine", component_runner)
+        apple_component_test = (
+            ROOT / "lddc/test/platform/files/app_file_picker_test.dart"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "debugDefaultTargetPlatformOverride = TargetPlatform.macOS",
+            apple_component_test,
+        )
 
     def test_apple_platform_schemes_include_native_and_ui_test_targets(self) -> None:
         for platform in ("ios", "macos"):
@@ -981,7 +1016,7 @@ class QualityToolTests(unittest.TestCase):
         self.assertLess(
             runner.find('Wait-XcodeDestinationReady -Stage "initial"'),
             runner.find(
-                "foreach ($entry in $scenarios)",
+                "foreach ($entry in $selectedScenarioEntries)",
                 runner.find('Wait-XcodeDestinationReady -Stage "initial"'),
             ),
         )
