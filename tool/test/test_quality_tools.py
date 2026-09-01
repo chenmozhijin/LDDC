@@ -574,8 +574,14 @@ class QualityToolTests(unittest.TestCase):
             "try waitForTypedCancelButton(",
             "let picker = try normalizePickerToBrowseRoot(app: app)",
             'action: "document_picker_typed_cancel_tapped"',
-            "for iteration in 1...3",
-            'action: "document_picker_cancel_iteration_\\(iteration)"',
+            "func testDocumentPickerCancellationRound1ReturnsToFlutter() throws",
+            "func testDocumentPickerCancellationRound2ReturnsToFlutter() throws",
+            "func testDocumentPickerCancellationRound3ReturnsToFlutter() throws",
+            "private func runDocumentPickerCancellationRound(",
+            'scenario: "ios_document_picker_cancel_1"',
+            'scenario: "ios_document_picker_cancel_2"',
+            'scenario: "ios_document_picker_cancel_3"',
+            'action: "document_picker_cancel_round_\\(round)"',
         ):
             self.assertIn(marker, source)
         self.assertNotIn("isFixtureDirectory(", source)
@@ -586,6 +592,99 @@ class QualityToolTests(unittest.TestCase):
         self.assertNotIn("waitForKeyboardTutorialToDisappear(", source)
         self.assertNotIn("preview.descendants(matching:", source)
         self.assertNotIn(".doubleTap()", source)
+
+    def test_ios_cancellation_round_split_contract_rejects_mutations(self) -> None:
+        checker = _load_native_isolation_checker()
+        source = (ROOT / "lddc/ios/RunnerUITests/RunnerUITests.swift").read_text(
+            encoding="utf-8"
+        )
+        runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
+            encoding="utf-8"
+        )
+        workflow = (
+            ROOT / ".github/workflows/platform-stabilization.yml"
+        ).read_text(encoding="utf-8")
+        matrix = json.loads(
+            (ROOT / "tool/test/platform_capability_matrix.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(checker.ios_picker_state_machine_failures(source), [])
+        self.assertEqual(
+            checker.ios_cancellation_split_contract_failures(
+                runner,
+                workflow,
+                matrix,
+            ),
+            [],
+        )
+
+        ui_mutations = (
+            source.replace(
+                'action: "document_picker_cancel_round_\\(round)"',
+                'for iteration in 1...3 {\n'
+                '        action: "document_picker_cancel_iteration_\\(iteration)"\n'
+                "      }",
+                1,
+            ),
+            source.replace(
+                "func testDocumentPickerCancellationRound1ReturnsToFlutter() throws",
+                "func testDocumentPickerCancellationReturnsToFlutter() throws",
+                1,
+            ),
+            source.replace(
+                'scenario: "ios_document_picker_cancel_3"',
+                'scenario: "ios_document_picker_cancel_missing"',
+                1,
+            ),
+        )
+        for index, mutation in enumerate(ui_mutations):
+            with self.subTest(kind="ui", index=index):
+                self.assertNotEqual(mutation, source)
+                self.assertNotEqual(
+                    checker.ios_picker_state_machine_failures(mutation),
+                    [],
+                )
+
+        wrong_mapping = runner.replace(
+            'Method = "testDocumentPickerCancellationRound2ReturnsToFlutter"',
+            'Method = "testDocumentPickerCancellationRound1ReturnsToFlutter"',
+            1,
+        )
+        old_workflow = workflow.replace(
+            "-Scenarios $cancelScenarios",
+            "-Scenarios ios_document_picker_cancel",
+            1,
+        )
+        missing_round = json.loads(json.dumps(matrix))
+        missing_round["contracts"] = [
+            contract
+            for contract in missing_round["contracts"]
+            if contract.get("scenario") != "ios_document_picker_cancel_3"
+        ]
+        observation_round = json.loads(json.dumps(matrix))
+        for contract in observation_round["contracts"]:
+            if contract.get("scenario") == "ios_document_picker_cancel_2":
+                contract["gate"] = "observation"
+
+        cross_file_mutations = (
+            (wrong_mapping, workflow, matrix),
+            (runner, old_workflow, matrix),
+            (runner, workflow, missing_round),
+            (runner, workflow, observation_round),
+        )
+        for index, (mutated_runner, mutated_workflow, mutated_matrix) in enumerate(
+            cross_file_mutations
+        ):
+            with self.subTest(kind="cross-file", index=index):
+                self.assertNotEqual(
+                    checker.ios_cancellation_split_contract_failures(
+                        mutated_runner,
+                        mutated_workflow,
+                        mutated_matrix,
+                    ),
+                    [],
+                )
 
     def test_ios_picker_state_machine_gate_rejects_disabled_and_unconverted_mutations(self) -> None:
         checker = _load_native_isolation_checker()
@@ -901,7 +1000,9 @@ class QualityToolTests(unittest.TestCase):
             if contract.get("platform") in {"ios", "macos"}
         }
         for scenario in (
-            "ios_document_picker_cancel",
+            "ios_document_picker_cancel_1",
+            "ios_document_picker_cancel_2",
+            "ios_document_picker_cancel_3",
             "ios_media_business_round_trip",
             "macos_open_panel_cancel",
             "macos_file_result_adapter",

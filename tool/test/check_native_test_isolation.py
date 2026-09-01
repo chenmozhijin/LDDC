@@ -83,8 +83,14 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         'try require(candidates.count < 2, "系统 Picker 的可操作 typed Cancel Button 不是唯一控件")',
         "let picker = try normalizePickerToBrowseRoot(app: app)",
         'action: "document_picker_typed_cancel_tapped"',
-        "for iteration in 1...3",
-        'action: "document_picker_cancel_iteration_\\(iteration)"',
+        "func testDocumentPickerCancellationRound1ReturnsToFlutter() throws",
+        "func testDocumentPickerCancellationRound2ReturnsToFlutter() throws",
+        "func testDocumentPickerCancellationRound3ReturnsToFlutter() throws",
+        "private func runDocumentPickerCancellationRound(",
+        'scenario: "ios_document_picker_cancel_1"',
+        'scenario: "ios_document_picker_cancel_2"',
+        'scenario: "ios_document_picker_cancel_3"',
+        'action: "document_picker_cancel_round_\\(round)"',
         "let value = preview.value as? String",
         "if element.exists, element.isHittable, element.isEnabled",
         "element.waitForExistence(timeout: 3), element.isHittable, element.isEnabled",
@@ -93,6 +99,75 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
     for marker in required_markers:
         if marker not in source:
             problems.append(f"iOS Picker 状态机缺少强契约: {marker}")
+
+    for forbidden in (
+        "for iteration in 1...3",
+        "testDocumentPickerCancellationReturnsToFlutter",
+        "document_picker_cancel_iteration_",
+    ):
+        if forbidden in source:
+            problems.append(f"iOS Picker 取消门禁禁止三轮共享同一 XCTest 预算: {forbidden}")
+    if re.search(r'"ios_document_picker_cancel"(?![_A-Za-z0-9])', source):
+        problems.append("iOS Picker 取消场景禁止恢复旧的单一 scenario 名称")
+
+    cancellation_methods = (
+        (1, "testDocumentPickerCancellationRound1ReturnsToFlutter", "ios_document_picker_cancel_1"),
+        (2, "testDocumentPickerCancellationRound2ReturnsToFlutter", "ios_document_picker_cancel_2"),
+        (3, "testDocumentPickerCancellationRound3ReturnsToFlutter", "ios_document_picker_cancel_3"),
+    )
+    for round_number, method, scenario in cancellation_methods:
+        method_match = re.search(
+            rf"  func {re.escape(method)}\(\) throws \{{(?P<body>[\s\S]*?)(?=\n\n  (?:func|private func) )",
+            source,
+        )
+        if method_match is None:
+            continue
+        method_body = method_match.group("body")
+        if method_body.count("try runDocumentPickerCancellationRound(") != 1:
+            problems.append(f"iOS 取消场景 {method} 必须只调用一次独立 round helper")
+        if f'scenario: "{scenario}"' not in method_body:
+            problems.append(f"iOS 取消场景 {method} 未绑定自身 scenario: {scenario}")
+        if f"round: {round_number}" not in method_body:
+            problems.append(f"iOS 取消场景 {method} 未绑定自身 round: {round_number}")
+
+    helper_match = re.search(
+        r"  private func runDocumentPickerCancellationRound\([\s\S]*?\n  \) throws \{"
+        r"(?P<body>[\s\S]*?)(?=\n\n  func testDocumentPickerExportsLyricsFile)",
+        source,
+    )
+    if helper_match is None:
+        problems.append("iOS 取消场景缺少可验证的独立 round helper 实现")
+    else:
+        helper_body = helper_match.group("body")
+        for marker in (
+            "var actions: [String: [[String: Any]]] = [:]",
+            "var failure: Error?",
+            "var app: XCUIApplication?",
+            "let launchedApp = try launchApp()",
+            "app = launchedApp",
+            "catch let error",
+            "failure = error",
+            "captureFailureAndCleanup(app: app, scenario: scenario, failure: failure)",
+            "attachEvidence(scenario: scenario, actions: actions, failure: failure)",
+            "if let failure {",
+            "throw failure",
+        ):
+            if marker not in helper_body:
+                problems.append(f"iOS 取消 round helper 缺少独立生命周期契约: {marker}")
+        if helper_body.count("_ = try openDocumentPicker(app: launchedApp)") != 1:
+            problems.append("iOS 取消 round helper 必须恰好打开一次真实 Document Picker")
+        if helper_body.count("try cancelSystemPicker(") != 1:
+            problems.append("iOS 取消 round helper 必须恰好执行一次真实取消")
+        if helper_body.count("try terminateAndVerify(launchedApp)") != 1:
+            problems.append("iOS 取消 round helper 必须恰好执行一次资源终止验证")
+        if re.search(r"\bfor\s+\w+\s+in\s+1\.\.\.3\b", helper_body):
+            problems.append("iOS 取消 round helper 禁止在单个 XCTest 方法内重新执行三轮")
+        catch_index = helper_body.find("} catch let error")
+        report_index = helper_body.find(
+            "captureFailureAndCleanup(app: app, scenario: scenario, failure: failure)"
+        )
+        if catch_index < 0 or report_index < catch_index:
+            problems.append("iOS 取消 round helper 必须在捕获失败后继续报告和清理")
 
     select_match = re.search(
         r"  private func selectFixture\([\s\S]*?\n  \}"
@@ -208,6 +283,103 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
     ):
         if forbidden in source:
             problems.append(f"iOS Picker 状态机禁止旧 fallback: {forbidden}")
+    return problems
+
+
+def ios_cancellation_split_contract_failures(
+    runner: str,
+    workflow: str,
+    capability_matrix: dict[str, object],
+) -> list[str]:
+    """校验 iOS 三个取消 round 在 runner、workflow 和能力矩阵中的一致性。"""
+
+    problems: list[str] = []
+    cancellation_contracts = (
+        ("ios_document_picker_cancel_1", "testDocumentPickerCancellationRound1ReturnsToFlutter"),
+        ("ios_document_picker_cancel_2", "testDocumentPickerCancellationRound2ReturnsToFlutter"),
+        ("ios_document_picker_cancel_3", "testDocumentPickerCancellationRound3ReturnsToFlutter"),
+    )
+    for scenario, method in cancellation_contracts:
+        pair_pattern = re.compile(
+            rf'Name = "{re.escape(scenario)}"[\s\S]{{0,240}}'
+            rf'Method = "{re.escape(method)}"'
+        )
+        if pair_pattern.search(runner) is None:
+            problems.append(f"iOS runner 场景与 XCTest 方法映射错误: {scenario} -> {method}")
+
+    if "testDocumentPickerCancellationReturnsToFlutter" in runner:
+        problems.append("iOS runner 禁止恢复旧的共享取消 XCTest 方法")
+    if re.search(r'"ios_document_picker_cancel"(?![_A-Za-z0-9])', runner):
+        problems.append("iOS runner 禁止恢复旧的单一取消场景")
+
+    for marker in (
+        "$cancelScenarios = @(",
+        "'ios_document_picker_cancel_1'",
+        "'ios_document_picker_cancel_2'",
+        "'ios_document_picker_cancel_3'",
+        "-Scenarios $cancelScenarios",
+    ):
+        if marker not in workflow:
+            problems.append(f"iOS required workflow 缺少三轮取消数组契约: {marker}")
+    if re.search(
+        r"(?m)^\s*-Scenarios\s+['\"]?ios_document_picker_cancel['\"]?(?:\s|`|$)",
+        workflow,
+    ):
+        problems.append("iOS required workflow 禁止传入旧的单一取消场景")
+    if re.search(r"(?m)^\s*-Scenarios\s+['\"]\$cancelScenarios['\"]", workflow):
+        problems.append("iOS required workflow 必须传入数组变量，而不是字面量字符串")
+    if re.search(r"['\"]ios_document_picker_cancel['\"]", workflow):
+        problems.append("iOS required workflow 禁止声明旧的单一取消场景")
+
+    contracts = capability_matrix.get("contracts")
+    if not isinstance(contracts, list):
+        return problems + ["iOS 能力矩阵缺少 contracts 数组"]
+    if any(
+        isinstance(contract, dict)
+        and contract.get("scenario") == "ios_document_picker_cancel"
+        for contract in contracts
+    ):
+        problems.append("iOS 能力矩阵禁止恢复旧的单一取消场景")
+    for scenario, _ in cancellation_contracts:
+        matches = [
+            contract
+            for contract in contracts
+            if isinstance(contract, dict) and contract.get("scenario") == scenario
+        ]
+        if len(matches) != 1:
+            problems.append(f"iOS 能力矩阵中的取消场景必须恰好出现一次: {scenario}")
+            continue
+        contract = matches[0]
+        for key, expected in (
+            ("profile", "platform"),
+            ("platform", "ios"),
+            ("framework", "xcuitest"),
+            ("gate", "required"),
+        ):
+            if contract.get(key) != expected:
+                problems.append(
+                    f"iOS 能力矩阵取消场景 {scenario} 的 {key} 必须为 {expected}"
+                )
+        capabilities = contract.get("capabilities")
+        if not isinstance(capabilities, dict):
+            problems.append(f"iOS 能力矩阵取消场景缺少 capabilities: {scenario}")
+            continue
+        for capability in ("filePicker", "resourceCleanup"):
+            state = capabilities.get(capability)
+            if not isinstance(state, dict):
+                problems.append(f"iOS 能力矩阵取消场景缺少能力要求: {scenario}/{capability}")
+                continue
+            for key, expected in (
+                ("mode", "real"),
+                ("required", True),
+                ("applicable", True),
+            ):
+                if state.get(key) != expected:
+                    problems.append(
+                        f"iOS 能力矩阵取消场景 {scenario}/{capability} 的 {key} 不满足真实 required 契约"
+                    )
+            if not isinstance(state.get("reason"), str) or not state["reason"].strip():
+                problems.append(f"iOS 能力矩阵取消场景缺少能力原因: {scenario}/{capability}")
     return problems
 
 
@@ -767,6 +939,16 @@ def failures() -> list[str]:
     ios_runner = (ROOT / "tool/test/run_ios_platform_tests.ps1").read_text(
         encoding="utf-8"
     )
+    stabilization_workflow_source = (
+        ROOT / ".github/workflows/platform-stabilization.yml"
+    ).read_text(encoding="utf-8")
+    problems.extend(
+        ios_cancellation_split_contract_failures(
+            ios_runner,
+            stabilization_workflow_source,
+            capability_matrix,
+        )
+    )
     problems.extend(ios_export_witness_failures(ios_app_delegate, ios_runner))
     for marker in (
         '"-test-timeouts-enabled", "YES"',
@@ -795,7 +977,9 @@ def failures() -> list[str]:
             ios_runner,
             (
                 "ios_document_picker_select",
-                "ios_document_picker_cancel",
+                "ios_document_picker_cancel_1",
+                "ios_document_picker_cancel_2",
+                "ios_document_picker_cancel_3",
                 "ios_document_picker_export",
                 "ios_document_picker_export_cancel",
                 "ios_document_picker_export_termination",
@@ -1013,7 +1197,11 @@ def failures() -> list[str]:
             "macos-finder-observation:",
             "run_macos_platform_tests.ps1",
             "run_ios_platform_tests.ps1",
-            "-Scenarios ios_document_picker_cancel",
+            "$cancelScenarios = @(",
+            "'ios_document_picker_cancel_1'",
+            "'ios_document_picker_cancel_2'",
+            "'ios_document_picker_cancel_3'",
+            "-Scenarios $cancelScenarios",
             "$scenarios = @(",
             "'ios_document_picker_export_termination'",
             "-ObservationScenarios $scenarios",
@@ -1717,7 +1905,18 @@ def failures() -> list[str]:
             problems.append(f"iOS 外部 Xcode/报告进程禁止绕过硬超时执行器: {forbidden}")
     for scenario, method in (
         ("ios_document_picker_select", "testDocumentPickerSelectsSeededAudio"),
-        ("ios_document_picker_cancel", "testDocumentPickerCancellationReturnsToFlutter"),
+        (
+            "ios_document_picker_cancel_1",
+            "testDocumentPickerCancellationRound1ReturnsToFlutter",
+        ),
+        (
+            "ios_document_picker_cancel_2",
+            "testDocumentPickerCancellationRound2ReturnsToFlutter",
+        ),
+        (
+            "ios_document_picker_cancel_3",
+            "testDocumentPickerCancellationRound3ReturnsToFlutter",
+        ),
         ("ios_document_picker_export", "testDocumentPickerExportsLyricsFile"),
         (
             "ios_document_picker_export_cancel",

@@ -423,7 +423,49 @@
     {
       "profile": "platform",
       "platform": "ios",
-      "scenario": "ios_document_picker_cancel",
+      "scenario": "ios_document_picker_cancel_1",
+      "framework": "xcuitest",
+      "gate": "required",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "XCUITest 必须在真实 UIDocumentPicker 中执行取消并返回 Flutter"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消后测试应用和 Document Picker 必须关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "ios",
+      "scenario": "ios_document_picker_cancel_2",
+      "framework": "xcuitest",
+      "gate": "required",
+      "capabilities": {
+        "filePicker": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "XCUITest 必须在真实 UIDocumentPicker 中执行取消并返回 Flutter"
+        },
+        "resourceCleanup": {
+          "mode": "real",
+          "required": true,
+          "applicable": true,
+          "reason": "取消后测试应用和 Document Picker 必须关闭"
+        }
+      }
+    },
+    {
+      "profile": "platform",
+      "platform": "ios",
+      "scenario": "ios_document_picker_cancel_3",
       "framework": "xcuitest",
       "gate": "required",
       "capabilities": {

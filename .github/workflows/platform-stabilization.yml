@@ -47,9 +47,14 @@ jobs:
         continue-on-error: true
         shell: pwsh
         run: |
+          $cancelScenarios = @(
+            'ios_document_picker_cancel_1'
+            'ios_document_picker_cancel_2'
+            'ios_document_picker_cancel_3'
+          )
           & ./tool/test/run_ios_platform_tests.ps1 `
             -Device $env:DEVICE_ID `
-            -Scenarios ios_document_picker_cancel `
+            -Scenarios $cancelScenarios `
             -PreserveBuildProducts
       - name: Run required iOS native contract tests
         id: ios_native_contracts

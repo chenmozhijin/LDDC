@@ -82,7 +82,33 @@ final class RunnerUITests: XCTestCase {
     }
   }
 
-  func testDocumentPickerCancellationReturnsToFlutter() throws {
+  // 三轮真实取消必须拆成独立 XCTest。XCTest 的 120 秒限制按测试方法计算，
+  // 如果在一个方法内串行执行三轮，第三轮会在系统 Picker 已正确工作时被框架强制终止。
+  func testDocumentPickerCancellationRound1ReturnsToFlutter() throws {
+    try runDocumentPickerCancellationRound(
+      scenario: "ios_document_picker_cancel_1",
+      round: 1
+    )
+  }
+
+  func testDocumentPickerCancellationRound2ReturnsToFlutter() throws {
+    try runDocumentPickerCancellationRound(
+      scenario: "ios_document_picker_cancel_2",
+      round: 2
+    )
+  }
+
+  func testDocumentPickerCancellationRound3ReturnsToFlutter() throws {
+    try runDocumentPickerCancellationRound(
+      scenario: "ios_document_picker_cancel_3",
+      round: 3
+    )
+  }
+
+  private func runDocumentPickerCancellationRound(
+    scenario: String,
+    round: Int
+  ) throws {
     var actions: [String: [[String: Any]]] = [:]
     var failure: Error?
     var app: XCUIApplication?
@@ -90,36 +116,34 @@ final class RunnerUITests: XCTestCase {
       let launchedApp = try launchApp()
       app = launchedApp
       let openSong = launchedApp.buttons[openSongIdentifier]
-      for iteration in 1...3 {
-        _ = try openDocumentPicker(app: launchedApp)
-        try cancelSystemPicker(
-          app: launchedApp,
-          returnControl: openSong,
-          actions: &actions
-        )
-        try require(launchedApp.wait(for: .runningForeground, timeout: 15), "第 \(iteration) 次取消后 LDDC 没有返回前台")
-        try require(
-          waitForHittable(openSong, timeout: 15),
-          "第 \(iteration) 次取消后 Flutter 打开歌曲动作不可再次操作"
-        )
-        addAction(
-          &actions,
-          capability: "filePicker",
-          action: "document_picker_cancel_iteration_\(iteration)"
-        )
-        addAction(
-          &actions,
-          capability: "nativeChannels",
-          action: "flutter_picker_cancel_round_trip_iteration_\(iteration)"
-        )
-      }
+      _ = try openDocumentPicker(app: launchedApp)
+      try cancelSystemPicker(
+        app: launchedApp,
+        returnControl: openSong,
+        actions: &actions
+      )
+      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "第 \(round) 轮取消后 LDDC 没有返回前台")
+      try require(
+        waitForHittable(openSong, timeout: 15),
+        "第 \(round) 轮取消后 Flutter 打开歌曲动作不可再次操作"
+      )
+      addAction(
+        &actions,
+        capability: "filePicker",
+        action: "document_picker_cancel_round_\(round)"
+      )
+      addAction(
+        &actions,
+        capability: "nativeChannels",
+        action: "flutter_picker_cancel_round_trip_\(round)"
+      )
       try terminateAndVerify(launchedApp)
       addAction(&actions, capability: "resourceCleanup", action: "application_and_picker_closed")
     } catch let error {
       failure = error
     }
-    captureFailureAndCleanup(app: app, scenario: "ios_document_picker_cancel", failure: failure)
-    attachEvidence(scenario: "ios_document_picker_cancel", actions: actions, failure: failure)
+    captureFailureAndCleanup(app: app, scenario: scenario, failure: failure)
+    attachEvidence(scenario: scenario, actions: actions, failure: failure)
     if let failure {
       throw failure
     }

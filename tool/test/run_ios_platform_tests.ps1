@@ -6,7 +6,9 @@ param(
   [int]$ScenarioTimeoutSeconds = 120,
   [ValidateSet(
     "ios_document_picker_select",
-    "ios_document_picker_cancel",
+    "ios_document_picker_cancel_1",
+    "ios_document_picker_cancel_2",
+    "ios_document_picker_cancel_3",
     "ios_document_picker_export",
     "ios_document_picker_export_cancel",
     "ios_document_picker_export_termination"
@@ -14,7 +16,9 @@ param(
   [string[]]$Scenarios = @(),
   [ValidateSet(
     "ios_document_picker_select",
-    "ios_document_picker_cancel",
+    "ios_document_picker_cancel_1",
+    "ios_document_picker_cancel_2",
+    "ios_document_picker_cancel_3",
     "ios_document_picker_export",
     "ios_document_picker_export_cancel",
     "ios_document_picker_export_termination"
@@ -753,8 +757,16 @@ $allScenarios = @(
     Method = "testDocumentPickerSelectsSeededAudio"
   },
   @{
-    Name = "ios_document_picker_cancel"
-    Method = "testDocumentPickerCancellationReturnsToFlutter"
+    Name = "ios_document_picker_cancel_1"
+    Method = "testDocumentPickerCancellationRound1ReturnsToFlutter"
+  },
+  @{
+    Name = "ios_document_picker_cancel_2"
+    Method = "testDocumentPickerCancellationRound2ReturnsToFlutter"
+  },
+  @{
+    Name = "ios_document_picker_cancel_3"
+    Method = "testDocumentPickerCancellationRound3ReturnsToFlutter"
   },
   @{
     Name = "ios_document_picker_export"
