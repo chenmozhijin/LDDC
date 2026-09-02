@@ -560,6 +560,7 @@ class QualityToolTests(unittest.TestCase):
             "private func navigatePickerToFixtureDirectory(",
             "private func navigatePickerToOnMyIPhone(",
             "private func normalizePickerToBrowseRoot(",
+            "private func waitForBackNavigation(",
             "private func waitForPickerDestination(",
             "requireFixtureCell(in: picker, timeout: 15)",
             "returnControl: openSong,",
@@ -635,6 +636,16 @@ class QualityToolTests(unittest.TestCase):
             source.replace(
                 'scenario: "ios_document_picker_cancel_3"',
                 'scenario: "ios_document_picker_cancel_missing"',
+                1,
+            ),
+            source.replace(
+                "waitForBackNavigation(",
+                "waitForPickerDestination(",
+                1,
+            ),
+            source.replace(
+                "if waitForOnMyIPhoneLocation(in: picker, timeout: 0) != nil {",
+                "if pickerDestination(picker) == .browseRoot {",
                 1,
             ),
         )

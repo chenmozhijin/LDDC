@@ -70,6 +70,7 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         "private func navigatePickerToFixtureDirectory(",
         "private func navigatePickerToOnMyIPhone(",
         "private func normalizePickerToBrowseRoot(",
+        "private func waitForBackNavigation(",
         "private func waitForPickerDestination(",
         "private func waitForPickerDismissal(",
         "let picker = try navigatePickerToFixtureDirectory(app: app)",
@@ -168,6 +169,45 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         )
         if catch_index < 0 or report_index < catch_index:
             problems.append("iOS 取消 round helper 必须在捕获失败后继续报告和清理")
+
+    normalize_match = re.search(
+        r"  private func normalizePickerToBrowseRoot\([\s\S]*?\n  \}"
+        r"(?=\n\n  private func waitForBackNavigation)",
+        source,
+    )
+    if normalize_match is None:
+        problems.append("iOS Picker 缺少可验证的 Browse 根页归一化实现")
+    else:
+        normalize_body = normalize_match.group(0)
+        for marker in (
+            "waitForOnMyIPhoneLocation(in: picker, timeout: 0)",
+            "let expectedBackButtonLabel: String?",
+            "waitForBackNavigation(",
+            'case "On My iPhone":',
+            'case "Browse":',
+        ):
+            if marker not in normalize_body:
+                problems.append(f"iOS Picker Browse 根页归一化缺少状态转换契约: {marker}")
+        if "pickerDestination(picker) == .browseRoot" in normalize_body:
+            problems.append("iOS Picker 取消根页归一化禁止在每层重复扫描全部页面状态")
+
+    back_navigation_match = re.search(
+        r"  private func waitForBackNavigation\([\s\S]*?\n  \}"
+        r"(?=\n\n  private func pickerDestination)",
+        source,
+    )
+    if back_navigation_match is None:
+        problems.append("iOS Picker 缺少 BackButton 页面转换等待")
+    else:
+        back_navigation_body = back_navigation_match.group(0)
+        for marker in (
+            "if let picker = systemPickerContext(app: app)",
+            "if let expectedBackButtonLabel",
+            "label: expectedBackButtonLabel",
+            "waitForOnMyIPhoneLocation(in: picker, timeout: 0)",
+        ):
+            if marker not in back_navigation_body:
+                problems.append(f"iOS Picker BackButton 页面转换缺少精确状态验证: {marker}")
 
     select_match = re.search(
         r"  private func selectFixture\([\s\S]*?\n  \}"
@@ -845,6 +885,7 @@ def failures() -> list[str]:
         "private func navigatePickerToFixtureDirectory(",
         "private func navigatePickerToOnMyIPhone(",
         "private func normalizePickerToBrowseRoot(",
+        "private func waitForBackNavigation(",
         "private func waitForPickerDestination(",
         "requireFixtureCell(in: picker, timeout: 15)",
         'action: "document_picker_fixture_cell_tapped"',

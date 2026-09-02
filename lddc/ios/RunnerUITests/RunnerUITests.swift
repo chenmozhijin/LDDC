@@ -568,25 +568,28 @@ final class RunnerUITests: XCTestCase {
     }
 
     for _ in 0..<4 {
-      if pickerDestination(picker) == .browseRoot {
+      if waitForOnMyIPhoneLocation(in: picker, timeout: 0) != nil {
         return picker
       }
       guard let backButton = waitForBackButton(in: picker, timeout: 5) else {
         throw testFailure("系统 Picker 既不在 Browse 根页，也没有唯一可操作的 BackButton")
       }
-      let expectedDestination: SystemPickerDestination
+      let expectedBackButtonLabel: String?
       switch backButton.label {
       case "On My iPhone":
-        expectedDestination = .onMyIPhone
+        expectedBackButtonLabel = "Browse"
       case "Browse":
-        expectedDestination = .browseRoot
+        expectedBackButtonLabel = nil
       default:
         throw testFailure("系统 Picker BackButton 指向未知父页面: \(backButton.label)")
       }
       backButton.tap()
-      guard let parent = waitForPickerDestination(
+      // Browse 的初始位置可能是上次访问的目录。只验证当前 BackButton 的确定标签
+      // 转换，避免每一层都扫描 fixture、标题与多个远程 AX 候选；最终仍必须看到
+      // Browse 根页唯一的 On My iPhone 位置，不能把任意无 BackButton 页面当作根页。
+      guard let parent = waitForBackNavigation(
         app: app,
-        destination: expectedDestination,
+        expectedBackButtonLabel: expectedBackButtonLabel,
         timeout: 10
       ) else {
         throw testFailure("系统 Picker 点击 BackButton 后没有进入预期父页面")
@@ -594,6 +597,31 @@ final class RunnerUITests: XCTestCase {
       picker = parent
     }
     throw testFailure("系统 Picker 在四次有界返回后仍未进入 Browse 根页")
+  }
+
+  private func waitForBackNavigation(
+    app: XCUIApplication,
+    expectedBackButtonLabel: String?,
+    timeout: TimeInterval
+  ) -> SystemPickerContext? {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if let picker = systemPickerContext(app: app) {
+        if let expectedBackButtonLabel {
+          if waitForBackButton(
+            in: picker,
+            label: expectedBackButtonLabel,
+            timeout: 0
+          ) != nil {
+            return picker
+          }
+        } else if waitForOnMyIPhoneLocation(in: picker, timeout: 0) != nil {
+          return picker
+        }
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return nil
   }
 
   private func pickerDestination(
