@@ -563,7 +563,10 @@ class QualityToolTests(unittest.TestCase):
             "private func waitForBackNavigation(",
             "private func waitForPickerDestination(",
             "requireFixtureCell(in: picker, timeout: 15)",
-            "returnControl: openSong,",
+            "staleRootReturnControlProvider: (() -> XCUIElement)? = nil",
+            "let returnControl = staleRootReturnControlProvider?()",
+            "launchedApp.buttons[self.openSongIdentifier]",
+            "launchedApp.descendants(matching: .any)[self.saveFileIdentifier]",
             'action: "document_picker_fixture_cell_tapped"',
             'action: "document_picker_select_audio"',
             "waitForPreviewLyricsValue(preview: preview",
@@ -573,8 +576,19 @@ class QualityToolTests(unittest.TestCase):
             "let resumedPicker = try waitForSystemPicker(app: launchedApp, timeout: 5)",
             'let save = try requireEnabledTypedButton(named: "Save", in: resumedPicker, timeout: 15)',
             "try waitForTypedCancelButton(",
-            "let picker = try normalizePickerToBrowseRoot(app: app)",
+            "let picker = try normalizePickerToBrowseRoot(",
             'action: "document_picker_typed_cancel_tapped"',
+            "private final class CancellationRoundContext",
+            "private let cancellationRoundActionBudgetSeconds: TimeInterval = 85",
+            "private func cancellationRoundTimeout(",
+            "actionBudgetSeconds: cancellationRoundActionBudgetSeconds",
+            "let returnedOpenSong = launchedApp.buttons[openSongIdentifier]",
+            "for _ in 0..<2",
+            "for index in 0...1",
+            "query.element(boundBy: index)",
+            "private func captureCancellationRoundFailureAndCleanup(",
+            'cleanupDiagnostics["cancellationRound"] = context.diagnostics',
+            '"terminate_app_without_repeating_picker_navigation"',
             "func testDocumentPickerCancellationRound1ReturnsToFlutter() throws",
             "func testDocumentPickerCancellationRound2ReturnsToFlutter() throws",
             "func testDocumentPickerCancellationRound3ReturnsToFlutter() throws",
@@ -585,6 +599,13 @@ class QualityToolTests(unittest.TestCase):
             'action: "document_picker_cancel_round_\\(round)"',
         ):
             self.assertIn(marker, source)
+        picker_elements_match = re.search(
+            r"  private func pickerElements\([\s\S]*?\n  \}"
+            r"(?=\n\n  private func requireUniquePickerElement)",
+            source,
+        )
+        self.assertIsNotNone(picker_elements_match)
+        self.assertNotIn("allElementsBoundByIndex", picker_elements_match.group(0))
         self.assertNotIn("isFixtureDirectory(", source)
         self.assertNotIn("waitForCurrentFixtureCell(", source)
         self.assertNotIn("pickerRootIdentity(", source)
@@ -592,6 +613,8 @@ class QualityToolTests(unittest.TestCase):
         self.assertNotIn("waitForSystemPickerToClose(", source)
         self.assertNotIn("waitForKeyboardTutorialToDisappear(", source)
         self.assertNotIn("preview.descendants(matching:", source)
+        self.assertNotIn("for iteration in 1...3", source)
+        self.assertNotIn("testDocumentPickerCancellationReturnsToFlutter", source)
         self.assertNotIn(".doubleTap()", source)
 
     def test_ios_cancellation_round_split_contract_rejects_mutations(self) -> None:
@@ -648,9 +671,65 @@ class QualityToolTests(unittest.TestCase):
                 "if pickerDestination(picker) == .browseRoot {",
                 1,
             ),
+            source.replace(
+                "actionBudgetSeconds: cancellationRoundActionBudgetSeconds",
+                "actionBudgetSeconds: 120",
+                1,
+            ),
+            source.replace(
+                "let returnedOpenSong = launchedApp.buttons[openSongIdentifier]",
+                "let openSong = launchedApp.buttons[openSongIdentifier]",
+                1,
+            ),
+            source.replace("for _ in 0..<2", "for _ in 0..<4", 1),
+            source.replace(
+                "query.element(boundBy: index)",
+                "query.allElementsBoundByIndex[index]",
+                1,
+            ),
+            source.replace(
+                "captureCancellationRoundFailureAndCleanup(",
+                "captureFailureAndCleanup(",
+                1,
+            ),
+            source.replace(
+                "let picker = try normalizePickerToBrowseRoot(\n"
+                "      app: app,\n"
+                "      cancellationContext: cancellationContext\n"
+                "    )",
+                "let picker = try waitForSystemPicker(app: app, timeout: 5)",
+                1,
+            ),
+            source.replace(
+                'cancellationContext?.mark("picker_dismissed")',
+                "// 受控 mutation：丢失 Picker 关闭时间线",
+                1,
+            ),
+            source.replace(
+                "staleRootReturnControlProvider: {\n"
+                "          launchedApp.buttons[self.openSongIdentifier]\n"
+                "        }",
+                "staleRootReturnControlProvider: nil",
+                1,
+            ),
+            source.replace(
+                "let returnControl = staleRootReturnControlProvider?()",
+                "let returnControl: XCUIElement? = nil",
+                1,
+            ),
+            source.replace(
+                "staleRootReturnControlProvider: {\n"
+                "          launchedApp.descendants(matching: .any)[self.saveFileIdentifier]\n"
+                "        }",
+                "staleRootReturnControlProvider: nil",
+                1,
+            ),
+            source.replace("executionTimeAllowance = 120", "executionTimeAllowance = 180", 1),
         )
         for index, mutation in enumerate(ui_mutations):
             with self.subTest(kind="ui", index=index):
+                # 替换表达式本身也必须命中当前源码，避免源码缩进或结构变化后
+                # mutation 静默退化为原文，令防回归测试产生假绿。
                 self.assertNotEqual(mutation, source)
                 self.assertNotEqual(
                     checker.ios_picker_state_machine_failures(mutation),
@@ -677,17 +756,34 @@ class QualityToolTests(unittest.TestCase):
         for contract in observation_round["contracts"]:
             if contract.get("scenario") == "ios_document_picker_cancel_2":
                 contract["gate"] = "observation"
+        increased_runner_timeout = runner.replace(
+            "[int]$ScenarioTimeoutSeconds = 120",
+            "[int]$ScenarioTimeoutSeconds = 180",
+            1,
+        )
+        changed_finalization_timeout = runner.replace(
+            "$xcodeResultFinalizationTimeoutSeconds = $ScenarioTimeoutSeconds + 90",
+            "$xcodeResultFinalizationTimeoutSeconds = $ScenarioTimeoutSeconds + 120",
+            1,
+        )
 
         cross_file_mutations = (
             (wrong_mapping, workflow, matrix),
             (runner, old_workflow, matrix),
             (runner, workflow, missing_round),
             (runner, workflow, observation_round),
+            (increased_runner_timeout, workflow, matrix),
+            (changed_finalization_timeout, workflow, matrix),
         )
         for index, (mutated_runner, mutated_workflow, mutated_matrix) in enumerate(
             cross_file_mutations
         ):
             with self.subTest(kind="cross-file", index=index):
+                self.assertTrue(
+                    mutated_runner != runner
+                    or mutated_workflow != workflow
+                    or mutated_matrix != matrix
+                )
                 self.assertNotEqual(
                     checker.ios_cancellation_split_contract_failures(
                         mutated_runner,
@@ -721,8 +817,12 @@ class QualityToolTests(unittest.TestCase):
                 1,
             ),
             source.replace(
-                "returnControl: openSong,\n        timeout: 15",
-                "returnControl: nil,\n        timeout: 15",
+                "staleRootReturnControlProvider: {\n"
+                "          app.buttons[self.openSongIdentifier]\n"
+                "        },\n"
+                "        timeout: 15",
+                "staleRootReturnControlProvider: nil,\n"
+                "        timeout: 15",
                 1,
             ),
             source.replace("fixture.tap()", "fixture.doubleTap()", 1),
@@ -756,7 +856,10 @@ class QualityToolTests(unittest.TestCase):
                 1,
             ),
             source.replace(
-                "let picker = try normalizePickerToBrowseRoot(app: app)",
+                "let picker = try normalizePickerToBrowseRoot(\n"
+                "      app: app,\n"
+                "      cancellationContext: cancellationContext\n"
+                "    )",
                 "let picker = try waitForSystemPicker(app: app, timeout: 5)",
                 1,
             ),

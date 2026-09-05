@@ -75,14 +75,15 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         "private func waitForPickerDismissal(",
         "let picker = try navigatePickerToFixtureDirectory(app: app)",
         "try requireFixtureCell(in: picker, timeout: 15)",
-        "returnControl: openSong,",
-        "returnControl: returnControl,",
+        "staleRootReturnControlProvider: (() -> XCUIElement)? = nil",
+        "staleRootReturnControlProvider: {",
+        "let returnControl = staleRootReturnControlProvider?()",
         'action: "document_picker_fixture_cell_tapped"',
         'action: "document_picker_select_audio"',
         "queries: [picker.application.buttons.matching(predicate)]",
         "try waitForTypedCancelButton(",
         'try require(candidates.count < 2, "系统 Picker 的可操作 typed Cancel Button 不是唯一控件")',
-        "let picker = try normalizePickerToBrowseRoot(app: app)",
+        "let picker = try normalizePickerToBrowseRoot(",
         'action: "document_picker_typed_cancel_tapped"',
         "func testDocumentPickerCancellationRound1ReturnsToFlutter() throws",
         "func testDocumentPickerCancellationRound2ReturnsToFlutter() throws",
@@ -92,10 +93,26 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
         'scenario: "ios_document_picker_cancel_2"',
         'scenario: "ios_document_picker_cancel_3"',
         'action: "document_picker_cancel_round_\\(round)"',
+        "private final class CancellationRoundContext",
+        "private let cancellationRoundActionBudgetSeconds: TimeInterval = 85",
+        "func timeout(upTo maximum: TimeInterval, phase: String) throws -> TimeInterval",
+        "actionBudgetSeconds: cancellationRoundActionBudgetSeconds",
+        "private func cancellationRoundTimeout(",
+        "for index in 0...1",
+        "query.element(boundBy: index)",
+        "(!requireHittable || (element.isHittable && element.isEnabled))",
+        "private func captureCancellationRoundFailureAndCleanup(",
+        'cleanupDiagnostics["cancellationRound"] = context.diagnostics',
+        'context.mark("app_launched")',
+        'context.mark("picker_opened")',
+        'cancellationContext?.mark("browse_root_confirmed")',
+        'cancellationContext?.mark("cancel_tapped")',
+        'cancellationContext?.mark("picker_dismissed")',
+        'context.mark("flutter_ready")',
+        'context.mark("app_terminated")',
         "let value = preview.value as? String",
         "if element.exists, element.isHittable, element.isEnabled",
-        "element.waitForExistence(timeout: 3), element.isHittable, element.isEnabled",
-        "(!requireHittable || ($0.isHittable && $0.isEnabled))",
+        "element.waitForExistence(timeout: initialTimeout), element.isHittable, element.isEnabled",
     )
     for marker in required_markers:
         if marker not in source:
@@ -110,6 +127,25 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
             problems.append(f"iOS Picker 取消门禁禁止三轮共享同一 XCTest 预算: {forbidden}")
     if re.search(r'"ios_document_picker_cancel"(?![_A-Za-z0-9])', source):
         problems.append("iOS Picker 取消场景禁止恢复旧的单一 scenario 名称")
+    if "executionTimeAllowance = 120" not in source:
+        problems.append("iOS Picker 取消 round 禁止增大 XCTest 单方法超时")
+
+    context_match = re.search(
+        r"private final class CancellationRoundContext \{(?P<body>[\s\S]*?)\n\}",
+        source,
+    )
+    if context_match is None:
+        problems.append("iOS 取消 round 缺少共享动作预算上下文")
+    else:
+        context_body = context_match.group("body")
+        for marker in (
+            "actionDeadline = startedUptime + actionBudgetSeconds",
+            "return min(maximum, remaining)",
+            "取消 round 的真实 UI 动作预算已耗尽，最后阶段:",
+            '"checkpoints": checkpoints',
+        ):
+            if marker not in context_body:
+                problems.append(f"iOS 取消 round 动作预算缺少强契约: {marker}")
 
     cancellation_methods = (
         (1, "testDocumentPickerCancellationRound1ReturnsToFlutter", "ios_document_picker_cancel_1"),
@@ -141,21 +177,27 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
     else:
         helper_body = helper_match.group("body")
         for marker in (
+            "let context = CancellationRoundContext(",
+            "actionBudgetSeconds: cancellationRoundActionBudgetSeconds",
             "var actions: [String: [[String: Any]]] = [:]",
             "var failure: Error?",
             "var app: XCUIApplication?",
             "let launchedApp = try launchApp()",
             "app = launchedApp",
+            "let returnedOpenSong = launchedApp.buttons[openSongIdentifier]",
+            "staleRootReturnControlProvider: {",
+            "launchedApp.buttons[self.openSongIdentifier]",
             "catch let error",
             "failure = error",
-            "captureFailureAndCleanup(app: app, scenario: scenario, failure: failure)",
+            "captureCancellationRoundFailureAndCleanup(",
+            'cleanupDiagnostics["cancellationRound"] = context.diagnostics',
             "attachEvidence(scenario: scenario, actions: actions, failure: failure)",
             "if let failure {",
             "throw failure",
         ):
             if marker not in helper_body:
                 problems.append(f"iOS 取消 round helper 缺少独立生命周期契约: {marker}")
-        if helper_body.count("_ = try openDocumentPicker(app: launchedApp)") != 1:
+        if helper_body.count("_ = try openDocumentPicker(") != 1:
             problems.append("iOS 取消 round helper 必须恰好打开一次真实 Document Picker")
         if helper_body.count("try cancelSystemPicker(") != 1:
             problems.append("iOS 取消 round helper 必须恰好执行一次真实取消")
@@ -163,10 +205,32 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
             problems.append("iOS 取消 round helper 必须恰好执行一次资源终止验证")
         if re.search(r"\bfor\s+\w+\s+in\s+1\.\.\.3\b", helper_body):
             problems.append("iOS 取消 round helper 禁止在单个 XCTest 方法内重新执行三轮")
-        catch_index = helper_body.find("} catch let error")
-        report_index = helper_body.find(
-            "captureFailureAndCleanup(app: app, scenario: scenario, failure: failure)"
+        if helper_body.count("cancellationContext: context") != 2:
+            problems.append("iOS 取消 round 必须把同一动作预算传给打开和取消路径")
+        if "let openSong = launchedApp.buttons[openSongIdentifier]" in helper_body:
+            problems.append("iOS 取消 round 禁止缓存跨 Picker 页面的 Flutter 控件代理")
+        if "staleRootReturnControlProvider: nil" in helper_body:
+            problems.append("iOS 取消 round 必须提供按需解析的陈旧 AX 根判别控件")
+        foreground_index = helper_body.find("launchedApp.wait(for: .runningForeground")
+        returned_control_index = helper_body.find(
+            "let returnedOpenSong = launchedApp.buttons[openSongIdentifier]"
         )
+        if foreground_index < 0 or returned_control_index < foreground_index:
+            problems.append("iOS 取消 round 必须在 Flutter 返回前台后重新解析打开歌曲控件")
+        if "captureFailureAndCleanup(" in helper_body:
+            problems.append("iOS 取消 round 失败时禁止复用会再次导航 Picker 的通用清理")
+        for phase in (
+            'context.mark("app_launched")',
+            'context.mark("picker_opened")',
+            'context.mark("flutter_ready")',
+            'context.mark("app_terminated")',
+            'phase: "flutter_foreground_wait"',
+            'phase: "flutter_control_wait"',
+        ):
+            if phase not in helper_body:
+                problems.append(f"iOS 取消 round helper 缺少有界时间线阶段: {phase}")
+        catch_index = helper_body.find("} catch let error")
+        report_index = helper_body.find("captureCancellationRoundFailureAndCleanup(")
         if catch_index < 0 or report_index < catch_index:
             problems.append("iOS 取消 round helper 必须在捕获失败后继续报告和清理")
 
@@ -183,6 +247,8 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
             "waitForOnMyIPhoneLocation(in: picker, timeout: 0)",
             "let expectedBackButtonLabel: String?",
             "waitForBackNavigation(",
+            "cancellationRoundTimeout(",
+            "for _ in 0..<2",
             'case "On My iPhone":',
             'case "Browse":',
         ):
@@ -190,6 +256,121 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
                 problems.append(f"iOS Picker Browse 根页归一化缺少状态转换契约: {marker}")
         if "pickerDestination(picker) == .browseRoot" in normalize_body:
             problems.append("iOS Picker 取消根页归一化禁止在每层重复扫描全部页面状态")
+        if "for _ in 0..<4" in normalize_body:
+            problems.append("iOS Picker 取消根页归一化禁止恢复四次泛化 BackButton 回退")
+
+    picker_elements_match = re.search(
+        r"  private func pickerElements\([\s\S]*?\n  \}"
+        r"(?=\n\n  private func requireUniquePickerElement)",
+        source,
+    )
+    if picker_elements_match is None:
+        problems.append("iOS Picker 缺少受限的精确候选查询实现")
+    else:
+        picker_elements_body = picker_elements_match.group(0)
+        for marker in (
+            "for query in queries",
+            "for index in 0...1",
+            "query.element(boundBy: index)",
+            "elementBelongsToPicker(element, picker: picker)",
+            "if candidates.count > 1",
+        ):
+            if marker not in picker_elements_body:
+                problems.append(f"iOS Picker 精确候选查询缺少轻量约束: {marker}")
+        if "allElementsBoundByIndex" in picker_elements_body:
+            problems.append("iOS Picker 取消关键路径禁止全量枚举 remote AX 元素")
+
+    cancellation_match = re.search(
+        r"  private func cancelSystemPicker\([\s\S]*?\n  \}"
+        r"(?=\n\n  private func waitForTypedCancelButton)",
+        source,
+    )
+    if cancellation_match is None:
+        problems.append("iOS Picker 缺少可验证的 typed Cancel 实现")
+    else:
+        cancellation_body = cancellation_match.group(0)
+        for marker in (
+            "cancellationContext: cancellationContext",
+            'cancellationContext?.mark("browse_root_confirmed")',
+            'cancellationContext?.mark("cancel_tapped")',
+            'cancellationContext?.mark("picker_dismissed")',
+            "staleRootReturnControlProvider: (() -> XCUIElement)? = nil",
+            "staleRootReturnControlProvider: staleRootReturnControlProvider",
+            'phase: "cancel_button_wait"',
+            'phase: "picker_dismissal_wait"',
+        ):
+            if marker not in cancellation_body:
+                problems.append(f"iOS Picker 取消路径缺少预算或时间线契约: {marker}")
+        if "waitForHittable(" in cancellation_body:
+            problems.append("iOS Picker 取消路径禁止重复等待 Flutter 返回控件")
+
+    picker_dismissal_match = re.search(
+        r"  private func waitForPickerDismissal\([\s\S]*?\n  \}"
+        r"(?=\n\n  private func require)",
+        source,
+    )
+    if picker_dismissal_match is None:
+        problems.append("iOS Picker 缺少陈旧 AX 根安全的关闭判定")
+    else:
+        picker_dismissal_body = picker_dismissal_match.group(0)
+        for marker in (
+            "staleRootReturnControlProvider: (() -> XCUIElement)?",
+            "typedSystemPickerRoot(in: app) == nil",
+            "let returnControl = staleRootReturnControlProvider?()",
+            "returnControl.isHittable",
+            "returnControl.isEnabled",
+        ):
+            if marker not in picker_dismissal_body:
+                problems.append(f"iOS Picker 陈旧 AX 根关闭判定缺少强契约: {marker}")
+        stale_root_index = picker_dismissal_body.find("typedSystemPickerRoot(in: app) == nil")
+        provider_index = picker_dismissal_body.find(
+            "let returnControl = staleRootReturnControlProvider?()"
+        )
+        if stale_root_index < 0 or provider_index < stale_root_index:
+            problems.append("iOS Picker 必须仅在宿主根消失后按需解析陈旧 AX 根判别控件")
+
+    export_cancellation_match = re.search(
+        r"  func testDocumentPickerExportCancellationCleansTemporaryFile\(\) throws \{"
+        r"(?P<body>[\s\S]*?)(?=\n\n  func testTerminatedExportIsCleanedOnNextLaunch)",
+        source,
+    )
+    if export_cancellation_match is None:
+        problems.append("iOS 导出取消场景缺少可验证的陈旧 AX 根恢复契约")
+    else:
+        export_cancellation_body = export_cancellation_match.group("body")
+        for marker in (
+            "staleRootReturnControlProvider: {",
+            "launchedApp.descendants(matching: .any)[self.saveFileIdentifier]",
+        ):
+            if marker not in export_cancellation_body:
+                problems.append(f"iOS 导出取消缺少按需解析的陈旧 AX 根判别控件: {marker}")
+
+    cancellation_cleanup_match = re.search(
+        r"  private func captureCancellationRoundFailureAndCleanup\([\s\S]*?\n  \}"
+        r"(?=\n\n  private func isSystemPickerVisible)",
+        source,
+    )
+    if cancellation_cleanup_match is None:
+        problems.append("iOS 取消 round 缺少专用失败清理")
+    else:
+        cancellation_cleanup_body = cancellation_cleanup_match.group(0)
+        for marker in (
+            'context.mark("failure_cleanup_started")',
+            "let failedPhase = context.lastPhase",
+            'cleanupDiagnostics["failurePhase"] = failedPhase',
+            "app.terminate()",
+            "app.wait(for: .notRunning, timeout: 5)",
+            '"terminate_app_without_repeating_picker_navigation"',
+        ):
+            if marker not in cancellation_cleanup_body:
+                problems.append(f"iOS 取消 round 失败清理缺少强契约: {marker}")
+        for forbidden in (
+            "cancelSystemPicker(",
+            "normalizePickerToBrowseRoot(",
+            "attachAccessibilityDiagnostics(",
+        ):
+            if forbidden in cancellation_cleanup_body:
+                problems.append(f"iOS 取消 round 失败清理禁止重复 Picker 动作: {forbidden}")
 
     back_navigation_match = re.search(
         r"  private func waitForBackNavigation\([\s\S]*?\n  \}"
@@ -236,8 +417,11 @@ def ios_picker_state_machine_failures(source: str) -> list[str]:
             )
         if select_body.count("waitForPickerDismissal(") != 1:
             problems.append("iOS Files observation 必须恰好执行一次 Picker 关闭等待")
-        if select_body.count("returnControl: openSong,") != 1:
-            problems.append("iOS Files observation 的 Picker 关闭等待必须绑定 Flutter 返回控件")
+        if (
+            select_body.count("staleRootReturnControlProvider: {") != 1
+            or select_body.count("app.buttons[self.openSongIdentifier]") != 1
+        ):
+            problems.append("iOS Files observation 的 Picker 关闭等待必须按需解析 Flutter 返回控件")
 
     scenario_contracts = (
         ("testDocumentPickerSelectsSeededAudio", "saveTag.tap()"),
@@ -334,6 +518,16 @@ def ios_cancellation_split_contract_failures(
     """校验 iOS 三个取消 round 在 runner、workflow 和能力矩阵中的一致性。"""
 
     problems: list[str] = []
+    for marker in (
+        "[int]$ScenarioTimeoutSeconds = 120",
+        '$xcodeResultFinalizationTimeoutSeconds = $ScenarioTimeoutSeconds + 90',
+        '"-maximum-test-execution-time-allowance", "$ScenarioTimeoutSeconds"',
+    ):
+        if marker not in runner:
+            problems.append(f"iOS runner 取消 round 超时边界被改变: {marker}")
+    if re.search(r"\[int\]\$ScenarioTimeoutSeconds\s*=\s*(?!120\b)\d+", runner):
+        problems.append("iOS runner 禁止增大 XCTest 单场景超时")
+
     cancellation_contracts = (
         ("ios_document_picker_cancel_1", "testDocumentPickerCancellationRound1ReturnsToFlutter"),
         ("ios_document_picker_cancel_2", "testDocumentPickerCancellationRound2ReturnsToFlutter"),
