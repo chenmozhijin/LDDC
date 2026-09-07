@@ -5,6 +5,54 @@ private struct SystemPickerContext {
   let root: XCUIElement
 }
 
+private final class CancellationRoundContext {
+  private let startedUptime: TimeInterval
+  private let actionDeadline: TimeInterval
+  private(set) var lastPhase = "round_started"
+  private(set) var checkpoints: [[String: Any]] = []
+
+  init(actionBudgetSeconds: TimeInterval) {
+    startedUptime = ProcessInfo.processInfo.systemUptime
+    actionDeadline = startedUptime + actionBudgetSeconds
+    mark("round_started")
+  }
+
+  func mark(_ phase: String) {
+    let now = ProcessInfo.processInfo.systemUptime
+    lastPhase = phase
+    checkpoints.append([
+      "phase": phase,
+      "elapsedMilliseconds": Int(max(0, now - startedUptime) * 1000),
+      "remainingActionBudgetMilliseconds": Int(max(0, actionDeadline - now) * 1000),
+    ])
+  }
+
+  func timeout(upTo maximum: TimeInterval, phase: String) throws -> TimeInterval {
+    mark(phase)
+    let remaining = actionDeadline - ProcessInfo.processInfo.systemUptime
+    guard remaining > 0 else {
+      throw NSError(
+        domain: "LDDCPlatformTests",
+        code: 3,
+        userInfo: [
+          NSLocalizedDescriptionKey: "取消 round 的真实 UI 动作预算已耗尽，最后阶段: \(phase)",
+        ]
+      )
+    }
+    return min(maximum, remaining)
+  }
+
+  var diagnostics: [String: Any] {
+    let remaining = max(0, actionDeadline - ProcessInfo.processInfo.systemUptime)
+    return [
+      "actionBudgetMilliseconds": Int((actionDeadline - startedUptime) * 1000),
+      "lastPhase": lastPhase,
+      "remainingActionBudgetMilliseconds": Int(remaining * 1000),
+      "checkpoints": checkpoints,
+    ]
+  }
+}
+
 final class RunnerUITests: XCTestCase {
   private let appBundleIdentifier = "com.cmzj.lddc.platformtests"
   private let fixtureName = "audio_sample.mp3"
@@ -19,6 +67,9 @@ final class RunnerUITests: XCTestCase {
   private let springBoardBundleIdentifier = "com.apple.springboard"
   private let documentBrowsingRootPrefix = "DOC.browsingRoot Source: "
   private let platformTestDisplayName = "LDDC Platform Tests"
+  // XCTest 的 120 秒限制覆盖整个测试方法。真实 UI 动作只使用其中 85 秒，
+  // 为 evidence、失败报告和应用终止预留 35 秒，避免框架先于测试自身收尾。
+  private let cancellationRoundActionBudgetSeconds: TimeInterval = 85
   private var cleanupVerified = false
   private var cleanupDiagnostics: [String: Any] = [:]
 
@@ -67,27 +118,107 @@ final class RunnerUITests: XCTestCase {
     }
   }
 
-  func testDocumentPickerCancellationReturnsToFlutter() throws {
+  // 三轮真实取消必须拆成独立 XCTest。XCTest 的 120 秒限制按测试方法计算，
+  // 如果在一个方法内串行执行三轮，第三轮会在系统 Picker 已正确工作时被框架强制终止。
+  func testDocumentPickerCancellationRound1ReturnsToFlutter() throws {
+    try runDocumentPickerCancellationRound(
+      scenario: "ios_document_picker_cancel_1",
+      round: 1
+    )
+  }
+
+  func testDocumentPickerCancellationRound2ReturnsToFlutter() throws {
+    try runDocumentPickerCancellationRound(
+      scenario: "ios_document_picker_cancel_2",
+      round: 2
+    )
+  }
+
+  func testDocumentPickerCancellationRound3ReturnsToFlutter() throws {
+    try runDocumentPickerCancellationRound(
+      scenario: "ios_document_picker_cancel_3",
+      round: 3
+    )
+  }
+
+  private func runDocumentPickerCancellationRound(
+    scenario: String,
+    round: Int
+  ) throws {
+    let context = CancellationRoundContext(
+      actionBudgetSeconds: cancellationRoundActionBudgetSeconds
+    )
     var actions: [String: [[String: Any]]] = [:]
     var failure: Error?
     var app: XCUIApplication?
     do {
+      context.mark("app_launching")
       let launchedApp = try launchApp()
       app = launchedApp
-      _ = try openDocumentPicker(app: launchedApp)
-      try cancelSystemPicker(app: launchedApp)
-      try require(launchedApp.wait(for: .runningForeground, timeout: 15), "取消后 LDDC 没有返回前台")
-      let openSong = launchedApp.buttons[openSongIdentifier]
-      try require(waitForHittable(openSong, timeout: 15), "取消后 Flutter 打开歌曲动作不可再次操作")
-      addAction(&actions, capability: "filePicker", action: "document_picker_cancel")
-      addAction(&actions, capability: "nativeChannels", action: "flutter_picker_cancel_round_trip")
+      context.mark("app_launched")
+      _ = try openDocumentPicker(
+        app: launchedApp,
+        cancellationContext: context
+      )
+      context.mark("picker_opened")
+      try cancelSystemPicker(
+        app: launchedApp,
+        actions: &actions,
+        cancellationContext: context,
+        // 远程 Files 服务偶尔会在取消后保留 DocumentsApp 的陈旧 AX 根。这里只在
+        // 宿主 Picker 根已消失时按需重新解析控件，用于区分陈旧快照；round helper
+        // 仍会在下方独立完成唯一一次 Flutter 前台与可操作状态断言。
+        staleRootReturnControlProvider: {
+          launchedApp.buttons[self.openSongIdentifier]
+        }
+      )
+      let foregroundTimeout = try cancellationRoundTimeout(
+        15,
+        context: context,
+        phase: "flutter_foreground_wait"
+      )
+      try require(
+        launchedApp.wait(for: .runningForeground, timeout: foregroundTimeout),
+        "第 \(round) 轮取消后 LDDC 没有返回前台"
+      )
+      // Document Picker 关闭后必须重新解析 Flutter 控件；不能复用打开 Picker 前的
+      // XCUIElement 代理，否则远程 AX snapshot 刷新时会把陈旧代理误判为恢复成功。
+      let returnedOpenSong = launchedApp.buttons[openSongIdentifier]
+      let openSongTimeout = try cancellationRoundTimeout(
+        15,
+        context: context,
+        phase: "flutter_control_wait"
+      )
+      try require(
+        waitForHittable(returnedOpenSong, timeout: openSongTimeout),
+        "第 \(round) 轮取消后 Flutter 打开歌曲动作不可再次操作"
+      )
+      context.mark("flutter_ready")
+      addAction(
+        &actions,
+        capability: "filePicker",
+        action: "document_picker_cancel_round_\(round)"
+      )
+      addAction(
+        &actions,
+        capability: "nativeChannels",
+        action: "flutter_picker_cancel_round_trip_\(round)"
+      )
+      context.mark("app_termination_started")
       try terminateAndVerify(launchedApp)
+      context.mark("app_terminated")
       addAction(&actions, capability: "resourceCleanup", action: "application_and_picker_closed")
     } catch let error {
       failure = error
     }
-    captureFailureAndCleanup(app: app, scenario: "ios_document_picker_cancel", failure: failure)
-    attachEvidence(scenario: "ios_document_picker_cancel", actions: actions, failure: failure)
+    captureCancellationRoundFailureAndCleanup(
+      app: app,
+      scenario: scenario,
+      failure: failure,
+      context: context
+    )
+    cleanupDiagnostics["cancellationRound"] = context.diagnostics
+    attachEvidence(scenario: scenario, actions: actions, failure: failure)
     if let failure {
       throw failure
     }
@@ -207,17 +338,34 @@ final class RunnerUITests: XCTestCase {
     app.launch()
   }
 
-  private func openDocumentPicker(app: XCUIApplication) throws -> SystemPickerContext {
+  private func openDocumentPicker(
+    app: XCUIApplication,
+    cancellationContext: CancellationRoundContext? = nil
+  ) throws -> SystemPickerContext {
     let navigation = app.buttons[navigationIdentifier]
-    try require(
-      navigation.waitForExistence(timeout: 15),
-      "Flutter 没有向 XCUITest 暴露打开歌词导航 identifier"
+    try requireHittable(
+      navigation,
+      in: app,
+      message: "Flutter 没有向 XCUITest 暴露可操作的打开歌词导航 identifier",
+      cancellationContext: cancellationContext,
+      phase: "navigation_ready_wait"
     )
     navigation.tap()
     let openSong = app.buttons[openSongIdentifier]
-    try require(openSong.waitForExistence(timeout: 15), "Flutter 没有暴露打开歌曲按钮 identifier")
+    try requireHittable(
+      openSong,
+      in: app,
+      message: "Flutter 没有暴露可操作的打开歌曲按钮 identifier",
+      cancellationContext: cancellationContext,
+      phase: "open_song_ready_wait"
+    )
     openSong.tap()
-    return try waitForSystemPicker(app: app, timeout: 15)
+    let pickerTimeout = try cancellationRoundTimeout(
+      15,
+      context: cancellationContext,
+      phase: "picker_open_wait"
+    )
+    return try waitForSystemPicker(app: app, timeout: pickerTimeout)
   }
 
   private func selectSeededAudio(
@@ -367,6 +515,196 @@ final class RunnerUITests: XCTestCase {
     return false
   }
 
+  private func waitForPickerDismissal(
+    app: XCUIApplication,
+    staleRootReturnControlProvider: (() -> XCUIElement)? = nil,
+    timeout: TimeInterval
+  ) -> Bool {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if systemPickerContext(app: app) == nil {
+        return true
+      }
+      // iOS 远程 Files 服务可能短暂保留已关闭页面的旧 AX 根。只有宿主应用内的
+      // Picker 根已经消失，并且按需重新解析的 Flutter 控件重新可命中，才把该旧根
+      // 视为陈旧快照；这不会缓存跨 Picker 页面的 XCUIElement，也不会接受仍覆盖
+      // 在应用上的 Picker。
+      if typedSystemPickerRoot(in: app) == nil,
+         let returnControl = staleRootReturnControlProvider?(),
+         returnControl.exists,
+         returnControl.isHittable,
+         returnControl.isEnabled {
+        return true
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return false
+  }
+
+  private func normalizePickerToBrowseRoot(
+    app: XCUIApplication,
+    cancellationContext: CancellationRoundContext? = nil
+  ) throws -> SystemPickerContext {
+    let pickerContextTimeout = try cancellationRoundTimeout(
+      5,
+      context: cancellationContext,
+      phase: "picker_context_wait"
+    )
+    var picker = try waitForSystemPicker(app: app, timeout: pickerContextTimeout)
+    let browseTabTimeout = try cancellationRoundTimeout(
+      2,
+      context: cancellationContext,
+      phase: "browse_tab_wait"
+    )
+    if let browseTab = waitForBrowseTabButton(in: picker, timeout: browseTabTimeout) {
+      browseTab.tap()
+      let refreshedPickerTimeout = try cancellationRoundTimeout(
+        5,
+        context: cancellationContext,
+        phase: "browse_tab_transition_wait"
+      )
+      picker = try waitForSystemPicker(app: app, timeout: refreshedPickerTimeout)
+    }
+
+    // 当前测试只会从 On My iPhone 或匿名 fixture 目录返回 Browse 根页，最多需要
+    // 两次已知 BackButton 转换。未知标签立即失败，不能用泛化回退掩盖页面状态错误。
+    for _ in 0..<2 {
+      if waitForOnMyIPhoneLocation(in: picker, timeout: 0) != nil {
+        return picker
+      }
+      let backButtonTimeout = try cancellationRoundTimeout(
+        5,
+        context: cancellationContext,
+        phase: "browse_root_back_button_wait"
+      )
+      guard let backButton = waitForBackButton(in: picker, timeout: backButtonTimeout) else {
+        throw testFailure("系统 Picker 既不在 Browse 根页，也没有唯一可操作的 BackButton")
+      }
+      let expectedBackButtonLabel: String?
+      switch backButton.label {
+      case "On My iPhone":
+        expectedBackButtonLabel = "Browse"
+      case "Browse":
+        expectedBackButtonLabel = nil
+      default:
+        throw testFailure("系统 Picker BackButton 指向未知父页面: \(backButton.label)")
+      }
+      backButton.tap()
+      // Browse 的初始位置可能是上次访问的目录。只验证当前 BackButton 的确定标签
+      // 转换，避免每一层都扫描 fixture、标题与多个远程 AX 候选；最终仍必须看到
+      // Browse 根页唯一的 On My iPhone 位置，不能把任意无 BackButton 页面当作根页。
+      let backNavigationTimeout = try cancellationRoundTimeout(
+        10,
+        context: cancellationContext,
+        phase: "browse_root_transition_wait"
+      )
+      guard let parent = waitForBackNavigation(
+        app: app,
+        expectedBackButtonLabel: expectedBackButtonLabel,
+        timeout: backNavigationTimeout
+      ) else {
+        throw testFailure("系统 Picker 点击 BackButton 后没有进入预期父页面")
+      }
+      picker = parent
+    }
+    if waitForOnMyIPhoneLocation(in: picker, timeout: 0) != nil {
+      return picker
+    }
+    throw testFailure("系统 Picker 在两次确定 BackButton 返回后仍未进入 Browse 根页")
+  }
+
+  private func waitForBackNavigation(
+    app: XCUIApplication,
+    expectedBackButtonLabel: String?,
+    timeout: TimeInterval
+  ) -> SystemPickerContext? {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if let picker = systemPickerContext(app: app) {
+        if let expectedBackButtonLabel {
+          if waitForBackButton(
+            in: picker,
+            label: expectedBackButtonLabel,
+            timeout: 0
+          ) != nil {
+            return picker
+          }
+        } else if waitForOnMyIPhoneLocation(in: picker, timeout: 0) != nil {
+          return picker
+        }
+      }
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return nil
+  }
+
+  private func waitForBrowseTabButton(
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    waitForUniquePickerElement(
+      queries: [
+        picker.application.buttons.matching(
+          NSPredicate(
+            format: "label ==[c] %@ AND identifier != %@",
+            "Browse",
+            "BackButton"
+          )
+        ),
+      ],
+      in: picker,
+      timeout: timeout
+    )
+  }
+
+  private func waitForBackButton(
+    in picker: SystemPickerContext,
+    label: String? = nil,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    let predicate: NSPredicate
+    if let label {
+      predicate = NSPredicate(
+        format: "identifier == %@ AND label ==[c] %@",
+        "BackButton",
+        label
+      )
+    } else {
+      predicate = NSPredicate(format: "identifier == %@", "BackButton")
+    }
+    return waitForUniquePickerElement(
+      queries: [picker.application.buttons.matching(predicate)],
+      in: picker,
+      timeout: timeout
+    )
+  }
+
+  private func waitForOnMyIPhoneLocation(
+    in picker: SystemPickerContext,
+    timeout: TimeInterval
+  ) -> XCUIElement? {
+    waitForUniquePickerElement(
+      queries: [
+        picker.application.buttons.matching(
+          NSPredicate(
+            format: "label ==[c] %@ AND identifier != %@",
+            "On My iPhone",
+            "BackButton"
+          )
+        ),
+        picker.application.cells.matching(
+          NSPredicate(
+            format: "label ==[c] %@ OR identifier == %@",
+            "On My iPhone",
+            "DOC.sidebar.item.On My iPhone"
+          )
+        ),
+      ],
+      in: picker,
+      timeout: timeout
+    )
+  }
+
   private func requireTypedButton(
     named name: String,
     in picker: SystemPickerContext,
@@ -505,11 +843,27 @@ final class RunnerUITests: XCTestCase {
     in picker: SystemPickerContext,
     requireHittable: Bool
   ) -> [XCUIElement] {
-    queries.flatMap { $0.allElementsBoundByIndex }.filter {
-      $0.exists
-        && (!requireHittable || $0.isHittable)
-        && elementBelongsToPicker($0, picker: picker)
+    var candidates: [XCUIElement] = []
+    for query in queries {
+      // 只需区分零个、唯一或多个候选。远程 Files AX 的全量枚举会重复拉取大型
+      // hierarchy，因此每个精确 predicate 最多检查两个候选，仍可拒绝不唯一控件。
+      for index in 0...1 {
+        let element = query.element(boundBy: index)
+        guard element.exists else {
+          break
+        }
+        guard (!requireHittable || (element.isHittable && element.isEnabled)),
+              elementBelongsToPicker(element, picker: picker)
+        else {
+          continue
+        }
+        candidates.append(element)
+        if candidates.count > 1 {
+          return candidates
+        }
+      }
     }
+    return candidates
   }
 
   private func requireUniquePickerElement(
@@ -542,39 +896,92 @@ final class RunnerUITests: XCTestCase {
     )
   }
 
-  private func cancelSystemPicker(app: XCUIApplication) throws {
-    let picker = try waitForSystemPicker(app: app, timeout: 5)
-    let cancelQueries = [
-      picker.application.buttons.matching(
-        NSPredicate(format: "label ==[c] %@ OR identifier ==[c] %@", "Cancel", "Cancel")
-      ),
-    ]
-    let existingCancelButtons = pickerElements(
-      queries: cancelQueries,
-      in: picker,
-      requireHittable: false
+  private func cancelSystemPicker(
+    app: XCUIApplication,
+    actions: inout [String: [[String: Any]]],
+    cancellationContext: CancellationRoundContext? = nil,
+    staleRootReturnControlProvider: (() -> XCUIElement)? = nil
+  ) throws {
+    let picker = try normalizePickerToBrowseRoot(
+      app: app,
+      cancellationContext: cancellationContext
     )
-    if !existingCancelButtons.isEmpty {
-      try require(existingCancelButtons.count == 1, "系统 Picker 的 typed Cancel 按钮不是唯一控件")
-      let cancel = existingCancelButtons[0]
-      try require(waitForHittable(cancel, timeout: 3), "系统 Picker 的 typed Cancel 按钮存在但不可点击")
-      cancel.tap()
-      try require(waitForSystemPickerToClose(app: app, timeout: 10), "点击 Cancel 后系统 Picker 没有关闭")
-      return
+    cancellationContext?.mark("browse_root_confirmed")
+    let cancelPredicate = NSPredicate(
+      format: "label ==[c] %@ OR identifier ==[c] %@",
+      "Cancel",
+      "Cancel"
+    )
+    let cancelTimeout = try cancellationRoundTimeout(
+      5,
+      context: cancellationContext,
+      phase: "cancel_button_wait"
+    )
+    guard let cancel = try waitForTypedCancelButton(
+      in: picker,
+      predicate: cancelPredicate,
+      timeout: cancelTimeout
+    ) else {
+      throw testFailure(
+        "系统 Picker 已返回 Browse 根页，但没有唯一、启用且可命中的 typed Cancel Button"
+      )
     }
+    cancel.tap()
+    cancellationContext?.mark("cancel_tapped")
+    addAction(
+      &actions,
+      capability: "filePicker",
+      action: "document_picker_typed_cancel_tapped"
+    )
+    let dismissalTimeout = try cancellationRoundTimeout(
+      10,
+      context: cancellationContext,
+      phase: "picker_dismissal_wait"
+    )
+    try require(
+      waitForPickerDismissal(
+        app: app,
+        staleRootReturnControlProvider: staleRootReturnControlProvider,
+        timeout: dismissalTimeout
+      ),
+      "点击 Cancel 后系统 Picker 没有关闭"
+    )
+    cancellationContext?.mark("picker_dismissed")
+  }
 
-    // 只有 typed Cancel 按钮确实不存在时，紧凑 Picker 才允许下拉关闭。
-    // 按钮已经出现但暂时不可命中属于真实 UI 失败，不能通过另一条路径掩盖。
-    // 手势只作用于已确认的 typed Picker 根，不使用屏幕坐标或 sheet fallback。
-    try require(picker.root.exists && picker.root.isHittable, "系统 Picker 根节点不可操作")
-    picker.root.swipeDown()
-    try require(waitForSystemPickerToClose(app: app, timeout: 10), "下拉后系统 Picker 没有关闭")
+  private func waitForTypedCancelButton(
+    in picker: SystemPickerContext,
+    predicate: NSPredicate,
+    timeout: TimeInterval
+  ) throws -> XCUIElement? {
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      let candidates = pickerElements(
+        queries: [picker.application.buttons.matching(predicate)],
+        in: picker,
+        requireHittable: true
+      )
+      if candidates.count == 1 {
+        return candidates[0]
+      }
+      try require(candidates.count < 2, "系统 Picker 的可操作 typed Cancel Button 不是唯一控件")
+      Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return nil
+  }
+
+  private func cancelSystemPicker(app: XCUIApplication) throws {
+    var cleanupActions: [String: [[String: Any]]] = [:]
+    try cancelSystemPicker(
+      app: app,
+      actions: &cleanupActions
+    )
   }
 
   private func waitForHittable(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
     let deadline = Date().addingTimeInterval(timeout)
     repeat {
-      if element.exists, element.isHittable {
+      if element.exists, element.isHittable, element.isEnabled {
         return true
       }
       Thread.sleep(forTimeInterval: 0.2)
@@ -602,20 +1009,51 @@ final class RunnerUITests: XCTestCase {
   private func requireHittable(
     _ element: XCUIElement,
     in app: XCUIApplication,
-    message: String
+    message: String,
+    cancellationContext: CancellationRoundContext? = nil,
+    phase: String = "flutter_control_wait"
   ) throws {
-    if element.waitForExistence(timeout: 3), element.isHittable {
+    let initialTimeout = try cancellationRoundTimeout(
+      3,
+      context: cancellationContext,
+      phase: phase
+    )
+    if element.waitForExistence(timeout: initialTimeout), element.isHittable, element.isEnabled {
       return
     }
     let scrollView = app.scrollViews.firstMatch
-    try require(scrollView.waitForExistence(timeout: 5), "Flutter 页面没有暴露可滚动语义容器")
-    for _ in 0..<6 {
+    let scrollTimeout = try cancellationRoundTimeout(
+      5,
+      context: cancellationContext,
+      phase: "\(phase)_scroll_container_wait"
+    )
+    try require(
+      scrollView.waitForExistence(timeout: scrollTimeout),
+      "Flutter 页面没有暴露可滚动语义容器"
+    )
+    for attempt in 1...6 {
       scrollView.swipeUp()
-      if element.waitForExistence(timeout: 1), element.isHittable {
+      let retryTimeout = try cancellationRoundTimeout(
+        1,
+        context: cancellationContext,
+        phase: "\(phase)_scroll_retry_\(attempt)"
+      )
+      if element.waitForExistence(timeout: retryTimeout), element.isHittable, element.isEnabled {
         return
       }
     }
     try require(false, message)
+  }
+
+  private func cancellationRoundTimeout(
+    _ maximum: TimeInterval,
+    context: CancellationRoundContext?,
+    phase: String
+  ) throws -> TimeInterval {
+    guard let context else {
+      return maximum
+    }
+    return try context.timeout(upTo: maximum, phase: phase)
   }
 
   private func terminateAndVerify(_ app: XCUIApplication) throws {
@@ -665,6 +1103,38 @@ final class RunnerUITests: XCTestCase {
     if let pickerDismissError {
       cleanupDiagnostics["pickerDismissError"] = pickerDismissError
     }
+  }
+
+  private func captureCancellationRoundFailureAndCleanup(
+    app: XCUIApplication?,
+    scenario: String,
+    failure: Error?,
+    context: CancellationRoundContext
+  ) {
+    guard let failure else {
+      return
+    }
+    // 取消 round 的动作预算已接近 XCTest 上限。失败后只记录阶段并终止应用，
+    // 不能再次执行 Browse 根页导航或 Cancel，否则会消耗预留的 evidence 收尾时间。
+    let failedPhase = context.lastPhase
+    context.mark("failure_cleanup_started")
+    cleanupDiagnostics["originalFailure"] = String(describing: failure)
+    cleanupDiagnostics["failureScenario"] = scenario
+    cleanupDiagnostics["failurePhase"] = failedPhase
+    guard let app else {
+      cleanupDiagnostics["appCreated"] = false
+      cleanupVerified = false
+      context.mark("failure_cleanup_without_app")
+      return
+    }
+    if app.state != .notRunning {
+      app.terminate()
+    }
+    let appStopped = app.wait(for: .notRunning, timeout: 5)
+    cleanupVerified = appStopped
+    cleanupDiagnostics["pickerCleanupStrategy"] = "terminate_app_without_repeating_picker_navigation"
+    cleanupDiagnostics["appStoppedAfterFailure"] = appStopped
+    context.mark(appStopped ? "failure_app_terminated" : "failure_app_termination_failed")
   }
 
   private func isSystemPickerVisible(app: XCUIApplication) -> Bool {

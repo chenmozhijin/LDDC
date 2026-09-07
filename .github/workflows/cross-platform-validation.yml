@@ -537,7 +537,22 @@ jobs:
         if: always() && steps.simulator.outcome == 'success'
         continue-on-error: true
         shell: pwsh
-        run: ./tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID
+        run: |
+          $cancelScenarios = @(
+            'ios_document_picker_cancel_1'
+            'ios_document_picker_cancel_2'
+            'ios_document_picker_cancel_3'
+          )
+          # 显式传递完整 iOS 原生场景集合：三个取消 round 各自拥有独立 XCTest
+          # 方法，其他既有选择和导出场景仍保持原来的 required 覆盖。
+          $iosPickerScenarios = @(
+            'ios_document_picker_select'
+          ) + $cancelScenarios + @(
+            'ios_document_picker_export'
+            'ios_document_picker_export_cancel'
+            'ios_document_picker_export_termination'
+          )
+          ./tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID -Scenarios $iosPickerScenarios
       - name: Build iOS release without codesigning
         id: release_build
         continue-on-error: true

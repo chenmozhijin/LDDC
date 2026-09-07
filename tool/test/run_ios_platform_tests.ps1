@@ -3,7 +3,17 @@ param(
   [string]$Device,
   [string]$ReportDir = "build/integration_reports/ios-native",
   [ValidateRange(30, 600)]
-  [int]$ScenarioTimeoutSeconds = 120
+  [int]$ScenarioTimeoutSeconds = 120,
+  [ValidateSet(
+    "ios_document_picker_select",
+    "ios_document_picker_cancel_1",
+    "ios_document_picker_cancel_2",
+    "ios_document_picker_cancel_3",
+    "ios_document_picker_export",
+    "ios_document_picker_export_cancel",
+    "ios_document_picker_export_termination"
+  )]
+  [string[]]$Scenarios = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -473,7 +483,7 @@ function Write-InfrastructureFailureReports {
     [string]$FailureClass = "infrastructure_failure"
   )
 
-  foreach ($entry in $scenarios) {
+  foreach ($entry in $selectedScenarioEntries) {
     $scenario = $entry.Name
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
     $junitPath = Join-Path $junitDir "$scenario.xml"
@@ -500,14 +510,22 @@ function Write-InfrastructureFailureReports {
   }
 }
 
-$scenarios = @(
+$allScenarios = @(
   @{
     Name = "ios_document_picker_select"
     Method = "testDocumentPickerSelectsSeededAudio"
   },
   @{
-    Name = "ios_document_picker_cancel"
-    Method = "testDocumentPickerCancellationReturnsToFlutter"
+    Name = "ios_document_picker_cancel_1"
+    Method = "testDocumentPickerCancellationRound1ReturnsToFlutter"
+  },
+  @{
+    Name = "ios_document_picker_cancel_2"
+    Method = "testDocumentPickerCancellationRound2ReturnsToFlutter"
+  },
+  @{
+    Name = "ios_document_picker_cancel_3"
+    Method = "testDocumentPickerCancellationRound3ReturnsToFlutter"
   },
   @{
     Name = "ios_document_picker_export"
@@ -522,6 +540,14 @@ $scenarios = @(
     Method = "testTerminatedExportIsCleanedOnNextLaunch"
   }
 )
+$selectedScenarioEntries = if ($Scenarios.Count -eq 0) {
+  $allScenarios
+} else {
+  @($allScenarios | Where-Object { $Scenarios -contains $_.Name })
+}
+if ($selectedScenarioEntries.Count -ne $Scenarios.Count -and $Scenarios.Count -gt 0) {
+  throw "iOS 场景选择未能建立一对一 XCTest 映射"
+}
 $overallExitCode = 0
 $infrastructureFailureMessage = $null
 $infrastructureFailureClass = "infrastructure_failure"
@@ -615,7 +641,7 @@ try {
   Invoke-RequiredSimctl `
     -Stage "install-platform-test-app" `
     -CommandArguments @("install", $Device, $appBundle.FullName) | Out-Null
-  foreach ($entry in $scenarios) {
+  foreach ($entry in $selectedScenarioEntries) {
     $scenario = $entry.Name
     $method = $entry.Method
     $scenarioStartedAt = [DateTimeOffset]::UtcNow
