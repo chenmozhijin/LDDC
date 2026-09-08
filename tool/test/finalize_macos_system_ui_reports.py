@@ -12,8 +12,10 @@ import time
 import uuid
 import xml.etree.ElementTree as ET
 
+from capability_matrix import CapabilityMatrixError, load_matrix, resolve_gate
 
-SCENARIOS = ("macos_open_panel_select", "macos_open_panel_cancel")
+
+VALID_SCENARIOS = ("macos_open_panel_select", "macos_open_panel_cancel")
 
 
 def _atomic_json(path: Path, payload: dict) -> None:
@@ -59,7 +61,25 @@ def _watchdog_message(report_root: Path, step_outcome: str) -> str:
     return f"macOS system UI runner did not complete: step={step_outcome}"
 
 
-def _fallback_evidence(run_id: str, scenario: str, message: str) -> dict:
+def _fallback_evidence(
+    run_id: str,
+    scenario: str,
+    message: str,
+    *,
+    observation: bool,
+) -> dict:
+    extra = {
+        "infrastructureFailure": message,
+        "failureClass": "watchdog_interruption",
+        "resourceMeasurementStatus": "not_exercised_before_test_start",
+    }
+    if observation:
+        # watchdog 在 runner 来得及写 evidence 前中断时，仍要保留本次真实
+        # Finder 流程属于 observation 的原因，不能把失败伪装为已通过。
+        extra["experimentalObservation"] = True
+        extra["experimentalReason"] = (
+            "真实 Finder 选择属于 observation，失败保留 watchdog 与原生证据"
+        )
     return {
         "runId": run_id,
         "scenario": scenario,
@@ -76,11 +96,7 @@ def _fallback_evidence(run_id: str, scenario: str, message: str) -> dict:
         "capabilityEvidence": {},
         "resources": {"baseline": {}, "final": {}, "thresholds": {}},
         "artifacts": [],
-        "extra": {
-            "infrastructureFailure": message,
-            "failureClass": "watchdog_interruption",
-            "resourceMeasurementStatus": "not_exercised_before_test_start",
-        },
+        "extra": extra,
     }
 
 
@@ -129,15 +145,44 @@ def finalize(args: argparse.Namespace) -> int:
     message = _watchdog_message(report_root, args.step_outcome)
     normalizer = root / "tool/test/normalize_integration_report.py"
     matrix = root / "tool/test/platform_capability_matrix.json"
+    try:
+        matrix_payload = load_matrix(matrix)
+        gates = {
+            resolve_gate(
+                matrix_payload,
+                profile="platform",
+                platform="macos",
+                scenario=scenario,
+                framework="integration_test+xcuitest",
+            )
+            for scenario in args.scenarios
+        }
+    except CapabilityMatrixError as error:
+        raise RuntimeError(f"无法解析 macOS finalizer gate: {error}") from error
+    if len(gates) != 1:
+        raise RuntimeError("macOS finalizer 不能混合 required 与 observation 场景")
+    if (next(iter(gates)) == "observation") != args.observation:
+        raise RuntimeError("macOS finalizer 的 --observation 必须与能力矩阵 gate 一致")
     finalization_failed = False
-    for scenario in SCENARIOS:
+    for scenario in args.scenarios:
         scenario_report = scenario_dir / f"{scenario}.json"
         junit_report = junit_dir / f"{scenario}.xml"
         if scenario_report.is_file() and junit_report.is_file():
             continue
+        # 能补齐 watchdog 诊断不代表 runner 原本正确产出了报告。保留可解析的
+        # 失败证据，同时让 finalizer 非零，避免缺失的 JSON/JUnit 被汇总成假绿。
+        finalization_failed = True
         evidence = attachment_dir / f"lddc-evidence-{scenario}.json"
         summary = raw_dir / f"{scenario}.xcresult.summary.json"
-        _atomic_json(evidence, _fallback_evidence(run_id, scenario, message))
+        _atomic_json(
+            evidence,
+            _fallback_evidence(
+                run_id,
+                scenario,
+                message,
+                observation=args.observation,
+            ),
+        )
         _atomic_json(
             summary,
             {
@@ -182,7 +227,7 @@ def finalize(args: argparse.Namespace) -> int:
         if completed.returncode != 0:
             finalization_failed = True
 
-    for scenario in SCENARIOS:
+    for scenario in args.scenarios:
         if not _report_pair_is_valid(
             scenario_dir / f"{scenario}.json",
             junit_dir / f"{scenario}.xml",
@@ -199,6 +244,15 @@ def _parse_args() -> argparse.Namespace:
         "--report-root",
         default="lddc/build/integration_reports/macos-native",
     )
+    # required 与 observation 使用独立报告根目录；补报器只能处理本次调用
+    # 明确声明的场景，避免 watchdog 中断时把观察结果写进 required 汇总。
+    parser.add_argument(
+        "--scenarios",
+        nargs="+",
+        choices=VALID_SCENARIOS,
+        required=True,
+    )
+    parser.add_argument("--observation", action="store_true")
     parser.add_argument("--step-outcome", required=True)
     return parser.parse_args()
 

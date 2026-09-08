@@ -13,7 +13,17 @@ param(
     "ios_document_picker_export_cancel",
     "ios_document_picker_export_termination"
   )]
-  [string[]]$Scenarios = @()
+  [string[]]$Scenarios = @(),
+  [ValidateSet(
+    "ios_document_picker_select",
+    "ios_document_picker_cancel_1",
+    "ios_document_picker_cancel_2",
+    "ios_document_picker_cancel_3",
+    "ios_document_picker_export",
+    "ios_document_picker_export_cancel",
+    "ios_document_picker_export_termination"
+  )]
+  [string[]]$ObservationScenarios = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +40,7 @@ $normalizer = Join-Path $repoRoot "tool/test/normalize_integration_report.py"
 $junitConverter = Join-Path $repoRoot "tool/test/xcresult_summary_to_junit.py"
 $verifier = Join-Path $repoRoot "tool/test/verify_integration_reports.py"
 $matrix = Join-Path $repoRoot "tool/test/platform_capability_matrix.json"
+$matrixResolver = Join-Path $repoRoot "tool/test/capability_matrix.py"
 $processSupervisor = Join-Path $repoRoot "tool/test/process_group_supervisor.py"
 $fixture = Join-Path $appRoot "integration_test/fixtures/media/audio_sample.mp3"
 $fixtureSize = (Get-Item -LiteralPath $fixture).Length
@@ -88,8 +99,17 @@ if (-not $derivedData.StartsWith(
 $scenarioDir = Join-Path $runRoot "scenarios"
 $rawDir = Join-Path $runRoot "raw"
 $junitDir = Join-Path $runRoot "junit"
+$requiredScenarioDir = Join-Path $runRoot "required-scenarios"
+$requiredJunitDir = Join-Path $runRoot "required-junit"
 $attachmentsDir = Join-Path $runRoot "attachments"
-foreach ($directory in @($scenarioDir, $rawDir, $junitDir, $attachmentsDir)) {
+foreach ($directory in @(
+    $scenarioDir,
+    $rawDir,
+    $junitDir,
+    $requiredScenarioDir,
+    $requiredJunitDir,
+    $attachmentsDir
+  )) {
   New-Item -ItemType Directory -Force -Path $directory | Out-Null
 }
 
@@ -432,6 +452,26 @@ function Add-RunnerEvidence {
   )
 }
 
+function Add-ObservationEvidence {
+  param(
+    [Parameter(Mandatory = $true)][string]$EvidencePath,
+    [Parameter(Mandatory = $true)][string]$Reason
+  )
+
+  # 观察并不改变真实 XCTest 的结果；它只声明该失败不会进入 required 汇总。
+  $payload = Get-Content -LiteralPath $EvidencePath -Raw | ConvertFrom-Json -AsHashtable
+  if (-not $payload.ContainsKey("extra") -or $null -eq $payload.extra) {
+    $payload["extra"] = [ordered]@{}
+  }
+  $payload.extra["experimentalObservation"] = $true
+  $payload.extra["experimentalReason"] = $Reason
+  [IO.File]::WriteAllText(
+    $EvidencePath,
+    ($payload | ConvertTo-Json -Depth 20),
+    [Text.UTF8Encoding]::new($false)
+  )
+}
+
 function Write-FallbackSummary {
   param(
     [Parameter(Mandatory = $true)][string]$Path,
@@ -498,6 +538,11 @@ function Write-InfrastructureFailureReports {
       -Scenario $scenario `
       -Message $Message `
       -FailureClass $FailureClass
+    if ($observationFilter.Contains($scenario)) {
+      Add-ObservationEvidence `
+        -EvidencePath $fallbackEvidence `
+        -Reason "完整 Files 导航属于 observation，失败保留原始 XCTest 和 AX 证据"
+    }
     & python $normalizer `
       --scenario-report $scenarioPath `
       --raw-report $summaryPath `
@@ -540,15 +585,57 @@ $allScenarios = @(
     Method = "testTerminatedExportIsCleanedOnNextLaunch"
   }
 )
-$selectedScenarioEntries = if ($Scenarios.Count -eq 0) {
-  $allScenarios
-} else {
-  @($allScenarios | Where-Object { $Scenarios -contains $_.Name })
+$scenarioFilter = [Collections.Generic.HashSet[string]]::new(
+  [StringComparer]::Ordinal
+)
+foreach ($scenario in $Scenarios) {
+  $scenarioFilter.Add($scenario) | Out-Null
 }
-if ($selectedScenarioEntries.Count -ne $Scenarios.Count -and $Scenarios.Count -gt 0) {
+$observationFilter = [Collections.Generic.HashSet[string]]::new(
+  [StringComparer]::Ordinal
+)
+foreach ($scenario in $ObservationScenarios) {
+  $observationFilter.Add($scenario) | Out-Null
+}
+if ($scenarioFilter.Count -gt 0) {
+  foreach ($scenario in $observationFilter) {
+    if (-not $scenarioFilter.Contains($scenario)) {
+      throw "iOS observation 场景必须同时出现在 -Scenarios 中: $scenario"
+    }
+  }
+}
+$selectedScenarioEntries = if ($scenarioFilter.Count -eq 0) {
+  @($allScenarios)
+} else {
+  @($allScenarios | Where-Object { $scenarioFilter.Contains($_.Name) })
+}
+if ($selectedScenarioEntries.Count -eq 0) {
+  throw "没有选择任何 iOS Document Picker 场景"
+}
+if ($selectedScenarioEntries.Count -ne $scenarioFilter.Count) {
   throw "iOS 场景选择未能建立一对一 XCTest 映射"
 }
+foreach ($entry in $selectedScenarioEntries) {
+  $gateOutput = @(& python $matrixResolver `
+      --matrix $matrix `
+      --profile platform `
+      --platform ios `
+      --scenario $entry.Name `
+      --framework xcuitest `
+      --gate)
+  $gateExitCode = $LASTEXITCODE
+  $expectedGate = ($gateOutput -join "`n").Trim()
+  if ($gateExitCode -ne 0 -or $expectedGate -notin @("required", "observation")) {
+    throw "无法解析 iOS 场景 $($entry.Name) 的 gate"
+  }
+  $expectedObservation = $expectedGate -eq "observation"
+  $declaredObservation = $observationFilter.Contains($entry.Name)
+  if ($expectedObservation -ne $declaredObservation) {
+    throw "iOS 场景 $($entry.Name) 的 runner gate 与能力矩阵不一致"
+  }
+}
 $overallExitCode = 0
+$observationFailureDetected = $false
 $infrastructureFailureMessage = $null
 $infrastructureFailureClass = "infrastructure_failure"
 $activeInfrastructureFailureClass = "infrastructure_failure"
@@ -937,6 +1024,19 @@ try {
         -PostconditionStatus $postconditionStatus
       $evidencePath = Get-Item -LiteralPath $fallbackEvidence
     }
+    $experimentalObservation = $observationFilter.Contains($scenario)
+    if ($experimentalObservation) {
+      try {
+        Add-ObservationEvidence `
+          -EvidencePath $evidencePath.FullName `
+          -Reason "完整 Files 导航属于 observation，失败保留原始 XCTest 和 AX 证据"
+      } catch {
+        $message = "iOS observation 场景 $scenario 无法写入 gate evidence: $($_.Exception.Message)"
+        Add-SummaryFailure -SummaryPath $summaryPath -Message $message
+        $effectiveExitCode = 1
+        Write-Warning $message
+      }
+    }
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
     & python $normalizer `
       --scenario-report $scenarioPath `
@@ -951,10 +1051,14 @@ try {
     & python $junitConverter --input $summaryPath --output $junitPath --scenario $scenario
     $junitExitCode = $LASTEXITCODE
     if ($effectiveExitCode -ne 0 -or $normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
-      # Document Picker 的选择、取消、导出和生命周期场景彼此独立。单个失败
-      # 不能阻断后续证据收集，但最终退出码仍必须失败，避免 CI 假绿。
-      $overallExitCode = 1
-      Write-Warning "iOS XCUITest 场景 $scenario 失败，继续收集其余独立场景"
+      # observation 只是不阻断 required 汇总；原始失败、JUnit 和 evidence 均保留。
+      if ($experimentalObservation -and $normalizeExitCode -eq 0 -and $junitExitCode -eq 0) {
+        $observationFailureDetected = $true
+        Write-Warning "iOS observation 场景 $scenario 失败，保留原始证据且不阻断 required"
+      } else {
+        $overallExitCode = 1
+        Write-Warning "iOS XCUITest 场景 $scenario 失败，继续收集其余独立场景"
+      }
     }
   }
 } catch {
@@ -993,14 +1097,41 @@ if (-not [string]::IsNullOrWhiteSpace($infrastructureFailureMessage)) {
     -FailureClass $infrastructureFailureClass
 }
 
-& python $verifier `
-  --directory $scenarioDir `
-  --junit-directory $junitDir `
-  --profile platform `
-  --platform ios `
-  --run-id $runId `
-  --matrix $matrix
-if ($LASTEXITCODE -ne 0) {
+foreach ($entry in $selectedScenarioEntries) {
+  $scenario = $entry.Name
+  if ($observationFilter.Contains($scenario)) {
+    continue
+  }
+  $scenarioPath = Join-Path $scenarioDir "$scenario.json"
+  $junitPath = Join-Path $junitDir "$scenario.xml"
+  if (-not (Test-Path -LiteralPath $scenarioPath -PathType Leaf) `
+      -or -not (Test-Path -LiteralPath $junitPath -PathType Leaf)) {
+    $overallExitCode = 1
+    Write-Error "iOS required 场景 $scenario 缺少 scenario JSON 或 JUnit" -ErrorAction Continue
+    continue
+  }
+  Copy-Item -LiteralPath $scenarioPath -Destination $requiredScenarioDir -Force
+  Copy-Item -LiteralPath $junitPath -Destination $requiredJunitDir -Force
+}
+
+$requiredReports = @(
+  Get-ChildItem -LiteralPath $requiredScenarioDir -File -ErrorAction SilentlyContinue
+)
+if ($requiredReports.Count -gt 0) {
+  & python $verifier `
+    --directory $requiredScenarioDir `
+    --junit-directory $requiredJunitDir `
+    --profile platform `
+    --platform ios `
+    --run-id $runId `
+    --matrix $matrix
+  if ($LASTEXITCODE -ne 0) {
+    $overallExitCode = 1
+  }
+}
+
+if ($requiredReports.Count -eq 0 -and $observationFailureDetected) {
+  # observation 专用步骤必须以真实失败结束，由 workflow 的 continue-on-error 保留可见信号。
   $overallExitCode = 1
 }
 

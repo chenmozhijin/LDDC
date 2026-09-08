@@ -283,26 +283,57 @@ jobs:
       - run: flutter pub get
       - name: Keep Apple dependency resolution on CocoaPods
         run: flutter config --no-enable-swift-package-manager
-      - name: Run macOS file panel automation
-        id: system_ui
+      - name: Run required macOS file panel cancellation
+        id: panel_cancel_required
         continue-on-error: true
         shell: pwsh
         run: |
           python tool/test/process_group_supervisor.py `
-            --phase macos-system-ui-workflow `
+            --phase macos-system-ui-required-workflow `
             --timeout 900 `
             --grace 5 `
             --cwd $PWD.Path `
-            --status lddc/build/integration_reports/macos-native/workflow-watchdog.json `
-            -- pwsh -NoLogo -NoProfile -File ./tool/test/run_macos_platform_tests.ps1
+            --status lddc/build/integration_reports/macos-native/required-panel/workflow-watchdog.json `
+            -- pwsh -NoLogo -NoProfile -File ./tool/test/run_macos_platform_tests.ps1 `
+              -Scenarios macos_open_panel_cancel `
+              -ReportDir build/integration_reports/macos-native/required-panel
           exit $LASTEXITCODE
-      - name: Finalize macOS system UI reports
-        id: report_finalize
+      - name: Finalize required macOS file panel reports
+        id: required_report_finalize
         if: always()
         continue-on-error: true
         run: >-
           python tool/test/finalize_macos_system_ui_reports.py
-          --step-outcome '${{ steps.system_ui.outcome }}'
+          --report-root lddc/build/integration_reports/macos-native/required-panel
+          --scenarios macos_open_panel_cancel
+          --step-outcome '${{ steps.panel_cancel_required.outcome }}'
+      - name: Run macOS Finder selection observation
+        id: finder_observation
+        if: always()
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          python tool/test/process_group_supervisor.py `
+            --phase macos-system-ui-observation-workflow `
+            --timeout 900 `
+            --grace 5 `
+            --cwd $PWD.Path `
+            --status lddc/build/integration_reports/macos-native/finder-observation/workflow-watchdog.json `
+            -- pwsh -NoLogo -NoProfile -File ./tool/test/run_macos_platform_tests.ps1 `
+              -Scenarios macos_open_panel_select `
+              -ObservationScenarios macos_open_panel_select `
+              -ReportDir build/integration_reports/macos-native/finder-observation
+          exit $LASTEXITCODE
+      - name: Finalize macOS Finder observation reports
+        id: finder_observation_finalize
+        if: always()
+        continue-on-error: true
+        run: >-
+          python tool/test/finalize_macos_system_ui_reports.py
+          --report-root lddc/build/integration_reports/macos-native/finder-observation
+          --scenarios macos_open_panel_select
+          --observation
+          --step-outcome '${{ steps.finder_observation.outcome }}'
       - name: Summarize required macOS system UI phase
         id: required_outcomes
         if: always()
@@ -311,15 +342,23 @@ jobs:
         run: |
           python tool/test/ci_phase_summary.py `
             --title 'macOS system UI validation' `
-            --phase 'system_ui|NSOpenPanel hybrid|${{ steps.system_ui.outcome }}' `
-            --phase 'report_finalize|Report finalization|${{ steps.report_finalize.outcome }}'
+            --phase 'panel_cancel_required|NSOpenPanel cancellation|${{ steps.panel_cancel_required.outcome }}' `
+            --phase 'required_report_finalize|Required report finalization|${{ steps.required_report_finalize.outcome }}'
       - name: Upload macOS system UI diagnostics
         if: always() && steps.required_outcomes.outcome != 'success'
         uses: actions/upload-artifact@v7
         with:
           name: macos-system-ui-diagnostics
-          path: lddc/build/integration_reports/macos-native/**
+          path: lddc/build/integration_reports/macos-native/required-panel/**
           if-no-files-found: warn
+          retention-days: 7
+      - name: Upload macOS Finder observation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-finder-observation-diagnostics
+          path: lddc/build/integration_reports/macos-native/finder-observation/**
+          if-no-files-found: ignore
           retention-days: 7
       - name: Enforce required macOS system UI result
         if: always()
@@ -532,8 +571,8 @@ jobs:
         id: simulator
         continue-on-error: true
         run: bash tool/test/create_ios_simulator.sh
-      - name: Run iOS Document Picker automation
-        id: system_ui
+      - name: Run required iOS Document Picker cancellation
+        id: picker_cancel_required
         if: always() && steps.simulator.outcome == 'success'
         continue-on-error: true
         shell: pwsh
@@ -543,16 +582,29 @@ jobs:
             'ios_document_picker_cancel_2'
             'ios_document_picker_cancel_3'
           )
-          # 显式传递完整 iOS 原生场景集合：三个取消 round 各自拥有独立 XCTest
-          # 方法，其他既有选择和导出场景仍保持原来的 required 覆盖。
-          $iosPickerScenarios = @(
+          # 三个取消 round 是 required；每轮独立 XCTest，避免单方法累计触发 120 秒限制。
+          ./tool/test/run_ios_platform_tests.ps1 `
+            -Device $env:DEVICE_ID `
+            -Scenarios $cancelScenarios `
+            -ReportDir build/integration_reports/ios-native/required-picker
+      - name: Run iOS Files selection and export observation
+        id: files_observation
+        if: always() && steps.simulator.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $filesObservationScenarios = @(
             'ios_document_picker_select'
-          ) + $cancelScenarios + @(
             'ios_document_picker_export'
             'ios_document_picker_export_cancel'
             'ios_document_picker_export_termination'
           )
-          ./tool/test/run_ios_platform_tests.ps1 -Device $env:DEVICE_ID -Scenarios $iosPickerScenarios
+          # Files 场景仍执行真实 XCTest、证据和资源清理；失败仅作为 observation 保留。
+          ./tool/test/run_ios_platform_tests.ps1 `
+            -Device $env:DEVICE_ID `
+            -Scenarios $filesObservationScenarios `
+            -ObservationScenarios $filesObservationScenarios `
+            -ReportDir build/integration_reports/ios-native/files-observation
       - name: Build iOS release without codesigning
         id: release_build
         continue-on-error: true
@@ -649,14 +701,22 @@ jobs:
             --phase 'native_channel|Native channels|${{ steps.native_channel.outcome }}' `
             --phase 'debug_rebuild|Debug application|${{ steps.debug_rebuild.outcome }}' `
             --phase 'native_tests|Native XCTest|${{ steps.native_tests.outcome }}' `
-            --phase 'system_ui|Document Picker XCUITest|${{ steps.system_ui.outcome }}' `
+            --phase 'picker_cancel_required|Document Picker cancellation XCUITest|${{ steps.picker_cancel_required.outcome }}' `
             --phase 'simulator_cleanup|Simulator cleanup|${{ steps.simulator_cleanup.outcome }}'
       - name: Upload iOS diagnostics
         if: always() && steps.required_outcomes.outcome != 'success'
         uses: actions/upload-artifact@v7
         with:
           name: ios-validation-diagnostics
-          path: lddc/build/integration_reports/**
+          path: lddc/build/integration_reports/ios-native/required-picker/**
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload iOS Files observation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-files-observation-diagnostics
+          path: lddc/build/integration_reports/ios-native/files-observation/**
           if-no-files-found: ignore
           retention-days: 7
       - name: Enforce required iOS result

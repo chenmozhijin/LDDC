@@ -13,6 +13,7 @@ from typing import Any
 
 MATRIX_PATH = Path(__file__).with_name("platform_capability_matrix.json")
 STATE_KEYS = {"mode", "required", "applicable", "reason"}
+GATES = {"required", "observation"}
 
 
 class CapabilityMatrixError(ValueError):
@@ -21,8 +22,8 @@ class CapabilityMatrixError(ValueError):
 
 def load_matrix(path: Path = MATRIX_PATH) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if payload.get("schemaVersion") != 2:
-        raise CapabilityMatrixError("能力矩阵 schemaVersion 必须为 2")
+    if payload.get("schemaVersion") != 3:
+        raise CapabilityMatrixError("能力矩阵 schemaVersion 必须为 3")
     profiles = payload.get("profiles")
     contracts = payload.get("contracts")
     if not isinstance(profiles, dict) or not profiles:
@@ -43,6 +44,11 @@ def load_matrix(path: Path = MATRIX_PATH) -> dict[str, Any]:
         if not isinstance(capabilities, dict):
             raise CapabilityMatrixError(f"contracts[{index}].capabilities 无效")
         _validate_capabilities(capabilities, f"contracts[{index}].capabilities")
+        gate = contract.get("gate", "required")
+        if gate not in GATES:
+            raise CapabilityMatrixError(
+                f"contracts[{index}].gate 必须为 required 或 observation"
+            )
     return payload
 
 
@@ -88,6 +94,43 @@ def resolve_contract(
     return resolved
 
 
+def resolve_gate(
+    matrix: dict[str, Any],
+    *,
+    profile: str,
+    platform: str,
+    scenario: str,
+    framework: str,
+) -> str:
+    """按契约特异性解析场景门禁，未声明时保持 required。"""
+    matches: list[tuple[int, dict[str, Any]]] = []
+    for contract in matrix["contracts"]:
+        if contract["profile"] != profile:
+            continue
+        selectors = {
+            "platform": platform,
+            "scenario": scenario,
+            "framework": framework,
+        }
+        if any(contract[key] not in {"*", value} for key, value in selectors.items()):
+            continue
+        specificity = sum(contract[key] != "*" for key in selectors)
+        matches.append((specificity, contract))
+
+    if profile != "offline" and not matches:
+        raise CapabilityMatrixError(
+            "能力矩阵没有匹配 gate 契约："
+            f"profile={profile}, platform={platform}, scenario={scenario}, "
+            f"framework={framework}"
+        )
+    gate = "required"
+    for _, contract in sorted(matches, key=lambda item: item[0]):
+        gate = contract.get("gate", gate)
+    if gate not in GATES:
+        raise CapabilityMatrixError(f"解析得到无效 gate={gate}")
+    return gate
+
+
 def _validate_capabilities(capabilities: dict[str, Any], location: str) -> None:
     for name, state in capabilities.items():
         if not isinstance(name, str) or not name.strip():
@@ -126,10 +169,23 @@ def main() -> int:
     parser.add_argument("--scenario", required=True)
     parser.add_argument("--framework", required=True)
     parser.add_argument("--base64", action="store_true")
+    parser.add_argument("--gate", action="store_true")
     args = parser.parse_args()
 
+    matrix = load_matrix(args.matrix)
+    if args.gate:
+        print(
+            resolve_gate(
+                matrix,
+                profile=args.profile,
+                platform=args.platform,
+                scenario=args.scenario,
+                framework=args.framework,
+            )
+        )
+        return 0
     contract = resolve_contract(
-        load_matrix(args.matrix),
+        matrix,
         profile=args.profile,
         platform=args.platform,
         scenario=args.scenario,

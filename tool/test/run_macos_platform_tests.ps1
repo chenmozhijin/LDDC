@@ -3,7 +3,11 @@ param(
   [ValidateRange(120, 180)]
   [int]$ScenarioTimeoutSeconds = 120,
   [ValidateRange(120, 300)]
-  [int]$FlutterStartupTimeoutSeconds = 180
+  [int]$FlutterStartupTimeoutSeconds = 180,
+  [ValidateSet("macos_open_panel_select", "macos_open_panel_cancel")]
+  [string[]]$Scenarios = @(),
+  [ValidateSet("macos_open_panel_select", "macos_open_panel_cancel")]
+  [string[]]$ObservationScenarios = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -49,6 +53,8 @@ if (-not $derivedData.StartsWith(
 $scenarioDir = Join-Path $runRoot "scenarios"
 $rawDir = Join-Path $runRoot "raw"
 $junitDir = Join-Path $runRoot "junit"
+$requiredScenarioDir = Join-Path $runRoot "required-scenarios"
+$requiredJunitDir = Join-Path $runRoot "required-junit"
 $attachmentsDir = Join-Path $runRoot "attachments"
 $diagnosticsDir = Join-Path $runRoot "diagnostics"
 $processStatusDir = Join-Path $diagnosticsDir "process-status"
@@ -70,7 +76,16 @@ $syncDir = Join-Path $hybridRoot "sync"
 $workspaceRoot = Join-Path $hybridRoot "workspace"
 $fixture = Join-Path $workspaceRoot "fixtures/audio_sample.mp3"
 $containerReportDir = Join-Path $hybridRoot "reports"
-foreach ($directory in @($scenarioDir, $rawDir, $junitDir, $attachmentsDir, $diagnosticsDir, $processStatusDir)) {
+foreach ($directory in @(
+    $scenarioDir,
+    $rawDir,
+    $junitDir,
+    $requiredScenarioDir,
+    $requiredJunitDir,
+    $attachmentsDir,
+    $diagnosticsDir,
+    $processStatusDir
+  )) {
   New-Item -ItemType Directory -Force -Path $directory | Out-Null
 }
 
@@ -93,7 +108,7 @@ function Resolve-UniqueBuildArtifact {
   return $matches[0]
 }
 
-$scenarios = @(
+$allScenarios = @(
   @{
     Name = "macos_open_panel_select"
     Action = "select"
@@ -105,6 +120,51 @@ $scenarios = @(
     Method = "testOpenPanelCancellationReturnsToFlutter"
   }
 )
+$scenarioFilter = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+foreach ($scenario in $Scenarios) {
+  $scenarioFilter.Add($scenario) | Out-Null
+}
+$observationFilter = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+foreach ($scenario in $ObservationScenarios) {
+  $observationFilter.Add($scenario) | Out-Null
+}
+if ($scenarioFilter.Count -gt 0) {
+  foreach ($scenario in $observationFilter) {
+    if (-not $scenarioFilter.Contains($scenario)) {
+      throw "macOS observation 场景必须同时出现在 -Scenarios 中: $scenario"
+    }
+  }
+}
+$selectedScenarioEntries = if ($scenarioFilter.Count -eq 0) {
+  @($allScenarios)
+} else {
+  @($allScenarios | Where-Object { $scenarioFilter.Contains($_.Name) })
+}
+if ($selectedScenarioEntries.Count -eq 0) {
+  throw "没有选择任何 macOS OpenPanel 场景"
+}
+if ($selectedScenarioEntries.Count -ne $scenarioFilter.Count) {
+  throw "macOS 场景选择未能建立一对一 XCTest 映射"
+}
+foreach ($entry in $selectedScenarioEntries) {
+  $gateOutput = @(& python $matrixResolver `
+      --matrix $matrix `
+      --profile platform `
+      --platform macos `
+      --scenario $entry.Name `
+      --framework integration_test+xcuitest `
+      --gate)
+  $gateExitCode = $LASTEXITCODE
+  $expectedGate = ($gateOutput -join "`n").Trim()
+  if ($gateExitCode -ne 0 -or $expectedGate -notin @("required", "observation")) {
+    throw "无法解析 macOS 场景 $($entry.Name) 的 gate"
+  }
+  $expectedObservation = $expectedGate -eq "observation"
+  $declaredObservation = $observationFilter.Contains($entry.Name)
+  if ($expectedObservation -ne $declaredObservation) {
+    throw "macOS 场景 $($entry.Name) 的 runner gate 与能力矩阵不一致"
+  }
+}
 # XCTest 结果包的收尾是独立的诊断阶段。它不能延长 Flutter 业务预算，
 # 但 Flutter 先失败时需要给 xcodebuild 一个固定窗口写出原始结果。
 $xcodeReportDrainSeconds = 30
@@ -736,13 +796,33 @@ function Add-RunnerDiagnosticEvidence {
   )
 }
 
+function Add-ObservationEvidence {
+  param(
+    [Parameter(Mandatory = $true)][string]$Path,
+    [Parameter(Mandatory = $true)][string]$Reason
+  )
+
+  # 保留真实 hybrid 结果，只把它从 required 汇总中隔离出来。
+  $payload = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json -AsHashtable
+  if (-not $payload.ContainsKey("extra") -or $payload.extra -isnot [hashtable]) {
+    $payload["extra"] = [ordered]@{}
+  }
+  $payload.extra["experimentalObservation"] = $true
+  $payload.extra["experimentalReason"] = $Reason
+  [IO.File]::WriteAllText(
+    $Path,
+    ($payload | ConvertTo-Json -Depth 30),
+    [Text.UTF8Encoding]::new($false)
+  )
+}
+
 function Write-InfrastructureFailureReports {
   param(
     [Parameter(Mandatory = $true)][string]$Message,
     [switch]$Overwrite
   )
 
-  foreach ($entry in $scenarios) {
+  foreach ($entry in $selectedScenarioEntries) {
     $scenario = $entry.Name
     $scenarioPath = Join-Path $scenarioDir "$scenario.json"
     $junitPath = Join-Path $junitDir "$scenario.xml"
@@ -755,6 +835,11 @@ function Write-InfrastructureFailureReports {
     $flutterJsonl = Join-Path $rawDir "$scenario.flutter.jsonl"
     $fallbackEvidence = Join-Path $attachmentsDir "lddc-evidence-$scenario.json"
     Write-FallbackEvidence -Path $fallbackEvidence -Scenario $scenario -Message $Message
+    if ($observationFilter.Contains($scenario)) {
+      Add-ObservationEvidence `
+        -Path $fallbackEvidence `
+        -Reason "完整 Finder 选择属于 observation，失败保留真实 hybrid 证据"
+    }
     & python $normalizer `
       --scenario-report $scenarioPath `
       --raw-report $flutterJsonl `
@@ -772,6 +857,7 @@ function Write-InfrastructureFailureReports {
 }
 
 $overallExitCode = 0
+$observationFailureDetected = $false
 $activeFlutterHandle = $null
 Push-Location $appRoot
 try {
@@ -844,7 +930,7 @@ try {
     -Filter "*.xctestrun" `
     -Description "macOS RunnerPlatformTests xctestrun"
 
-  foreach ($entry in $scenarios) {
+  foreach ($entry in $selectedScenarioEntries) {
     $scenario = $entry.Name
     $action = $entry.Action
     $method = $entry.Method
@@ -1121,6 +1207,23 @@ try {
       -FlutterExitCode $flutterExitCode `
       -XcodeExitCode $xcodeExitCode
 
+    $experimentalObservation = $observationFilter.Contains($scenario)
+    if ($experimentalObservation) {
+      try {
+        Add-ObservationEvidence `
+          -Path $evidencePath.FullName `
+          -Reason "完整 Finder 选择属于 observation，失败保留真实 hybrid 证据"
+      } catch {
+        $observationEvidenceError = "macOS observation 场景 $scenario 无法写入 gate evidence: $($_.Exception.Message)"
+        $runnerFailureMessage = if ([string]::IsNullOrWhiteSpace($runnerFailureMessage)) {
+          $observationEvidenceError
+        } else {
+          "$runnerFailureMessage; $observationEvidenceError"
+        }
+        Write-Warning $observationEvidenceError
+      }
+    }
+
     if (Test-Path -LiteralPath $containerScenarioPath -PathType Leaf) {
       Copy-Item -LiteralPath $containerScenarioPath -Destination $scenarioPath -Force
     }
@@ -1156,7 +1259,14 @@ try {
       --platform macos `
       --failure-junit $junitPath
     $normalizeExitCode = $LASTEXITCODE
-    if ($combinedExitCode -ne 0 -or $normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
+    if ($experimentalObservation) {
+      if ($normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
+        $overallExitCode = 1
+      } elseif ($combinedExitCode -ne 0) {
+        $observationFailureDetected = $true
+        Write-Warning "macOS observation 场景 $scenario 失败，保留真实报告且不阻断 required"
+      }
+    } elseif ($combinedExitCode -ne 0 -or $normalizeExitCode -ne 0 -or $junitExitCode -ne 0) {
       $overallExitCode = 1
     }
   }
@@ -1196,14 +1306,40 @@ try {
   }
 }
 
-& python $verifier `
-  --directory $scenarioDir `
-  --junit-directory $junitDir `
-  --profile platform `
-  --platform macos `
-  --run-id $runId `
-  --matrix $matrix
-if ($LASTEXITCODE -ne 0) {
+foreach ($entry in $selectedScenarioEntries) {
+  if ($observationFilter.Contains($entry.Name)) {
+    continue
+  }
+  $scenarioPath = Join-Path $scenarioDir "$($entry.Name).json"
+  $junitPath = Join-Path $junitDir "$($entry.Name).xml"
+  if (-not (Test-Path -LiteralPath $scenarioPath -PathType Leaf) `
+      -or -not (Test-Path -LiteralPath $junitPath -PathType Leaf)) {
+    $overallExitCode = 1
+    Write-Error "macOS required 场景 $($entry.Name) 缺少报告" -ErrorAction Continue
+    continue
+  }
+  Copy-Item -LiteralPath $scenarioPath -Destination $requiredScenarioDir -Force
+  Copy-Item -LiteralPath $junitPath -Destination $requiredJunitDir -Force
+}
+
+$requiredReports = @(
+  Get-ChildItem -LiteralPath $requiredScenarioDir -File -ErrorAction SilentlyContinue
+)
+if ($requiredReports.Count -gt 0) {
+  & python $verifier `
+    --directory $requiredScenarioDir `
+    --junit-directory $requiredJunitDir `
+    --profile platform `
+    --platform macos `
+    --run-id $runId `
+    --matrix $matrix
+  if ($LASTEXITCODE -ne 0) {
+    $overallExitCode = 1
+  }
+}
+
+if ($requiredReports.Count -eq 0 -and $observationFailureDetected) {
+  # observation 专用步骤必须以真实失败结束，由 workflow 的 continue-on-error 保留可见信号。
   $overallExitCode = 1
 }
 

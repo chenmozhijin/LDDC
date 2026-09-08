@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "profiles": {
     "offline": {
       "network": {
@@ -344,6 +344,7 @@
       "platform": "ios",
       "scenario": "ios_document_picker_select",
       "framework": "xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -433,6 +434,7 @@
       "platform": "ios",
       "scenario": "ios_document_picker_export",
       "framework": "xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -459,6 +461,7 @@
       "platform": "ios",
       "scenario": "ios_document_picker_export_cancel",
       "framework": "xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -485,6 +488,7 @@
       "platform": "ios",
       "scenario": "ios_document_picker_export_termination",
       "framework": "xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -511,6 +515,7 @@
       "platform": "macos",
       "scenario": "macos_open_panel_select",
       "framework": "integration_test+xcuitest",
+      "gate": "observation",
       "capabilities": {
         "filePicker": {
           "mode": "real",
@@ -549,6 +554,7 @@
       "platform": "macos",
       "scenario": "macos_open_panel_cancel",
       "framework": "integration_test+xcuitest",
+      "gate": "required",
       "capabilities": {
         "filePicker": {
           "mode": "real",

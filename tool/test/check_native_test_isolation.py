@@ -239,7 +239,7 @@ def ios_cancellation_split_contract_failures(
     workflow: str,
     capability_matrix: dict[str, object],
 ) -> list[str]:
-    """校验三轮取消在 runner、主 workflow 和能力矩阵中保持同一 required 契约。"""
+    """校验 iOS required 取消与 Files observation 的分层契约。"""
 
     problems: list[str] = []
     for marker in (
@@ -247,8 +247,15 @@ def ios_cancellation_split_contract_failures(
         chr(36) + "xcodeResultFinalizationTimeoutSeconds = " + chr(36) + "ScenarioTimeoutSeconds + 90",
         '"-maximum-test-execution-time-allowance", "' + chr(36) + "ScenarioTimeoutSeconds\"",
         "[string[]]" + chr(36) + "Scenarios = @()",
+        "[string[]]" + chr(36) + "ObservationScenarios = @()",
         chr(36) + "allScenarios = @(",
         chr(36) + "selectedScenarioEntries",
+        chr(36) + "matrixResolver",
+        "--gate",
+        "Add-ObservationEvidence",
+        chr(36) + "requiredScenarioDir",
+        chr(36) + "requiredJunitDir",
+        chr(36) + "requiredReports.Count -eq 0 -and " + chr(36) + "observationFailureDetected",
     ):
         if marker not in runner:
             problems.append(f"iOS runner 取消 round 契约缺少: {marker}")
@@ -256,12 +263,23 @@ def ios_cancellation_split_contract_failures(
     if re.search(timeout_assignment, runner):
         problems.append("iOS runner 禁止增大 XCTest 单场景超时")
 
-    cancellation_contracts = (
+    scenario_mappings = (
+        ("ios_document_picker_select", "testDocumentPickerSelectsSeededAudio"),
         ("ios_document_picker_cancel_1", "testDocumentPickerCancellationRound1ReturnsToFlutter"),
         ("ios_document_picker_cancel_2", "testDocumentPickerCancellationRound2ReturnsToFlutter"),
         ("ios_document_picker_cancel_3", "testDocumentPickerCancellationRound3ReturnsToFlutter"),
+        ("ios_document_picker_export", "testDocumentPickerExportsLyricsFile"),
+        (
+            "ios_document_picker_export_cancel",
+            "testDocumentPickerExportCancellationCleansTemporaryFile",
+        ),
+        (
+            "ios_document_picker_export_termination",
+            "testTerminatedExportIsCleanedOnNextLaunch",
+        ),
     )
-    for scenario, method in cancellation_contracts:
+    cancellation_contracts = scenario_mappings[1:4]
+    for scenario, method in scenario_mappings:
         pair_pattern = re.compile(
             rf'Name = "{re.escape(scenario)}"[\s\S]{{0,240}}Method = "{re.escape(method)}"'
         )
@@ -273,22 +291,62 @@ def ios_cancellation_split_contract_failures(
         problems.append("iOS runner 禁止恢复旧的单一取消场景")
 
     for marker in (
+        "id: picker_cancel_required",
         chr(36) + "cancelScenarios = @(",
         "'ios_document_picker_cancel_1'",
         "'ios_document_picker_cancel_2'",
         "'ios_document_picker_cancel_3'",
-        chr(36) + "iosPickerScenarios = @(",
-        "-Scenarios " + chr(36) + "iosPickerScenarios",
+        "-Scenarios " + chr(36) + "cancelScenarios",
+        "-ReportDir build/integration_reports/ios-native/required-picker",
+        "id: files_observation",
+        chr(36) + "filesObservationScenarios = @(",
+        "'ios_document_picker_select'",
+        "'ios_document_picker_export'",
+        "'ios_document_picker_export_cancel'",
+        "'ios_document_picker_export_termination'",
+        "-Scenarios " + chr(36) + "filesObservationScenarios",
+        "-ObservationScenarios " + chr(36) + "filesObservationScenarios",
+        "-ReportDir build/integration_reports/ios-native/files-observation",
+        "steps.picker_cancel_required.outcome",
+        "ios-files-observation-diagnostics",
     ):
         if marker not in workflow:
-            problems.append(f"iOS workflow 三轮取消数组契约缺少: {marker}")
+            problems.append(f"iOS workflow required/observation 分层契约缺少: {marker}")
+    for forbidden in (
+        chr(36) + "iosPickerScenarios",
+        "steps.files_observation.outcome",
+    ):
+        if forbidden in workflow:
+            problems.append(f"iOS required 汇总禁止包含观察场景: {forbidden}")
     if re.search(r"ios_document_picker_cancel(?![_A-Za-z0-9])", workflow):
         problems.append("iOS workflow 禁止声明旧的单一取消场景")
 
+    for marker in (
+        chr(36) + "observationFilter.Contains(" + chr(36) + "scenario)",
+        chr(36) + "expectedObservation = " + chr(36) + "expectedGate -eq \"observation\"",
+        "if (" + chr(36) + "expectedObservation -ne " + chr(36) + "declaredObservation)",
+        '"experimentalObservation"',
+        '"experimentalReason"',
+        "Copy-Item -LiteralPath " + chr(36) + "scenarioPath -Destination " + chr(36) + "requiredScenarioDir",
+    ):
+        if marker not in runner:
+            problems.append(f"iOS runner observation 证据或 required 隔离缺少: {marker}")
+
+    if capability_matrix.get("schemaVersion") != 3:
+        problems.append("iOS 能力矩阵必须升级到 schemaVersion 3")
     contracts = capability_matrix.get("contracts")
     if not isinstance(contracts, list):
         return problems + ["iOS 能力矩阵缺少 contracts 数组"]
-    for scenario, _ in cancellation_contracts:
+    scenario_contracts = (
+        ("ios_document_picker_cancel_1", "required", ("filePicker", "resourceCleanup")),
+        ("ios_document_picker_cancel_2", "required", ("filePicker", "resourceCleanup")),
+        ("ios_document_picker_cancel_3", "required", ("filePicker", "resourceCleanup")),
+        ("ios_document_picker_select", "observation", ("filePicker", "media", "resourceCleanup")),
+        ("ios_document_picker_export", "observation", ("filePicker", "nativeChannels", "resourceCleanup")),
+        ("ios_document_picker_export_cancel", "observation", ("filePicker", "nativeChannels", "resourceCleanup")),
+        ("ios_document_picker_export_termination", "observation", ("filePicker", "nativeChannels", "resourceCleanup")),
+    )
+    for scenario, gate, required_capabilities in scenario_contracts:
         matches = [
             contract
             for contract in contracts
@@ -302,14 +360,14 @@ def ios_cancellation_split_contract_failures(
             contract.get("profile") != "platform"
             or contract.get("platform") != "ios"
             or contract.get("framework") != "xcuitest"
-            or contract.get("gate") != "required"
+            or contract.get("gate") != gate
         ):
-            problems.append(f"iOS 能力矩阵 {scenario} 必须保持 required XCUITest 契约")
+            problems.append(f"iOS 能力矩阵 {scenario} gate 或 XCUITest 契约错误")
         capabilities = contract.get("capabilities")
         if not isinstance(capabilities, dict):
             problems.append(f"iOS 能力矩阵 {scenario} 缺少能力声明")
             continue
-        for capability in ("filePicker", "resourceCleanup"):
+        for capability in required_capabilities:
             state = capabilities.get(capability)
             if not isinstance(state, dict) or (
                 state.get("mode") != "real"
@@ -323,6 +381,127 @@ def ios_cancellation_split_contract_failures(
         for contract in contracts
     ):
         problems.append("iOS 能力矩阵禁止保留旧的单一取消场景")
+    return problems
+
+
+def macos_observation_contract_failures(
+    runner: str,
+    workflow: str,
+    capability_matrix: dict[str, object],
+    finalizer: str,
+) -> list[str]:
+    """校验 Finder 选择观察场景不会混入 macOS required 汇总。"""
+
+    problems: list[str] = []
+    for marker in (
+        "[string[]]" + chr(36) + "Scenarios = @()",
+        "[string[]]" + chr(36) + "ObservationScenarios = @()",
+        chr(36) + "selectedScenarioEntries",
+        chr(36) + "matrixResolver",
+        "--gate",
+        chr(36) + "expectedObservation = " + chr(36) + "expectedGate -eq \"observation\"",
+        "if (" + chr(36) + "expectedObservation -ne " + chr(36) + "declaredObservation)",
+        "Add-ObservationEvidence",
+        chr(36) + "requiredScenarioDir",
+        chr(36) + "requiredJunitDir",
+        chr(36) + "requiredReports.Count -eq 0 -and " + chr(36) + "observationFailureDetected",
+    ):
+        if marker not in runner:
+            problems.append(f"macOS runner required/observation 分层缺少: {marker}")
+
+    for marker in (
+        "id: panel_cancel_required",
+        "-Scenarios macos_open_panel_cancel",
+        "-ReportDir build/integration_reports/macos-native/required-panel",
+        "id: required_report_finalize",
+        "--report-root lddc/build/integration_reports/macos-native/required-panel",
+        "--scenarios macos_open_panel_cancel",
+        "steps.panel_cancel_required.outcome",
+        "id: finder_observation",
+        "-Scenarios macos_open_panel_select",
+        "-ObservationScenarios macos_open_panel_select",
+        "-ReportDir build/integration_reports/macos-native/finder-observation",
+        "id: finder_observation_finalize",
+        "--report-root lddc/build/integration_reports/macos-native/finder-observation",
+        "--scenarios macos_open_panel_select",
+        "--observation",
+        "macos-finder-observation-diagnostics",
+    ):
+        if marker not in workflow:
+            problems.append(f"macOS workflow required/observation 分层缺少: {marker}")
+
+    summary_start = workflow.find("Summarize required macOS system UI phase")
+    summary_end = workflow.find("Upload macOS system UI diagnostics", summary_start)
+    summary = workflow[summary_start:summary_end] if summary_start >= 0 else ""
+    for marker in (
+        "steps.panel_cancel_required.outcome",
+        "steps.required_report_finalize.outcome",
+    ):
+        if marker not in summary:
+            problems.append(f"macOS required 汇总缺少: {marker}")
+    for forbidden in (
+        "finder_observation",
+        "macos_open_panel_select",
+    ):
+        if forbidden in summary:
+            problems.append(f"macOS required 汇总禁止包含观察场景: {forbidden}")
+
+    for marker in (
+        "from capability_matrix import CapabilityMatrixError, load_matrix, resolve_gate",
+        "VALID_SCENARIOS",
+        'parser.add_argument(\n        "--scenarios",',
+        "choices=VALID_SCENARIOS",
+        "required=True",
+        "args.observation",
+        "macOS finalizer 不能混合 required 与 observation 场景",
+        "--observation 必须与能力矩阵 gate 一致",
+        '"experimentalObservation"',
+        '"experimentalReason"',
+    ):
+        if marker not in finalizer:
+            problems.append(f"macOS report finalizer 缺少显式场景隔离: {marker}")
+    if finalizer.count("for scenario in args.scenarios:") != 2:
+        problems.append("macOS report finalizer 必须只对显式声明的两个阶段遍历场景")
+    if re.search(r"(?m)^SCENARIOS\s*=", finalizer):
+        problems.append("macOS report finalizer 禁止补写未声明的另一层场景")
+
+    if capability_matrix.get("schemaVersion") != 3:
+        problems.append("macOS 能力矩阵必须升级到 schemaVersion 3")
+    contracts = capability_matrix.get("contracts")
+    if not isinstance(contracts, list):
+        return problems + ["macOS 能力矩阵缺少 contracts 数组"]
+    for scenario, gate in (
+        ("macos_open_panel_cancel", "required"),
+        ("macos_open_panel_select", "observation"),
+    ):
+        matches = [
+            contract
+            for contract in contracts
+            if isinstance(contract, dict) and contract.get("scenario") == scenario
+        ]
+        if len(matches) != 1:
+            problems.append(f"macOS 能力矩阵必须且只能包含一次 {scenario}")
+            continue
+        contract = matches[0]
+        if (
+            contract.get("profile") != "platform"
+            or contract.get("platform") != "macos"
+            or contract.get("framework") != "integration_test+xcuitest"
+            or contract.get("gate") != gate
+        ):
+            problems.append(f"macOS 能力矩阵 {scenario} gate 或框架契约错误")
+        capabilities = contract.get("capabilities")
+        if not isinstance(capabilities, dict):
+            problems.append(f"macOS 能力矩阵 {scenario} 缺少能力声明")
+            continue
+        for capability in ("filePicker", "nativeChannels", "resourceCleanup"):
+            state = capabilities.get(capability)
+            if not isinstance(state, dict) or (
+                state.get("mode") != "real"
+                or state.get("required") is not True
+                or state.get("applicable") is not True
+            ):
+                problems.append(f"macOS 能力矩阵 {scenario} 缺少真实 {capability} 门禁")
     return problems
 
 
@@ -1103,15 +1282,16 @@ def failures() -> list[str]:
     for forbidden in ("Register-OwnedProcessTree", "Wait-ForOwnedProcessBaseline"):
         if forbidden in macos_runner:
             problems.append(f"macOS hybrid runner 禁止使用会误算 Xcode 系统服务的 PID 快照: {forbidden}")
-    if workflow.count("run_macos_platform_tests.ps1") != 1:
-        problems.append("macOS hybrid runner 必须只在独立 system UI job 中执行一次")
+    if workflow.count("run_macos_platform_tests.ps1") != 2:
+        problems.append("macOS hybrid runner 必须在 required 与 observation 独立步骤各执行一次")
     for required in (
         "process_group_supervisor.py",
-        "--phase macos-system-ui-workflow",
+        "--phase macos-system-ui-required-workflow",
+        "--phase macos-system-ui-observation-workflow",
         "--timeout 900",
         "workflow-watchdog.json",
         "finalize_macos_system_ui_reports.py",
-        "steps.report_finalize.outcome",
+        "steps.required_report_finalize.outcome",
     ):
         if required not in workflow:
             problems.append(f"macOS system UI workflow 缺少外层进程组 watchdog: {required}")
@@ -1346,6 +1526,14 @@ def failures() -> list[str]:
             problems.append(f"macOS report finalizer 缺少报告完整性契约: {marker}")
     if 'args.step_outcome == "success"' in macos_finalizer:
         problems.append("macOS report finalizer 禁止重复承担 system UI 业务结果门禁")
+    problems.extend(
+        macos_observation_contract_failures(
+            macos_runner,
+            workflow,
+            capability_matrix,
+            macos_finalizer,
+        )
+    )
     ios_simulator_creator = (
         ROOT / "tool/test/create_ios_simulator.sh"
     ).read_text(encoding="utf-8")
@@ -1504,7 +1692,7 @@ def failures() -> list[str]:
             if marker not in ios_job:
                 problems.append(f"iOS hosted job 缺少固定 runner/runtime 契约: {marker}")
         simulator_index = ios_job.find("Create and boot a compatible iOS simulator")
-        system_ui_index = ios_job.find("Run iOS Document Picker automation")
+        system_ui_index = ios_job.find("Run required iOS Document Picker cancellation")
         release_index = ios_job.find("Build iOS release without codesigning")
         if not (0 <= simulator_index < system_ui_index < release_index):
             problems.append("iOS Document Picker 必须在 simulator 创建后、昂贵构建与业务阶段前执行")

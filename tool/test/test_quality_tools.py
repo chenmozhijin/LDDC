@@ -1510,9 +1510,30 @@ class QualityToolTests(unittest.TestCase):
             'Method = "testDocumentPickerCancellationRound1ReturnsToFlutter"',
             1,
         )
+        wrong_observation_mapping = runner.replace(
+            'Name = "ios_document_picker_select"\n    Method = '
+            '"testDocumentPickerSelectsSeededAudio"',
+            'Name = "ios_document_picker_select"\n    Method = '
+            '"testDocumentPickerCancellationRound1ReturnsToFlutter"',
+            1,
+        )
         old_workflow = workflow.replace(
-            "-Scenarios " + chr(36) + "iosPickerScenarios",
+            "-Scenarios " + chr(36) + "cancelScenarios",
             "-Scenarios ios_document_picker_cancel",
+            1,
+        )
+        missing_observation_declaration = workflow.replace(
+            "-ObservationScenarios " + chr(36) + "filesObservationScenarios",
+            "",
+            1,
+        )
+        observation_in_required_summary = workflow.replace(
+            "--phase 'picker_cancel_required|Document Picker cancellation XCUITest|"
+            "${{ steps.picker_cancel_required.outcome }}' `",
+            "--phase 'picker_cancel_required|Document Picker cancellation XCUITest|"
+            "${{ steps.picker_cancel_required.outcome }}' `\n"
+            "            --phase 'files_observation|Files observation|"
+            "${{ steps.files_observation.outcome }}' `",
             1,
         )
         missing_round = json.loads(json.dumps(matrix))
@@ -1525,18 +1546,39 @@ class QualityToolTests(unittest.TestCase):
         for contract in observation_round["contracts"]:
             if contract.get("scenario") == "ios_document_picker_cancel_2":
                 contract["gate"] = "observation"
+        required_observation = json.loads(json.dumps(matrix))
+        for contract in required_observation["contracts"]:
+            if contract.get("scenario") == "ios_document_picker_select":
+                contract["gate"] = "required"
+        missing_observation = json.loads(json.dumps(matrix))
+        missing_observation["contracts"] = [
+            contract
+            for contract in missing_observation["contracts"]
+            if contract.get("scenario") != "ios_document_picker_export_termination"
+        ]
         increased_timeout = runner.replace(
             "[int]" + chr(36) + "ScenarioTimeoutSeconds = 120",
             "[int]" + chr(36) + "ScenarioTimeoutSeconds = 180",
             1,
         )
+        implicit_observation = runner.replace(
+            "if (" + chr(36) + "expectedObservation -ne " + chr(36) + "declaredObservation)",
+            "if ($false)",
+            1,
+        )
 
         cross_file_mutations = (
             (wrong_mapping, workflow, matrix),
+            (wrong_observation_mapping, workflow, matrix),
             (runner, old_workflow, matrix),
+            (runner, missing_observation_declaration, matrix),
+            (runner, observation_in_required_summary, matrix),
             (runner, workflow, missing_round),
             (runner, workflow, observation_round),
+            (runner, workflow, required_observation),
+            (runner, workflow, missing_observation),
             (increased_timeout, workflow, matrix),
+            (implicit_observation, workflow, matrix),
         )
         for index, (mutated_runner, mutated_workflow, mutated_matrix) in enumerate(
             cross_file_mutations
@@ -1550,6 +1592,140 @@ class QualityToolTests(unittest.TestCase):
                     ),
                     [],
                 )
+
+    def test_platform_observation_gate_contract_rejects_regressions(self) -> None:
+        checker = _load_native_isolation_checker()
+        macos_runner = (ROOT / "tool/test/run_macos_platform_tests.ps1").read_text(
+            encoding="utf-8"
+        )
+        workflow = (
+            ROOT / ".github/workflows/cross-platform-validation.yml"
+        ).read_text(encoding="utf-8")
+        matrix = json.loads(
+            (ROOT / "tool/test/platform_capability_matrix.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        finalizer = (
+            ROOT / "tool/test/finalize_macos_system_ui_reports.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertEqual(
+            checker.macos_observation_contract_failures(
+                macos_runner,
+                workflow,
+                matrix,
+                finalizer,
+            ),
+            [],
+        )
+
+        required_select = json.loads(json.dumps(matrix))
+        for contract in required_select["contracts"]:
+            if contract.get("scenario") == "macos_open_panel_select":
+                contract["gate"] = "required"
+        missing_observation_parameter = workflow.replace(
+            "-ObservationScenarios macos_open_panel_select",
+            "",
+            1,
+        )
+        observation_in_required_summary = workflow.replace(
+            "--phase 'required_report_finalize|Required report finalization|"
+            "${{ steps.required_report_finalize.outcome }}'",
+            "--phase 'required_report_finalize|Required report finalization|"
+            "${{ steps.required_report_finalize.outcome }}' `\n"
+            "            --phase 'finder_observation|Finder observation|"
+            "${{ steps.finder_observation.outcome }}'",
+            1,
+        )
+        missing_runner_observation = macos_runner.replace(
+            "[string[]]" + chr(36) + "ObservationScenarios = @()",
+            "[string[]]" + chr(36) + "ObservationScenarios = @('macos_open_panel_cancel')",
+            1,
+        )
+        missing_finalizer_scope = finalizer.replace(
+            "for scenario in args.scenarios:",
+            "for scenario in VALID_SCENARIOS:",
+            1,
+        )
+        missing_observation_evidence = finalizer.replace(
+            'extra["experimentalObservation"] = True',
+            "extra.clear()",
+            1,
+        )
+
+        mutations = (
+            (macos_runner, workflow, required_select, finalizer),
+            (macos_runner, missing_observation_parameter, matrix, finalizer),
+            (macos_runner, observation_in_required_summary, matrix, finalizer),
+            (missing_runner_observation, workflow, matrix, finalizer),
+            (macos_runner, workflow, matrix, missing_finalizer_scope),
+            (macos_runner, workflow, matrix, missing_observation_evidence),
+        )
+        for index, (mutated_runner, mutated_workflow, mutated_matrix, mutated_finalizer) in enumerate(
+            mutations
+        ):
+            with self.subTest(index=index):
+                self.assertNotEqual(
+                    checker.macos_observation_contract_failures(
+                        mutated_runner,
+                        mutated_workflow,
+                        mutated_matrix,
+                        mutated_finalizer,
+                    ),
+                    [],
+                )
+
+    def test_capability_matrix_resolves_required_and_observation_gates(self) -> None:
+        path = ROOT / "tool/test/capability_matrix.py"
+        spec = importlib.util.spec_from_file_location("capability_matrix_gate", path)
+        if spec is None or spec.loader is None:
+            self.fail(f"无法加载能力矩阵解析器: {path}")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+        matrix = module.load_matrix()
+
+        expected_gates = {
+            ("ios", "ios_document_picker_cancel_1", "xcuitest"): "required",
+            ("ios", "ios_document_picker_cancel_2", "xcuitest"): "required",
+            ("ios", "ios_document_picker_cancel_3", "xcuitest"): "required",
+            ("ios", "ios_document_picker_select", "xcuitest"): "observation",
+            ("ios", "ios_document_picker_export", "xcuitest"): "observation",
+            ("ios", "ios_document_picker_export_cancel", "xcuitest"): "observation",
+            ("ios", "ios_document_picker_export_termination", "xcuitest"): "observation",
+            ("macos", "macos_open_panel_cancel", "integration_test+xcuitest"): "required",
+            ("macos", "macos_open_panel_select", "integration_test+xcuitest"): "observation",
+        }
+        for (platform, scenario, framework), gate in expected_gates.items():
+            with self.subTest(scenario=scenario):
+                self.assertEqual(
+                    module.resolve_gate(
+                        matrix,
+                        profile="platform",
+                        platform=platform,
+                        scenario=scenario,
+                        framework=framework,
+                    ),
+                    gate,
+                )
+
+        with self.assertRaises(module.CapabilityMatrixError):
+            module.resolve_gate(
+                matrix,
+                profile="platform",
+                platform="ios",
+                scenario="ios_document_picker_missing",
+                framework="xcuitest",
+            )
+
+        invalid_matrix = json.loads(json.dumps(matrix))
+        invalid_matrix["contracts"][0]["gate"] = "soft-required"
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "invalid-capability-matrix.json"
+            path.write_text(json.dumps(invalid_matrix), encoding="utf-8")
+            with self.assertRaises(module.CapabilityMatrixError):
+                module.load_matrix(path)
 
 
 if __name__ == "__main__":
