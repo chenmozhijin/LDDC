@@ -214,14 +214,24 @@ void main() {
               } else {
                 await search.tapSaveDirectory();
               }
+              // 保存器可能先完成文件写入，再由控制器异步提交成功状态；只等文件出现会
+              // 在这两个完成信号之间读取到旧状态。这里同时等待保存状态收口和路径，
+              // 让断言对应真实业务完成边界，不用固定延时掩盖竞态。
               await pumpUntil(
                 tester,
-                () => app.workspace.exportsDir
-                    .listSync(recursive: true)
-                    .whereType<File>()
-                    .isNotEmpty,
+                () {
+                  final SearchWorkflowState currentState = searchContainer
+                      .read(searchWorkflowControllerProvider);
+                  final bool hasExport = app.workspace.exportsDir
+                      .listSync(recursive: true)
+                      .whereType<File>()
+                      .isNotEmpty;
+                  return hasExport &&
+                      !currentState.isSavingPreview &&
+                      (currentState.lastSavedPath?.isNotEmpty ?? false);
+                },
                 timeout: runtime.defaultStepTimeout,
-                reason: '等待歌词保存产物写入隔离工作区',
+                reason: '等待歌词保存产物和保存状态完成',
               );
               final File exported = app.workspace.exportsDir
                   .listSync(recursive: true)

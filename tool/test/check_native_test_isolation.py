@@ -397,6 +397,9 @@ def macos_observation_contract_failures(
         "[string[]]" + chr(36) + "Scenarios = @()",
         "[string[]]" + chr(36) + "ObservationScenarios = @()",
         chr(36) + "selectedScenarioEntries",
+        chr(36) + "selectedScenarioCount = @(" + chr(36) + "selectedScenarioEntries).Count",
+        "if (" + chr(36) + "scenarioFilter.Count -gt 0 -and "
+        + chr(36) + "selectedScenarioCount -ne " + chr(36) + "scenarioFilter.Count)",
         chr(36) + "matrixResolver",
         "--gate",
         chr(36) + "expectedObservation = " + chr(36) + "expectedGate -eq \"observation\"",

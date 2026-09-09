@@ -140,10 +140,15 @@ $selectedScenarioEntries = if ($scenarioFilter.Count -eq 0) {
 } else {
   @($allScenarios | Where-Object { $scenarioFilter.Contains($_.Name) })
 }
-if ($selectedScenarioEntries.Count -eq 0) {
+# PowerShell 在数组只有一个 Hashtable 时会把它自动解包成标量；直接读取
+# `$selectedScenarioEntries.Count` 会得到字段数量而不是场景数量，导致 hosted
+# 只运行一个场景时被错误判定为没有一对一映射。显式包回数组后再比较数量。
+$selectedScenarioCount = @($selectedScenarioEntries).Count
+if ($selectedScenarioCount -eq 0) {
   throw "没有选择任何 macOS OpenPanel 场景"
 }
-if ($selectedScenarioEntries.Count -ne $scenarioFilter.Count) {
+# 未传过滤器时表示运行全部场景，此时不能拿选中数量与 0 比较。
+if ($scenarioFilter.Count -gt 0 -and $selectedScenarioCount -ne $scenarioFilter.Count) {
   throw "macOS 场景选择未能建立一对一 XCTest 映射"
 }
 foreach ($entry in $selectedScenarioEntries) {

@@ -1643,6 +1643,17 @@ class QualityToolTests(unittest.TestCase):
             "[string[]]" + chr(36) + "ObservationScenarios = @('macos_open_panel_cancel')",
             1,
         )
+        scalar_selection_count = macos_runner.replace(
+            chr(36) + "selectedScenarioCount = @(" + chr(36) + "selectedScenarioEntries).Count",
+            chr(36) + "selectedScenarioCount = " + chr(36) + "selectedScenarioEntries.Count",
+            1,
+        )
+        default_selection_guard = macos_runner.replace(
+            "if (" + chr(36) + "scenarioFilter.Count -gt 0 -and "
+            + chr(36) + "selectedScenarioCount -ne " + chr(36) + "scenarioFilter.Count)",
+            "if (" + chr(36) + "selectedScenarioCount -ne " + chr(36) + "scenarioFilter.Count)",
+            1,
+        )
         missing_finalizer_scope = finalizer.replace(
             "for scenario in args.scenarios:",
             "for scenario in VALID_SCENARIOS:",
@@ -1659,6 +1670,8 @@ class QualityToolTests(unittest.TestCase):
             (macos_runner, missing_observation_parameter, matrix, finalizer),
             (macos_runner, observation_in_required_summary, matrix, finalizer),
             (missing_runner_observation, workflow, matrix, finalizer),
+            (scalar_selection_count, workflow, matrix, finalizer),
+            (default_selection_guard, workflow, matrix, finalizer),
             (macos_runner, workflow, matrix, missing_finalizer_scope),
             (macos_runner, workflow, matrix, missing_observation_evidence),
         )
