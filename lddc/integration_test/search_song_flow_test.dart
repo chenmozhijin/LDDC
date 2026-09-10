@@ -220,8 +220,9 @@ void main() {
               await pumpUntil(
                 tester,
                 () {
-                  final SearchWorkflowState currentState = searchContainer
-                      .read(searchWorkflowControllerProvider);
+                  final SearchWorkflowState currentState = searchContainer.read(
+                    searchWorkflowControllerProvider,
+                  );
                   final bool hasExport = app.workspace.exportsDir
                       .listSync(recursive: true)
                       .whereType<File>()

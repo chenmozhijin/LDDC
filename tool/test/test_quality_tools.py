@@ -1593,6 +1593,74 @@ class QualityToolTests(unittest.TestCase):
                     [],
                 )
 
+    def test_ios_files_observation_activation_contract_rejects_regressions(self) -> None:
+        # 完整 Files 导航属于 observation，但它的测试契约仍必须拒绝回退：单击在
+        # iOS 26.5 上随机只选中不激活，精确相等比较歌词又会漏掉规范化后的时间
+        # 标签。两者都会把真实结果误判成失败，只能靠修正断言解决，不能靠放宽
+        # 超时、改写证据或跳过场景掩盖，因此这里逐条锁定。
+        checker = _load_native_isolation_checker()
+        source = (ROOT / "lddc/ios/RunnerUITests/RunnerUITests.swift").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertEqual(checker.ios_ui_test_failures(source), [])
+
+        mutations = (
+            source.replace(
+                'action: "document_picker_fixture_cell_double_tapped"',
+                'action: "document_picker_fixture_cell_tapped"',
+                1,
+            ),
+            source.replace(
+                "      retainedFixture.doubleTap()",
+                "      retainedFixture.tap()",
+                1,
+            ),
+            source.replace(
+                "    if !waitForPickerDismissal(\n"
+                "      app: app,\n"
+                "      staleRootReturnControlProvider: { app.buttons[self.openSongIdentifier] },\n"
+                "      timeout: 3\n"
+                "    ), let retainedPicker = systemPickerContext(app: app) {",
+                "    if false, let retainedPicker = systemPickerContext(app: app) {",
+                1,
+            ),
+            source.replace(
+                "private func waitForPreviewLyricsValue(",
+                "private func waitForPreviewLyricsText(",
+                1,
+            ),
+            source.replace(
+                '"value MATCHES %@ OR label MATCHES %@"',
+                '"label == %@ OR value == %@"',
+                1,
+            ),
+            source.replace(
+                "    let lyricsPredicate = NSPredicate(",
+                '    _ = NSPredicate(format: "label == %@ OR value == %@", '
+                '"Hello LDDC", "Hello LDDC")\n'
+                "    let lyricsPredicate = NSPredicate(",
+                1,
+            ),
+            source.replace(
+                "      if preview.exists {",
+                "      _ = preview.staticTexts.firstMatch\n      if preview.exists {",
+                1,
+            ),
+            source.replace(
+                r'  private let fixtureLyricsAccessibilityPattern ='
+                r' #"^\[00:00\.\d{2,3}\]Hello LDDC$"#' + "\n",
+                "",
+                1,
+            ),
+            source.replace("for attempt in 1...2", "for attempt in 1...3", 1),
+            source.replace("for attempt in 1...2", "for attempt in 1...1", 1),
+        )
+        for index, mutation in enumerate(mutations):
+            with self.subTest(kind="ios_ui_test", index=index):
+                self.assertNotEqual(mutation, source)
+                self.assertNotEqual(checker.ios_ui_test_failures(mutation), [])
+
     def test_platform_observation_gate_contract_rejects_regressions(self) -> None:
         checker = _load_native_isolation_checker()
         macos_runner = (ROOT / "tool/test/run_macos_platform_tests.ps1").read_text(

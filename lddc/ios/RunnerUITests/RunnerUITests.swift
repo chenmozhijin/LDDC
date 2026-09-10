@@ -57,6 +57,9 @@ final class RunnerUITests: XCTestCase {
   private let appBundleIdentifier = "com.cmzj.lddc.platformtests"
   private let fixtureName = "audio_sample.mp3"
   private let fixtureAccessibilityName = "audio_sample, mp3"
+  // LRC 时间标签可能从两位毫秒规范化为三位；只约束时间点与正文，避免把等价的
+  // 格式化差异误报为歌词读取失败。
+  private let fixtureLyricsAccessibilityPattern = #"^\[00:00\.\d{2,3}\]Hello LDDC$"#
   private let navigationIdentifier = "lddc.nav.open_lyrics"
   private let openSongIdentifier = "lddc.open_lyrics.open_song_file"
   private let saveFileIdentifier = "lddc.open_lyrics.save_file"
@@ -359,13 +362,43 @@ final class RunnerUITests: XCTestCase {
       cancellationContext: cancellationContext,
       phase: "open_song_ready_wait"
     )
-    openSong.tap()
-    let pickerTimeout = try cancellationRoundTimeout(
-      15,
-      context: cancellationContext,
-      phase: "picker_open_wait"
-    )
-    return try waitForSystemPicker(app: app, timeout: pickerTimeout)
+    var lastPickerError: Error?
+    // 首轮取消是 hosted runner 上的冷启动：Flutter 控件已经可交互时，第一次
+    // openSong 点击可能落在系统仍在准备 UIDocumentPicker 的窗口里而被吞掉，
+    // 表现为“按钮动作成功但没有任何系统界面”。这里在同一个共享动作预算内允许
+    // 至多两次真实点击：只有确认没有任何 Picker 根节点、并且按钮仍然可命中
+    // （也就是没有被系统界面遮挡）时才会补一次点击。不使用坐标点击，不透过
+    // 遮罩点击，也不延长 XCTest 或业务超时。
+    for attempt in 1...2 {
+      if attempt > 1 {
+        try require(
+          systemPickerContext(app: app) == nil,
+          "系统文件界面已出现，不能重复点击 Flutter 打开歌曲动作"
+        )
+        try requireHittable(
+          openSong,
+          in: app,
+          message: "打开歌曲按钮点击后系统文件界面没有出现，Flutter 打开歌曲动作也不可再次操作",
+          cancellationContext: cancellationContext,
+          phase: "open_song_retry_wait"
+        )
+      }
+      openSong.tap()
+      let pickerTimeout = try cancellationRoundTimeout(
+        20,
+        context: cancellationContext,
+        phase: "picker_open_wait_attempt_\(attempt)"
+      )
+      do {
+        return try waitForSystemPicker(app: app, timeout: pickerTimeout)
+      } catch {
+        lastPickerError = error
+      }
+    }
+    if let lastPickerError {
+      throw lastPickerError
+    }
+    throw testFailure("系统文件界面没有暴露 typed Document Picker 根节点")
   }
 
   private func selectSeededAudio(
@@ -431,25 +464,64 @@ final class RunnerUITests: XCTestCase {
     app: XCUIApplication,
     actions: inout [String: [[String: Any]]]
   ) throws {
-    try require(fixture.exists && fixture.isHittable, "匿名音频 fixture 不可点击")
+    try require(fixture.exists && fixture.isHittable && fixture.isEnabled, "匿名音频 fixture 不可点击")
+    let openSong = app.buttons[openSongIdentifier]
     fixture.tap()
-    try require(waitForSystemPickerToClose(app: app, timeout: 15), "选择文件后系统 Picker 没有关闭")
-    // 原生文件选择动作在 Picker 关闭后已经完成，先记录证据再验证 Flutter
-    // 预览，避免后置语义断言失败时把真实选择动作错误报告为零动作。
-    addAction(&actions, capability: "filePicker", action: "document_picker_select_audio")
+    addAction(&actions, capability: "filePicker", action: "document_picker_fixture_cell_tapped")
+
+    // iOS 26.5 的远程 Files 图标视图会把同一个 typed Cell 的首次 tap 随机解释为
+    // “仅选中”或“直接激活”。先给正常单击三秒完成回调；如果 Picker 仍停留在匿名
+    // fixture 目录，必须重新解析当前 AX snapshot 中唯一、可命中的同名 Cell，再执行
+    // 一次受控双击。不能复用首次点击前的 XCUIElement 代理，否则目录刷新后可能操作
+    // 陈旧元素，从而把真实的系统激活差异误报成 Flutter 回调失败。
+    if !waitForPickerDismissal(
+      app: app,
+      staleRootReturnControlProvider: { app.buttons[self.openSongIdentifier] },
+      timeout: 3
+    ), let retainedPicker = systemPickerContext(app: app) {
+      try require(
+        waitForFixtureCell(in: retainedPicker, timeout: 0) != nil,
+        "首次单击未返回 Flutter 时，系统 Picker 已离开匿名 fixture 目录"
+      )
+      let retainedFixture = try requireFixtureCell(in: retainedPicker, timeout: 2)
+      try require(
+        retainedFixture.exists && retainedFixture.isHittable && retainedFixture.isEnabled,
+        "首次单击未完成回调，重新解析的匿名音频 fixture 不可点击"
+      )
+      retainedFixture.doubleTap()
+      addAction(
+        &actions,
+        capability: "filePicker",
+        action: "document_picker_fixture_cell_double_tapped"
+      )
+    }
+
+    // 三秒单击等待、两秒重新解析与十秒最终等待共享原有十五秒结果预算，不通过延长
+    // 业务超时来掩盖远程 Files 界面的激活差异。
+    try require(
+      waitForPickerDismissal(
+        app: app,
+        staleRootReturnControlProvider: { app.buttons[self.openSongIdentifier] },
+        timeout: 10
+      ),
+      "单击或受控双击匿名音频后系统 Picker 没有关闭，文件回调未完成"
+    )
     try require(app.wait(for: .runningForeground, timeout: 15), "选择文件后 LDDC 没有返回前台")
+    try require(
+      waitForHittable(openSong, timeout: 15),
+      "选择文件后 Flutter 打开歌曲动作没有恢复，Picker 回调尚未完成"
+    )
     try require(
       app.otherElements[previewIdentifier].waitForExistence(timeout: 15),
       "选择结果没有回到 Flutter 预览区域"
     )
-    let preview = app.otherElements[previewIdentifier]
-    let lyricContent = preview.descendants(matching: .other).matching(
-      NSPredicate(format: "label == %@ OR value == %@", "Hello LDDC", "Hello LDDC")
-    ).firstMatch
     try require(
-      lyricContent.waitForExistence(timeout: 15),
+      waitForPreviewLyricsValue(preview: app.otherElements[previewIdentifier], timeout: 15),
       "生产 TagLib 没有从 security-scoped fd 回读匿名内嵌歌词"
     )
+    // 只有 Picker 关闭、应用回到前台、Flutter 控件恢复且匿名歌词确实出现后，才能把
+    // 系统动作记录为完成；单击动作本身不能证明原生 delegate 已经回调。
+    addAction(&actions, capability: "filePicker", action: "document_picker_select_audio")
   }
 
   private func openExportPicker(app: XCUIApplication) throws -> SystemPickerContext {
@@ -537,6 +609,34 @@ final class RunnerUITests: XCTestCase {
         return true
       }
       Thread.sleep(forTimeInterval: 0.1)
+    } while Date() < deadline
+    return false
+  }
+
+  private func waitForPreviewLyricsValue(
+    preview: XCUIElement,
+    timeout: TimeInterval
+  ) -> Bool {
+    // 预览根节点在部分 iOS 版本只暴露 identifier，规范化后的歌词行挂在后代 Other
+    // 的 value 上。用受约束的时间戳正则匹配，既不会把“尚未加载”文案误判为读取
+    // 成功，也不会因为精确相等比较漏掉时间标签前缀而假红。
+    let lyricsPredicate = NSPredicate(
+      format: "value MATCHES %@ OR label MATCHES %@",
+      fixtureLyricsAccessibilityPattern,
+      fixtureLyricsAccessibilityPattern
+    )
+    let deadline = Date().addingTimeInterval(timeout)
+    repeat {
+      if preview.exists {
+        if let value = preview.value as? String,
+           value.range(of: fixtureLyricsAccessibilityPattern, options: .regularExpression) != nil {
+          return true
+        }
+        if preview.descendants(matching: .other).matching(lyricsPredicate).firstMatch.exists {
+          return true
+        }
+      }
+      Thread.sleep(forTimeInterval: 0.2)
     } while Date() < deadline
     return false
   }

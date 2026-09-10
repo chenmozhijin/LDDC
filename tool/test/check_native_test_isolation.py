@@ -234,6 +234,83 @@ def ios_picker_cancellation_failures(source: str) -> list[str]:
     return problems
 
 
+def ios_ui_test_failures(source: str) -> list[str]:
+    """校验 iOS 导出、Files observation 与清理场景的 XCUITest 契约。"""
+
+    problems: list[str] = []
+    for marker in (
+        "testDocumentPickerExportsLyricsFile",
+        "testDocumentPickerExportCancellationCleansTemporaryFile",
+        "testTerminatedExportIsCleanedOnNextLaunch",
+        "stale_export_removed_on_next_launch",
+        'private let documentBrowsingRootPrefix = "DOC.browsingRoot Source: "',
+        "typedSystemPickerRoot(in: app)",
+        'application.otherElements["Browse View (Picker)"]',
+        'NSPredicate(format: "identifier BEGINSWITH %@", documentBrowsingRootPrefix)',
+        "let application: XCUIApplication",
+        "picker.application.buttons.matching(",
+        "picker.application.cells.matching(",
+        "picker.application.links.matching(",
+        "requireUniquePickerElement(",
+        "elementBelongsToPicker(",
+        "CGPoint(x: elementFrame.midX, y: elementFrame.midY)",
+        'private let fixtureAccessibilityName = "audio_sample, mp3"',
+        'requireTypedButton(named: "Browse"',
+        'requireTypedButton(named: "Save"',
+        'private let previewIdentifier = "lddc.open_lyrics.preview"',
+        'app.otherElements[previewIdentifier]',
+        r'private let fixtureLyricsAccessibilityPattern = #"^\[00:00\.\d{2,3}\]Hello LDDC$"#',
+        "private func waitForPreviewLyricsValue(",
+        '"value MATCHES %@ OR label MATCHES %@"',
+        'action: "document_picker_fixture_cell_double_tapped"',
+        "retainedFixture.doubleTap()",
+        r'phase: "picker_open_wait_attempt_\(attempt)"',
+        "for attempt in 1...2",
+        '"On My iPhone"',
+        'private let platformTestDisplayName = "LDDC Platform Tests"',
+        "if documents.state != .notRunning",
+        "executionTimeAllowance = 120",
+    ):
+        if marker not in source:
+            problems.append(f"iOS 导出与清理场景缺少: {marker}")
+    if "documents.wait(for: .runningForeground" in source:
+        problems.append("iOS Document Picker 禁止依赖 DocumentsApp 前台进程状态")
+    if "modeTabBar.isHittable" in source or "waitForHittable(modeTabBar" in source:
+        problems.append("iOS Document Picker 禁止要求 TabBar 父代理自身可命中")
+    invalid_descendant_types = invalid_descendant_element_types(source)
+    if invalid_descendant_types:
+        problems.append(
+            "iOS XCUITest descendants(matching:) 必须使用 XCUIElement.ElementType 单数枚举，"
+            f"禁止集合属性名 .{invalid_descendant_types[0]}"
+        )
+    for forbidden in (
+        "systemPickerRoots",
+        "pickerElement(",
+        "findSystemPickerElement",
+        "requireSystemPickerElement",
+        'picker.root.buttons["Browse"]',
+        'picker.root.buttons["Cancel"]',
+        "picker.root.buttons.matching(",
+        "picker.root.cells.matching(",
+        "picker.root.links.matching(",
+        ".sheets",
+        "label CONTAINS[c]",
+        "identifier CONTAINS[c]",
+        '"nativeWindowCount"',
+        # 旧实现对预览歌词做精确相等比较，会漏掉规范化后的 [00:00.00] 时间标签；
+        # 也不允许再用视觉文本子节点枚举或把冷启动重试放宽到三次以上。
+        '"Hello LDDC", "Hello LDDC"',
+        "preview.staticTexts",
+        "for attempt in 1...3",
+        "retainedFixture.press(forDuration",
+        # 允许禁用受控二次激活就等于把随机失败固化下来，必须直接拒绝。
+        "if false, let retainedPicker",
+    ):
+        if forbidden in source:
+            problems.append(f"iOS Document Picker 禁止宽泛选择或 sheet fallback: {forbidden}")
+    return problems
+
+
 def ios_cancellation_split_contract_failures(
     runner: str,
     workflow: str,
@@ -775,62 +852,7 @@ def failures() -> list[str]:
     ):
         if marker not in ios_unit_tests:
             problems.append(f"iOS fd 注册表单测缺少: {marker}")
-    for marker in (
-        "testDocumentPickerExportsLyricsFile",
-        "testDocumentPickerExportCancellationCleansTemporaryFile",
-        "testTerminatedExportIsCleanedOnNextLaunch",
-        "stale_export_removed_on_next_launch",
-        'private let documentBrowsingRootPrefix = "DOC.browsingRoot Source: "',
-        "typedSystemPickerRoot(in: app)",
-        'application.otherElements["Browse View (Picker)"]',
-        'NSPredicate(format: "identifier BEGINSWITH %@", documentBrowsingRootPrefix)',
-        "let application: XCUIApplication",
-        "picker.application.buttons.matching(",
-        "picker.application.cells.matching(",
-        "picker.application.links.matching(",
-        "requireUniquePickerElement(",
-        "elementBelongsToPicker(",
-        "CGPoint(x: elementFrame.midX, y: elementFrame.midY)",
-        'private let fixtureAccessibilityName = "audio_sample, mp3"',
-        'requireTypedButton(named: "Browse"',
-        'requireTypedButton(named: "Save"',
-        'private let previewIdentifier = "lddc.open_lyrics.preview"',
-        'app.otherElements[previewIdentifier]',
-        'label == %@ OR value == %@", "Hello LDDC", "Hello LDDC"',
-        '"On My iPhone"',
-        'private let platformTestDisplayName = "LDDC Platform Tests"',
-        "if documents.state != .notRunning",
-        "executionTimeAllowance = 120",
-    ):
-        if marker not in ios_ui_test:
-            problems.append(f"iOS 导出与清理场景缺少: {marker}")
-    if "documents.wait(for: .runningForeground" in ios_ui_test:
-        problems.append("iOS Document Picker 禁止依赖 DocumentsApp 前台进程状态")
-    if "modeTabBar.isHittable" in ios_ui_test or "waitForHittable(modeTabBar" in ios_ui_test:
-        problems.append("iOS Document Picker 禁止要求 TabBar 父代理自身可命中")
-    invalid_descendant_types = invalid_descendant_element_types(ios_ui_test)
-    if invalid_descendant_types:
-        problems.append(
-            "iOS XCUITest descendants(matching:) 必须使用 XCUIElement.ElementType 单数枚举，"
-            f"禁止集合属性名 .{invalid_descendant_types[0]}"
-        )
-    for forbidden in (
-        "systemPickerRoots",
-        "pickerElement(",
-        "findSystemPickerElement",
-        "requireSystemPickerElement",
-        'picker.root.buttons["Browse"]',
-        'picker.root.buttons["Cancel"]',
-        "picker.root.buttons.matching(",
-        "picker.root.cells.matching(",
-        "picker.root.links.matching(",
-        ".sheets",
-        "label CONTAINS[c]",
-        "identifier CONTAINS[c]",
-        '"nativeWindowCount"',
-    ):
-        if forbidden in ios_ui_test:
-            problems.append(f"iOS Document Picker 禁止宽泛选择或 sheet fallback: {forbidden}")
+    problems.extend(ios_ui_test_failures(ios_ui_test))
 
     capability_matrix = json.loads(
         (ROOT / "tool/test/platform_capability_matrix.json").read_text(encoding="utf-8")
