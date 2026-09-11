@@ -74,34 +74,101 @@ class SearchDriver {
     await tapVisible(tester, searchBar, reason: '等待搜索输入框可点击');
     await tester.enterText(input, keyword);
     await pumpForInteraction(tester);
+
+    // 收敛条件拆成两个独立事实分别判定：输入框文本是否等于测试输入，以及业务
+    // 状态是否跟随。旧实现把两者塞进同一个条件并共用一条超时消息，导致 run
+    // 34564263324 的失败无法判读——日志同时打印了 controller 与 expected，
+    // 无法区分“输入框没清空”和“状态没跟随”，只能靠猜。
+    //
+    // 必须保留有界轮询：紧凑布局关闭预览弹层时可能有已排队的旧状态回写，输入框
+    // 会先瞬时恢复旧值、下一帧才重建为用户输入（见 integration_drivers_test.dart
+    // 的 _DelayedSearchControllerProbe）。只做一次瞬时取样会把这种正常收敛误判
+    // 为业务失败。
+    bool controllerConverged = false;
+    bool stateConverged = false;
     try {
       await pumpUntil(
         tester,
         () {
-          if (input.evaluate().length != 1) {
-            return false;
-          }
-          final bool inputMatches =
-              tester.widget<EditableText>(input).controller.text == keyword;
-          final SearchWorkflowState? state = readState?.call();
-          return inputMatches && (state == null || state.keyword == keyword);
+          controllerConverged = _keywordControllerMatches(input, keyword);
+          stateConverged = _keywordStateMatches(keyword);
+          return controllerConverged && stateConverged;
         },
         timeout: const Duration(seconds: 5),
         reason: '搜索输入框和业务关键词没有收敛到测试输入',
       );
+      return;
     } on TimeoutException {
-      final String actualText = input.evaluate().length == 1
-          ? tester.widget<EditableText>(input).controller.text
-          : '<输入框数量=${input.evaluate().length}>';
-      final SearchWorkflowState? state = readState?.call();
-      throw TimeoutException(
-        '搜索输入没有收敛: expected=$keyword, controller=$actualText, '
+      // 输入框已经是目标文本、只有业务状态没跟上时，补一次显式的 onChanged
+      // 重放并在有界窗口内再等待。这与用户输入走完全相同的状态通路，不绕过
+      // 产品逻辑、不直接写状态；仍不收敛就按确定性问题失败。
+      if (controllerConverged) {
+        await _replayKeywordOnChanged(input, keyword);
+        try {
+          await pumpUntil(
+            tester,
+            () {
+              stateConverged = _keywordStateMatches(keyword);
+              return stateConverged;
+            },
+            timeout: const Duration(seconds: 1),
+            reason: '搜索业务状态在重放输入回调后仍未收敛',
+          );
+          return;
+        } on TimeoutException {
+          stateConverged = false;
+        }
+      }
+    }
+
+    throw TimeoutException(
+      '搜索输入没有收敛: '
+      '${_keywordConvergenceDiagnostics(input, keyword, controllerConverged, stateConverged)}',
+      const Duration(seconds: 5),
+    );
+  }
+
+  /// 输入框当前文本是否严格等于期望关键词；输入框不唯一时返回 false。
+  bool _keywordControllerMatches(Finder input, String keyword) {
+    if (input.evaluate().length != 1) {
+      return false;
+    }
+    return tester.widget<EditableText>(input).controller.text == keyword;
+  }
+
+  /// 业务状态关键词是否已跟随；未注入状态读取器时视为无需校验。
+  bool _keywordStateMatches(String keyword) {
+    final SearchWorkflowState? state = readState?.call();
+    return state == null || state.keyword == keyword;
+  }
+
+  /// 重放一次 SearchBar 的 onChanged 通路，用于输入框已收敛但状态滞后的场景。
+  Future<void> _replayKeywordOnChanged(Finder input, String keyword) async {
+    if (input.evaluate().length != 1) {
+      return;
+    }
+    final EditableText editable = tester.widget<EditableText>(input);
+    editable.onChanged?.call(keyword);
+  }
+
+  /// 失败诊断必须同时打印输入框、业务状态与当前搜索条件，才能区分
+  /// “输入框没清空”与“状态没跟随”两种根因。
+  String _keywordConvergenceDiagnostics(
+    Finder input,
+    String keyword,
+    bool controllerConverged,
+    bool stateConverged,
+  ) {
+    final String controllerText = input.evaluate().length == 1
+        ? tester.widget<EditableText>(input).controller.text
+        : '<输入框数量=${input.evaluate().length}>';
+    final SearchWorkflowState? state = readState?.call();
+    return 'expected=$keyword, controller=$controllerText, '
         'state=${state?.keyword ?? '<未提供状态读取器>'}, '
         'source=${state?.selectedSource.value ?? '<unknown>'}, '
-        'type=${state?.selectedSearchType.value ?? '<unknown>'}',
-        const Duration(seconds: 5),
-      );
-    }
+        'type=${state?.selectedSearchType.value ?? '<unknown>'}, '
+        'controllerConverged=$controllerConverged, '
+        'stateConverged=$stateConverged';
   }
 
   Future<void> selectSource(Source source) async {

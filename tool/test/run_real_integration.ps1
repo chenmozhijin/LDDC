@@ -161,6 +161,61 @@ function Copy-ContainerScenarioReport {
   [IO.File]::WriteAllText($Destination, $content, [Text.UTF8Encoding]::new($false))
 }
 
+function Copy-FailureScreenshots {
+  param(
+    [Parameter(Mandatory = $true)][string]$ContainerReportDir,
+    [Parameter(Mandatory = $true)][string]$Destination
+  )
+
+  # 失败截图由集成测试写到应用沙箱的 <ContainerReportDir>/screenshots/ 下，
+  # 但 runner 只回收了场景 JSON，CI 工件里因此从来没有图像证据：run
+  # 34564263324 的 search_collection_flow 失败只剩一行超时文本，无法判断当时
+  # 输入框与页面到底是什么状态。这里把该目录显式拉回报告目录，让它随既有工件
+  # 一起上传。属于纯诊断增强：不改变任何判定，缺少截图也不会让场景失败。
+  if ($Platform -ne "android") {
+    return
+  }
+  try {
+    $relativeDir = "code_cache/$ContainerReportDir/screenshots" -replace '\\', '/'
+    $listed = & adb -s $Device exec-out run-as com.cmzj.lddc ls $relativeDir 2>&1
+    if ($LASTEXITCODE -ne 0) {
+      return
+    }
+    $names = @($listed | ForEach-Object { "$_".Trim() } | Where-Object {
+      -not [string]::IsNullOrWhiteSpace($_) -and $_ -match '\.png$'
+    })
+    if ($names.Count -eq 0) {
+      return
+    }
+    New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+    foreach ($name in $names) {
+      # 截图是二进制 PNG，`exec-out ... > file` 会经过 PowerShell 的文本管道，
+      # 存在换行与编码改写风险（在设备端包含 0x0A 字节时会损坏图像）。设备侧
+      # 先 base64 编码，再把文本解码回字节写入磁盘，才能得到与设备端一致的图。
+      $encoded = & adb -s $Device exec-out run-as com.cmzj.lddc base64 "$relativeDir/$name" 2>&1
+      if ($LASTEXITCODE -ne 0) {
+        Write-Warning "无法拉回失败截图 $name"
+        continue
+      }
+      $base64Text = ($encoded | ForEach-Object { "$_".Trim() }) -join ""
+      if ([string]::IsNullOrWhiteSpace($base64Text)) {
+        Write-Warning "失败截图 $name 内容为空"
+        continue
+      }
+      try {
+        [IO.File]::WriteAllBytes(
+          (Join-Path $Destination $name),
+          [Convert]::FromBase64String($base64Text)
+        )
+      } catch {
+        Write-Warning "失败截图 $name 解码失败: $($_.Exception.Message)"
+      }
+    }
+  } catch {
+    Write-Warning "失败截图回收异常: $($_.Exception.Message)"
+  }
+}
+
 function Test-ScenarioExecutionStarted {
   param([Parameter(Mandatory = $true)][string]$EventReportPath)
 
@@ -459,6 +514,9 @@ try {
         $collectionExitCode = 1
         Write-Error -ErrorAction Continue $_
       }
+      Copy-FailureScreenshots `
+        -ContainerReportDir $containerReportDir `
+        -Destination (Join-Path $scenarioReportDir "$scenarioName.screenshots")
     }
 
     $convertExitCode = 0
