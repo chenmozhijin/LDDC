@@ -80,6 +80,15 @@ function Test-ShouldRetryAndroidScenario {
   if (-not $TestStarted) {
     return $true
   }
+  # 恢复上限由 $Attempt -ne 0 保证为每个场景一次。
+  #
+  # 这里刻意不再额外要求“资源已回基线”。系统 ANR 模态层会顶替前台窗口并拦截
+  # 返回键，Picker 拿不到取消回调，pendingPickerCount 必然停在 1。旧实现把资源
+  # 回基线当成重试前置条件，该条件在 ANR 卡住时永不可满足，零动作恢复分支因此
+  # 成为死代码，hosted 抖动被直接升级为 required 门禁失败。
+  # 现在由测试侧负责归因：ANR 在场且零业务动作时记 hosted_system_anr；无 ANR
+  # 归因的真实泄漏记 resource_cleanup_failure，仍然禁止重试。已有业务动作的
+  # 场景无论资源状态如何都不重试，避免用重跑替真实产品行为作证。
   return $FailureCategory -eq "hosted_system_anr" -and $NativeActionCount -eq 0
 }
 
@@ -115,7 +124,11 @@ if ($ValidateReportParser) {
     @{ Name = "DocumentsUI 确定性失败"; Started = $true; Category = "documents_ui_failure"; Actions = 0; Retry = $false },
     @{ Name = "资源清理失败"; Started = $true; Category = "resource_cleanup_failure"; Actions = 0; Retry = $false },
     @{ Name = "业务失败"; Started = $true; Category = "application_failure"; Actions = 0; Retry = $false },
-    @{ Name = "第二次失败"; Started = $true; Category = "hosted_system_anr"; Actions = 0; Retry = $false; Attempt = 1 }
+    @{ Name = "第二次失败"; Started = $true; Category = "hosted_system_anr"; Actions = 0; Retry = $false; Attempt = 1 },
+    # 回归用例：run 34483594346 的 ANR 卡住 Picker 时，pendingPickerCount 无法回零，
+    # 测试侧归因为 hosted_system_anr 且零业务动作。该形态必须允许一次有界重启，
+    # 否则 hosted 抖动会再次被升级为 required 门禁失败。
+    @{ Name = "零动作系统 ANR 导致资源未回基线仍可恢复"; Started = $true; Category = "hosted_system_anr"; Actions = 0; Retry = $true }
   )
   foreach ($case in $retryCases) {
     $attempt = if ($case.ContainsKey("Attempt")) { [int]$case.Attempt } else { 0 }
@@ -128,7 +141,7 @@ if ($ValidateReportParser) {
       throw "Android 重试契约自检失败：$($case.Name)"
     }
   }
-  Write-Output "Android JUnit parser 自检通过：tests=0 可重试，tests=1 成功或失败均不重试。"
+  Write-Output "Android JUnit parser 自检通过：tests=0 可重试；tests=1 仅零业务动作的 hosted 系统 ANR 允许一次重启恢复。"
   exit 0
 }
 

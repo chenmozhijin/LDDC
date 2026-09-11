@@ -500,9 +500,18 @@ class DocumentsUiPlatformPocTest {
 
     private fun waitForDocumentsUi() {
         val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        var recoveredSystemAnr = false
         while (System.currentTimeMillis() < deadline) {
             if (detectHostedSystemAnr()) {
-                throw HostedSystemAnrException("等待 DocumentsUI 时检测到系统 ANR")
+                if (recoveredSystemAnr) {
+                    // 已按“等待”恢复过一次仍然复发，说明系统模态层无法用恢复动作消除，
+                    // 继续点击只会无限延长门禁时间。此时必须按系统 ANR 分类失败，
+                    // 交给 runner 在零业务动作时做有界重启，不能假装恢复成功。
+                    throw HostedSystemAnrException("DocumentsUI 等待期间系统 ANR 反复出现")
+                }
+                dismissSystemAnrModal()
+                recoveredSystemAnr = true
+                continue
             }
             if (device.currentPackageName in DOCUMENTS_UI_PACKAGES) {
                 return
@@ -535,16 +544,25 @@ class DocumentsUiPlatformPocTest {
     private fun returnFromDocumentsUiForResourceSnapshot() {
         val deadline = System.currentTimeMillis() + 5_000
         // hosted emulator 的 Quickstep ANR 属于 DocumentsUI 之上的系统模态层。
-        // 先用系统返回动作关闭该层，再逐层退出 Picker，才能让生产 Activity
-        // 收到取消回调并清空 pending request；清理不会改变原始失败分类。
-        if (detectHostedSystemAnr()) {
-            device.pressBack()
-            device.waitForIdle(200)
-        }
+        // 该模态层只能按 android:id/aerr_wait 关闭：它在窗口层级里顶替了前台窗口，
+        // device.currentPackageName 会返回 android 而不是 DocumentsUI，按返回键也
+        // 不会消除对话框。旧实现只按返回键并在包名循环里判断是否退出，导致模态层
+        // 一直挡住 Picker 的取消回调，pendingPickerCount 永远停在 1，于是真实原因
+        // 被误分类为 resource_cleanup_failure，runner 的零动作重启分支无法触发。
+        // 这里不改变原始失败分类，ANR 事实仍由 writeEvidence 单独记录。
+        dismissSystemAnrModal()
         while (System.currentTimeMillis() < deadline && device.currentPackageName in DOCUMENTS_UI_PACKAGES) {
             // 失败可能发生在 provider 根、Recent 或搜索页。Back 是系统导航语义，
             // 逐层返回会触发生产 Picker 的取消回调并清空 pending request。
             device.pressBack()
+            device.waitForIdle(200)
+        }
+        // 关闭系统模态层后 Picker 才可能真正退出；窗口切换与取消回调是异步的，
+        // 这里只留出固定的短暂观察窗口，不做无界等待。
+        repeat(10) {
+            if (device.currentPackageName !in DOCUMENTS_UI_PACKAGES) {
+                return
+            }
             device.waitForIdle(200)
         }
     }
@@ -560,9 +578,17 @@ class DocumentsUiPlatformPocTest {
 
     private fun waitForDocumentsUiResource(resourceNames: List<String>, message: String): UiObject2 {
         val deadline = System.currentTimeMillis() + TIMEOUT_MS
+        var recoveredSystemAnr = false
         while (System.currentTimeMillis() < deadline) {
             if (detectHostedSystemAnr()) {
-                throw HostedSystemAnrException("等待 DocumentsUI 资源时检测到系统 ANR")
+                if (recoveredSystemAnr) {
+                    // 与 waitForDocumentsUi 同一契约：恢复只允许一次，复发即按系统 ANR
+                    // 失败，避免用反复“等待”掩盖真实的系统无响应。
+                    throw HostedSystemAnrException("等待 DocumentsUI 资源时系统 ANR 反复出现")
+                }
+                dismissSystemAnrModal()
+                recoveredSystemAnr = true
+                continue
             }
             findDocumentsUiResource(resourceNames)?.let { return it }
             device.waitForIdle(100)
@@ -581,6 +607,36 @@ class DocumentsUiPlatformPocTest {
             Log.e(EVIDENCE_LOG_TAG, "hosted system ANR detected during system UI interaction")
         }
         return detected
+    }
+
+    /**
+     * 关闭已经出现的宿主系统 ANR 模态层，返回是否真的执行了恢复动作。
+     *
+     * 系统 ANR 对话框属于 `android` 包，会替换前台窗口并拦截输入。只要它在场，
+     * DocumentsUI 的点击与返回键都不会生效。这里只在检测到系统对话框资源
+     * `android:id/aerr_wait` 时动作，并且要求 `aerr_close` 不存在：真实 ANR
+     * 对话框会同时提供“关闭应用”和“等待”，出现 `aerr_close` 说明无法确定是
+     * 哪个进程无响应，保守地不做恢复，让上层按失败处理，避免吞掉被测应用
+     * 自身的无响应缺陷。恢复最多由调用方各执行一次，避免把持续无响应伪装成通过。
+     */
+    private fun dismissSystemAnrModal(): Boolean {
+        val waitButton = device.findObject(By.res("android", "aerr_wait")) ?: return false
+        if (device.findObject(By.res("android", "aerr_close")) != null) {
+            // Android 同时提供“关闭应用/等待”时无法区分宿主应用与系统进程，
+            // 保守地不做恢复，让上层按失败处理。
+            Log.e(EVIDENCE_LOG_TAG, "system ANR close action present; refusing automated recovery")
+            return false
+        }
+        try {
+            waitButton.click()
+        } catch (_: StaleObjectException) {
+            // 对话框正好在点击瞬间被系统移除属于正常恢复路径，不需要额外重试。
+            // 本轮恢复额度已经消耗，上层会用 detectHostedSystemAnr() 重新判定。
+        }
+        device.wait(Until.gone(By.res("android", "aerr_wait")), 2_000)
+        device.waitForIdle(100)
+        Log.w(EVIDENCE_LOG_TAG, "dismissed hosted system ANR with android:id/aerr_wait")
+        return true
     }
 
     private fun waitForDocumentsUiFileNameInput(): UiObject2 {
@@ -918,13 +974,17 @@ class DocumentsUiPlatformPocTest {
                 .filterKeys { capability -> capability in setOf("filePicker", "media", "lifecycle") }
                 .values
                 .sumOf { actions -> actions.size }
+        val hostedSystemAnrConfirmed = hostedSystemAnrDetected || failure is HostedSystemAnrException
         val failureCategory =
             when {
                 failure == null -> null
-                // 系统 ANR 后也必须先把 Activity 资源清回基线。若清理仍失败，
-                // 该场景不可重试，否则会把真实 fd/picker 残留当作 hosted 波动。
+                // 真实业务动作已经成功落地时，即使之后出现宿主系统 ANR 也不能重试，
+                // 否则会用一次重跑替真实的产品行为作证。此时必须按普通失败分类。
+                hostedSystemAnrConfirmed && nativeActionCount > 0 ->
+                    if (final != baseline) "resource_cleanup_failure" else "application_failure"
+                hostedSystemAnrConfirmed -> "hosted_system_anr"
+                // 无系统 ANR 可归因时，资源未回基线仍是最高优先级的确定性失败。
                 final != baseline -> "resource_cleanup_failure"
-                hostedSystemAnrDetected || failure is HostedSystemAnrException -> "hosted_system_anr"
                 failure is DocumentsUiFailureException -> "documents_ui_failure"
                 else -> "application_failure"
             }
@@ -956,6 +1016,10 @@ class DocumentsUiPlatformPocTest {
                         "failureCategory" to
                             failureCategory,
                         "nativeActionCount" to nativeActionCount,
+                        // runner 需要独立区分“ANR 挡住了 Picker 清理”与“真的泄漏”：
+                        // 系统模态层在场时 Picker 拿不到取消回调，pendingPickerCount
+                        // 必然停在 1，这不是产品缺陷，不能用它锁死零动作 ANR 恢复。
+                        "resourcesReturnedToBaseline" to (final == baseline),
                     ),
             )
         val jsonObject = JSONObject(payload)
