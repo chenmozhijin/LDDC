@@ -42,7 +42,7 @@ final class AboutPageControllerProvider
 }
 
 String _$aboutPageControllerHash() =>
-    r'446400e9bd51626155e71d07005b68c09fd52c42';
+    r'408334ce9cc2653f76a4a59ce514b2ae0cb35a88';
 
 abstract class _$AboutPageController
     extends $AsyncNotifier<PageViewState<AboutPagePayload>> {

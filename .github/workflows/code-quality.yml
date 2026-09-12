@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION: 3.47.0-0.2.pre
+  FLUTTER_VERSION: 3.47.3
 
 jobs:
   static-and-unit:
@@ -27,7 +27,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
 
       - name: Resolve workspace dependencies

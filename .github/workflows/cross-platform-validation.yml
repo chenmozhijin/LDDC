@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION: 3.47.0-0.2.pre
+  FLUTTER_VERSION: 3.47.3
 
 jobs:
   windows-validation:
@@ -24,7 +24,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - run: flutter pub get
       - name: Build Windows release
@@ -141,7 +141,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - run: flutter pub get
       - name: Keep Apple dependency resolution on CocoaPods
@@ -278,7 +278,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - run: flutter pub get
       - name: Keep Apple dependency resolution on CocoaPods
@@ -376,7 +376,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - name: Install Linux build and automation dependencies
         run: |
@@ -471,7 +471,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - uses: gradle/actions/setup-gradle@v6
       - run: flutter pub get
@@ -562,7 +562,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - run: flutter pub get
       - name: Keep Apple dependency resolution on CocoaPods
@@ -736,7 +736,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - run: flutter pub get
       - name: Build experimental Web client

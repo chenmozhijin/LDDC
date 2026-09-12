@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION: 3.47.0-0.2.pre
+  FLUTTER_VERSION: 3.47.3
 
 jobs:
   algorithm-benchmarks:
@@ -24,7 +24,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - run: flutter pub get
       - name: Run full algorithm and Ruby benchmarks
@@ -42,7 +42,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - run: flutter pub get
       - name: Build resource-boundary runner
@@ -89,7 +89,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: beta
+          channel: stable
           cache: true
       - name: Install Linux native asset dependencies
         if: matrix.platform == 'linux'
