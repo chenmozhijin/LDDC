@@ -1,7 +1,7 @@
 name: lddc
 description: "LDDC Flutter 客户端，用于搜索、转换、本地匹配和桌面显示精准歌词。"
 publish_to: 'none'
-version: 0.10.0+1
+version: 0.10.0-alpha.1+1
 resolution: workspace
 
 environment:

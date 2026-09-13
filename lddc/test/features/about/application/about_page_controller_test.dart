@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lddc/src/app/bootstrap/app_providers.dart';
+import 'package:lddc/src/core/about/about_ports.dart';
+import 'package:lddc/src/core/app_metadata.dart';
 import 'package:lddc/src/core/config/config.dart';
 import 'package:lddc/src/features/about/application/about_page_controller.dart';
 import 'package:lddc/src/features/about/application/about_page_dependencies.dart';
 import 'package:lddc/src/features/about/application/about_page_models.dart';
-import 'package:lddc/src/core/about/about_ports.dart';
 import 'package:lddc_lyrics_flutter/lddc_lyrics_flutter.dart';
 
 void main() {
@@ -44,7 +45,9 @@ void main() {
           (pageState.view as AsyncSuccess<AboutPagePayload>).data;
 
       expect(payload.appName, 'LDDC');
-      expect(payload.versionLabel, 'v0.10.0-alpha.1');
+      // 版本标签必须来自单一真源（kLddcVersion 由 pubspec.yaml 生成），
+      // 因此这里断言"等于常量"而不是写死字面量，避免每次改版本都要手改测试。
+      expect(payload.versionLabel, kLddcVersion);
       expect(payload.projectLinks, hasLength(3));
       expect(payload.headline, isNotEmpty);
       expect(payload.description, isNotEmpty);

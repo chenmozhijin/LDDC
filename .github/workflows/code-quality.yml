@@ -59,14 +59,17 @@ jobs:
             tool.test.test_process_group_supervisor \
             tool.test.test_finalize_macos_system_ui_reports
 
-      - name: Regenerate localization and reject generated drift
+      - name: Regenerate localization and app metadata, reject generated drift
         id: localization_drift
         continue-on-error: true
         run: |
           cd lddc
           flutter gen-l10n
+          # 版本号单一真源是 pubspec.yaml；生成物必须与之一致，否则应用显示、
+          # 系统属性和发行包命名会互相矛盾。
+          python tool/generate_app_metadata.py
           cd ..
-          git diff --exit-code -- lddc/lib/src/core/i18n/l10n
+          git diff --exit-code -- lddc/lib/src/core/i18n/l10n lddc/lib/src/core/app_metadata.dart
 
       - name: Test architecture tooling
         id: architecture_tests
