@@ -1,7 +1,9 @@
 include: package:flutter_lints/flutter.yaml
 
+# analyzer plugin 版本必须与 pubspec.lock 实际解析到的 riverpod_lint 一致，
+# 否则会出现"配置写一个版本、分析器实际跑另一个版本"的双来源状态。
 plugins:
-  riverpod_lint: 3.1.4
+  riverpod_lint: 3.1.9
 
 analyzer:
   exclude:
