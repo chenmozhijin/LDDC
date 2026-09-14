@@ -184,7 +184,10 @@ class SearchDriver {
   /// 不产生差异更新，而关闭预览弹层后排队的产品状态回写会把旧关键词重新写回输入框，
   /// 使输入框在收敛窗口内始终停在旧值。清空 controller 并重放 onChanged 会同时触发
   /// controller 监听与业务回调，正是产品自身清空搜索框的路径，不绕过状态机。
-  Future<void> _clearKeywordThroughController(Finder input, String keyword) async {
+  Future<void> _clearKeywordThroughController(
+    Finder input,
+    String keyword,
+  ) async {
     if (input.evaluate().length != 1) {
       return;
     }

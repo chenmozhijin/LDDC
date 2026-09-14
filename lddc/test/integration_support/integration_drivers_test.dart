@@ -106,7 +106,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('SearchDriver 清空关键词时通过控件通路收敛（回归 stale 回写）', (WidgetTester tester) async {
+  testWidgets('SearchDriver 清空关键词时通过控件通路收敛（回归 stale 回写）', (
+    WidgetTester tester,
+  ) async {
     // 复现 run 34791249376 / 34564263324 的失败形态：关闭预览弹层后排队的产品
     // 状态回写把旧关键词重新写回输入框，而 `enterText('')` 的空串不产生差异更新，
     // 于是输入框在收敛窗口内一直停在旧值。驱动必须走控件真实的清空通路收敛。
@@ -239,6 +241,7 @@ class _DelayedSearchControllerProbe extends StatefulWidget {
   State<_DelayedSearchControllerProbe> createState() =>
       _DelayedSearchControllerProbeState();
 }
+
 class _DelayedSearchControllerProbeState
     extends State<_DelayedSearchControllerProbe> {
   final TextEditingController controller = TextEditingController(
