@@ -118,6 +118,33 @@ class SearchDriver {
         } on TimeoutException {
           stateConverged = false;
         }
+      } else if (keyword.isEmpty) {
+        // 清空关键词是唯一会失败的形态（run 34564263324 的 search_collection_flow
+        // 与 run 34791249376 的 search_song_flow 都停在 enterKeyword('')）：
+        // `tester.enterText(input, '')` 走平台文本输入通道，空串可能不产生差异更新，
+        // 而刚关闭预览弹层时排队的旧状态回写会把上一个关键词写回输入框，于是
+        // controller 在 5 秒窗口内始终停在旧值，收敛条件无法成立。
+        //
+        // 这里改用该控件真正暴露的清空路径：直接清空 keywordController 并重放
+        // onChanged（SearchBar 的 controller 与 onChanged 就是产品的清空通路），
+        // 既覆盖空串不做差异更新的情况，也不绕过产品状态机。
+        await _clearKeywordThroughController(input, keyword);
+        try {
+          await pumpUntil(
+            tester,
+            () {
+              controllerConverged = _keywordControllerMatches(input, keyword);
+              stateConverged = _keywordStateMatches(keyword);
+              return controllerConverged && stateConverged;
+            },
+            timeout: const Duration(seconds: 1),
+            reason: '清空关键词后输入框与业务状态仍未收敛',
+          );
+          return;
+        } on TimeoutException {
+          controllerConverged = _keywordControllerMatches(input, keyword);
+          stateConverged = _keywordStateMatches(keyword);
+        }
       }
     }
 
@@ -149,6 +176,22 @@ class SearchDriver {
     }
     final EditableText editable = tester.widget<EditableText>(input);
     editable.onChanged?.call(keyword);
+  }
+
+  /// 通过控件真实的清空通路清空关键词：清空 controller + 重放 onChanged。
+  ///
+  /// 为什么不能只依赖 `tester.enterText(input, '')`：空串走平台文本输入通道时可能
+  /// 不产生差异更新，而关闭预览弹层后排队的产品状态回写会把旧关键词重新写回输入框，
+  /// 使输入框在收敛窗口内始终停在旧值。清空 controller 并重放 onChanged 会同时触发
+  /// controller 监听与业务回调，正是产品自身清空搜索框的路径，不绕过状态机。
+  Future<void> _clearKeywordThroughController(Finder input, String keyword) async {
+    if (input.evaluate().length != 1) {
+      return;
+    }
+    final EditableText editable = tester.widget<EditableText>(input);
+    editable.controller.clear();
+    editable.onChanged?.call(keyword);
+    await pumpForInteraction(tester);
   }
 
   /// 失败诊断必须同时打印输入框、业务状态与当前搜索条件，才能区分

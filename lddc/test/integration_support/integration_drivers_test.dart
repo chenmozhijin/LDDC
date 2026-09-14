@@ -106,6 +106,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('SearchDriver 清空关键词时通过控件通路收敛（回归 stale 回写）', (WidgetTester tester) async {
+    // 复现 run 34791249376 / 34564263324 的失败形态：关闭预览弹层后排队的产品
+    // 状态回写把旧关键词重新写回输入框，而 `enterText('')` 的空串不产生差异更新，
+    // 于是输入框在收敛窗口内一直停在旧值。驱动必须走控件真实的清空通路收敛。
+    final GlobalKey<_StaleKeywordWriteBackProbeState> probeKey =
+        GlobalKey<_StaleKeywordWriteBackProbeState>();
+    await tester.pumpWidget(
+      MaterialApp(home: _StaleKeywordWriteBackProbe(key: probeKey)),
+    );
+
+    await SearchDriver(tester).enterKeyword('');
+
+    expect(probeKey.currentState!.controller.text, isEmpty);
+    expect(probeKey.currentState!.staleWriteExecuted, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('持续 SnackBar 不阻塞未被遮挡的本地匹配操作', (WidgetTester tester) async {
     final GlobalKey<ScaffoldMessengerState> messengerKey =
         GlobalKey<ScaffoldMessengerState>();
@@ -222,7 +239,6 @@ class _DelayedSearchControllerProbe extends StatefulWidget {
   State<_DelayedSearchControllerProbe> createState() =>
       _DelayedSearchControllerProbeState();
 }
-
 class _DelayedSearchControllerProbeState
     extends State<_DelayedSearchControllerProbe> {
   final TextEditingController controller = TextEditingController(
@@ -258,6 +274,57 @@ class _DelayedSearchControllerProbeState
                 controller.text = value;
               }
             });
+          });
+        },
+      ),
+    );
+  }
+}
+
+/// 复现"旧状态回写吞掉清空操作"的探针。
+///
+/// 与 `_DelayedSearchControllerProbe` 的差别是：这里回写旧值后**不会**再重建为
+/// 用户输入，模拟产品在关闭预览弹层后把旧关键词重新写回、且空串不产生差异更新
+/// 的真实失败形态（run 34791249376 的 search_song_flow、34564263324 的
+/// search_collection_flow 都停在这一形态）。只有走控件自身的清空通路才能收敛。
+class _StaleKeywordWriteBackProbe extends StatefulWidget {
+  const _StaleKeywordWriteBackProbe({super.key});
+
+  @override
+  State<_StaleKeywordWriteBackProbe> createState() =>
+      _StaleKeywordWriteBackProbeState();
+}
+
+class _StaleKeywordWriteBackProbeState
+    extends State<_StaleKeywordWriteBackProbe> {
+  final TextEditingController controller = TextEditingController(
+    text: 'previous-keyword',
+  );
+  bool staleWriteExecuted = false;
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SearchBar(
+        key: const ValueKey<String>('search_toolbar_search_bar'),
+        controller: controller,
+        onChanged: (String value) {
+          // 排队一次旧值回写：若驱动只依赖 enterText 的差异更新，输入框会一直
+          // 停在旧关键词；清空 controller 则会让这次回写被清空操作取代。
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) {
+              return;
+            }
+            staleWriteExecuted = true;
+            if (controller.text.isNotEmpty) {
+              controller.text = 'previous-keyword';
+            }
           });
         },
       ),
