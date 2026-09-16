@@ -47,6 +47,28 @@ def _load_coverage_checker():
     return module
 
 
+def _load_app_metadata_generator():
+    path = ROOT / "lddc/tool/generate_app_metadata.py"
+    spec = importlib.util.spec_from_file_location("generate_app_metadata", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"无法加载应用元数据生成器: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_release_packager():
+    path = ROOT / "lddc/tool/package_release_artifacts.py"
+    spec = importlib.util.spec_from_file_location("package_release_artifacts", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"无法加载发行打包脚本: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _load_ci_phase_summary():
     path = ROOT / "tool/test/ci_phase_summary.py"
     spec = importlib.util.spec_from_file_location("ci_phase_summary", path)
@@ -281,6 +303,82 @@ class QualityToolTests(unittest.TestCase):
         self.assertTrue(source_dir.resolve().is_relative_to(ROOT.resolve()))
         self.assertTrue((source_dir / "logo.png").is_file())
         self.assertTrue((source_dir / "logo.ico").is_file())
+
+    def test_app_metadata_generation_matches_pubspec_and_keeps_prerelease(self) -> None:
+        """版本号单一真源：生成内容必须由 pubspec 派生，并保留预发布段。
+
+        预发布段不能省略——更新检查按 SemVer 预发布规则比较（`v0.10.0` 会被判为比
+        `v0.10.0-alpha.1` 更新），一旦退化成正式版语义，alpha 用户会得到错误的提示。
+        """
+        generator = _load_app_metadata_generator()
+        pubspec_version = generator._read_pubspec_version()
+
+        self.assertIn("+", pubspec_version, "本用例要求 pubspec 带构建号，覆盖去 +build 的派生")
+
+        rendered = generator.expected_metadata_text()
+        expected_label = pubspec_version.split("+", maxsplit=1)[0]
+        self.assertIn(f"const String kLddcVersion = 'v{expected_label}';", rendered)
+        self.assertIn("GENERATED CODE - DO NOT MODIFY BY HAND.", rendered)
+
+        # 已提交的生成文件必须与当前 pubspec 一致（等价于 CI 的漂移门禁）。
+        committed = (ROOT / "lddc/lib/src/core/app_metadata.dart").read_text(encoding="utf-8")
+        self.assertEqual(committed, rendered)
+
+    def test_app_metadata_generation_rejects_malformed_versions(self) -> None:
+        generator = _load_app_metadata_generator()
+
+        for bad in ("0.10", "v0.10.0", "0.10.0.1", "abc", ""):
+            with self.subTest(version=bad):
+                with self.assertRaises(ValueError):
+                    generator.render_metadata(bad)
+
+        # 合法形式：正式版、预发布、预发布+构建号；预发布段必须保留。
+        self.assertIn("kLddcVersion = 'v1.2.3';", generator.render_metadata("1.2.3"))
+        self.assertIn("kLddcVersion = 'v1.2.3-rc.1';", generator.render_metadata("1.2.3-rc.1+7"))
+
+    def test_release_packager_derives_names_from_pubspec(self) -> None:
+        """打包产物命名必须与 pubspec 同源，避免包名与版本号各写一份。"""
+        packager = _load_release_packager()
+        generator = _load_app_metadata_generator()
+
+        version = packager.app_version()
+        self.assertEqual(version, generator._read_pubspec_version().split("+", maxsplit=1)[0])
+        self.assertNotIn("+", version, "产物名不能带 pubspec 的 +build 构建号")
+
+    def test_release_packager_deb_metadata_matches_release_metadata(self) -> None:
+        """deb 的 control 与桌面项必须使用发布元数据，不能各自硬编码应用名。"""
+        packager = _load_release_packager()
+        metadata = json.loads(
+            (ROOT / "lddc/tool/release_metadata.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(packager._metadata()["displayName"], metadata["displayName"])
+        self.assertEqual(packager._metadata()["appId"], metadata["appId"])
+
+    def test_release_packager_deb_layout_matches_python_install_semantics(self) -> None:
+        """deb 的安装布局必须与 Python 版同形：/usr/lib/LDDC + /usr/bin/LDDC + 桌面项。
+
+        这里只做源码级契约断言（真正构建需要 dpkg-deb），避免在无 Linux 工具链的
+        开发机上产生假失败。
+        """
+        source = (ROOT / "lddc/tool/package_release_artifacts.py").read_text(encoding="utf-8")
+
+        self.assertIn('.symlink_to("../lib/LDDC/lddc")', source)
+        self.assertIn('"lib" / "LDDC"', source)
+        self.assertIn("Exec=/usr/bin/LDDC", source)
+        self.assertIn("Icon=/usr/share/icons/hicolor/512x512/apps/LDDC.png", source)
+        self.assertIn("--root-owner-group", source)
+
+    def test_release_packager_ios_reads_executable_from_plist(self) -> None:
+        """iOS 可执行文件名必须从 Info.plist 读取。
+
+        工程里 PRODUCT_NAME 是 LDDC 而产物目录是 Runner.app，硬编码任一名字都会在
+        真实构建上失败，因此必须以 CFBundleExecutable 为准。
+        """
+        source = (ROOT / "lddc/tool/package_release_artifacts.py").read_text(encoding="utf-8")
+
+        self.assertIn('plist.get("CFBundleExecutable")', source)
+        self.assertNotIn('app / "Runner"', source)
 
     def test_git_hygiene_requires_stable_major_action_tags(self) -> None:
         checker = _load_git_hygiene_checker()

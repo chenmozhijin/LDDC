@@ -32,9 +32,24 @@ val hasReleaseSigning = listOf(
     releaseKeyAlias,
     releaseKeyPassword,
 ).all { !it.isNullOrBlank() }
-val allowUnsignedCiRelease =
+
+// CI 专用签名：CI 需要产出"可直接安装"的 APK/AAB 供下载验证，但没有（也不应该有）
+// 正式发布密钥。因此由 workflow 在 job 内用 keytool 生成一次性 keystore，并通过这四个
+// 环境变量注入；每次运行的签名都不同，产物只能用于安装验证，不能当作发布版。
+// 它与正式签名严格分离：正式 keystore 存在时优先使用正式签名；两者都缺失时仍然报错，
+// 本地绝不能靠"放行无签名"产出看似可安装的包。
+val ciArtifactKeystoreFile = providers.environmentVariable("LDDC_CI_ARTIFACT_KEYSTORE").orNull
+val ciArtifactStorePassword = providers.environmentVariable("LDDC_CI_ARTIFACT_STORE_PASSWORD").orNull
+val ciArtifactKeyAlias = providers.environmentVariable("LDDC_CI_ARTIFACT_KEY_ALIAS").orNull
+val ciArtifactKeyPassword = providers.environmentVariable("LDDC_CI_ARTIFACT_KEY_PASSWORD").orNull
+val hasCiArtifactSigning =
     providers.environmentVariable("CI").orNull.equals("true", ignoreCase = true) &&
-        providers.environmentVariable("LDDC_ALLOW_UNSIGNED_CI_RELEASE").orNull == "1"
+        listOf(
+            ciArtifactKeystoreFile,
+            ciArtifactStorePassword,
+            ciArtifactKeyAlias,
+            ciArtifactKeyPassword,
+        ).all { !it.isNullOrBlank() }
 
 android {
     namespace = "com.cmzj.lddc"
@@ -71,14 +86,25 @@ android {
                 keyPassword = releaseKeyPassword
             }
         }
+        // CI 专用签名配置：只在 CI 且四个环境变量齐全时创建，单独命名以便与正式签名
+        // 区分；发布流水线永远用不到它。
+        if (hasCiArtifactSigning) {
+            create("ciArtifact") {
+                storeFile = file(ciArtifactKeystoreFile!!)
+                storePassword = ciArtifactStorePassword
+                keyAlias = ciArtifactKeyAlias
+                keyPassword = ciArtifactKeyPassword
+            }
+        }
     }
 
     buildTypes {
         release {
-            // Release 包必须由正式 keystore 签名。缺少签名时不回退 debug 签名，
-            // 避免本地验证产物被误当作可分发安装包。
-            if (hasReleaseSigning) {
-                signingConfig = signingConfigs.getByName("release")
+            // Release 包必须签名：优先正式 keystore，其次才是 CI 专用一次性签名。
+            // 两者都没有时不回退 debug 签名，避免本地验证产物被误当作可分发安装包。
+            when {
+                hasReleaseSigning -> signingConfig = signingConfigs.getByName("release")
+                hasCiArtifactSigning -> signingConfig = signingConfigs.getByName("ciArtifact")
             }
         }
     }
@@ -97,14 +123,16 @@ gradle.taskGraph.whenReady {
         task.name.contains("Release") &&
             listOf("assemble", "bundle", "package", "sign", "validateSigning").any(task.name::contains)
     }
-    // GitHub CI 需要验证 release APK/AAB 的完整编译链，但这些产物不会上传或发布。
-    // 只有 CI=true 且显式开启专用变量时才允许无签名打包，本地仍必须提供正式密钥。
-    if (releasePackagingRequested && !hasReleaseSigning && !allowUnsignedCiRelease) {
+    // Release 打包必须带签名：正式 keystore 或 CI 专用一次性签名二选一。
+    // 之前允许"CI 无签名打包"的放行开关已删除——它产出的 APK 装不上，
+    // 会掩盖真实问题；现在 CI 也必须真的有签名。
+    if (releasePackagingRequested && !hasReleaseSigning && !hasCiArtifactSigning) {
         throw GradleException(
-            "Android release 构建缺少正式签名。请设置 LDDC_ANDROID_KEYSTORE_FILE、" +
+            "Android release 构建缺少签名。请设置 LDDC_ANDROID_KEYSTORE_FILE、" +
                 "LDDC_ANDROID_KEYSTORE_PASSWORD、LDDC_ANDROID_KEY_ALIAS、" +
                 "LDDC_ANDROID_KEY_PASSWORD，或在 android/key.properties 中提供 " +
-                "storeFile/storePassword/keyAlias/keyPassword。"
+                "storeFile/storePassword/keyAlias/keyPassword；CI 侧还会注入 " +
+                "LDDC_CI_ARTIFACT_* 四个变量用于一次性签名。"
         )
     }
 }

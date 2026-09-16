@@ -47,6 +47,80 @@ jobs:
           if (-not (Test-Path -LiteralPath "$destination/lddc.exe" -PathType Leaf)) {
             throw 'Windows production snapshot is incomplete'
           }
+      # 发行包只打包"刚刚通过 Release 构建"的同一份产物，确保可运行性证据与产物对应。
+      - name: Package Windows release artifacts
+        id: release_package
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $out = 'build/release-artifacts/windows'
+          python lddc/tool/package_release_artifacts.py windows-portable `
+            --release-dir lddc/build/windows/x64/runner/Release --out $out
+          python lddc/tool/package_release_artifacts.py build-info `
+            --platform windows-amd64 --out $out
+      # onefile 是 best-effort（见 docs/core/33）：7-Zip 安装器 SFX 是否可用由本步实测，
+      # 失败只记录缺口，不阻断 required 门禁，也不静默删除该类型。
+      - name: Package Windows onefile (best-effort)
+        id: release_onefile
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          choco install 7zip -y --no-progress
+          $sfx = 'C:\Program Files\7-Zip\7zSD.sfx'
+          if (-not (Test-Path -LiteralPath $sfx)) {
+            throw "runner 镜像没有 7-Zip 安装器 SFX 模块：$sfx"
+          }
+          python lddc/tool/package_release_artifacts.py windows-onefile `
+            --release-dir lddc/build/windows/x64/runner/Release `
+            --sfx $sfx --out build/release-artifacts/windows
+      - name: Verify Windows release artifacts
+        id: release_verify
+        if: always() && steps.release_package.outcome == 'success'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem build/release-artifacts/windows/LDDC-*-windows-amd64.zip |
+            Select-Object -First 1
+          if (-not $zip) { throw '没有找到 Windows 便携 zip' }
+          $dest = Join-Path $env:RUNNER_TEMP 'lddc-portable-verify'
+          if (Test-Path -LiteralPath $dest) { Remove-Item -LiteralPath $dest -Recurse -Force }
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath $dest
+          $exe = Join-Path $dest 'LDDC\lddc.exe'
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
+            throw "便携 zip 解压后缺少 LDDC\lddc.exe：$exe"
+          }
+          # LDDC 是单实例应用：宿主上若残留实例，新进程会立刻转发并正常退出，使
+          # "存活 N 秒"的判定失效。这里先清掉残留实例，让烟测结论只反映本次产物。
+          Get-Process -Name lddc -ErrorAction SilentlyContinue |
+            Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 2
+          $process = Start-Process -FilePath $exe -PassThru
+          Start-Sleep -Seconds 12
+          if ($process.HasExited) {
+            throw "便携 zip 解压后的 lddc.exe 在 12 秒内退出，退出码 $($process.ExitCode)"
+          }
+          Write-Host "便携 zip 启动烟测通过：window=$($process.MainWindowTitle)"
+          $process.CloseMainWindow() | Out-Null
+          Start-Sleep -Seconds 3
+          if (-not $process.HasExited) { $process.Kill() }
+      - name: Upload Windows release artifacts
+        if: always() && steps.release_package.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-windows-amd64
+          path: lddc/build/release-artifacts/windows/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Windows release build tree
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-tree-windows-amd64
+          path: lddc/build/windows/x64/runner/Release/**
+          if-no-files-found: error
+          retention-days: 7
       - name: Build Windows debug application for native automation
         id: debug_build
         continue-on-error: true
@@ -161,6 +235,58 @@ jobs:
           mkdir -p "$destination"
           cp -R 'lddc/build/macos/Build/Products/Release/LDDC.app' "$destination/LDDC.app"
           test -x "$destination/LDDC.app/Contents/MacOS/LDDC"
+      - name: Package macOS release artifacts
+        id: release_package
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          out='build/release-artifacts/macos'
+          python lddc/tool/package_release_artifacts.py macos-dmg \
+            --app lddc/build/macos/Build/Products/Release/LDDC.app --arch arm64 --out $out
+          python lddc/tool/package_release_artifacts.py build-info \
+            --platform macos-arm64 --out $out
+      # 挂载 dmg 并从挂载点启动，证明用户实际拿到的这个包能跑；同时记录签名状态
+      # （未签名是预期结果，与 Python 版一致，用户需绕过 Gatekeeper）。
+      - name: Verify macOS release artifacts
+        id: release_verify
+        if: always() && steps.release_package.outcome == 'success'
+        continue-on-error: true
+        run: |
+          dmg="$(ls build/release-artifacts/macos/LDDC-*-arm64.dmg | head -n 1)"
+          test -n "$dmg"
+          mount_point="$(mktemp -d)"
+          hdiutil attach "$dmg" -mountpoint "$mount_point" -nobrowse -quiet
+          test -d "$mount_point/LDDC.app"
+          codesign -dv "$mount_point/LDDC.app" 2>&1 || true
+          "$mount_point/LDDC.app/Contents/MacOS/LDDC" &
+          app_pid=$!
+          sleep 12
+          if ! kill -0 "$app_pid" 2>/dev/null; then
+            hdiutil detach "$mount_point" -quiet || true
+            echo "dmg 内的 LDDC 在 12 秒内退出" >&2
+            exit 1
+          fi
+          echo "dmg 启动烟测通过：pid=$app_pid"
+          kill "$app_pid" 2>/dev/null || true
+          sleep 2
+          hdiutil detach "$mount_point" -quiet || true
+          rmdir "$mount_point" 2>/dev/null || true
+      - name: Upload macOS release artifacts
+        if: always() && steps.release_package.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-macos-arm64
+          path: lddc/build/release-artifacts/macos/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload macOS release build tree
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-tree-macos-arm64
+          path: lddc/build/macos/Build/Products/Release/**
+          if-no-files-found: error
+          retention-days: 7
       - name: Build macOS debug application for native automation
         id: debug_build
         continue-on-error: true
@@ -390,6 +516,62 @@ jobs:
         continue-on-error: true
         working-directory: lddc
         run: flutter build linux --release
+      - name: Package Linux release artifacts
+        id: release_package
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          out='build/release-artifacts/linux'
+          python lddc/tool/package_release_artifacts.py linux-deb \
+            --bundle-dir lddc/build/linux/x64/release/bundle --arch amd64 --out $out
+          python lddc/tool/package_release_artifacts.py build-info \
+            --platform linux-amd64 --out $out
+      # 在同一 job 内真实安装 deb、检查动态库无缺失、并在 xvfb 下有界启动安装后的
+      # LDDC 命令，最后卸载——证明"可安装可运行"而不只是产出了文件。
+      - name: Verify Linux release artifacts
+        id: release_verify
+        if: always() && steps.release_package.outcome == 'success'
+        continue-on-error: true
+        run: |
+          deb="$(ls build/release-artifacts/linux/LDDC_*_amd64.deb | head -n 1)"
+          test -n "$deb"
+          sudo apt-get install -y "./$deb"
+          dpkg -s LDDC >/dev/null
+          test -x /usr/lib/LDDC/lddc
+          test -L /usr/bin/LDDC
+          if ldd /usr/lib/LDDC/lddc | grep -q 'not found'; then
+            echo "deb 安装后的可执行文件存在缺失动态库：" >&2
+            ldd /usr/lib/LDDC/lddc >&2
+            exit 1
+          fi
+          xvfb-run -a --server-args="-screen 0 1280x720x24" /usr/bin/LDDC &
+          app_pid=$!
+          sleep 15
+          if ! kill -0 "$app_pid" 2>/dev/null; then
+            echo "deb 安装后的 LDDC 在 15 秒内退出" >&2
+            exit 1
+          fi
+          echo "deb 安装与启动烟测通过：pid=$app_pid"
+          kill "$app_pid" 2>/dev/null || true
+          sleep 2
+          sudo apt-get remove -y LDDC
+          test ! -e /usr/lib/LDDC/lddc
+      - name: Upload Linux release artifacts
+        if: always() && steps.release_package.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-linux-amd64
+          path: lddc/build/release-artifacts/linux/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Linux release build tree
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-tree-linux-amd64
+          path: lddc/build/linux/x64/release/bundle/**
+          if-no-files-found: error
+          retention-days: 7
       - name: Build Linux debug application for native automation
         id: debug_build
         continue-on-error: true
@@ -464,8 +646,6 @@ jobs:
     # 模拟器启动和失败报告回收。job 总上限必须覆盖这些固定开销，否则
     # GitHub 会在 always() 诊断步骤前直接终止，反而丢失真正的失败证据。
     timeout-minutes: 180
-    env:
-      LDDC_ALLOW_UNSIGNED_CI_RELEASE: '1'
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2
@@ -475,13 +655,82 @@ jobs:
           cache: true
       - uses: gradle/actions/setup-gradle@v6
       - run: flutter pub get
-      - name: Build unsigned Android release outputs
+      # 发行包需要"可安装"，而 CI 没有也不应该持有正式发布密钥：这里用 keytool 生成
+      # 一次性 keystore（写在 RUNNER_TEMP，绝不进入仓库工作树——.keystore 是 hygiene
+      # 禁用后缀），经 GITHUB_ENV 注入 gradle 的 ciArtifact 签名配置。
+      # 每次运行的签名都不同，因此产物只能用于安装验证，不能当作发布版。
+      - name: Generate CI-only artifact keystore
+        id: ci_keystore
+        run: |
+          keystore="$RUNNER_TEMP/lddc-ci-artifact.jks"
+          store_password="$(openssl rand -hex 16)"
+          key_password="$(openssl rand -hex 16)"
+          keytool -genkeypair -v \
+            -keystore "$keystore" \
+            -storetype JKS \
+            -storepass "$store_password" \
+            -keypass "$key_password" \
+            -alias lddc-ci-artifact \
+            -keyalg RSA -keysize 2048 -validity 30 \
+            -dname "CN=LDDC CI artifact, OU=CI, O=chenmozhijin, C=CN"
+          {
+            echo "LDDC_CI_ARTIFACT_KEYSTORE=$keystore"
+            echo "LDDC_CI_ARTIFACT_STORE_PASSWORD=$store_password"
+            echo "LDDC_CI_ARTIFACT_KEY_ALIAS=lddc-ci-artifact"
+            echo "LDDC_CI_ARTIFACT_KEY_PASSWORD=$key_password"
+          } >> "$GITHUB_ENV"
+      - name: Build signed Android release outputs
         id: release_build
         continue-on-error: true
         working-directory: lddc
         run: |
           flutter build apk --release
           flutter build appbundle --release
+      - name: Package Android release artifacts
+        id: release_package
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          out='build/release-artifacts/android'
+          python lddc/tool/package_release_artifacts.py android \
+            --apk lddc/build/app/outputs/flutter-apk/app-release.apk \
+            --aab lddc/build/app/outputs/bundle/release/app-release.aab \
+            --out $out
+          python lddc/tool/package_release_artifacts.py build-info \
+            --platform android --out $out
+      # 验签是核心：没有签名的 APK 装不上，之前"无签名打包"会把这个问题一路掩盖到
+      # 用户下载后才发现。
+      - name: Verify Android signatures
+        id: release_verify
+        if: always() && steps.release_package.outcome == 'success'
+        continue-on-error: true
+        run: |
+          apksigner="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          test -n "$apksigner"
+          apk="$(ls build/release-artifacts/android/LDDC-*-android.apk | head -n 1)"
+          aab="$(ls build/release-artifacts/android/LDDC-*-android.aab | head -n 1)"
+          test -n "$apk" && test -n "$aab"
+          "$apksigner" verify --print-certs "$apk"
+          # AAB 用 JAR 签名，jarsigner 是 JDK 自带工具。
+          jarsigner -verify "$aab"
+      - name: Upload Android release artifacts
+        if: always() && steps.release_package.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-android
+          path: lddc/build/release-artifacts/android/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Android release build tree
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-tree-android
+          path: |
+            lddc/build/app/outputs/flutter-apk/**
+            lddc/build/app/outputs/bundle/**
+          if-no-files-found: error
+          retention-days: 7
       - name: Enable KVM access for the Android emulator
         run: |
           test -e /dev/kvm
@@ -610,6 +859,53 @@ jobs:
         continue-on-error: true
         working-directory: lddc
         run: flutter build ios --release --no-codesign
+      - name: Package iOS release artifacts
+        id: release_package
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          out='build/release-artifacts/ios'
+          python lddc/tool/package_release_artifacts.py ios \
+            --app lddc/build/ios/iphoneos/Runner.app --out $out
+          python lddc/tool/package_release_artifacts.py build-info \
+            --platform ios-arm64 --out $out
+      # 无证书时只能给未签名产物：这里如实记录"架构正确但不可安装"，
+      # 不把它伪装成可安装包。
+      - name: Verify iOS release artifacts
+        id: release_verify
+        if: always() && steps.release_package.outcome == 'success'
+        continue-on-error: true
+        run: |
+          app='lddc/build/ios/iphoneos/Runner.app'
+          test -d "$app"
+          executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")"
+          test -n "$executable"
+          file "$app/$executable"
+          file "$app/$executable" | grep -q 'arm64' || {
+            echo "iOS 产物不是 arm64 设备构建" >&2
+            exit 1
+          }
+          if codesign -dv "$app" 2>&1 | grep -q 'Authority='; then
+            echo "iOS 产物意外带正式签名，请检查构建参数" >&2
+            exit 1
+          fi
+          echo "iOS 产物为未签名 arm64 设备构建（不可安装，仅归档）"
+      - name: Upload iOS release artifacts
+        if: always() && steps.release_package.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-ios
+          path: lddc/build/release-artifacts/ios/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload iOS release build tree
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-tree-ios
+          path: lddc/build/ios/iphoneos/**
+          if-no-files-found: error
+          retention-days: 7
       - name: Run offline application flows
         id: offline
         if: always() && steps.simulator.outcome == 'success'
@@ -740,8 +1036,54 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Build experimental Web client
+        id: release_build
         working-directory: lddc
         run: flutter build web --release
+      - name: Package Web release artifacts
+        id: release_package
+        continue-on-error: true
+        run: |
+          out='build/release-artifacts/web'
+          python lddc/tool/package_release_artifacts.py web \
+            --web-dir lddc/build/web --out $out
+          python lddc/tool/package_release_artifacts.py build-info \
+            --platform web --out $out
+      # Web 是新增类型（Python 版没有），用本地静态服务器确认入口真的可服务。
+      - name: Verify Web release artifacts
+        id: release_verify
+        if: always() && steps.release_package.outcome == 'success'
+        continue-on-error: true
+        run: |
+          web='lddc/build/web'
+          test -f "$web/index.html"
+          test -f "$web/main.dart.js"
+          (cd "$web" && python -m http.server 8731 >/dev/null 2>&1 & echo $! > /tmp/web-server.pid)
+          sleep 3
+          for path in index.html main.dart.js flutter_service_worker.js; do
+            status="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8731/$path")"
+            test "$status" = '200' || {
+              echo "Web 入口 $path 返回 $status" >&2
+              exit 1
+            }
+          done
+          echo "Web 静态托管检查通过"
+          kill "$(cat /tmp/web-server.pid)" 2>/dev/null || true
+      - name: Upload Web release artifacts
+        if: always() && steps.release_package.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-web
+          path: lddc/build/release-artifacts/web/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Web release build tree
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-tree-web
+          path: lddc/build/web/**
+          if-no-files-found: error
+          retention-days: 7
       - name: Run browser capability observation
         working-directory: lddc
         run: |
@@ -758,4 +1100,116 @@ jobs:
           name: experimental-web-observation
           path: lddc/build/web-observation/**
           if-no-files-found: warn
+          retention-days: 7
+
+  # 下面两个 job 只补齐发行包的架构覆盖（Python 版同时发布 mac x64/arm64 与
+  # linux amd64/arm64），不重复上面的平台验证：它们不参与 required 门禁汇总，
+  # 也不使用 ci_phase_summary.py 与 required_outcomes 条件。
+  macos-release-amd64:
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build macOS x64 release
+        id: release_build
+        continue-on-error: true
+        working-directory: lddc
+        run: flutter build macos --release
+      - name: Package macOS x64 release artifacts
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          out='build/release-artifacts/macos-amd64'
+          python lddc/tool/package_release_artifacts.py macos-dmg \
+            --app lddc/build/macos/Build/Products/Release/LDDC.app --arch amd64 --out $out
+          python lddc/tool/package_release_artifacts.py build-info \
+            --platform macos-amd64 --out $out
+      - name: Verify macOS x64 release artifacts
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          dmg="$(ls build/release-artifacts/macos-amd64/LDDC-*-amd64.dmg | head -n 1)"
+          test -n "$dmg"
+          mount_point="$(mktemp -d)"
+          hdiutil attach "$dmg" -mountpoint "$mount_point" -nobrowse -quiet
+          test -d "$mount_point/LDDC.app"
+          file "$mount_point/LDDC.app/Contents/MacOS/LDDC"
+          hdiutil detach "$mount_point" -quiet || true
+          rmdir "$mount_point" 2>/dev/null || true
+      - name: Upload macOS x64 release artifacts
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-macos-amd64
+          path: lddc/build/release-artifacts/macos-amd64/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload macOS x64 release build tree
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-tree-macos-amd64
+          path: lddc/build/macos/Build/Products/Release/**
+          if-no-files-found: error
+          retention-days: 7
+
+  linux-release-arm64:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev \
+            liblzma-dev libayatana-appindicator3-dev dbus-x11 xvfb xauth
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build Linux arm64 release
+        id: release_build
+        continue-on-error: true
+        working-directory: lddc
+        run: flutter build linux --release
+      - name: Package Linux arm64 release artifacts
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          out='build/release-artifacts/linux-arm64'
+          python lddc/tool/package_release_artifacts.py linux-deb \
+            --bundle-dir lddc/build/linux/arm64/release/bundle --arch arm64 --out $out
+          python lddc/tool/package_release_artifacts.py build-info \
+            --platform linux-arm64 --out $out
+      - name: Verify Linux arm64 release artifacts
+        if: always() && steps.release_build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          deb="$(ls build/release-artifacts/linux-arm64/LDDC_*_arm64.deb | head -n 1)"
+          test -n "$deb"
+          dpkg-deb --info "$deb"
+          dpkg-deb --contents "$deb" | grep -q 'usr/lib/LDDC/lddc'
+      - name: Upload Linux arm64 release artifacts
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-linux-arm64
+          path: lddc/build/release-artifacts/linux-arm64/**
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload Linux arm64 release build tree
+        if: always() && steps.release_build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-tree-linux-arm64
+          path: lddc/build/linux/arm64/release/bundle/**
+          if-no-files-found: error
           retention-days: 7

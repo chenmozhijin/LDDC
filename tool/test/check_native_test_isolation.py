@@ -1132,6 +1132,40 @@ def failures() -> list[str]:
         problems.append("平台 artifact 必须使用条件 diagnostics 命名，禁止固定 failure 命名")
     if workflow.count("steps.required_outcomes.outcome != 'success'") != 6:
         problems.append("五个平台及独立 macOS 系统 UI diagnostics 必须仅在 required phase 失败时上传")
+
+    # 发行包契约：CI 必须真的上传可安装产物，且不能重新引入"无签名放行"或把打包
+    # 塞进 required phase 汇总器（否则打包失败会被误报成平台验证失败）。
+    if "LDDC_ALLOW_UNSIGNED_CI_RELEASE" in workflow:
+        problems.append("禁止恢复 Android 无签名放行开关：那样产出的 APK 装不上")
+    if "LDDC_CI_ARTIFACT_KEYSTORE" not in workflow:
+        problems.append("Android job 必须注入 CI 专用签名 keystore 变量")
+    packaging_entry = "lddc/tool/package_release_artifacts.py"
+    if not (ROOT / packaging_entry).is_file():
+        problems.append(f"缺少发行打包脚本入口：{packaging_entry}")
+    for artifact in (
+        "release-windows-amd64",
+        "release-macos-arm64",
+        "release-macos-amd64",
+        "release-linux-amd64",
+        "release-linux-arm64",
+        "release-android",
+        "release-ios",
+        "release-web",
+    ):
+        if artifact not in workflow:
+            problems.append(f"发行包 artifact 缺少：{artifact}")
+    for job_name in ("macos-release-amd64:", "linux-release-arm64:"):
+        job_index = workflow.find(f"  {job_name}")
+        if job_index < 0:
+            problems.append(f"缺少发行包架构补充 job：{job_name}")
+        elif job_index < workflow.find("  experimental-web:"):
+            problems.append(f"{job_name} 必须追加在 experimental-web 之后，避免污染门禁的 job 切片")
+    # 新增 job 不得使用被计数的两个契约字符串（否则上面 6/6 断言会失真）。
+    tail = workflow[workflow.find("  macos-release-amd64:") :]
+    if "tool/test/ci_phase_summary.py" in tail:
+        problems.append("发行包架构补充 job 不得使用 required phase 汇总器")
+    if "steps.required_outcomes.outcome != 'success'" in tail:
+        problems.append("发行包架构补充 job 不得使用 required_outcomes 诊断条件")
     protocol_pubspec = (
         ROOT / "packages/lddc_desktop_protocol/pubspec.yaml"
     ).read_text(encoding="utf-8")
