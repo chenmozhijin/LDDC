@@ -51,7 +51,6 @@ jobs:
       - name: Package Windows release artifacts
         id: release_package
         if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
         shell: pwsh
         run: |
           $out = 'build/release-artifacts/windows'
@@ -78,7 +77,6 @@ jobs:
       - name: Verify Windows release artifacts
         id: release_verify
         if: always() && steps.release_package.outcome == 'success'
-        continue-on-error: true
         shell: pwsh
         run: |
           $zip = Get-ChildItem build/release-artifacts/windows/LDDC-*-windows-amd64.zip |
@@ -238,7 +236,6 @@ jobs:
       - name: Package macOS release artifacts
         id: release_package
         if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
         run: |
           out='build/release-artifacts/macos'
           python lddc/tool/package_release_artifacts.py macos-dmg \
@@ -250,7 +247,6 @@ jobs:
       - name: Verify macOS release artifacts
         id: release_verify
         if: always() && steps.release_package.outcome == 'success'
-        continue-on-error: true
         run: |
           dmg="$(ls build/release-artifacts/macos/LDDC-*-arm64.dmg | head -n 1)"
           test -n "$dmg"
@@ -519,7 +515,6 @@ jobs:
       - name: Package Linux release artifacts
         id: release_package
         if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
         run: |
           out='build/release-artifacts/linux'
           python lddc/tool/package_release_artifacts.py linux-deb \
@@ -531,7 +526,6 @@ jobs:
       - name: Verify Linux release artifacts
         id: release_verify
         if: always() && steps.release_package.outcome == 'success'
-        continue-on-error: true
         run: |
           deb="$(ls build/release-artifacts/linux/LDDC_*_amd64.deb | head -n 1)"
           test -n "$deb"
@@ -689,7 +683,6 @@ jobs:
       - name: Package Android release artifacts
         id: release_package
         if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
         run: |
           out='build/release-artifacts/android'
           python lddc/tool/package_release_artifacts.py android \
@@ -862,11 +855,15 @@ jobs:
       - name: Package iOS release artifacts
         id: release_package
         if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
         run: |
           out='build/release-artifacts/ios'
-          python lddc/tool/package_release_artifacts.py ios \
-            --app lddc/build/ios/iphoneos/Runner.app --out $out
+          # 产物目录名由工程 PRODUCT_NAME 决定（实际是 LDDC.app，不是模板默认的
+          # Runner.app）：这里按实际产物发现，避免硬编码名字导致静默失败
+          # （run 35123524876 的 release-ios 就是因为写了 Runner.app 而 skipped）。
+          app="$(ls -d lddc/build/ios/iphoneos/*.app | head -n 1)"
+          test -n "$app"
+          echo "iOS 产物目录：$app"
+          python lddc/tool/package_release_artifacts.py ios --app "$app" --out $out
           python lddc/tool/package_release_artifacts.py build-info \
             --platform ios-arm64 --out $out
       # 无证书时只能给未签名产物：这里如实记录"架构正确但不可安装"，
@@ -874,9 +871,8 @@ jobs:
       - name: Verify iOS release artifacts
         id: release_verify
         if: always() && steps.release_package.outcome == 'success'
-        continue-on-error: true
         run: |
-          app='lddc/build/ios/iphoneos/Runner.app'
+          app="$(ls -d lddc/build/ios/iphoneos/*.app | head -n 1)"
           test -d "$app"
           executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Info.plist")"
           test -n "$executable"
@@ -889,6 +885,11 @@ jobs:
             echo "iOS 产物意外带正式签名，请检查构建参数" >&2
             exit 1
           fi
+          # 确认归档里真的有这个 app（而不是只生成了一个空 zip）。
+          unzip -l build/release-artifacts/ios/LDDC-*-ios-arm64-unsigned.zip | grep -q 'Info.plist' || {
+            echo "iOS 归档缺少 Info.plist" >&2
+            exit 1
+          }
           echo "iOS 产物为未签名 arm64 设备构建（不可安装，仅归档）"
       - name: Upload iOS release artifacts
         if: always() && steps.release_package.outcome == 'success'
@@ -1041,7 +1042,6 @@ jobs:
         run: flutter build web --release
       - name: Package Web release artifacts
         id: release_package
-        continue-on-error: true
         run: |
           out='build/release-artifacts/web'
           python lddc/tool/package_release_artifacts.py web \
@@ -1052,7 +1052,6 @@ jobs:
       - name: Verify Web release artifacts
         id: release_verify
         if: always() && steps.release_package.outcome == 'success'
-        continue-on-error: true
         run: |
           web='lddc/build/web'
           test -f "$web/index.html"
@@ -1123,7 +1122,6 @@ jobs:
         run: flutter build macos --release
       - name: Package macOS x64 release artifacts
         if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
         run: |
           out='build/release-artifacts/macos-amd64'
           python lddc/tool/package_release_artifacts.py macos-dmg \
@@ -1132,7 +1130,6 @@ jobs:
             --platform macos-amd64 --out $out
       - name: Verify macOS x64 release artifacts
         if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
         run: |
           dmg="$(ls build/release-artifacts/macos-amd64/LDDC-*-amd64.dmg | head -n 1)"
           test -n "$dmg"

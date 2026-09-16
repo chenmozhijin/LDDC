@@ -86,15 +86,31 @@ def _verify_non_empty(path: Path) -> None:
 def _verify_zip_members(archive: Path, members: tuple[str, ...]) -> None:
     """校验 zip 内必需条目，避免产出"看似成功但其实缺文件"的包。
 
-    条目按"以给定相对路径结尾"匹配：Windows 自带 bsdtar 生成的条目带 `./` 前缀，
-    macOS/Linux 的 zip 不带，用后缀匹配可以同时覆盖，不必为平台写两套。
+    条目按"以给定相对路径结尾"匹配：bsdtar 生成的条目带 `./` 前缀，Python zipfile
+    不带，用后缀匹配可以同时覆盖，不必为平台写两套。
     """
     _verify_non_empty(archive)
+    if not zipfile.is_zipfile(archive):
+        raise SystemExit(f"{archive.name} 不是有效的 zip 容器")
     with zipfile.ZipFile(archive) as handle:
         names = [name.replace("\\", "/").lstrip("./") for name in handle.namelist()]
     missing = [member for member in members if not any(n.endswith(member) for n in names)]
     if missing:
         raise SystemExit(f"{archive.name} 缺少必需条目：{', '.join(missing)}")
+
+
+def _write_zip(source_dir: Path, archive: Path) -> None:
+    """用标准库写 zip。
+
+    不要改用 `tar -a`：GNU tar（Linux）的 `-a` 不支持 zip，会产出非 zip 文件——
+    run 35123524876 的 Web 打包就是这样失败的（bsdtar 支持，所以 Windows/macOS 正常，
+    只有 Linux 挂）。标准库在所有平台行为一致。
+    """
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as handle:
+        for path in sorted(source_dir.rglob("*")):
+            if path.is_dir():
+                continue
+            handle.write(path, path.relative_to(source_dir).as_posix())
 
 
 def write_build_info(out_dir: Path, platform: str) -> Path:
@@ -191,9 +207,7 @@ def package_windows_portable(release_dir: Path, out_dir: Path) -> Path:
     with tempfile.TemporaryDirectory() as staging_raw:
         staging = Path(staging_raw)
         shutil.copytree(release, staging / "LDDC", symlinks=True)
-        # 用 Windows 自带 bsdtar（tar.exe）按扩展名生成 zip：比 Compress-Archive 快得多，
-        # 且不会像它那样在大目录上产生额外内存峰值。
-        _run(["tar.exe", "-a", "-c", "-f", str(archive), "-C", str(staging), "LDDC"])
+        _write_zip(staging, archive)
     _verify_zip_members(
         archive,
         (
@@ -247,7 +261,7 @@ def package_windows_onefile(release_dir: Path, sfx_module: Path, out_dir: Path) 
         archive_dir = staging / "zip"
         archive_dir.mkdir()
         shutil.copy2(packed, archive_dir / "lddc.exe")
-        _run(["tar.exe", "-a", "-c", "-f", str(archive), "-C", str(archive_dir), "lddc.exe"])
+        _write_zip(archive_dir, archive)
 
     _verify_zip_members(archive, ("lddc.exe",))
     return archive
@@ -371,11 +385,14 @@ def package_android(apk: Path, aab: Path, out_dir: Path) -> list[Path]:
 def package_ios(app_path: Path, out_dir: Path) -> Path:
     """归档 iOS 产物。
 
-    无证书时只能提供未签名 app：它不能装到真机，因此这里只归档并在安装说明里明确
-    标注，不把它伪装成可安装产物。`ditto` 用于保留 bundle 的符号链接与权限。
+    无证书时只能提供未签名 app：它不能装到真机，因此这里只归档并在文档中明确标注，
+    不把它伪装成可安装产物。
 
-    可执行文件名不硬编码：工程的 PRODUCT_NAME 是 LDDC，而产物目录是 Runner.app，
-    两者不一致，因此以构建后 Info.plist 的 CFBundleExecutable 为准。
+    两个名字都不硬编码（run 35118876178 之后修正）：
+    - 产物目录名由工程 PRODUCT_NAME 决定，实际是 `LDDC.app` 而不是模板默认的
+      `Runner.app`；因此调用方传入的路径必须存在，且这里再校验一次。
+    - 可执行文件名以构建后 Info.plist 的 CFBundleExecutable 为准。
+    `ditto` 用于保留 bundle 的符号链接与权限（zip 会破坏 bundle 语义，不能替代）。
     """
     app = _require_dir(app_path, "iOS 应用")
     plist_path = _require_file(app / "Info.plist", "iOS Info.plist")
@@ -393,13 +410,13 @@ def package_ios(app_path: Path, out_dir: Path) -> Path:
 
 
 def package_web(web_dir: Path, out_dir: Path) -> Path:
-    """打包 Web 静态产物。"""
+    """打包 Web 静态产物（标准库写 zip，跨平台一致）。"""
     web = _require_dir(web_dir, "Web 构建目录")
     for required in ("index.html", "main.dart.js", "flutter_service_worker.js"):
         _require_file(web / required, f"Web 入口 {required}")
 
     archive = out_dir / f"LDDC-{app_version()}-web.zip"
-    _run(["tar", "-a", "-c", "-f", str(archive), "-C", str(web), "."])
+    _write_zip(web, archive)
     _verify_zip_members(archive, ("index.html", "main.dart.js", "flutter_service_worker.js"))
     return archive
 
