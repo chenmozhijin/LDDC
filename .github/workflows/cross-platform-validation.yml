@@ -110,7 +110,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-windows-amd64
-          path: lddc/build/release-artifacts/windows/**
+          path: build/release-artifacts/windows/**
           if-no-files-found: error
           retention-days: 7
       - name: Upload Windows release build tree
@@ -276,7 +276,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-macos-arm64
-          path: lddc/build/release-artifacts/macos/**
+          path: build/release-artifacts/macos/**
           if-no-files-found: error
           retention-days: 7
       - name: Upload macOS release build tree
@@ -561,7 +561,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-linux-amd64
-          path: lddc/build/release-artifacts/linux/**
+          path: build/release-artifacts/linux/**
           if-no-files-found: error
           retention-days: 7
       - name: Upload Linux release build tree
@@ -718,7 +718,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-android
-          path: lddc/build/release-artifacts/android/**
+          path: build/release-artifacts/android/**
           if-no-files-found: error
           retention-days: 7
       - name: Upload Android release build tree
@@ -895,7 +895,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-ios
-          path: lddc/build/release-artifacts/ios/**
+          path: build/release-artifacts/ios/**
           if-no-files-found: error
           retention-days: 7
       - name: Upload iOS release build tree
@@ -1073,7 +1073,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-web
-          path: lddc/build/release-artifacts/web/**
+          path: build/release-artifacts/web/**
           if-no-files-found: error
           retention-days: 7
       - name: Upload Web release build tree
@@ -1147,7 +1147,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-macos-amd64
-          path: lddc/build/release-artifacts/macos-amd64/**
+          path: build/release-artifacts/macos-amd64/**
           if-no-files-found: error
           retention-days: 7
       - name: Upload macOS x64 release build tree
@@ -1202,7 +1202,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-linux-arm64
-          path: lddc/build/release-artifacts/linux-arm64/**
+          path: build/release-artifacts/linux-arm64/**
           if-no-files-found: error
           retention-days: 7
       - name: Upload Linux arm64 release build tree
