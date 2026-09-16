@@ -1147,14 +1147,21 @@ def failures() -> list[str]:
         "release-macos-arm64",
         "release-macos-amd64",
         "release-linux-amd64",
-        "release-linux-arm64",
         "release-android",
         "release-ios",
         "release-web",
     ):
         if artifact not in workflow:
             problems.append(f"发行包 artifact 缺少：{artifact}")
-    for job_name in ("macos-release-amd64:", "linux-release-arm64:"):
+    # Linux arm64 发行包目前**不可能**产出：Flutter 官方发布清单里 linux 只有 x64
+    # （releases_linux.json 在所有 channel 都没有 arm64 条目），subosito/flutter-action
+    # 无法解析该组合。因此这里断言"不得存在一个必然失败的 arm64 job"，避免有人重新加回；
+    # 覆盖缺口记录在 docs/core/33 与进度文档中。
+    if "linux-release-arm64" in workflow or "release-linux-arm64" in workflow:
+        problems.append(
+            "Linux arm64 发行包不可产出（Flutter 无 linux arm64 发布产物），不得声明该 job 或 artifact"
+        )
+    for job_name in ("macos-release-amd64:",):
         job_index = workflow.find(f"  {job_name}")
         if job_index < 0:
             problems.append(f"缺少发行包架构补充 job：{job_name}")

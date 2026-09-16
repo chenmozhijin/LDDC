@@ -1102,9 +1102,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # 下面两个 job 只补齐发行包的架构覆盖（Python 版同时发布 mac x64/arm64 与
-  # linux amd64/arm64），不重复上面的平台验证：它们不参与 required 门禁汇总，
-  # 也不使用 ci_phase_summary.py 与 required_outcomes 条件。
+  # 下面的 job 只补齐发行包的架构覆盖（Python 版同时发布 mac x64/arm64），不重复上面的
+  # 平台验证：它不参与 required 门禁汇总，也不使用 ci_phase_summary.py 与
+  # required_outcomes 条件。Linux arm64 见本文件末尾的缺口说明。
   macos-release-amd64:
     runs-on: macos-15-intel
     timeout-minutes: 60
@@ -1159,57 +1159,10 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  linux-release-arm64:
-    runs-on: ubuntu-24.04-arm
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v7
-      - name: Install Linux build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev \
-            liblzma-dev libayatana-appindicator3-dev dbus-x11 xvfb xauth
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - run: flutter pub get
-      - name: Build Linux arm64 release
-        id: release_build
-        continue-on-error: true
-        working-directory: lddc
-        run: flutter build linux --release
-      - name: Package Linux arm64 release artifacts
-        if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
-        run: |
-          out='build/release-artifacts/linux-arm64'
-          python lddc/tool/package_release_artifacts.py linux-deb \
-            --bundle-dir lddc/build/linux/arm64/release/bundle --arch arm64 --out $out
-          python lddc/tool/package_release_artifacts.py build-info \
-            --platform linux-arm64 --out $out
-      - name: Verify Linux arm64 release artifacts
-        if: always() && steps.release_build.outcome == 'success'
-        continue-on-error: true
-        run: |
-          deb="$(ls build/release-artifacts/linux-arm64/LDDC_*_arm64.deb | head -n 1)"
-          test -n "$deb"
-          dpkg-deb --info "$deb"
-          dpkg-deb --contents "$deb" | grep -q 'usr/lib/LDDC/lddc'
-      - name: Upload Linux arm64 release artifacts
-        if: always() && steps.release_build.outcome == 'success'
-        uses: actions/upload-artifact@v7
-        with:
-          name: release-linux-arm64
-          path: build/release-artifacts/linux-arm64/**
-          if-no-files-found: error
-          retention-days: 7
-      - name: Upload Linux arm64 release build tree
-        if: always() && steps.release_build.outcome == 'success'
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-tree-linux-arm64
-          path: lddc/build/linux/arm64/release/bundle/**
-          if-no-files-found: error
-          retention-days: 7
+  # 说明：这里**没有** Linux arm64 发行包 job。Flutter 官方发布清单
+  # （storage.googleapis.com/flutter_infra_release/releases/releases_linux.json）
+  # 在所有 channel 都只提供 linux x64，没有 arm64 产物，subosito/flutter-action
+  # 因此无法解析 "3.47.3 + arm64"（run 35118876178 实测 exit 1：
+  # "Unable to determine Flutter version for channel: stable version: 3.47.3
+  #  architecture: arm64"）。本轮先记录该覆盖缺口（Python 版有 arm64 deb，
+  # Flutter 侧暂时做不到），等待上游提供 linux arm64 产物或改用自建 SDK 后再补。
