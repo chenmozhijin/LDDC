@@ -49,10 +49,10 @@ class _LocalMatchPageState extends ConsumerState<LocalMatchPage> {
       });
     });
 
-    final bool isDesktopPlatform = ref.watch(
-      localMatchPageControllerProvider.select(
-        (LocalMatchPageState state) => state.isDesktopMode,
-      ),
+    final (bool isDesktopPlatform, bool isAndroidMode) = ref.watch(
+      localMatchPageControllerProvider.select((LocalMatchPageState state) {
+        return (state.isDesktopMode, state.isAndroidMode);
+      }),
     );
     final LocalMatchPageController controller = ref.read(
       localMatchPageControllerProvider.notifier,
@@ -74,13 +74,14 @@ class _LocalMatchPageState extends ConsumerState<LocalMatchPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               if (showIntro) ...<Widget>[
+                // 壳层 AppBar 已经渲染路由标题，这里不再重复渲染同名标题，
+                // 否则移动端会同时出现两个「本地匹配」。只保留一行流程说明，
+                // 安卓端用平台专属文案说明"选择目录树即自动扫描"，消除
+                // "看不到导入按钮"的误解。
                 Text(
-                  context.l10n.navLocalMatch,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  context.l10n.localMatchIntro,
+                  isAndroidMode
+                      ? context.l10n.localMatchAndroidIntro
+                      : context.l10n.localMatchIntro,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),

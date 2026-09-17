@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
 const List<String> kLocalMatchSongFileExtensions = <String>[
@@ -60,7 +61,12 @@ class LocalMatchInputPickerImpl implements LocalMatchInputPicker {
       // 否则应用重启或系统回收后可能拿着已失效 URI 继续批量写入。
       await _treePort.persistTreePermission(tree.uri);
       return tree;
-    } on Exception {
+    } on PlatformException catch (error) {
+      // 用户在系统目录选择器里取消是正常操作，不是失败：本接口用 null 表示
+      // "没有选到目录"，否则控制器会把取消当成错误弹提示。
+      if (error.code == 'cancelled') {
+        return null;
+      }
       rethrow;
     }
   }

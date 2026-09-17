@@ -787,6 +787,64 @@ void main() {
       expect(state.queueItems[0].lastStatus?.index, 0);
       expect(state.queueItems[1].lastStatus?.index, 1);
     });
+
+    test('安卓目录树扫描零命中时给出明确提示且不留在忙碌态', () async {
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        picker: _FakeLocalMatchInputPicker(androidTreeToken: _androidTree),
+      );
+      addTearDown(container.dispose);
+      final LocalMatchPageController controller = container.read(
+        localMatchPageControllerProvider.notifier,
+      );
+
+      await controller.selectAndroidTree();
+
+      final LocalMatchPageState state = controller.currentState;
+      // 这条路径过去完全静默：既没有提示也没有进度，用户只看到空队列。
+      expect(state.isBusy, isFalse);
+      expect(state.scanCompletedWithoutMatch, isTrue);
+      expect(state.notice?.code, LocalMatchNoticeCode.scanCompletedNoMatch);
+    });
+
+    test('扫描抛出 Error 时不会卡在忙碌态并记录失败明细', () async {
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        picker: _FakeLocalMatchInputPicker(androidTreeToken: _androidTree),
+        androidGetInfosUseCase: _ThrowingAndroidSafLocalMatchGetInfosUseCase(),
+      );
+      addTearDown(container.dispose);
+      final LocalMatchPageController controller = container.read(
+        localMatchPageControllerProvider.notifier,
+      );
+
+      await controller.selectAndroidTree();
+
+      final LocalMatchPageState state = controller.currentState;
+      // StateError 属于 Error：只写 on Exception 时它会逃到按钮回调被丢弃的 Future 上，
+      // 界面永久停在 scanning，既没有提示也没有失败明细。
+      expect(state.isBusy, isFalse);
+      expect(state.taskPhase, LocalMatchTaskPhase.completed);
+      expect(state.recentErrors, isNotEmpty);
+      expect(state.notice?.code, LocalMatchNoticeCode.treeScanFailed);
+    });
+
+    test('用户取消目录选择不产生错误提示', () async {
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        // pickAndroidTree 返回 null 表示用户取消，不是失败。
+        picker: _FakeLocalMatchInputPicker(),
+      );
+      addTearDown(container.dispose);
+      final LocalMatchPageController controller = container.read(
+        localMatchPageControllerProvider.notifier,
+      );
+
+      await controller.selectAndroidTree();
+
+      expect(controller.currentState.notice, isNull);
+      expect(controller.currentState.isBusy, isFalse);
+    });
   });
 
   group('LocalMatchPage', () {
@@ -1616,6 +1674,98 @@ void main() {
         isEmpty,
       );
     });
+
+    testWidgets('安卓零命中时空态与文案按平台区分且不再重复页面标题', (
+      WidgetTester tester,
+    ) async {
+      _setTestViewport(tester, const Size(390, 844));
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        picker: _FakeLocalMatchInputPicker(androidTreeToken: _androidTree),
+      );
+      addTearDown(container.dispose);
+      await container
+          .read(localMatchPageControllerProvider.notifier)
+          .selectAndroidTree();
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await tester.pumpAndSettle();
+
+      // 壳层 AppBar 是唯一标题来源，页面体内不再重复渲染同名标题。
+      expect(find.text('本地匹配'), findsNothing);
+      // 零命中必须与"尚未选择目录树"区分开（可能同时有 SnackBar，故用 findsWidgets）。
+      expect(
+        find.text('扫描完成，但没有找到可识别的音频或 CUE 文件'),
+        findsWidgets,
+      );
+      // 安卓端不再套用桌面端"先导入文件或文件夹"文案。
+      expect(find.text('先导入文件或文件夹以建立任务队列'), findsNothing);
+      expect(
+        find.text('选择目录树后会自动扫描并建立任务队列，无需另外导入。'),
+        findsOneWidget,
+      );
+      expect(find.text('选择目录树并执行'), findsOneWidget);
+    });
+
+    testWidgets('扫描失败明细在页面上可展开查看', (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 844));
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        picker: _FakeLocalMatchInputPicker(androidTreeToken: _androidTree),
+        androidGetInfosUseCase: _ThrowingAndroidSafLocalMatchGetInfosUseCase(),
+      );
+      addTearDown(container.dispose);
+      await container
+          .read(localMatchPageControllerProvider.notifier)
+          .selectAndroidTree();
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await tester.pumpAndSettle();
+
+      final Finder panel = find.byKey(
+        const ValueKey<String>('local_match_error_details'),
+      );
+      expect(panel, findsOneWidget);
+      // 折叠时明细文本尚未构建，展开后才应出现具体错误。
+      expect(find.textContaining('Bad state'), findsNothing);
+      // 队列卡副标题与空态提示共用同一文案（与桌面端一致），因此是多个候选。
+      expect(find.text('选择目录树后会自动建立任务队列'), findsWidgets);
+
+      await tester.tap(panel);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Bad state'), findsOneWidget);
+    });
+  });
+
+  group('LocalMatchInputPickerImpl', () {
+    test('安卓目录选择被用户取消时返回 null 而不是抛出异常', () async {
+      final LocalMatchInputPickerImpl picker = LocalMatchInputPickerImpl(
+        filePicker: _FakeAppFilePicker(),
+        treePort: _CancellingAndroidSafTreePort(),
+      );
+
+      // 取消是正常操作：接口用 null 表达"未选到目录"，控制器据此静默返回，
+      // 不会弹出「选择目录树失败：用户取消目录选择」。
+      expect(await picker.pickAndroidTree(), isNull);
+    });
+
+    test('非取消类错误继续向上抛出交给控制器提示', () async {
+      final LocalMatchInputPickerImpl picker = LocalMatchInputPickerImpl(
+        filePicker: _FakeAppFilePicker(),
+        treePort: _FailingAndroidSafTreePort(),
+      );
+
+      expect(
+        picker.pickAndroidTree(),
+        throwsA(
+          isA<PlatformException>().having(
+            (PlatformException error) => error.code,
+            'code',
+            'permission_denied',
+          ),
+        ),
+      );
+    });
   });
 }
 
@@ -2330,4 +2480,44 @@ void _setTestViewport(WidgetTester tester, Size size) {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
   });
+}
+
+const AndroidSafTreeToken _androidTree = AndroidSafTreeToken(
+  uri: 'content://tree/root',
+  displayName: '根目录',
+);
+
+/// 用 `Error`（而不是 `Exception`）模拟 SAF 端口契约违规。
+///
+/// 这是修复前会让界面永久停在 scanning 的真实故障形态：扫描链路的异常边界如果只写
+/// `on Exception`，`StateError` 会一路逃到按钮回调被丢弃的 Future 上。
+class _ThrowingAndroidSafLocalMatchGetInfosUseCase
+    extends _StubAndroidSafLocalMatchGetInfosUseCase {
+  @override
+  Future<AndroidSafLocalMatchGetInfosResult> run({
+    required AndroidSafTreeToken rootTree,
+    AndroidSafScanCheckpoint? checkpoint,
+    LocalMatchCancellationToken? cancellationToken,
+    LocalMatchGetInfosProgressCallback? onProgress,
+    LocalMatchSongEntryBatchCallback? onEntries,
+    bool collectEntries = true,
+  }) async {
+    throw StateError('Android SAF 目录子项缺少 displayName');
+  }
+}
+
+/// 模拟用户在系统目录选择器里取消（原生返回 error code = cancelled）。
+class _CancellingAndroidSafTreePort extends _FakeAndroidSafTreePort {
+  @override
+  Future<AndroidSafTreeToken> pickTree({String? initialUri}) async {
+    throw PlatformException(code: 'cancelled', message: '用户取消目录选择');
+  }
+}
+
+/// 模拟权限/授权失败等真实错误：不能被当成"用户取消"吞掉。
+class _FailingAndroidSafTreePort extends _FakeAndroidSafTreePort {
+  @override
+  Future<AndroidSafTreeToken> pickTree({String? initialUri}) async {
+    throw PlatformException(code: 'permission_denied', message: '持久化目录授权失败');
+  }
 }

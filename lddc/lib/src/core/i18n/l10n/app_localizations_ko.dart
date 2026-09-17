@@ -717,6 +717,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get localMatchTreeNotSelected => '선택한 디렉터리 트리가 없습니다.';
 
   @override
+  String get localMatchAndroidIntro =>
+      '디렉터리 트리를 선택하면 자동으로 검색하여 작업 대기열을 만듭니다. 별도로 가져올 필요가 없습니다.';
+
+  @override
+  String get localMatchAndroidImportAndRunTitle => '트리 선택 및 실행';
+
+  @override
+  String get localMatchAndroidQueueEmptyHint =>
+      '디렉터리 트리를 선택하면 작업 대기열이 자동으로 생성됩니다';
+
+  @override
+  String get localMatchAndroidValidationEmptyQueue => '먼저 디렉터리 트리를 선택하세요';
+
+  @override
+  String get localMatchScanNoMatch => '검색은 완료되었지만 지원되는 오디오 또는 CUE 파일을 찾지 못했습니다';
+
+  @override
+  String localMatchErrorDetailsTitle(int count) {
+    return '실패 상세($count건)';
+  }
+
+  @override
   String get localMatchSaveModeSong => '노래 폴더에 저장';
 
   @override

@@ -30,6 +30,7 @@ class LocalMatchDesktopLayout extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 8),
+              const LocalMatchErrorDetailsPanel(),
               Expanded(
                 child: LocalMatchQueueCard(
                   controller: controller,

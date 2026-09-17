@@ -68,6 +68,7 @@ String localMatchNoticeText(BuildContext context, LocalMatchNotice notice) {
     LocalMatchNoticeCode.scanCancelled => l10n.localMatchNoticeScanCancelled,
     LocalMatchNoticeCode.scanCompletedWithErrors =>
       l10n.localMatchNoticeScanCompletedWithErrors,
+    LocalMatchNoticeCode.scanCompletedNoMatch => l10n.localMatchScanNoMatch,
     LocalMatchNoticeCode.scanFailed => l10n.localMatchNoticeScanFailed(detail),
     LocalMatchNoticeCode.treeScanFailed => l10n.localMatchNoticeTreeScanFailed(
       detail,
@@ -93,16 +94,20 @@ String localMatchNoticeText(BuildContext context, LocalMatchNotice notice) {
 
 String localMatchValidationIssueText(
   BuildContext context,
-  LocalMatchRunValidationIssue issue,
-) {
+  LocalMatchRunValidationIssue issue, {
+  // 安卓目录树模式没有"导入"这个动作，空队列提示必须换成平台专属文案；
+  // 默认 false 让桌面端与既有断言保持原样。
+  bool androidTreeMode = false,
+}) {
   final l10n = context.l10n;
   return switch (issue.code) {
     LocalMatchRunValidationCode.emptyLangs =>
       l10n.localMatchValidationEmptyLangs,
     LocalMatchRunValidationCode.emptySources =>
       l10n.localMatchValidationEmptySources,
-    LocalMatchRunValidationCode.emptyQueue =>
-      l10n.localMatchValidationEmptyQueue,
+    LocalMatchRunValidationCode.emptyQueue => androidTreeMode
+        ? l10n.localMatchAndroidValidationEmptyQueue
+        : l10n.localMatchValidationEmptyQueue,
     LocalMatchRunValidationCode.tagRequiresLrc =>
       l10n.commonAudioTagRequiresLrc,
     LocalMatchRunValidationCode.skipExistingFileNameConflict =>

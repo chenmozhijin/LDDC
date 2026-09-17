@@ -35,6 +35,7 @@ class LocalMatchCompactLayout extends StatelessWidget {
           },
         ),
         const SizedBox(height: 12),
+        const LocalMatchErrorDetailsPanel(),
         Consumer(
           builder: (BuildContext context, WidgetRef ref, Widget? child) {
             final LocalMatchPageState state = ref.watch(
@@ -83,7 +84,11 @@ class LocalMatchHeaderCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
-              context.l10n.localMatchImportAndRunTitle,
+              // 安卓端没有"添加文件/文件夹"入口，标题不能沿用桌面端的「导入与执行」，
+              // 否则用户会去找一个并不存在的导入按钮。
+              state.isAndroidMode
+                  ? context.l10n.localMatchAndroidImportAndRunTitle
+                  : context.l10n.localMatchImportAndRunTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
