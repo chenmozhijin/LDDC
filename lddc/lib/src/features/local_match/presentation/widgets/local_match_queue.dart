@@ -32,6 +32,8 @@ class LocalMatchQueueCard extends ConsumerWidget {
       bool isSelectionMode,
       Set<String> selectedItemIds,
       bool isDesktopMode,
+      bool isAndroidMode,
+      bool scanCompletedWithoutMatch,
     ) = ref.watch(
       localMatchPageControllerProvider.select((LocalMatchPageState state) {
         return (
@@ -39,6 +41,8 @@ class LocalMatchQueueCard extends ConsumerWidget {
           state.isSelectionMode,
           state.selectedItemIds,
           state.isDesktopMode,
+          state.isAndroidMode,
+          state.scanCompletedWithoutMatch,
         );
       }),
     );
@@ -70,6 +74,8 @@ class LocalMatchQueueCard extends ConsumerWidget {
                   LocalMatchQueueHeader(
                     queueLength: queueLength,
                     desktopMode: desktopMode,
+                    isAndroidMode: isAndroidMode,
+                    scanCompletedWithoutMatch: scanCompletedWithoutMatch,
                     controller: controller,
                   ),
                 if (showStatusSummary) ...<Widget>[
@@ -91,7 +97,11 @@ class LocalMatchQueueCard extends ConsumerWidget {
                   Expanded(
                     child: Center(
                       child: EmptyState(
-                        message: context.l10n.localMatchQueueEmptyHint,
+                        message: localMatchEmptyQueueHint(
+                          context,
+                          scanCompletedWithoutMatch: scanCompletedWithoutMatch,
+                          isAndroidMode: isAndroidMode,
+                        ),
                       ),
                     ),
                   )
@@ -603,6 +613,76 @@ class LocalMatchStatusChip extends StatelessWidget {
       label: Text(value.$1, style: TextStyle(color: value.$3)),
       backgroundColor: value.$2,
       side: BorderSide.none,
+    );
+  }
+}
+
+/// 扫描/匹配失败明细面板。
+///
+/// 这些错误过去只存在于 controller state 里，没有任何渲染出口：用户可以"扫描完成
+/// 但队列是空的"，却看不到任何原因（设计文档《Android 本地匹配专项设计》§9 要求
+/// 显示失败明细，§10 要求失败不静默）。面板自身订阅 provider，无错误时渲染为空，
+/// 因此各布局只需放一个 const 调用。
+///
+/// 条数上限由 controller 强制为最近 20 条，明细列表不随目录规模增长，不存在无界内存。
+class LocalMatchErrorDetailsPanel extends ConsumerWidget {
+  const LocalMatchErrorDetailsPanel({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final List<String> errors = ref.watch(
+      localMatchPageControllerProvider.select(
+        (LocalMatchPageState state) => state.recentErrors,
+      ),
+    );
+    if (errors.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    // 面板自带下间距：无错误时整块消失（含间距），布局方只需放一个 const 调用，
+    // 不需要额外判断是否存在明细。
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        key: const ValueKey<String>('local_match_error_details'),
+        decoration: BoxDecoration(
+          color: colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: ExpansionTile(
+          dense: true,
+          shape: const Border(),
+          collapsedShape: const Border(),
+          iconColor: colorScheme.onErrorContainer,
+          collapsedIconColor: colorScheme.onErrorContainer,
+          leading: Icon(
+            Icons.error_outline,
+            color: colorScheme.onErrorContainer,
+          ),
+          title: Text(
+            context.l10n.localMatchErrorDetailsTitle(errors.length),
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: colorScheme.onErrorContainer,
+            ),
+          ),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          children: <Widget>[
+            for (final String error in errors)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    error,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

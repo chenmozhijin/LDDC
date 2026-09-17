@@ -406,6 +406,19 @@
   },
   "localMatchSaveRootRequired": "This save mode needs a save root. Select one first.",
   "localMatchTreeNotSelected": "No directory tree selected",
+  "localMatchAndroidIntro": "Picking a directory tree scans it automatically and builds the task queue, so no separate import step is needed.",
+  "localMatchAndroidImportAndRunTitle": "Pick Tree And Run",
+  "localMatchAndroidQueueEmptyHint": "Picking a directory tree builds the task queue automatically",
+  "localMatchAndroidValidationEmptyQueue": "Pick a directory tree first",
+  "localMatchScanNoMatch": "Scan finished, but no supported audio or CUE file was found",
+  "localMatchErrorDetailsTitle": "Failure details ({count})",
+  "@localMatchErrorDetailsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "localMatchSaveModeSong": "Save To Song Folder",
   "localMatchSaveModeMirror": "Mirror Folders",
   "localMatchSaveModeSpecify": "Specific Folder",

@@ -308,10 +308,15 @@ class MainActivity : FlutterActivity() {
         }
         val treeUri = Uri.parse(uriText)
         try {
-            val treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
-            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocumentId)
+            // 传入 uri 可能是树根，也可能是子目录文档。枚举子目录必须用"当前目录"的文档 id：
+            // getTreeDocumentId() 对子目录文档 URI 也只会返回树根 id，会让枚举子目录退化成
+            // 再枚举一次树根，子目录永远进不去（递归扫描失效，且不产生任何错误）。
+            val currentDocumentId =
+                SafTreeEntries.currentDocumentId(treeUri.pathSegments)
+                    ?: DocumentsContract.getTreeDocumentId(treeUri)
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, currentDocumentId)
             val children = mutableListOf<Map<String, Any?>>()
-            contentResolver.query(
+            val queryResult = contentResolver.query(
                 childrenUri,
                 arrayOf(
                     Document.COLUMN_DOCUMENT_ID,
@@ -323,7 +328,14 @@ class MainActivity : FlutterActivity() {
                 null,
                 null,
                 "${Document.COLUMN_DISPLAY_NAME} ASC",
-            )?.use { cursor ->
+            )
+            if (queryResult == null) {
+                // provider 没有返回游标既不是"空目录"也不是异常。当成空目录会让整棵子树
+                // 静默消失，因此这里必须显式失败。
+                result.error("list_children_failed", "列举目录失败，provider 未返回游标", null)
+                return
+            }
+            queryResult.use { cursor ->
                 val documentIdIndex = cursor.getColumnIndex(Document.COLUMN_DOCUMENT_ID)
                 val displayNameIndex = cursor.getColumnIndex(Document.COLUMN_DISPLAY_NAME)
                 val mimeTypeIndex = cursor.getColumnIndex(Document.COLUMN_MIME_TYPE)
@@ -340,12 +352,18 @@ class MainActivity : FlutterActivity() {
                         continue
                     }
                     val documentId = cursor.getString(documentIdIndex)
-                    val displayName =
+                    val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)
+                    val rawDisplayName =
                         if (displayNameIndex >= 0 && !cursor.isNull(displayNameIndex)) {
                             cursor.getString(displayNameIndex)
                         } else {
                             null
                         }
+                    // displayName 缺失时回退路径末段：Dart 侧把它当必填字段，传 null/空串会让
+                    // 整个目录页（最多 128 项）作废并被记成一次错误。
+                    val displayName = SafChannelArguments.nonBlank(rawDisplayName)
+                        ?: childUri.lastPathSegment
+                        ?: documentId
                     val mimeType =
                         if (mimeTypeIndex >= 0 && !cursor.isNull(mimeTypeIndex)) {
                             cursor.getString(mimeTypeIndex)
@@ -364,16 +382,20 @@ class MainActivity : FlutterActivity() {
                         } else {
                             null
                         }
-                    val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, documentId)
+                    // 目录/文件必须是"二选一必真"：两者都为 false 时 Dart 侧会静默跳过整行
+                    // （目录还会丢掉整棵子树），而且不产生任何错误。
+                    val isDirectory = SafTreeEntries.isDirectoryMime(mimeType)
                     children.add(
                         mapOf(
                             "uri" to childUri.toString(),
                             "displayName" to displayName,
                             "mimeType" to mimeType,
-                            "isDirectory" to (mimeType == Document.MIME_TYPE_DIR),
-                            "isFile" to (mimeType != null && mimeType != Document.MIME_TYPE_DIR),
-                            "sizeBytes" to size,
-                            "lastModifiedMs" to lastModified,
+                            "isDirectory" to isDirectory,
+                            "isFile" to !isDirectory,
+                            // 负数是 provider 的"未知大小/未知时间"约定，转 null 才能通过 Dart
+                            // 侧的非负校验，否则整页作废。
+                            "sizeBytes" to SafTreeEntries.nonNegativeOrNull(size),
+                            "lastModifiedMs" to SafTreeEntries.nonNegativeOrNull(lastModified),
                         )
                     )
                 }
@@ -381,7 +403,6 @@ class MainActivity : FlutterActivity() {
                 result.success(mapOf("entries" to children, "nextOffset" to nextOffset))
                 return
             }
-            result.success(mapOf("entries" to children, "nextOffset" to null))
         } catch (error: SecurityException) {
             result.error("permission_denied", "列举目录失败，权限不足: ${error.message}", null)
         } catch (error: FileNotFoundException) {

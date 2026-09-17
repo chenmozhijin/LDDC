@@ -699,6 +699,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get localMatchTreeNotSelected => '尚未选择目录树';
 
   @override
+  String get localMatchAndroidIntro => '选择目录树后会自动扫描并建立任务队列，无需另外导入。';
+
+  @override
+  String get localMatchAndroidImportAndRunTitle => '选择目录树并执行';
+
+  @override
+  String get localMatchAndroidQueueEmptyHint => '选择目录树后会自动建立任务队列';
+
+  @override
+  String get localMatchAndroidValidationEmptyQueue => '请先选择目录树';
+
+  @override
+  String get localMatchScanNoMatch => '扫描完成，但没有找到可识别的音频或 CUE 文件';
+
+  @override
+  String localMatchErrorDetailsTitle(int count) {
+    return '失败明细（$count 条）';
+  }
+
+  @override
   String get localMatchSaveModeSong => '保存到歌曲目录';
 
   @override
@@ -2939,6 +2959,26 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get localMatchTreeNotSelected => '尚未选择目录树';
 
   @override
+  String get localMatchAndroidIntro => '选择目录树后会自动扫描并建立任务队列，无需另外导入。';
+
+  @override
+  String get localMatchAndroidImportAndRunTitle => '选择目录树并执行';
+
+  @override
+  String get localMatchAndroidQueueEmptyHint => '选择目录树后会自动建立任务队列';
+
+  @override
+  String get localMatchAndroidValidationEmptyQueue => '请先选择目录树';
+
+  @override
+  String get localMatchScanNoMatch => '扫描完成，但没有找到可识别的音频或 CUE 文件';
+
+  @override
+  String localMatchErrorDetailsTitle(int count) {
+    return '失败明细（$count 条）';
+  }
+
+  @override
   String get localMatchSaveModeSong => '保存到歌曲目录';
 
   @override
@@ -5177,6 +5217,26 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get localMatchTreeNotSelected => '尚未選擇目錄樹';
+
+  @override
+  String get localMatchAndroidIntro => '選擇目錄樹後會自動掃描並建立任務佇列，無需另外匯入。';
+
+  @override
+  String get localMatchAndroidImportAndRunTitle => '選擇目錄樹並執行';
+
+  @override
+  String get localMatchAndroidQueueEmptyHint => '選擇目錄樹後會自動建立任務佇列';
+
+  @override
+  String get localMatchAndroidValidationEmptyQueue => '請先選擇目錄樹';
+
+  @override
+  String get localMatchScanNoMatch => '掃描完成，但沒有找到可辨識的音訊或 CUE 檔案';
+
+  @override
+  String localMatchErrorDetailsTitle(int count) {
+    return '失敗明細（$count 條）';
+  }
 
   @override
   String get localMatchSaveModeSong => '儲存到歌曲目錄';

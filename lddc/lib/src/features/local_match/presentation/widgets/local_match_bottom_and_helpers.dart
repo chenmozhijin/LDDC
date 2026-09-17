@@ -85,6 +85,24 @@ bool localMatchResolveStartAction(LocalMatchPageState state) {
   return state.canStart && validateLocalMatchRun(state).isEmpty;
 }
 
+/// 队列为空时的统一说明文案。
+///
+/// 三种成因必须区分：扫描完成但零命中、安卓目录树尚未选择、桌面端尚未导入。
+/// 安卓端没有"添加文件/文件夹"入口，继续显示桌面文案会让用户去找不存在的导入按钮。
+/// 队列卡副标题与空态提示共用本函数，避免同一句话两处维护、两边漂移。
+String localMatchEmptyQueueHint(
+  BuildContext context, {
+  required bool scanCompletedWithoutMatch,
+  required bool isAndroidMode,
+}) {
+  if (scanCompletedWithoutMatch) {
+    return context.l10n.localMatchScanNoMatch;
+  }
+  return isAndroidMode
+      ? context.l10n.localMatchAndroidQueueEmptyHint
+      : context.l10n.localMatchQueueEmptyHint;
+}
+
 List<String> localMatchInlineValidationMessages(
   BuildContext context,
   LocalMatchPageState state,
@@ -92,7 +110,11 @@ List<String> localMatchInlineValidationMessages(
   return validateLocalMatchRun(state)
       .map(
         (LocalMatchRunValidationIssue issue) =>
-            localMatchValidationIssueText(context, issue),
+            localMatchValidationIssueText(
+              context,
+              issue,
+              androidTreeMode: state.isAndroidMode,
+            ),
       )
       .toList(growable: false);
 }
@@ -116,7 +138,11 @@ List<String> localMatchVisualValidationMessages(
       )
       .map(
         (LocalMatchRunValidationIssue issue) =>
-            localMatchValidationIssueText(context, issue),
+            localMatchValidationIssueText(
+              context,
+              issue,
+              androidTreeMode: state.isAndroidMode,
+            ),
       )
       .toList(growable: false);
 }

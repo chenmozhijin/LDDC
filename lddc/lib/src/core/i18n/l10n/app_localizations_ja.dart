@@ -715,6 +715,29 @@ class AppLocalizationsJa extends AppLocalizations {
   String get localMatchTreeNotSelected => 'ディレクトリツリーが選択されていません';
 
   @override
+  String get localMatchAndroidIntro =>
+      'ディレクトリツリーを選択すると自動的にスキャンしてタスクキューを作成します。別途インポートする必要はありません。';
+
+  @override
+  String get localMatchAndroidImportAndRunTitle => 'ツリーを選択して実行';
+
+  @override
+  String get localMatchAndroidQueueEmptyHint =>
+      'ディレクトリツリーを選択すると自動でタスクキューを作成します';
+
+  @override
+  String get localMatchAndroidValidationEmptyQueue => '先にディレクトリツリーを選択してください';
+
+  @override
+  String get localMatchScanNoMatch =>
+      'スキャンは完了しましたが、対応する音声または CUE ファイルが見つかりませんでした';
+
+  @override
+  String localMatchErrorDetailsTitle(int count) {
+    return '失敗の詳細（$count 件）';
+  }
+
+  @override
   String get localMatchSaveModeSong => 'ソングフォルダーに保存';
 
   @override

@@ -546,7 +546,8 @@ void main() {
       await tester.pumpWidget(_buildTestApp(container));
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('批量转换'), findsOneWidget);
+      // 壳层 AppBar 已经渲染路由标题，页面体内不再重复渲染第二个「批量转换」。
+      expect(find.text('批量转换'), findsNothing);
       expect(
         find.byKey(const ValueKey<String>('batch_convert_compact_controls')),
         findsOneWidget,

@@ -32,6 +32,7 @@ enum LocalMatchNoticeCode {
   openLyricsFailed,
   scanCancelled,
   scanCompletedWithErrors,
+  scanCompletedNoMatch,
   scanFailed,
   treeScanFailed,
   matchCancelled,
@@ -268,6 +269,16 @@ class LocalMatchPageState {
   bool get isAndroidMode => inputMode == LocalMatchInputMode.androidTree;
 
   bool get canStart => !isBusy && queueItems.isNotEmpty;
+
+  /// 是否"扫描已成功结束但一条都没命中"。
+  ///
+  /// 这条路径过去完全静默（无提示、无进度条），用户只看到空队列，无法区分
+  /// "还没选目录树/还没导入"和"扫描完了但没找到可识别的音频或 CUE"。这里用既有
+  /// 字段派生，不新增状态副本，避免两条真相来源漂移。
+  bool get scanCompletedWithoutMatch =>
+      !isBusy &&
+      queueItems.isEmpty &&
+      progressMessage.code == LocalMatchProgressMessageCode.scanCompleted;
 
   int get totalCount => queueItems.length;
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/i18n/i18n.dart';
 import '../../application/batch_convert_page_controller.dart';
 import 'batch_convert_controls.dart';
 import 'batch_convert_presentation_helpers.dart';
@@ -100,11 +99,7 @@ class BatchConvertCompactLayout extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          context.l10n.navBatchConvert,
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: 16),
+        // 壳层 AppBar 已经渲染路由标题，页面内不再重复渲染第二个「批量转换」。
         Consumer(
           builder: (BuildContext context, WidgetRef ref, Widget? child) {
             final BatchConvertStatusView statusView = ref.watch(

@@ -1371,6 +1371,42 @@ abstract class AppLocalizations {
   /// **'No directory tree selected'**
   String get localMatchTreeNotSelected;
 
+  /// No description provided for @localMatchAndroidIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Picking a directory tree scans it automatically and builds the task queue, so no separate import step is needed.'**
+  String get localMatchAndroidIntro;
+
+  /// No description provided for @localMatchAndroidImportAndRunTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick Tree And Run'**
+  String get localMatchAndroidImportAndRunTitle;
+
+  /// No description provided for @localMatchAndroidQueueEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Picking a directory tree builds the task queue automatically'**
+  String get localMatchAndroidQueueEmptyHint;
+
+  /// No description provided for @localMatchAndroidValidationEmptyQueue.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a directory tree first'**
+  String get localMatchAndroidValidationEmptyQueue;
+
+  /// No description provided for @localMatchScanNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan finished, but no supported audio or CUE file was found'**
+  String get localMatchScanNoMatch;
+
+  /// No description provided for @localMatchErrorDetailsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Failure details ({count})'**
+  String localMatchErrorDetailsTitle(int count);
+
   /// No description provided for @localMatchSaveModeSong.
   ///
   /// In en, this message translates to:

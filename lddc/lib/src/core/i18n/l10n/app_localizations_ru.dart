@@ -750,6 +750,30 @@ class AppLocalizationsRu extends AppLocalizations {
   String get localMatchTreeNotSelected => 'Дерево каталогов не выбрано';
 
   @override
+  String get localMatchAndroidIntro =>
+      'После выбора дерева каталогов оно сканируется автоматически и формирует очередь задач — отдельный импорт не нужен.';
+
+  @override
+  String get localMatchAndroidImportAndRunTitle => 'Выбрать дерево и запустить';
+
+  @override
+  String get localMatchAndroidQueueEmptyHint =>
+      'После выбора дерева каталогов очередь задач создастся автоматически';
+
+  @override
+  String get localMatchAndroidValidationEmptyQueue =>
+      'Сначала выберите дерево каталогов';
+
+  @override
+  String get localMatchScanNoMatch =>
+      'Сканирование завершено, но поддерживаемые аудио- или CUE-файлы не найдены';
+
+  @override
+  String localMatchErrorDetailsTitle(int count) {
+    return 'Подробности ошибок ($count)';
+  }
+
+  @override
   String get localMatchSaveModeSong => 'Сохранить в папку песни';
 
   @override

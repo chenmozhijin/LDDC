@@ -740,6 +740,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localMatchTreeNotSelected => 'No directory tree selected';
 
   @override
+  String get localMatchAndroidIntro =>
+      'Picking a directory tree scans it automatically and builds the task queue, so no separate import step is needed.';
+
+  @override
+  String get localMatchAndroidImportAndRunTitle => 'Pick Tree And Run';
+
+  @override
+  String get localMatchAndroidQueueEmptyHint =>
+      'Picking a directory tree builds the task queue automatically';
+
+  @override
+  String get localMatchAndroidValidationEmptyQueue =>
+      'Pick a directory tree first';
+
+  @override
+  String get localMatchScanNoMatch =>
+      'Scan finished, but no supported audio or CUE file was found';
+
+  @override
+  String localMatchErrorDetailsTitle(int count) {
+    return 'Failure details ($count)';
+  }
+
+  @override
   String get localMatchSaveModeSong => 'Save To Song Folder';
 
   @override

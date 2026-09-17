@@ -32,6 +32,13 @@ localMatchPageControllerProvider =
 /// 这个 controller 同时管理桌面文件路径、Android SAF 树目录、队列选择状态和
 /// 长任务进度。任务通道与预览通道分别使用异步代际守卫保护：页面销毁、用户
 /// 取消或新任务启动后，旧任务的迟到回调不能再写入 UI state。
+///
+/// 所有对外动作的失败边界统一写成 `catch (error)` 而不是 `on Exception`：
+/// `StateError`、`ArgumentError` 属于 `Error` 而不是 `Exception`，只写
+/// `on Exception` 时它们会一路逃到按钮回调被丢弃的 Future 上，界面会永久停在
+/// scanning/matching 且没有任何提示（安卓 SAF 端口校验抛的正是 `StateError`）。
+/// 除 `UnsupportedError` 需要单独分类外，其余失败一律收敛成 notice +
+/// recentErrors，保证"失败必有提示"这一设计约束。
 class LocalMatchPageController extends Notifier<LocalMatchPageState> {
   static const int _recentErrorLimit = 20;
   static const int _previewChunkSize = 100;
@@ -313,7 +320,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         PageNoticeSeverity.warning,
         detail: error.message ?? error.toString(),
       );
-    } on Exception catch (error) {
+    } catch (error) {
       _emitNotice(
         LocalMatchNoticeCode.importFilesFailed,
         PageNoticeSeverity.error,
@@ -344,7 +351,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         PageNoticeSeverity.warning,
         detail: error.message ?? error.toString(),
       );
-    } on Exception catch (error) {
+    } catch (error) {
       _emitNotice(
         LocalMatchNoticeCode.importDirectoriesFailed,
         PageNoticeSeverity.error,
@@ -464,7 +471,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         PageNoticeSeverity.warning,
         detail: error.message ?? error.toString(),
       );
-    } on Exception catch (error) {
+    } catch (error) {
       _emitNotice(
         LocalMatchNoticeCode.selectTreeFailed,
         PageNoticeSeverity.error,
@@ -492,7 +499,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         PageNoticeSeverity.warning,
         detail: error.message ?? error.toString(),
       );
-    } on Exception catch (error) {
+    } catch (error) {
       _emitNotice(
         LocalMatchNoticeCode.selectSaveRootFailed,
         PageNoticeSeverity.error,
@@ -590,7 +597,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         PageNoticeSeverity.warning,
         detail: error.message ?? error.toString(),
       );
-    } on Exception catch (error) {
+    } catch (error) {
       _emitNotice(
         LocalMatchNoticeCode.setRootFailed,
         PageNoticeSeverity.error,
@@ -667,7 +674,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         PageNoticeSeverity.warning,
         detail: error.message ?? error.toString(),
       );
-    } on Exception catch (error) {
+    } catch (error) {
       _emitNotice(
         LocalMatchNoticeCode.openSongDirectoryFailed,
         PageNoticeSeverity.error,
@@ -698,7 +705,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         PageNoticeSeverity.warning,
         detail: error.message ?? error.toString(),
       );
-    } on Exception catch (error) {
+    } catch (error) {
       _emitNotice(
         LocalMatchNoticeCode.openSaveDirectoryFailed,
         PageNoticeSeverity.error,
@@ -725,7 +732,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         PageNoticeSeverity.warning,
         detail: error.message ?? error.toString(),
       );
-    } on Exception catch (error) {
+    } catch (error) {
       _emitNotice(
         LocalMatchNoticeCode.openLyricsFailed,
         PageNoticeSeverity.error,
@@ -823,8 +830,14 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
           LocalMatchNoticeCode.scanCompletedWithErrors,
           PageNoticeSeverity.warning,
         );
+      } else if (_queueItems.isEmpty) {
+        // 与安卓目录树扫描保持一致：扫描成功但零命中时必须给出明确提示。
+        _emitNotice(
+          LocalMatchNoticeCode.scanCompletedNoMatch,
+          PageNoticeSeverity.warning,
+        );
       }
-    } on Exception catch (error) {
+    } catch (error) {
       if (_isCurrentTask(generation)) {
         state = state.copyWith(
           taskPhase: LocalMatchTaskPhase.completed,
@@ -932,8 +945,15 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
           LocalMatchNoticeCode.scanCompletedWithErrors,
           PageNoticeSeverity.warning,
         );
+      } else if (_queueItems.isEmpty) {
+        // 扫描成功但一条都没命中。这条路径必须显式提示：否则用户只看到空队列，
+        // 既没有进度也没有错误，无法判断是扫描没跑、还是目录里没有可识别的音频。
+        _emitNotice(
+          LocalMatchNoticeCode.scanCompletedNoMatch,
+          PageNoticeSeverity.warning,
+        );
       }
-    } on Exception catch (error) {
+    } catch (error) {
       if (_isCurrentTask(generation)) {
         state = state.copyWith(
           taskPhase: LocalMatchTaskPhase.completed,
@@ -1037,7 +1057,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
           skipCount: result.skipCount,
         );
       }
-    } on Exception catch (error) {
+    } catch (error) {
       if (_isCurrentTask(generation)) {
         _syncQueueSnapshotToState();
         state = state.copyWith(
@@ -1159,7 +1179,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
           skipCount: result.skipCount,
         );
       }
-    } on Exception catch (error) {
+    } catch (error) {
       if (_isCurrentTask(generation)) {
         _syncQueueSnapshotToState();
         state = state.copyWith(

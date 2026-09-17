@@ -17,11 +17,15 @@ class LocalMatchQueueHeader extends StatelessWidget {
     super.key,
     required this.queueLength,
     required this.desktopMode,
+    required this.isAndroidMode,
+    required this.scanCompletedWithoutMatch,
     required this.controller,
   });
 
   final int queueLength;
   final bool desktopMode;
+  final bool isAndroidMode;
+  final bool scanCompletedWithoutMatch;
   final LocalMatchPageController controller;
 
   @override
@@ -39,7 +43,11 @@ class LocalMatchQueueHeader extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 queueLength == 0
-                    ? context.l10n.localMatchQueueEmptyHint
+                    ? localMatchEmptyQueueHint(
+                        context,
+                        scanCompletedWithoutMatch: scanCompletedWithoutMatch,
+                        isAndroidMode: isAndroidMode,
+                      )
                     : desktopMode
                     ? context.l10n.localMatchQueueDesktopHint(queueLength)
                     : context.l10n.localMatchQueueMobileHint(queueLength),
