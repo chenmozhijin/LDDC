@@ -119,18 +119,23 @@ jobs:
           path: lddc/build/windows/x64/runner/Release/**
           if-no-files-found: error
           retention-days: 7
+      # 这些平台验证步骤必须用 always()：前面的发行包打包/验证一旦失败，没有 always()
+      # 的步骤会被整体跳过，phase 汇总会把它误报成 skipped（而不是让真正的失败可见）。
       - name: Build Windows debug application for native automation
         id: debug_build
+        if: always()
         continue-on-error: true
         working-directory: lddc
         run: flutter build windows --debug
       - name: Run offline application flows
         id: offline
+        if: always()
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_real_integration.ps1 -Profile offline -Device windows -Platform windows
       - name: Run native channel flows
         id: native_channel
+        if: always()
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_real_integration.ps1 -Profile platform -Device windows -Platform windows
@@ -142,6 +147,7 @@ jobs:
         run: ./tool/test/run_windows_platform_tests.ps1
       - name: Run real desktop process and service tests
         id: desktop_process
+        if: always()
         continue-on-error: true
         shell: pwsh
         run: >-
@@ -149,6 +155,7 @@ jobs:
           -AppExe lddc/build/production_e2e/windows/lddc.exe
       - name: Run production media resource checks
         id: media_resource
+        if: always()
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_platform_media_resource.ps1 -Platform windows -LoopCount 3
@@ -285,6 +292,7 @@ jobs:
           retention-days: 7
       - name: Build macOS debug application for native automation
         id: debug_build
+        if: always()
         continue-on-error: true
         working-directory: lddc
         run: flutter build macos --debug
@@ -319,16 +327,19 @@ jobs:
               -resultBundlePath "$result_path"
       - name: Run offline application flows
         id: offline
+        if: always()
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_real_integration.ps1 -Profile offline -Device macos -Platform macos
       - name: Run native channel flows
         id: native_channel
+        if: always()
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_real_integration.ps1 -Profile platform -Device macos -Platform macos
       - name: Run real desktop process and service tests
         id: desktop_process
+        if: always()
         continue-on-error: true
         shell: pwsh
         run: >-
@@ -336,6 +347,7 @@ jobs:
           -AppExe lddc/build/production_e2e/macos/LDDC.app/Contents/MacOS/LDDC
       - name: Run production media resource checks
         id: media_resource
+        if: always()
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_platform_media_resource.ps1 -Platform macos -LoopCount 3
@@ -523,14 +535,24 @@ jobs:
             --platform linux-amd64 --out $out
       # 在同一 job 内真实安装 deb、检查动态库无缺失、并在 xvfb 下有界启动安装后的
       # LDDC 命令，最后卸载——证明"可安装可运行"而不只是产出了文件。
+      #
+      # 包名从 deb 自身读取而不是写死：control 里按 Python 版同形写的是 `Package: LDDC`
+      # （大写），而 dpkg 会把包名规范化为小写 `lddc`，用 `apt-get remove LDDC` 会
+      # 报 "Unable to locate package LDDC"（run 35131599035 就是这样失败的）。
       - name: Verify Linux release artifacts
         id: release_verify
         if: always() && steps.release_package.outcome == 'success'
         run: |
           deb="$(ls build/release-artifacts/linux/LDDC_*_amd64.deb | head -n 1)"
           test -n "$deb"
+          # 包名从 deb 的 control 读取后再规范化为小写：control 里按 Python 版同形写的
+          # 是 `Package: LDDC`（大写），而 Debian 包名规范要求小写、dpkg 会自动规范化，
+          # 因此安装/查询/卸载都必须用规范化后的名字（run 35131599035 用 `apt-get
+          # remove LDDC` 报 "Unable to locate package LDDC" 就是这个原因）。
+          installed_name="$(dpkg-deb --field "$deb" Package | tr 'A-Z' 'a-z')"
+          echo "deb 包名（规范化后）：$installed_name"
           sudo apt-get install -y "./$deb"
-          dpkg -s LDDC >/dev/null
+          dpkg -s "$installed_name" >/dev/null
           test -x /usr/lib/LDDC/lddc
           test -L /usr/bin/LDDC
           if ldd /usr/lib/LDDC/lddc | grep -q 'not found'; then
@@ -548,7 +570,7 @@ jobs:
           echo "deb 安装与启动烟测通过：pid=$app_pid"
           kill "$app_pid" 2>/dev/null || true
           sleep 2
-          sudo apt-get remove -y LDDC
+          sudo apt-get remove -y "$installed_name"
           test ! -e /usr/lib/LDDC/lddc
       - name: Upload Linux release artifacts
         if: always() && steps.release_package.outcome == 'success'
@@ -566,13 +588,18 @@ jobs:
           path: lddc/build/linux/x64/release/bundle/**
           if-no-files-found: error
           retention-days: 7
+      # 下面这些平台验证步骤必须用 always()：前面的发行包打包/验证一旦失败，
+      # 没有 always() 的步骤会被整体跳过，导致 phase 汇总把 debug/offline/native
+      # 报成 skipped，把"发行包缺了"误报成"平台验证没跑"（run 35131599035 即如此）。
       - name: Build Linux debug application for native automation
         id: debug_build
+        if: always()
         continue-on-error: true
         working-directory: lddc
         run: flutter build linux --debug
       - name: Run offline application flows
         id: offline
+        if: always()
         continue-on-error: true
         run: >-
           xvfb-run -a --server-args="-screen 0 1600x1000x24"
@@ -580,6 +607,7 @@ jobs:
           -Profile offline -Device linux -Platform linux
       - name: Run native channel flows
         id: native_channel
+        if: always()
         continue-on-error: true
         run: >-
           xvfb-run -a --server-args="-screen 0 1600x1000x24"
@@ -602,6 +630,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Run production media resource checks
         id: media_resource
+        if: always()
         continue-on-error: true
         shell: pwsh
         run: ./tool/test/run_platform_media_resource.ps1 -Platform linux -LoopCount 3
@@ -725,11 +754,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Enable KVM access for the Android emulator
+        if: always()
         run: |
           test -e /dev/kvm
           sudo chmod 0666 /dev/kvm
       - name: Run Android application, channel, and DocumentsUI validation
         id: platform_validation
+        if: always()
         continue-on-error: true
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
@@ -1084,6 +1115,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Run browser capability observation
+        if: always()
         working-directory: lddc
         run: |
           mkdir -p build/web-observation
