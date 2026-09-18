@@ -165,6 +165,10 @@ class _LocalMatchPageState extends ConsumerState<LocalMatchPage> {
   }
 
   void _showNotice(BuildContext context, LocalMatchNotice notice) {
+    // 通知会带原生错误里的编码 URI，取当前目录树显示名交给文案层还原成可读路径。
+    final LocalMatchAndroidTreeLabels labels = LocalMatchAndroidTreeLabels.of(
+      ref.read(localMatchPageControllerProvider),
+    );
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final (Color backgroundColor, Color foregroundColor) colors =
         switch (notice.severity) {
@@ -193,7 +197,12 @@ class _LocalMatchPageState extends ConsumerState<LocalMatchPage> {
           behavior: SnackBarBehavior.floating,
           backgroundColor: colors.$1,
           content: Text(
-            localMatchNoticeText(context, notice),
+            localMatchNoticeText(
+              context,
+              notice,
+              songTree: labels.songTree,
+              saveTree: labels.saveTree,
+            ),
             style: TextStyle(color: colors.$2),
           ),
         ),

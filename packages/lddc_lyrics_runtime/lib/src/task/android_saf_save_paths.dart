@@ -238,3 +238,131 @@ String? _nonBlank(String? value) {
   final String text = value?.trim() ?? '';
   return text.isEmpty ? null : text;
 }
+
+/// 已知授权树的展示标签。
+///
+/// 安卓端拿到的路径是 `content://…/tree/…%2F…` 这类编码 URI，直接给用户看非常不友好；
+/// 调用方把"当前已知的授权树（URI + 显示名）"传进来，就能把 URI 还原成
+/// `内部存储 / Music / Album / demo.lrc` 这样的层级路径。
+class AndroidSafTreeLabel {
+  const AndroidSafTreeLabel({required this.uri, required this.label});
+
+  final String uri;
+  final String label;
+}
+
+/// 把 SAF 文档/目录 URI 转成面向用户的展示路径。
+///
+/// - 命中已知授权树：`<树显示名> / <相对目录…> / <文件名>`；
+/// - 未知授权树：从文档 id 还原层级，去掉存储卷前缀（`primary:` 之类），
+///   例如 `Music / Album / demo.lrc`；
+/// - 非 SAF 路径（桌面本地路径）：原样返回，桌面端展示不受影响；
+/// - URI 形态无法解析时：退化为百分号解码后的原文本。
+String formatAndroidSafPath(
+  String? uri, {
+  AndroidSafTreeLabel? songTree,
+  AndroidSafTreeLabel? saveTree,
+}) {
+  final String text = uri?.trim() ?? '';
+  if (text.isEmpty || !text.startsWith('content://')) {
+    return text;
+  }
+  final String? documentId = safDocumentIdOf(text);
+  if (documentId == null) {
+    return _decodePercent(text);
+  }
+  final String uriAuthority = Uri.tryParse(text)?.host ?? '';
+  for (final AndroidSafTreeLabel? candidate in <AndroidSafTreeLabel?>[
+    songTree,
+    saveTree,
+  ]) {
+    if (candidate == null) {
+      continue;
+    }
+    final String? treeDocumentId = safDocumentIdOf(candidate.uri);
+    if (treeDocumentId == null) {
+      continue;
+    }
+    if ((Uri.tryParse(candidate.uri)?.host ?? '') != uriAuthority) {
+      continue;
+    }
+    if (documentId != treeDocumentId &&
+        !documentId.startsWith('$treeDocumentId/')) {
+      continue;
+    }
+    return _joinDisplayParts(<String>[
+      candidate.label,
+      ..._relativeParts(documentId, treeDocumentId),
+    ]);
+  }
+  return _joinDisplayParts(_documentIdParts(documentId));
+}
+
+/// 把文本里内嵌的 SAF URI 替换成展示路径。
+///
+/// 用于失败明细、状态文案、通知 detail 等会拼接原生错误信息的场景：
+/// 这些文本里常带原始 URI，用户看不出是哪个文件。
+String humanizeAndroidSafUris(
+  String text, {
+  AndroidSafTreeLabel? songTree,
+  AndroidSafTreeLabel? saveTree,
+}) {
+  if (!text.contains('content://')) {
+    return text;
+  }
+  return text.replaceAllMapped(_safUriPattern, (Match match) {
+    final String raw = match.group(0) ?? '';
+    return formatAndroidSafPath(raw, songTree: songTree, saveTree: saveTree);
+  });
+}
+
+final RegExp _safUriPattern = RegExp(r'content://[^\s，。；、）)】\]]+');
+
+List<String> _relativeParts(String documentId, String treeDocumentId) {
+  if (documentId == treeDocumentId) {
+    return const <String>[];
+  }
+  return documentId
+      .substring(treeDocumentId.length + 1)
+      .split('/')
+      .where((String segment) => segment.isNotEmpty)
+      .toList(growable: false);
+}
+
+/// 未知授权树时，用文档 id 的层级 + 去掉存储卷前缀的根名做展示。
+List<String> _documentIdParts(String documentId) {
+  final List<String> raw = documentId
+      .split('/')
+      .where((String segment) => segment.isNotEmpty)
+      .toList(growable: false);
+  if (raw.isEmpty) {
+    return const <String>[];
+  }
+  final String rootName = _stripVolumePrefix(raw.first);
+  return <String>[if (rootName.isNotEmpty) rootName, ...raw.skip(1)];
+}
+
+/// `primary:Music` / `1234-5678:Music` → `Music`；没有卷前缀时原样返回。
+String _stripVolumePrefix(String rootId) {
+  final int colon = rootId.indexOf(':');
+  if (colon >= 0 && colon < rootId.length - 1) {
+    return rootId.substring(colon + 1);
+  }
+  return rootId;
+}
+
+String _joinDisplayParts(List<String> parts) {
+  return parts
+      .map((String part) => part.trim())
+      .where((String part) => part.isNotEmpty)
+      .join(' / ');
+}
+
+String _decodePercent(String value) {
+  try {
+    return Uri.decodeFull(value);
+  } on ArgumentError {
+    // 非法百分号序列：保留原文，绝不因为展示而抛错。
+    return value;
+  }
+}

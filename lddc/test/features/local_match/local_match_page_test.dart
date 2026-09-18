@@ -18,6 +18,7 @@ import 'package:lddc/src/features/local_match/application/local_match_input_pick
 import 'package:lddc/src/features/local_match/application/local_match_page_controller.dart';
 import 'package:lddc/src/features/local_match/application/local_match_page_state.dart';
 import 'package:lddc/src/features/local_match/presentation/local_match_page.dart';
+import 'package:lddc/src/features/local_match/presentation/widgets/local_match_bottom_and_helpers.dart';
 import 'package:lddc/src/features/local_match/presentation/widgets/local_match_rules.dart';
 import 'package:lddc/src/platform/android/saf/android_saf_lyrics_save_persistence.dart';
 import 'package:lddc/src/platform/drag_drop/drag_drop_port.dart';
@@ -676,6 +677,18 @@ void main() {
       expect(treePort.writeRequests.single.displayName, endsWith('.lrc'));
       expect(utf8.decode(treePort.writeRequests.single.bytes), '[00:00.000]歌词');
       expect(state.queueItems.single.outputPath, contains('root%2FAlbum'));
+      // 展示层把编码 URI 还原成"树名 / 相对目录 / 文件名"，普通用户才能看懂。
+      final String displayPath = LocalMatchAndroidTreeLabels.of(
+        state,
+      ).formatPath(state.queueItems.single.outputPath);
+      expect(displayPath, startsWith('根目录 / Album /'));
+      expect(displayPath, isNot(contains('content://')));
+      expect(displayPath, isNot(contains('%2F')));
+      // 源文件路径同样是编码 URI，必须落到同一棵树的层级路径上展示。
+      final String songDisplayPath = LocalMatchAndroidTreeLabels.of(
+        state,
+      ).formatPath(state.queueItems.single.songInfo.path);
+      expect(songDisplayPath, '根目录 / Album / song.mp3');
     });
 
     test('Android 目录树匹配取消后再次启动会从 batch checkpoint 继续', () async {
@@ -1788,6 +1801,115 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets('安卓队列行把编码 URI 显示为可读层级路径', (WidgetTester tester) async {
+      // 视口放大，确保队列卡片真的被构建（窄屏时它可能落在视口外而不参与布局）。
+      _setTestViewport(tester, const Size(1000, 1200));
+      const AndroidSafTreeToken tree = AndroidSafTreeToken(
+        uri: 'content://com.android.externalstorage.documents/tree/root',
+        displayName: '根目录',
+      );
+      final SongInfo songInfo = SongInfo(
+        source: Source.local,
+        path:
+            'content://com.android.externalstorage.documents/tree/root/document/root%2FAlbum%2Fsong.mp3',
+        title: 'Song',
+        artist: SongArtist(<String>['Singer']),
+      );
+      final _FakeAndroidSafTreePort treePort = _FakeAndroidSafTreePort();
+      final _StubLocalMatchUseCase localMatchUseCase = _StubLocalMatchUseCase(
+        runHandler:
+            ({
+              required List<LocalMatchSongEntry> entries,
+              required LocalMatchRunOptions options,
+              AppConfig? config,
+              LocalMatchCancellationToken? cancellationToken,
+              LyricsSavePersistencePort? lyricsPersistencePort,
+              LocalMatchProgressCallback? onProgress,
+            }) async {
+              // 走真实持久化实现：返回的是原生写入后的编码 URI。
+              final String outputPath = await lyricsPersistencePort!.saveText(
+                request: LyricsSaveRequest(
+                  songInfo: entries.single.songInfo,
+                  lyricLangs: options.langs,
+                  lyricsFormat: options.lyricsFormat,
+                  fileNameFormat:
+                      config?.lyrics.fileNameFormat ??
+                      ConfigDefaults.current.lyrics.fileNameFormat,
+                ),
+                text: '[00:00.000]歌词',
+              );
+              final LocalMatchingStatus status = LocalMatchingStatus(
+                type: LocalMatchingStatusType.success,
+                index: 0,
+                text: '已写入',
+                path: outputPath,
+              );
+              onProgress?.call(
+                LocalMatchProgress(
+                  text: '正在写入歌词',
+                  value: 1,
+                  maxValue: 1,
+                  status: status,
+                ),
+              );
+              return LocalMatchResult(
+                total: 1,
+                successCount: 1,
+                failCount: 0,
+                skipCount: 0,
+                cancelled: false,
+                statuses: <LocalMatchingStatus>[status],
+              );
+            },
+      );
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        picker: _FakeLocalMatchInputPicker(androidTreeToken: tree),
+        androidGetInfosUseCase: _StubAndroidSafLocalMatchGetInfosUseCase(
+          resultBuilder: (AndroidSafTreeToken rootTree) =>
+              AndroidSafLocalMatchGetInfosResult(
+                entries: <LocalMatchSongEntry>[
+                  LocalMatchSongEntry(
+                    songInfo: songInfo,
+                    rootPath: rootTree.uri,
+                  ),
+                ],
+                errors: const <String>[],
+                cancelled: false,
+                checkpoint: null,
+              ),
+        ),
+        localMatchUseCase: localMatchUseCase,
+        treePort: treePort,
+      );
+      addTearDown(container.dispose);
+      final LocalMatchPageController controller = container.read(
+        localMatchPageControllerProvider.notifier,
+      );
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await controller.selectAndroidTree();
+      await tester.pumpAndSettle();
+      await controller.startOrCancel();
+      await tester.pumpAndSettle();
+
+      // 界面整体不应出现编码 URI：头部提示显示授权树显示名，路径展示统一走可读化处理。
+      // 队列行的路径摘要保留首尾层级，Tooltip 里放全量文本，这里两种都断言。
+      expect(find.text('根目录'), findsWidgets);
+      expect(find.byTooltip('根目录 / Album / song.mp3'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is Tooltip &&
+              (widget.message ?? '').startsWith('根目录 / Album /') &&
+              (widget.message ?? '').endsWith('.lrc'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('content://'), findsNothing);
+      expect(find.textContaining('%2F'), findsNothing);
+    });
   });
 
   group('LocalMatchInputPickerImpl', () {
@@ -2484,30 +2606,36 @@ class _FakeAndroidSafTreePort implements AndroidSafTreePort {
           directorySegments: directorySegments,
         ) ??
         treeUri;
+    // 原生返回的是真实形态的文档 URI：整个文档 id（含目录与文件名）作为**一段**
+    // 拼在 /document/ 之后并被百分号编码。这里必须同样构造，否则展示层与
+    // 文档 id 解析都会拿到错误的分段结果。
+    final String writtenUri =
+        safDocumentUri(
+          treeUri: treeUri,
+          documentId: <String>[
+            safDocumentIdOf(treeUri) ?? '',
+            ...directorySegments,
+            displayName,
+          ].join('/'),
+        ) ??
+        '$directoryUri/$displayName';
+    AndroidSafTreeEntry createdEntry() => AndroidSafTreeEntry(
+      uri: writtenUri,
+      displayName: displayName,
+      mimeType: mimeType,
+      isDirectory: false,
+      isFile: true,
+    );
     childrenByUri.update(
       directoryUri,
       (List<AndroidSafTreeEntry> current) => <AndroidSafTreeEntry>[
         ...current,
-        AndroidSafTreeEntry(
-          uri: '$directoryUri/$displayName',
-          displayName: displayName,
-          mimeType: mimeType,
-          isDirectory: false,
-          isFile: true,
-        ),
+        createdEntry(),
       ],
-      ifAbsent: () => <AndroidSafTreeEntry>[
-        AndroidSafTreeEntry(
-          uri: '$directoryUri/$displayName',
-          displayName: displayName,
-          mimeType: mimeType,
-          isDirectory: false,
-          isFile: true,
-        ),
-      ],
+      ifAbsent: () => <AndroidSafTreeEntry>[createdEntry()],
     );
     return AndroidSafWriteDocumentResult(
-      uri: '$directoryUri/$displayName',
+      uri: writtenUri,
       displayName: displayName,
     );
   }

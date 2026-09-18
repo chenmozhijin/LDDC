@@ -212,7 +212,10 @@ class _OpenLyricsPageState extends ConsumerState<OpenLyricsPage> {
 
 String _openLyricsNoticeText(BuildContext context, OpenLyricsNotice notice) {
   final l10n = context.l10n;
-  final String? detail = notice.detail;
+  // 保存结果 detail 在安卓端是 content:// 编码 URI，在文案映射层统一可读化。
+  final String? detail = notice.detail == null
+      ? null
+      : humanizeAndroidSafUris(notice.detail!);
   return switch (notice.code) {
     OpenLyricsNoticeCode.openFailed => l10n.openLyricsNoticeOpenFailed(
       detail ?? '',
@@ -262,8 +265,10 @@ class _PreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 安卓端输入路径可能是 content:// 编码 URI（SAF 选择结果）：
+    // 这里只做展示层还原，state.inputPath 仍是原始路径，读取/保存逻辑不受影响。
     final String? inputDisplayText = switch (state.inputPath?.trim()) {
-      final String path when path.isNotEmpty => path,
+      final String path when path.isNotEmpty => formatAndroidSafPath(path),
       _ when state.inputName.trim().isNotEmpty => state.inputName,
       _ => null,
     };

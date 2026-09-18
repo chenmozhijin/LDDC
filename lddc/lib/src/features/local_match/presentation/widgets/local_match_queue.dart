@@ -235,12 +235,28 @@ class LocalMatchQueueRowCardState extends State<LocalMatchQueueRowCard> {
               builder: (BuildContext context, bool focused, Widget? child) {
                 final LocalMatchPageController controller = widget.controller;
                 final ColorScheme colorScheme = Theme.of(context).colorScheme;
+                // 安卓端保存结果是编码 URI：用当前已知的授权树标签还原成可读层级路径。
+                final LocalMatchAndroidTreeLabels androidLabels =
+                    LocalMatchAndroidTreeLabels.of(controller.currentState);
                 final String lyricsPath = localMatchQueueItemDisplayLyricsPath(
                   context,
                   item,
+                  androidLabels: androidLabels,
                 );
+                // 源文件路径在安卓端也是编码 URI（content://…%2F…）：
+                // 与歌词路径一起还原成可读层级路径，同一行不能出现两种风格。
+                final String songPathText = androidLabels.formatPath(
+                  item.songInfo.path,
+                );
+                final String songPathDisplay = songPathText.isEmpty
+                    ? '-'
+                    : songPathText;
                 final String? failureSummary =
-                    localMatchQueueItemFailureSummary(context, item);
+                    localMatchQueueItemFailureSummary(
+                      context,
+                      item,
+                      androidLabels: androidLabels,
+                    );
                 return RepaintBoundary(
                   child: Material(
                     color: selected
@@ -387,7 +403,7 @@ class LocalMatchQueueRowCardState extends State<LocalMatchQueueRowCard> {
                                     'local_match_path_song_${item.id}',
                                   ),
                                   label: context.l10n.localMatchSongPathLabel,
-                                  fullText: item.songInfo.path ?? '-',
+                                  fullText: songPathDisplay,
                                 ),
                                 const SizedBox(height: 10),
                                 QueueExpandedPathBlock(
@@ -409,7 +425,7 @@ class LocalMatchQueueRowCardState extends State<LocalMatchQueueRowCard> {
                                         label: context
                                             .l10n
                                             .localMatchSongPathLabel,
-                                        value: item.songInfo.path ?? '-',
+                                        value: songPathDisplay,
                                       ),
                                     ),
                                     const SizedBox(width: 14),
@@ -630,14 +646,29 @@ class LocalMatchErrorDetailsPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final List<String> errors = ref.watch(
-      localMatchPageControllerProvider.select(
-        (LocalMatchPageState state) => state.recentErrors,
-      ),
+    final (
+      List<String> errors,
+      AndroidSafTreeToken? songTreeToken,
+      AndroidSafTreeToken? saveTreeToken,
+    ) = ref.watch(
+      localMatchPageControllerProvider.select((LocalMatchPageState state) {
+        return (
+          state.recentErrors,
+          state.androidTreeToken,
+          state.androidSaveTreeToken,
+        );
+      }),
     );
     if (errors.isEmpty) {
       return const SizedBox.shrink();
     }
+    // 错误原文来自原生，里面嵌的是编码 URI；这里换成可读层级路径，
+    // 否则用户看到一长串 `content://…%2F…` 完全无法定位文件。
+    final LocalMatchAndroidTreeLabels androidLabels =
+        LocalMatchAndroidTreeLabels.fromTokens(
+          songTreeToken: songTreeToken,
+          saveTreeToken: saveTreeToken,
+        );
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     // 面板自带下间距：无错误时整块消失（含间距），布局方只需放一个 const 调用，
     // 不需要额外判断是否存在明细。
@@ -673,7 +704,7 @@ class LocalMatchErrorDetailsPanel extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text(
-                    error,
+                    androidLabels.humanize(error),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: colorScheme.onErrorContainer,
                     ),

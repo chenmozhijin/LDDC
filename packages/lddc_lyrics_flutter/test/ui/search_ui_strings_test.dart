@@ -113,6 +113,22 @@ void main() {
     );
   });
 
+  test('搜索通知详情里的安卓编码 URI 在文案层还原为可读路径', () {
+    // 安卓保存结果与原生错误都是 content:// 编码 URI：文案层是唯一出口，
+    // 在这里统一可读化后，SnackBar / 内嵌提示等所有通知出口都不会漏。
+    final String text = searchNoticeText(
+      strings,
+      const SearchNotice(
+        code: SearchNoticeCode.lyricsSaveSucceeded,
+        detail:
+            'content://com.android.externalstorage.documents/tree/root/document/root%2FAlbum%2Fdemo.lrc',
+      ),
+    );
+    expect(text, isNot(contains('content://')));
+    expect(text, isNot(contains('%2F')));
+    expect(text, contains('Album / demo.lrc'));
+  });
+
   test('表格状态编码保留裁剪后的详情并兼容无详情消息', () {
     expect(
       SearchTableStatusMessage.encode(SearchTableStatusMessageCode.searching),
