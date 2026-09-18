@@ -100,7 +100,8 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
   LocalMatchPageState get currentState => state;
 
   LocalMatchPreviewOptions get _previewOptions {
-    final AndroidSafTreeToken? tree = state.androidTreeToken;
+    final AndroidSafTreeToken? songTree = state.androidTreeToken;
+    final AndroidSafTreeToken? saveTree = state.androidSaveTreeToken;
     return LocalMatchPreviewOptions(
       saveMode: state.saveMode,
       fileNameMode: state.fileNameMode,
@@ -109,7 +110,10 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
       fileNameFormat: _config.lyrics.fileNameFormat,
       selectedLangs: state.selectedLangs,
       saveRootPath: state.saveRootPath,
-      androidTreeLabel: tree?.displayName ?? tree?.uri ?? '',
+      androidSongTreeUri: songTree?.uri ?? '',
+      androidSongTreeLabel: songTree?.displayName ?? songTree?.uri ?? '',
+      androidSaveTreeUri: saveTree?.uri,
+      androidSaveTreeLabel: saveTree?.displayName ?? saveTree?.uri ?? '',
     );
   }
 
@@ -168,7 +172,10 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
   }
 
   void updateSaveMode(LocalMatchSaveMode saveMode) {
-    if (!state.isDesktopMode || state.isBusy) {
+    // 桌面与安卓都可切换。安卓三种模式的落点：song=歌曲所在目录，
+    // mirror=保存根树并保留歌曲相对层级，specify=保存根树根目录；
+    // 目标推导与写入见 AndroidSafLyricsSavePersistence 与 android_saf_save_paths.dart。
+    if (state.isBusy) {
       return;
     }
     state = state.copyWith(saveMode: saveMode);
@@ -478,6 +485,57 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         detail: error.toString(),
       );
     }
+  }
+
+  /// 选择 mirror / specify 模式使用的保存根授权树。
+  ///
+  /// 与歌曲树相互独立：这里只完成选择与持久授权，不触发扫描（保存根不需要入队）。
+  Future<void> selectAndroidSaveTree() async {
+    if (!_capability.androidSafTreeAccess) {
+      _emitNotice(
+        LocalMatchNoticeCode.safTreeUnsupported,
+        PageNoticeSeverity.warning,
+      );
+      return;
+    }
+    if (state.isBusy) {
+      _emitNotice(
+        LocalMatchNoticeCode.busySwitchTree,
+        PageNoticeSeverity.warning,
+      );
+      return;
+    }
+    try {
+      final AndroidSafTreeToken? tree = await _inputPicker.pickAndroidTree(
+        initialUri: state.androidSaveTreeToken?.uri,
+      );
+      if (tree == null) {
+        return;
+      }
+      state = state.copyWith(androidSaveTreeToken: tree);
+      await _refreshQueuePreviews();
+    } on UnsupportedError catch (error) {
+      _emitNotice(
+        LocalMatchNoticeCode.unsupportedOperation,
+        PageNoticeSeverity.warning,
+        detail: error.message ?? error.toString(),
+      );
+    } catch (error) {
+      _emitNotice(
+        LocalMatchNoticeCode.selectSaveRootFailed,
+        PageNoticeSeverity.error,
+        detail: error.toString(),
+      );
+    }
+  }
+
+  /// 清除保存根树选择。歌曲树不受影响；mirror/specify 会因此被启动前校验拦住。
+  Future<void> clearAndroidSaveTree() async {
+    if (state.isBusy || state.androidSaveTreeToken == null) {
+      return;
+    }
+    state = state.copyWith(clearAndroidSaveTreeToken: true);
+    await _refreshQueuePreviews();
   }
 
   Future<void> selectSaveRootDirectory() async {
@@ -1411,7 +1469,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
 
   LocalMatchRunOptions _buildRunOptions() {
     return LocalMatchRunOptions(
-      saveMode: state.isAndroidMode ? LocalMatchSaveMode.song : state.saveMode,
+      saveMode: state.saveMode,
       fileNameMode: state.fileNameMode,
       saveToTagMode: state.saveToTagMode,
       lyricsFormat: state.lyricsFormat,
@@ -1431,11 +1489,16 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
     if (!state.isAndroidMode) {
       return null;
     }
-    final AndroidSafTreeToken? tree = state.androidTreeToken;
-    if (tree == null) {
+    final AndroidSafTreeToken? songTree = state.androidTreeToken;
+    if (songTree == null) {
       return null;
     }
-    return _dependencies.androidLyricsPersistenceFactory(tree);
+    // 保存目标不再隐式写树根：模式与保存根树一并交给实现，由它推导每首歌的落点。
+    return _dependencies.androidLyricsPersistenceFactory(
+      songTree,
+      state.androidSaveTreeToken,
+      state.saveMode,
+    );
   }
 
   List<LocalMatchRunValidationIssue> _validateBeforeRun() {

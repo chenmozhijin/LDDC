@@ -394,7 +394,7 @@
   "localMatchSkipExisting": "Skip Existing Lyrics",
   "localMatchSkipExistingConflictHint": "The current output strategy and file-name mode cannot skip existing lyrics. If files still need to be saved, avoid naming by matched lyrics info.",
   "localMatchSaveToSongDirectoryHint": "Saving to the song folder does not need an extra save root.",
-  "localMatchAndroidTreeSaveHint": "Android directory tree saves are written directly into the authorized tree.",
+  "localMatchAndroidTreeSaveHint": "Android writes into the authorized tree according to the save mode: the song folder, a mirrored folder under the save root, or the save root itself.",
   "localMatchFileNameTemplateHint": "The file name template uses lyrics_file_name_fmt from Settings.",
   "localMatchSaveRootPath": "Save root: {path}",
   "@localMatchSaveRootPath": {

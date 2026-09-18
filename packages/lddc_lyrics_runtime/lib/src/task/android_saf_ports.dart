@@ -93,8 +93,14 @@ abstract interface class AndroidSafTreePort {
     required int limit,
   });
 
+  /// 写入文档。
+  ///
+  /// [directorySegments] 是相对 [treeUri] 的目录层级，空列表表示写树根。实现必须
+  /// 逐级定位/创建目录后再写入，且不得越出该授权树：song / mirror / specify
+  /// 三种保存模式共用这一个写入口，不允许再出现隐式写树根的行为。
   Future<AndroidSafWriteDocumentResult> writeDocument({
     required String treeUri,
+    required List<String> directorySegments,
     required String displayName,
     required String mimeType,
     required Uint8List bytes,

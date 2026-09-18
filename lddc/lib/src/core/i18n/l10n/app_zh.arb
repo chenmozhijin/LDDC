@@ -394,7 +394,7 @@
   "localMatchSkipExisting": "跳过已有歌词",
   "localMatchSkipExistingConflictHint": "当前“输出策略 + 文件名模式”组合不支持开启跳过已有歌词；若还需要保存文件，请避免选择“按歌词信息命名”。",
   "localMatchSaveToSongDirectoryHint": "当前保存到歌曲目录，无需额外保存根目录。",
-  "localMatchAndroidTreeSaveHint": "Android 目录树文件保存会直接写入已授权目录树。",
+  "localMatchAndroidTreeSaveHint": "Android 端按保存模式写入已授权目录树：歌曲目录 / 保存根镜像 / 保存根根目录。",
   "localMatchFileNameTemplateHint": "命名模板沿用设置页中的 lyrics_file_name_fmt。",
   "localMatchSaveRootPath": "保存根目录：{path}",
   "@localMatchSaveRootPath": {

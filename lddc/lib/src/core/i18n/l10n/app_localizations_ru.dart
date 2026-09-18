@@ -731,7 +731,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get localMatchAndroidTreeSaveHint =>
-      'Сохранения дерева каталогов Android записываются непосредственно в авторизованное дерево.';
+      'Android записывает в авторизованное дерево согласно режиму сохранения: папка песни, зеркальная папка под корнем сохранения или сам корень сохранения.';
 
   @override
   String get localMatchFileNameTemplateHint =>

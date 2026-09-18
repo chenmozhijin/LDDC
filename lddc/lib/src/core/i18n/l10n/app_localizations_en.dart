@@ -721,7 +721,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get localMatchAndroidTreeSaveHint =>
-      'Android directory tree saves are written directly into the authorized tree.';
+      'Android writes into the authorized tree according to the save mode: the song folder, a mirrored folder under the save root, or the save root itself.';
 
   @override
   String get localMatchFileNameTemplateHint =>

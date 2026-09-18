@@ -7,8 +7,16 @@ import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc_lyrics_flutter/lddc_lyrics_flutter.dart';
 import 'local_match_input_picker.dart';
 
+/// Android 歌词保存实现工厂。
+///
+/// 保存目标由实现决定（端口契约），因此这里把"歌曲树 + 保存根树 + 保存模式"一并注入：
+/// song 只用歌曲树，mirror/specify 使用保存根树。
 typedef AndroidLyricsPersistenceFactory =
-    LyricsSavePersistencePort Function(AndroidSafTreeToken tree);
+    LyricsSavePersistencePort Function(
+      AndroidSafTreeToken songTree,
+      AndroidSafTreeToken? saveTree,
+      LocalMatchSaveMode saveMode,
+    );
 
 typedef OpenLocalMatchSongInSearch =
     Future<void> Function(SongInfo songInfo, List<Source> preferredSources);

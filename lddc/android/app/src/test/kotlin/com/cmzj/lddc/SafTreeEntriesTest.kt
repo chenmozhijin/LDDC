@@ -62,4 +62,34 @@ class SafTreeEntriesTest {
         assertEquals(java.lang.Long.valueOf(0), SafTreeEntries.nonNegativeOrNull(0))
         assertEquals(java.lang.Long.valueOf(4096), SafTreeEntries.nonNegativeOrNull(4096))
     }
+
+    @Test
+    fun directorySegmentsRejectPathTraversalAndEmptySegments() {
+        assertTrue(SafTreeEntries.isSafeSegment("Album"))
+        assertTrue(SafTreeEntries.isSafeSegment(" 专辑 "))
+        assertFalse(SafTreeEntries.isSafeSegment(""))
+        assertFalse(SafTreeEntries.isSafeSegment("   "))
+        assertFalse(SafTreeEntries.isSafeSegment("."))
+        assertFalse(SafTreeEntries.isSafeSegment(".."))
+        assertFalse(SafTreeEntries.isSafeSegment("a/b"))
+        assertFalse(SafTreeEntries.isSafeSegment("a\\b"))
+    }
+
+    @Test
+    fun normalizeSegmentsAcceptsEmptyListButRejectsAnyIllegalSegment() {
+        // null 视为空：写树根，保持既有的搜索页保存行为。
+        assertEquals(emptyList<String>(), SafTreeEntries.normalizeSegments(null))
+        assertEquals(emptyList<String>(), SafTreeEntries.normalizeSegments(emptyList()))
+        assertEquals(
+            listOf("Album", "Disc 1"),
+            SafTreeEntries.normalizeSegments(listOf("Album", "Disc 1")),
+        )
+        assertEquals(
+            listOf("Album"),
+            SafTreeEntries.normalizeSegments(listOf(" Album ")),
+        )
+        // 任一段非法即整体失败：调用方必须报错，而不是"尽力猜测"写到树外。
+        assertNull(SafTreeEntries.normalizeSegments(listOf("Album", "..")))
+        assertNull(SafTreeEntries.normalizeSegments(listOf("")))
+    }
 }

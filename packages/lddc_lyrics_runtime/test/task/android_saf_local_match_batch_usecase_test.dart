@@ -546,6 +546,7 @@ class _FakeAndroidSafTreePort implements AndroidSafTreePort {
   @override
   Future<AndroidSafWriteDocumentResult> writeDocument({
     required String treeUri,
+    required List<String> directorySegments,
     required String displayName,
     required String mimeType,
     required Uint8List bytes,

@@ -915,7 +915,7 @@
   "localMatchSkipExisting": "既存の歌詞をスキップする",
   "localMatchSkipExistingConflictHint": "現在の出力戦略とファイル名モードでは、既存の歌詞をスキップできません。ファイルを保存する必要がある場合は、一致する歌詞情報に基づいて名前を付けることは避けてください。",
   "localMatchSaveToSongDirectoryHint": "ソングフォルダーへの保存には、追加の保存ルートは必要ありません。",
-  "localMatchAndroidTreeSaveHint": "Android ディレクトリ ツリーの保存は、承認されたツリーに直接書き込まれます。",
+  "localMatchAndroidTreeSaveHint": "Android は保存モードに従って承認済みツリーへ書き込みます: 曲のフォルダー / 保存ルート配下のミラー / 保存ルート直下。",
   "localMatchFileNameTemplateHint": "ファイル名のテンプレートは、設定の Lyrics_file_name_fmt を使用します。",
   "localMatchSaveRootPath": "ルートを保存: {path}",
   "localMatchSaveRootRequired": "この保存モードには保存ルートが必要です。まず 1 つ選択してください。",

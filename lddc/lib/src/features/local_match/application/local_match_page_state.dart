@@ -208,6 +208,7 @@ class LocalMatchPageState {
   const LocalMatchPageState({
     required this.inputMode,
     required this.androidTreeToken,
+    required this.androidSaveTreeToken,
     required this.queueItems,
     required this.focusedItemId,
     required this.selectedItemIds,
@@ -235,6 +236,12 @@ class LocalMatchPageState {
 
   final LocalMatchInputMode inputMode;
   final AndroidSafTreeToken? androidTreeToken;
+
+  /// mirror / specify 保存模式使用的保存根授权树。
+  ///
+  /// 与 [androidTreeToken]（歌曲所在树）相互独立：song 模式不使用它，
+  /// 且它在清空队列时才复位，避免扫描/重选歌曲树后丢失用户的保存位置选择。
+  final AndroidSafTreeToken? androidSaveTreeToken;
   final List<LocalMatchQueueItem> queueItems;
   final String? focusedItemId;
   final Set<String> selectedItemIds;
@@ -299,6 +306,8 @@ class LocalMatchPageState {
     LocalMatchInputMode? inputMode,
     AndroidSafTreeToken? androidTreeToken,
     bool clearAndroidTreeToken = false,
+    AndroidSafTreeToken? androidSaveTreeToken,
+    bool clearAndroidSaveTreeToken = false,
     List<LocalMatchQueueItem>? queueItems,
     String? focusedItemId,
     bool clearFocusedItemId = false,
@@ -331,6 +340,9 @@ class LocalMatchPageState {
       androidTreeToken: clearAndroidTreeToken
           ? null
           : (androidTreeToken ?? this.androidTreeToken),
+      androidSaveTreeToken: clearAndroidSaveTreeToken
+          ? null
+          : (androidSaveTreeToken ?? this.androidSaveTreeToken),
       queueItems: queueItems ?? this.queueItems,
       focusedItemId: clearFocusedItemId
           ? null
@@ -369,6 +381,7 @@ class LocalMatchPageState {
     return LocalMatchPageState(
       inputMode: inputMode,
       androidTreeToken: null,
+      androidSaveTreeToken: null,
       queueItems: const <LocalMatchQueueItem>[],
       focusedItemId: null,
       selectedItemIds: const <String>{},

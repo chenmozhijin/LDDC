@@ -88,6 +88,7 @@ class AndroidSafTreeAdapter implements AndroidSafTreePort {
   @override
   Future<AndroidSafWriteDocumentResult> writeDocument({
     required String treeUri,
+    required List<String> directorySegments,
     required String displayName,
     required String mimeType,
     required Uint8List bytes,
@@ -95,6 +96,8 @@ class AndroidSafTreeAdapter implements AndroidSafTreePort {
     final Map<Object?, Object?>? result = await _channel
         .invokeMapMethod<Object?, Object?>('writeDocument', <String, Object?>{
           'treeUri': treeUri,
+          // 目录层级在原生侧逐级定位/创建，避免每首歌多一次通道往返。
+          'directorySegments': directorySegments,
           'displayName': displayName,
           'mimeType': mimeType,
           'bytes': bytes,

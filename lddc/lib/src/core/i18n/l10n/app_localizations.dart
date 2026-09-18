@@ -1344,7 +1344,7 @@ abstract class AppLocalizations {
   /// No description provided for @localMatchAndroidTreeSaveHint.
   ///
   /// In en, this message translates to:
-  /// **'Android directory tree saves are written directly into the authorized tree.'**
+  /// **'Android writes into the authorized tree according to the save mode: the song folder, a mirrored folder under the save root, or the save root itself.'**
   String get localMatchAndroidTreeSaveHint;
 
   /// No description provided for @localMatchFileNameTemplateHint.
