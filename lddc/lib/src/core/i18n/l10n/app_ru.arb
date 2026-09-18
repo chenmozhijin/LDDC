@@ -926,6 +926,13 @@
   "localMatchAndroidValidationEmptyQueue": "Сначала выберите дерево каталогов",
   "localMatchScanNoMatch": "Сканирование завершено, но поддерживаемые аудио- или CUE-файлы не найдены",
   "localMatchErrorDetailsTitle": "Подробности ошибок ({count})",
+  "@localMatchErrorDetailsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "localMatchSaveModeSong": "Сохранить в папку песни",
   "localMatchSaveModeMirror": "Зеркальные папки",
   "localMatchSaveModeSpecify": "Конкретная папка",

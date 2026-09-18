@@ -1675,9 +1675,7 @@ void main() {
       );
     });
 
-    testWidgets('安卓零命中时空态与文案按平台区分且不再重复页面标题', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('安卓零命中时空态与文案按平台区分且不再重复页面标题', (WidgetTester tester) async {
       _setTestViewport(tester, const Size(390, 844));
       final ProviderContainer container = _createContainer(
         capability: _androidCapability(),
@@ -1694,16 +1692,10 @@ void main() {
       // 壳层 AppBar 是唯一标题来源，页面体内不再重复渲染同名标题。
       expect(find.text('本地匹配'), findsNothing);
       // 零命中必须与"尚未选择目录树"区分开（可能同时有 SnackBar，故用 findsWidgets）。
-      expect(
-        find.text('扫描完成，但没有找到可识别的音频或 CUE 文件'),
-        findsWidgets,
-      );
+      expect(find.text('扫描完成，但没有找到可识别的音频或 CUE 文件'), findsWidgets);
       // 安卓端不再套用桌面端"先导入文件或文件夹"文案。
       expect(find.text('先导入文件或文件夹以建立任务队列'), findsNothing);
-      expect(
-        find.text('选择目录树后会自动扫描并建立任务队列，无需另外导入。'),
-        findsOneWidget,
-      );
+      expect(find.text('选择目录树后会自动扫描并建立任务队列，无需另外导入。'), findsOneWidget);
       expect(find.text('选择目录树并执行'), findsOneWidget);
     });
 

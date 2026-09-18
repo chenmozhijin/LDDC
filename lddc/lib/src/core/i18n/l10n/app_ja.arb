@@ -926,6 +926,13 @@
   "localMatchAndroidValidationEmptyQueue": "先にディレクトリツリーを選択してください",
   "localMatchScanNoMatch": "スキャンは完了しましたが、対応する音声または CUE ファイルが見つかりませんでした",
   "localMatchErrorDetailsTitle": "失敗の詳細（{count} 件）",
+  "@localMatchErrorDetailsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "localMatchSaveModeSong": "ソングフォルダーに保存",
   "localMatchSaveModeMirror": "ミラーフォルダー",
   "localMatchSaveModeSpecify": "特定のフォルダー",

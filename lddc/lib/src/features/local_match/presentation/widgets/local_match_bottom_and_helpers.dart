@@ -109,12 +109,11 @@ List<String> localMatchInlineValidationMessages(
 ) {
   return validateLocalMatchRun(state)
       .map(
-        (LocalMatchRunValidationIssue issue) =>
-            localMatchValidationIssueText(
-              context,
-              issue,
-              androidTreeMode: state.isAndroidMode,
-            ),
+        (LocalMatchRunValidationIssue issue) => localMatchValidationIssueText(
+          context,
+          issue,
+          androidTreeMode: state.isAndroidMode,
+        ),
       )
       .toList(growable: false);
 }
@@ -137,12 +136,11 @@ List<String> localMatchVisualValidationMessages(
             !inlineOnlyCodes.contains(issue.code),
       )
       .map(
-        (LocalMatchRunValidationIssue issue) =>
-            localMatchValidationIssueText(
-              context,
-              issue,
-              androidTreeMode: state.isAndroidMode,
-            ),
+        (LocalMatchRunValidationIssue issue) => localMatchValidationIssueText(
+          context,
+          issue,
+          androidTreeMode: state.isAndroidMode,
+        ),
       )
       .toList(growable: false);
 }

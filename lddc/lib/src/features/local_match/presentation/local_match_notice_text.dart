@@ -105,9 +105,10 @@ String localMatchValidationIssueText(
       l10n.localMatchValidationEmptyLangs,
     LocalMatchRunValidationCode.emptySources =>
       l10n.localMatchValidationEmptySources,
-    LocalMatchRunValidationCode.emptyQueue => androidTreeMode
-        ? l10n.localMatchAndroidValidationEmptyQueue
-        : l10n.localMatchValidationEmptyQueue,
+    LocalMatchRunValidationCode.emptyQueue =>
+      androidTreeMode
+          ? l10n.localMatchAndroidValidationEmptyQueue
+          : l10n.localMatchValidationEmptyQueue,
     LocalMatchRunValidationCode.tagRequiresLrc =>
       l10n.commonAudioTagRequiresLrc,
     LocalMatchRunValidationCode.skipExistingFileNameConflict =>
