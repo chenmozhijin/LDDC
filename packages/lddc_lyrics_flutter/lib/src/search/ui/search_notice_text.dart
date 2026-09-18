@@ -1,9 +1,13 @@
+import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
+
 import '../../ui/search_ui_strings.dart';
 import '../search_workflow_state.dart';
 
 /// 将控制器通知解析为当前宿主语言的可见文本。
 String searchNoticeText(SearchUiStrings strings, SearchNotice notice) {
-  final String detail = notice.detail ?? '';
+  // detail 承载原生错误与保存结果（安卓端是 content:// 编码 URI），
+  // 在这里统一还原成可读路径：所有 detail 分支一次受益，页面无需各自处理。
+  final String detail = humanizeAndroidSafUris(notice.detail ?? '');
   final int saved = notice.successCount ?? 0;
   final int failed = notice.failureCount ?? 0;
   final int skipped = notice.skippedCount ?? 0;
