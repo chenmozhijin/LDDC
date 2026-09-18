@@ -416,6 +416,13 @@
   "localMatchAndroidValidationEmptyQueue": "請先選擇目錄樹",
   "localMatchScanNoMatch": "掃描完成，但沒有找到可辨識的音訊或 CUE 檔案",
   "localMatchErrorDetailsTitle": "失敗明細（{count} 條）",
+  "@localMatchErrorDetailsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "localMatchSaveModeSong": "儲存到歌曲目錄",
   "localMatchSaveModeMirror": "映象目錄",
   "localMatchSaveModeSpecify": "指定目錄",

@@ -472,9 +472,7 @@ class AndroidSafLocalMatchGetInfosUseCase {
           // 端口契约上"目录/文件"必有一真。两者皆假的实现（异常 provider、旧式目录
           // MIME）过去会被这里静默跳过：若是目录，整棵子树会无声消失且没有任何错误，
           // 所以必须留下记录而不是 continue 了事。
-          errors.add(
-            '目录项既不是文件也不是目录：${child.displayName} (${child.uri})',
-          );
+          errors.add('目录项既不是文件也不是目录：${child.displayName} (${child.uri})');
           continue;
         }
         if (!state.seenFileUris.add(child.uri)) {

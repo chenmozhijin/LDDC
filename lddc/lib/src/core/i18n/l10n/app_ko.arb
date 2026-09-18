@@ -926,6 +926,13 @@
   "localMatchAndroidValidationEmptyQueue": "먼저 디렉터리 트리를 선택하세요",
   "localMatchScanNoMatch": "검색은 완료되었지만 지원되는 오디오 또는 CUE 파일을 찾지 못했습니다",
   "localMatchErrorDetailsTitle": "실패 상세({count}건)",
+  "@localMatchErrorDetailsTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "localMatchSaveModeSong": "노래 폴더에 저장",
   "localMatchSaveModeMirror": "미러 폴더",
   "localMatchSaveModeSpecify": "특정 폴더",
