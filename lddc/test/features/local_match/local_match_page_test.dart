@@ -1734,6 +1734,61 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Bad state'), findsOneWidget);
     });
+
+    testWidgets('安卓端保存模式驱动保存根入口与提示', (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 844));
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        picker: _FakeLocalMatchInputPicker(androidTreeToken: _androidTree),
+      );
+      addTearDown(container.dispose);
+      final LocalMatchPageController controller = container.read(
+        localMatchPageControllerProvider.notifier,
+      );
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await tester.pumpAndSettle();
+
+      // song 模式：不需要保存根，入口与"需要保存根"提示都不出现。
+      expect(
+        find.byKey(const ValueKey<String>('local_match_pick_save_tree')),
+        findsNothing,
+      );
+      expect(find.text('当前保存模式需要保存根目录，请先选择。'), findsNothing);
+
+      // 切换为 mirror：出现保存根入口 + 缺少保存根的提示。
+      controller.updateSaveMode(LocalMatchSaveMode.mirror);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('local_match_pick_save_tree')),
+        findsOneWidget,
+      );
+      expect(find.text('当前保存模式需要保存根目录，请先选择。'), findsOneWidget);
+
+      // 选好保存根后提示换成实际保存根（不再提示缺失）。
+      await controller.selectAndroidSaveTree();
+      await tester.pumpAndSettle();
+      expect(find.text('当前保存模式需要保存根目录，请先选择。'), findsNothing);
+      expect(find.textContaining('根目录'), findsWidgets);
+
+      // 保存模式下拉在安卓端可见（改造前被桌面门槛挡住，只能靠状态断言）。
+      await tester.tap(
+        find.byKey(const ValueKey<String>('local_match_rules_card')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('local_match_save_mode')),
+        findsOneWidget,
+      );
+
+      // 切回 song：保存根入口再次隐藏。
+      controller.updateSaveMode(LocalMatchSaveMode.song);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey<String>('local_match_pick_save_tree')),
+        findsNothing,
+      );
+    });
   });
 
   group('LocalMatchInputPickerImpl', () {
