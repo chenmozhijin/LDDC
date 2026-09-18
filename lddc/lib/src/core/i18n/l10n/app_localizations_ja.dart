@@ -696,7 +696,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get localMatchAndroidTreeSaveHint =>
-      'Android ディレクトリ ツリーの保存は、承認されたツリーに直接書き込まれます。';
+      'Android は保存モードに従って承認済みツリーへ書き込みます: 曲のフォルダー / 保存ルート配下のミラー / 保存ルート直下。';
 
   @override
   String get localMatchFileNameTemplateHint =>

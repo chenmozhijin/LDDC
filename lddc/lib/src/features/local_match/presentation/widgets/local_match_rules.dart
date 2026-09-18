@@ -256,8 +256,7 @@ class LocalMatchImportActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool needsSaveRoot =
-        state.isDesktopMode && state.saveMode != LocalMatchSaveMode.song;
+    final bool needsSaveRoot = state.saveMode != LocalMatchSaveMode.song;
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -299,7 +298,7 @@ class LocalMatchImportActions extends StatelessWidget {
                 label: Text(context.l10n.localMatchActionSelectSaveRoot),
               ),
             ),
-        ] else
+        ] else ...<Widget>[
           AppActionSemantics(
             identifier: AppSemanticsIdentifiers.localMatchPickTree,
             label: state.androidTreeToken == null
@@ -317,6 +316,23 @@ class LocalMatchImportActions extends StatelessWidget {
               ),
             ),
           ),
+          // mirror/specify 的保存根是"另一棵已授权树"：安卓端不开这个入口的话，
+          // 保存模式选了也没有落地位置。
+          if (needsSaveRoot)
+            AppActionSemantics(
+              identifier: AppSemanticsIdentifiers.localMatchSaveRoot,
+              label: context.l10n.localMatchActionSelectSaveRoot,
+              onTap: state.isBusy ? null : controller.selectAndroidSaveTree,
+              child: OutlinedButton.icon(
+                key: const ValueKey<String>('local_match_pick_save_tree'),
+                onPressed: state.isBusy
+                    ? null
+                    : controller.selectAndroidSaveTree,
+                icon: const Icon(Icons.drive_folder_upload_outlined),
+                label: Text(context.l10n.localMatchActionSelectSaveRoot),
+              ),
+            ),
+        ],
         OutlinedButton.icon(
           key: const ValueKey<String>('local_match_clear_queue'),
           onPressed: state.isBusy ? null : controller.clearQueue,
@@ -370,7 +386,32 @@ class LocalMatchPathNotice extends StatelessWidget {
       final String label =
           state.androidTreeToken?.displayName ??
           context.l10n.localMatchTreeNotSelected;
-      return TonalInlineNotice(icon: Icons.account_tree_outlined, text: label);
+      if (state.saveMode == LocalMatchSaveMode.song) {
+        return TonalInlineNotice(
+          icon: Icons.account_tree_outlined,
+          text: label,
+        );
+      }
+      // mirror/specify 还需要保存根树：两行分别说明"歌曲树"和"保存根树"，
+      // 避免用户以为歌词仍写在歌曲旁边。
+      final String saveLabel =
+          state.androidSaveTreeToken?.displayName?.trim() ?? '';
+      final bool hasSaveTree = saveLabel.isNotEmpty;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          TonalInlineNotice(icon: Icons.account_tree_outlined, text: label),
+          const SizedBox(height: 8),
+          TonalInlineNotice(
+            icon: hasSaveTree
+                ? Icons.drive_folder_upload_outlined
+                : Icons.error_outline,
+            text: hasSaveTree
+                ? context.l10n.localMatchSaveRootPath(saveLabel)
+                : context.l10n.localMatchSaveRootRequired,
+          ),
+        ],
+      );
     }
     if (state.saveMode == LocalMatchSaveMode.song) {
       return TonalInlineNotice(
@@ -505,33 +546,32 @@ class LocalMatchRuleFields extends StatelessWidget {
       ),
     ];
     final List<Widget> advancedFields = <Widget>[
-      if (state.isDesktopMode)
-        LocalMatchRuleField(
-          label: context.l10n.localMatchFieldSaveMode,
-          width: narrowFieldWidth,
-          child: DropdownButtonFormField<LocalMatchSaveMode>(
-            key: const ValueKey<String>('local_match_save_mode'),
-            initialValue: state.saveMode,
-            isExpanded: true,
-            decoration: const InputDecoration(isDense: true),
-            items: LocalMatchSaveMode.values
-                .map(
-                  (LocalMatchSaveMode value) =>
-                      DropdownMenuItem<LocalMatchSaveMode>(
-                        value: value,
-                        child: Text(localMatchSaveModeLabel(context, value)),
-                      ),
-                )
-                .toList(growable: false),
-            onChanged: state.isBusy
-                ? null
-                : (LocalMatchSaveMode? value) {
-                    if (value != null) {
-                      controller.updateSaveMode(value);
-                    }
-                  },
-          ),
+      LocalMatchRuleField(
+        label: context.l10n.localMatchFieldSaveMode,
+        width: narrowFieldWidth,
+        child: DropdownButtonFormField<LocalMatchSaveMode>(
+          key: const ValueKey<String>('local_match_save_mode'),
+          initialValue: state.saveMode,
+          isExpanded: true,
+          decoration: const InputDecoration(isDense: true),
+          items: LocalMatchSaveMode.values
+              .map(
+                (LocalMatchSaveMode value) =>
+                    DropdownMenuItem<LocalMatchSaveMode>(
+                      value: value,
+                      child: Text(localMatchSaveModeLabel(context, value)),
+                    ),
+              )
+              .toList(growable: false),
+          onChanged: state.isBusy
+              ? null
+              : (LocalMatchSaveMode? value) {
+                  if (value != null) {
+                    controller.updateSaveMode(value);
+                  }
+                },
         ),
+      ),
       LocalMatchRuleField(
         label: context.l10n.localMatchFieldFileNameMode,
         width: narrowFieldWidth,

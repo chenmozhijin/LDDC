@@ -915,7 +915,7 @@
   "localMatchSkipExisting": "기존 가사 건너뛰기",
   "localMatchSkipExistingConflictHint": "현재 출력 전략 및 파일 이름 모드는 기존 가사를 건너뛸 수 없습니다. 파일을 계속 저장해야 하는 경우 일치하는 가사 정보로 이름을 지정하지 마세요.",
   "localMatchSaveToSongDirectoryHint": "노래 폴더에 저장하는 경우 추가 저장 루트가 필요하지 않습니다.",
-  "localMatchAndroidTreeSaveHint": "Android 디렉터리 트리 저장은 승인된 트리에 직접 기록됩니다.",
+  "localMatchAndroidTreeSaveHint": "Android는 저장 모드에 따라 승인된 트리에 기록합니다: 노래 폴더 / 저장 루트 아래의 미러 / 저장 루트 바로 아래.",
   "localMatchFileNameTemplateHint": "파일 이름 템플릿은 설정의 Lyrics_file_name_fmt를 사용합니다.",
   "localMatchSaveRootPath": "저장 루트: {path}",
   "localMatchSaveRootRequired": "이 저장 모드에는 저장 루트가 필요합니다. 먼저 하나를 선택하세요.",

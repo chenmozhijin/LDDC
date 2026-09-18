@@ -61,12 +61,29 @@ List<LocalMatchRunValidationIssue> validateLocalMatchRun(
         ),
       );
     }
-  } else if (state.isAndroidMode && state.androidTreeToken == null) {
-    issues.add(
-      const LocalMatchRunValidationIssue(
-        code: LocalMatchRunValidationCode.missingAndroidTree,
-      ),
-    );
+  } else if (state.isAndroidMode) {
+    if (state.androidTreeToken == null) {
+      issues.add(
+        const LocalMatchRunValidationIssue(
+          code: LocalMatchRunValidationCode.missingAndroidTree,
+        ),
+      );
+    }
+    // mirror/specify 缺保存根树、歌曲不在授权树内（或路径形态无法推导）都会让写入逐条失败，
+    // 必须在启动前拦住；校验与写入共用同一个目标推导纯函数，避免"校验放行、执行必失败"。
+    final List<LocalMatchSavePlanBlocker> androidBlockers = state.queueItems
+        .where((LocalMatchQueueItem item) => item.savePlan.hasBlockingError)
+        .map((LocalMatchQueueItem item) => item.savePlan.blocker)
+        .toSet()
+        .toList(growable: false);
+    for (final LocalMatchSavePlanBlocker blocker in androidBlockers) {
+      issues.add(
+        LocalMatchRunValidationIssue(
+          code: LocalMatchRunValidationCode.savePlanBlocked,
+          savePlanBlocker: blocker,
+        ),
+      );
+    }
   }
   return List<LocalMatchRunValidationIssue>.unmodifiable(issues);
 }

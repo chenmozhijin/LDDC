@@ -398,7 +398,7 @@
   "localMatchSkipExisting": "跳過已有歌詞",
   "localMatchSkipExistingConflictHint": "當前“輸出策略 + 檔名模式”組合不支援開啟跳過已有歌詞；若還需要儲存檔案，請避免選擇“按歌詞資訊命名”。",
   "localMatchSaveToSongDirectoryHint": "當前儲存到歌曲目錄，無需額外儲存根目錄。",
-  "localMatchAndroidTreeSaveHint": "Android 目錄樹檔案儲存會直接寫入已授權目錄樹。",
+  "localMatchAndroidTreeSaveHint": "Android 端依儲存模式寫入已授權目錄樹：歌曲目錄 / 儲存根鏡像 / 儲存根根目錄。",
   "localMatchFileNameTemplateHint": "命名模板沿用設定頁中的 lyrics_file_name_fmt。",
   "localMatchSaveRootPath": "儲存根目錄：{path}",
   "@localMatchSaveRootPath": {

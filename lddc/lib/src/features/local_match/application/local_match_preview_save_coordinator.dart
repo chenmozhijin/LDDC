@@ -1,6 +1,7 @@
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
+import '../../../platform/android/saf/android_saf_save_paths.dart';
 import 'local_match_page_state.dart';
 
 /// 生成队列预览所需的不可变配置快照。
@@ -13,7 +14,10 @@ final class LocalMatchPreviewOptions {
     required this.fileNameFormat,
     required List<String> selectedLangs,
     required this.saveRootPath,
-    required this.androidTreeLabel,
+    required this.androidSongTreeUri,
+    required this.androidSongTreeLabel,
+    required this.androidSaveTreeUri,
+    required this.androidSaveTreeLabel,
   }) : selectedLangs = List<String>.unmodifiable(selectedLangs);
 
   final LocalMatchSaveMode saveMode;
@@ -23,7 +27,14 @@ final class LocalMatchPreviewOptions {
   final String fileNameFormat;
   final List<String> selectedLangs;
   final String? saveRootPath;
-  final String androidTreeLabel;
+
+  /// 歌曲所在授权树（Android）。
+  final String androidSongTreeUri;
+  final String androidSongTreeLabel;
+
+  /// 保存根授权树（Android，仅 mirror/specify 使用）。
+  final String? androidSaveTreeUri;
+  final String androidSaveTreeLabel;
 }
 
 /// 队列预览与保存路径规划协调器，不持有 controller state 或第二份队列。
@@ -104,20 +115,47 @@ final class LocalMatchPreviewSaveCoordinator {
         songInfo.fromCue ||
         options.saveToTagMode != LocalMatchSaveToTagMode.onlyTag;
     if (needsFileWrite) {
+      final LocalMatchSavePlanKind kind = needsTagWrite
+          ? LocalMatchSavePlanKind.fileAndTag
+          : LocalMatchSavePlanKind.fileOnly;
+      // 预览与真实写入共用同一个纯函数推导目标，避免"预览显示写到 A、实际写到 B"。
+      final AndroidSafSaveTargetResult resolved = resolveAndroidSafSaveTarget(
+        saveMode: options.saveMode,
+        songPath: songInfo.path,
+        songTreeUri: options.androidSongTreeUri,
+        saveTreeUri: options.androidSaveTreeUri,
+        songTreeLabel: options.androidSongTreeLabel,
+        saveTreeLabel: options.androidSaveTreeLabel,
+      );
+      final AndroidSafSaveTarget? target = resolved.target;
+      if (target == null) {
+        return LocalMatchSavePlan(
+          kind: kind,
+          blocker: switch (resolved.failure) {
+            AndroidSafSaveTargetFailure.missingSaveTree =>
+              LocalMatchSavePlanBlocker.needsSaveRoot,
+            _ => LocalMatchSavePlanBlocker.unknown,
+          },
+        );
+      }
       final bool waitsForLyrics =
           options.fileNameMode == LocalMatchFileNameMode.formatByLyrics;
+      final String directoryLabel = target.directoryLabel.trim();
       final String? fileLabel = waitsForLyrics
           ? null
-          : '${options.androidTreeLabel} / '
-                '${LyricsPathTemplateFormatter.buildFileName(fileNameFormat: '${options.fileNameFormat}${options.lyricsFormat.ext}', songInfo: songInfo, lyricLangs: options.selectedLangs)}';
+          : (directoryLabel.isEmpty
+                ? LyricsPathTemplateFormatter.buildFileName(
+                    fileNameFormat:
+                        '${options.fileNameFormat}${options.lyricsFormat.ext}',
+                    songInfo: songInfo,
+                    lyricLangs: options.selectedLangs,
+                  )
+                : '$directoryLabel / '
+                      '${LyricsPathTemplateFormatter.buildFileName(fileNameFormat: '${options.fileNameFormat}${options.lyricsFormat.ext}', songInfo: songInfo, lyricLangs: options.selectedLangs)}');
       return LocalMatchSavePlan(
-        kind: needsTagWrite
-            ? LocalMatchSavePlanKind.fileAndTag
-            : LocalMatchSavePlanKind.fileOnly,
+        kind: kind,
         targetPath: fileLabel,
-        pendingFileNameRootLabel: waitsForLyrics
-            ? options.androidTreeLabel
-            : null,
+        pendingFileNameRootLabel: waitsForLyrics ? directoryLabel : null,
       );
     }
     return needsTagWrite

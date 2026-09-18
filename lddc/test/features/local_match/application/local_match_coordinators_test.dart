@@ -158,7 +158,7 @@ void main() {
       langs.add('ts');
 
       final LocalMatchSavePlan plan = coordinator.buildAndroidSavePlan(
-        _song(path: 'content://audio/song'),
+        _song(path: _nestedSongUri),
         options,
       );
 
@@ -166,10 +166,61 @@ void main() {
       expect(() => options.selectedLangs.add('roma'), throwsUnsupportedError);
       expect(plan.kind, LocalMatchSavePlanKind.fileOnly);
       expect(plan.targetPath, isNull);
-      expect(plan.pendingFileNameRootLabel, 'Music');
+      // song 模式的目标是歌曲所在目录，预览标签必须显示"歌曲树 / 相对目录"。
+      expect(plan.pendingFileNameRootLabel, 'Music / Album');
+    });
+
+    test('Android specify 模式预览扁平写到保存根', () {
+      const LocalMatchPreviewSaveCoordinator coordinator =
+          LocalMatchPreviewSaveCoordinator();
+
+      final LocalMatchSavePlan plan = coordinator.buildAndroidSavePlan(
+        _song(path: _nestedSongUri),
+        _previewOptions(
+          saveMode: LocalMatchSaveMode.specify,
+          androidSaveTreeUri: _saveTreeUri,
+          androidSaveTreeLabel: 'Lyrics',
+        ),
+      );
+
+      expect(plan.blocker, LocalMatchSavePlanBlocker.none);
+      expect(plan.targetPath, startsWith('Lyrics / '));
+      expect(plan.targetPath, contains('Singer - Song'));
+    });
+
+    test('Android 无法推导保存位置时给出阻塞而不是静默写树根', () {
+      const LocalMatchPreviewSaveCoordinator coordinator =
+          LocalMatchPreviewSaveCoordinator();
+
+      final LocalMatchSavePlan plan = coordinator.buildAndroidSavePlan(
+        // 非 SAF 路径：既不是树内文档，也无法推导相对目录。
+        _song(path: r'D:\music\a.mp3'),
+        _previewOptions(),
+      );
+
+      expect(plan.blocker, LocalMatchSavePlanBlocker.unknown);
+      expect(plan.targetPath, isNull);
+    });
+
+    test('Android mirror 模式缺保存根时按 needsSaveRoot 阻塞', () {
+      const LocalMatchPreviewSaveCoordinator coordinator =
+          LocalMatchPreviewSaveCoordinator();
+
+      final LocalMatchSavePlan plan = coordinator.buildAndroidSavePlan(
+        _song(path: _nestedSongUri),
+        _previewOptions(saveMode: LocalMatchSaveMode.mirror),
+      );
+
+      expect(plan.blocker, LocalMatchSavePlanBlocker.needsSaveRoot);
     });
   });
 }
+
+/// 歌曲位于授权树子目录中的标准 SAF 文档 URI（含 %2F 编码的文档 id）。
+const String _nestedSongUri =
+    'content://com.android.externalstorage.documents/tree/primary%3AMusic/document/primary%3AMusic%2FAlbum%2Fa.mp3';
+const String _saveTreeUri =
+    'content://com.android.externalstorage.documents/tree/primary%3ALyrics';
 
 LocalMatchInputCoordinator _inputCoordinator([_FakeMediaGateway? gateway]) {
   return LocalMatchInputCoordinator(
@@ -305,6 +356,11 @@ LocalMatchPreviewOptions _previewOptions({
   LocalMatchFileNameMode fileNameMode = LocalMatchFileNameMode.song,
   List<String>? selectedLangs,
   String? saveRootPath = 'C:/lyrics',
+  String androidSongTreeUri =
+      'content://com.android.externalstorage.documents/tree/primary%3AMusic',
+  String androidSongTreeLabel = 'Music',
+  String? androidSaveTreeUri,
+  String androidSaveTreeLabel = '',
 }) {
   return LocalMatchPreviewOptions(
     saveMode: saveMode,
@@ -314,7 +370,10 @@ LocalMatchPreviewOptions _previewOptions({
     fileNameFormat: '%<artist> - %<title>',
     selectedLangs: selectedLangs ?? const <String>['orig'],
     saveRootPath: saveRootPath,
-    androidTreeLabel: 'Music',
+    androidSongTreeUri: androidSongTreeUri,
+    androidSongTreeLabel: androidSongTreeLabel,
+    androidSaveTreeUri: androidSaveTreeUri,
+    androidSaveTreeLabel: androidSaveTreeLabel,
   );
 }
 

@@ -681,7 +681,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get localMatchSaveToSongDirectoryHint => '当前保存到歌曲目录，无需额外保存根目录。';
 
   @override
-  String get localMatchAndroidTreeSaveHint => 'Android 目录树文件保存会直接写入已授权目录树。';
+  String get localMatchAndroidTreeSaveHint =>
+      'Android 端按保存模式写入已授权目录树：歌曲目录 / 保存根镜像 / 保存根根目录。';
 
   @override
   String get localMatchFileNameTemplateHint =>
@@ -2941,7 +2942,8 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get localMatchSaveToSongDirectoryHint => '当前保存到歌曲目录，无需额外保存根目录。';
 
   @override
-  String get localMatchAndroidTreeSaveHint => 'Android 目录树文件保存会直接写入已授权目录树。';
+  String get localMatchAndroidTreeSaveHint =>
+      'Android 端按保存模式写入已授权目录树：歌曲目录 / 保存根镜像 / 保存根根目录。';
 
   @override
   String get localMatchFileNameTemplateHint =>
@@ -5201,7 +5203,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get localMatchSaveToSongDirectoryHint => '當前儲存到歌曲目錄，無需額外儲存根目錄。';
 
   @override
-  String get localMatchAndroidTreeSaveHint => 'Android 目錄樹檔案儲存會直接寫入已授權目錄樹。';
+  String get localMatchAndroidTreeSaveHint =>
+      'Android 端依儲存模式寫入已授權目錄樹：歌曲目錄 / 儲存根鏡像 / 儲存根根目錄。';
 
   @override
   String get localMatchFileNameTemplateHint =>

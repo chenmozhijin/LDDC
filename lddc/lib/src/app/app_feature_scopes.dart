@@ -58,8 +58,13 @@ SearchWorkflowDependencies buildSearchWorkflowDependencies(WidgetRef ref) {
     ),
     androidSafBatchSaveUseCase: SearchAndroidSafBatchSaveLyricsUseCase(
       lyricsApi: lyricsApi,
-      persistenceFactory: (String treeUri) =>
-          AndroidSafLyricsSavePersistence(treePort: treePort, treeUri: treeUri),
+      persistenceFactory: (String treeUri) => AndroidSafLyricsSavePersistence(
+        treePort: treePort,
+        treeUri: treeUri,
+        // 搜索页批量保存的语义是"扁平写到用户选定的树根"，等价于 specify 且保存根=该树。
+        saveMode: LocalMatchSaveMode.specify,
+        saveTreeUri: treeUri,
+      ),
     ),
     fileSavePersistenceFactory: (String folder) =>
         FileLyricsSavePersistence(folder: folder),
@@ -135,10 +140,14 @@ class AppLocalMatchPageScope extends ConsumerWidget {
             pathOpener: ref.watch(appPathOpenerProvider),
             mediaGateway: mediaGateway,
             dragDropPort: ref.watch(dragDropPortProvider),
-            androidLyricsPersistenceFactory: (tree) =>
+            androidLyricsPersistenceFactory: (songTree, saveTree, saveMode) =>
                 AndroidSafLyricsSavePersistence(
                   treePort: treePort,
-                  treeUri: tree.uri,
+                  treeUri: songTree.uri,
+                  saveMode: saveMode,
+                  saveTreeUri: saveTree?.uri,
+                  treeLabel: songTree.displayName ?? songTree.uri,
+                  saveTreeLabel: saveTree?.displayName ?? saveTree?.uri ?? '',
                 ),
             openInSearch: (songInfo, preferredSources) async {
               ref.read(appShellRouteListenableProvider).value =

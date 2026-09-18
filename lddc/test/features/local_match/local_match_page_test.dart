@@ -20,6 +20,7 @@ import 'package:lddc/src/features/local_match/application/local_match_page_state
 import 'package:lddc/src/features/local_match/presentation/local_match_page.dart';
 import 'package:lddc/src/features/local_match/presentation/widgets/local_match_rules.dart';
 import 'package:lddc/src/platform/android/saf/android_saf_lyrics_save_persistence.dart';
+import 'package:lddc/src/platform/android/saf/android_saf_save_paths.dart';
 import 'package:lddc/src/platform/drag_drop/drag_drop_port.dart';
 
 import '../../../integration_test/support/integration_drivers.dart';
@@ -574,13 +575,17 @@ void main() {
     });
 
     test('Android 目录树模式通过 persistence 写入歌词文件', () async {
+      // 真实 SAF 树 URI 形如 content://<provider>/tree/<treeDocId>，不能省略 authority。
       const AndroidSafTreeToken tree = AndroidSafTreeToken(
-        uri: 'content://tree/root',
+        uri: 'content://com.android.externalstorage.documents/tree/root',
         displayName: '根目录',
       );
+      // 歌曲位于授权树的子目录：song 模式必须写到它的所在目录，
+      // 而不是改造前那种"一律写授权树根"的行为。
       final SongInfo songInfo = SongInfo(
         source: Source.local,
-        path: 'content://doc/song.mp3',
+        path:
+            'content://com.android.externalstorage.documents/tree/root/document/root%2FAlbum%2Fsong.mp3',
         title: 'Song',
         artist: SongArtist(<String>['Singer']),
       );
@@ -666,24 +671,25 @@ void main() {
       expect(state.isAndroidMode, isTrue);
       expect(state.successCount, 1);
       expect(treePort.writeRequests, hasLength(1));
+      expect(treePort.writeRequests.single.directorySegments, <String>[
+        'Album',
+      ]);
       expect(treePort.writeRequests.single.displayName, endsWith('.lrc'));
       expect(utf8.decode(treePort.writeRequests.single.bytes), '[00:00.000]歌词');
-      expect(
-        state.queueItems.single.outputPath,
-        'content://tree/root/${treePort.writeRequests.single.displayName}',
-      );
+      expect(state.queueItems.single.outputPath, contains('root%2FAlbum'));
     });
 
     test('Android 目录树匹配取消后再次启动会从 batch checkpoint 继续', () async {
       const AndroidSafTreeToken tree = AndroidSafTreeToken(
-        uri: 'content://tree/root',
+        uri: 'content://com.android.externalstorage.documents/tree/root',
         displayName: '根目录',
       );
       final List<LocalMatchSongEntry> entries = <LocalMatchSongEntry>[
         LocalMatchSongEntry(
           songInfo: SongInfo(
             source: Source.local,
-            path: 'content://doc/one.mp3',
+            path:
+                'content://com.android.externalstorage.documents/tree/root/document/root%2Fone.mp3',
             title: 'One',
           ),
           rootPath: tree.uri,
@@ -691,7 +697,8 @@ void main() {
         LocalMatchSongEntry(
           songInfo: SongInfo(
             source: Source.local,
-            path: 'content://doc/two.mp3',
+            path:
+                'content://com.android.externalstorage.documents/tree/root/document/root%2Ftwo.mp3',
             title: 'Two',
           ),
           rootPath: tree.uri,
@@ -1837,10 +1844,18 @@ ProviderContainer _createContainer({
           pathOpener: pathOpener,
           mediaGateway: resolvedMediaGateway,
           dragDropPort: const DragDropPortImpl(),
-          androidLyricsPersistenceFactory: (AndroidSafTreeToken tree) =>
-              AndroidSafLyricsSavePersistence(
+          androidLyricsPersistenceFactory:
+              (
+                AndroidSafTreeToken songTree,
+                AndroidSafTreeToken? saveTree,
+                LocalMatchSaveMode saveMode,
+              ) => AndroidSafLyricsSavePersistence(
                 treePort: resolvedTreePort,
-                treeUri: tree.uri,
+                treeUri: songTree.uri,
+                saveMode: saveMode,
+                saveTreeUri: saveTree?.uri,
+                treeLabel: songTree.displayName ?? songTree.uri,
+                saveTreeLabel: saveTree?.displayName ?? saveTree?.uri ?? '',
               ),
           openInSearch: openInSearch ?? (_, _) async {},
         ),
@@ -2339,12 +2354,14 @@ class _FakeAndroidSafContentPort implements AndroidSafContentPort {
 class _AndroidSafWriteRequest {
   const _AndroidSafWriteRequest({
     required this.treeUri,
+    required this.directorySegments,
     required this.displayName,
     required this.mimeType,
     required this.bytes,
   });
 
   final String treeUri;
+  final List<String> directorySegments;
   final String displayName;
   final String mimeType;
   final Uint8List bytes;
@@ -2391,6 +2408,7 @@ class _FakeAndroidSafTreePort implements AndroidSafTreePort {
   @override
   Future<AndroidSafWriteDocumentResult> writeDocument({
     required String treeUri,
+    required List<String> directorySegments,
     required String displayName,
     required String mimeType,
     required Uint8List bytes,
@@ -2398,17 +2416,26 @@ class _FakeAndroidSafTreePort implements AndroidSafTreePort {
     writeRequests.add(
       _AndroidSafWriteRequest(
         treeUri: treeUri,
+        directorySegments: List<String>.unmodifiable(directorySegments),
         displayName: displayName,
         mimeType: mimeType,
         bytes: Uint8List.fromList(bytes),
       ),
     );
+    // 注册到"目标目录"URI 下，与实现侧 safDirectoryUri 的构造保持一致，
+    // 这样 exists() 的分页枚举才能看到刚写入的文件。
+    final String directoryUri =
+        safDirectoryUri(
+          treeUri: treeUri,
+          directorySegments: directorySegments,
+        ) ??
+        treeUri;
     childrenByUri.update(
-      treeUri,
+      directoryUri,
       (List<AndroidSafTreeEntry> current) => <AndroidSafTreeEntry>[
         ...current,
         AndroidSafTreeEntry(
-          uri: '$treeUri/$displayName',
+          uri: '$directoryUri/$displayName',
           displayName: displayName,
           mimeType: mimeType,
           isDirectory: false,
@@ -2417,7 +2444,7 @@ class _FakeAndroidSafTreePort implements AndroidSafTreePort {
       ],
       ifAbsent: () => <AndroidSafTreeEntry>[
         AndroidSafTreeEntry(
-          uri: '$treeUri/$displayName',
+          uri: '$directoryUri/$displayName',
           displayName: displayName,
           mimeType: mimeType,
           isDirectory: false,
@@ -2426,7 +2453,7 @@ class _FakeAndroidSafTreePort implements AndroidSafTreePort {
       ],
     );
     return AndroidSafWriteDocumentResult(
-      uri: '$treeUri/$displayName',
+      uri: '$directoryUri/$displayName',
       displayName: displayName,
     );
   }

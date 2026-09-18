@@ -698,7 +698,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get localMatchAndroidTreeSaveHint =>
-      'Android 디렉터리 트리 저장은 승인된 트리에 직접 기록됩니다.';
+      'Android는 저장 모드에 따라 승인된 트리에 기록합니다: 노래 폴더 / 저장 루트 아래의 미러 / 저장 루트 바로 아래.';
 
   @override
   String get localMatchFileNameTemplateHint =>

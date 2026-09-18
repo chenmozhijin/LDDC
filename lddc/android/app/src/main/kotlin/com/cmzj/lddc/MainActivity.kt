@@ -462,8 +462,17 @@ class MainActivity : FlutterActivity() {
         val displayName = call.argument<String>("displayName")
         val mimeType = call.argument<String>("mimeType")
         val bytes = call.argument<ByteArray>("bytes")
+        // Dart 侧只传"相对授权树的目录名"，这里不接受任何外部 document id，
+        // 因此写回永远落在用户授权的子树内。
+        val rawSegments = call.argument<List<Any?>>("directorySegments")
         if (treeUriText.isNullOrBlank() || displayName.isNullOrBlank() || mimeType.isNullOrBlank() || bytes == null) {
             result.error("invalid_argument", "treeUri/displayName/mimeType/bytes 不能为空", null)
+            return
+        }
+        val directorySegments =
+            SafTreeEntries.normalizeSegments(rawSegments?.map { it?.toString() ?: "" })
+        if (directorySegments == null) {
+            result.error("invalid_argument", "directorySegments 含非法目录段", null)
             return
         }
 
@@ -471,17 +480,28 @@ class MainActivity : FlutterActivity() {
         var targetUri: Uri? = null
         var createdNewDocument = false
         try {
-            val documentUri =
-                DocumentsContract.buildDocumentUriUsingTree(
-                    treeUri,
-                    DocumentsContract.getTreeDocumentId(treeUri),
+            // 目标目录由相对段逐级定位（缺失则创建）。song/mirror/specify 三种保存模式
+            // 都收敛到这一个入口，不再隐式写树根。
+            val parentDocumentId =
+                resolveDirectoryDocumentId(
+                    treeUri = treeUri,
+                    rootDocumentId = DocumentsContract.getTreeDocumentId(treeUri),
+                    segments = directorySegments,
                 )
-            targetUri = findChildDocumentUri(treeUri, displayName)
+            val parentDocumentUri =
+                DocumentsContract.buildDocumentUriUsingTree(treeUri, parentDocumentId)
+            targetUri =
+                findChildDocumentUri(
+                    treeUri = treeUri,
+                    parentDocumentId = parentDocumentId,
+                    displayName = displayName,
+                    expectDirectory = false,
+                )
             if (targetUri == null) {
                 targetUri =
                     DocumentsContract.createDocument(
                         contentResolver,
-                        documentUri,
+                        parentDocumentUri,
                         mimeType,
                         displayName,
                     )
@@ -593,19 +613,35 @@ class MainActivity : FlutterActivity() {
         intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri)
     }
 
-    private fun findChildDocumentUri(treeUri: Uri, displayName: String): Uri? {
+    /**
+     * 在指定父目录下按 displayName 查找直接子项。
+     *
+     * [expectDirectory] 用于区分"定位子目录"（保存模式逐级建目录）与"定位同名文件"
+     * （写歌词时要覆盖同名文件）。两者必须分开：命中同名目录时不能当作文件覆盖。
+     */
+    private fun findChildDocumentUri(
+        treeUri: Uri,
+        parentDocumentId: String,
+        displayName: String,
+        expectDirectory: Boolean,
+    ): Uri? {
         return try {
-            val treeDocumentId = DocumentsContract.getTreeDocumentId(treeUri)
-            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocumentId)
+            val childrenUri =
+                DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocumentId)
             contentResolver.query(
                 childrenUri,
-                arrayOf(Document.COLUMN_DOCUMENT_ID, Document.COLUMN_DISPLAY_NAME),
+                arrayOf(
+                    Document.COLUMN_DOCUMENT_ID,
+                    Document.COLUMN_DISPLAY_NAME,
+                    Document.COLUMN_MIME_TYPE,
+                ),
                 null,
                 null,
                 null,
             )?.use { cursor ->
                 val documentIdIndex = cursor.getColumnIndex(Document.COLUMN_DOCUMENT_ID)
                 val displayNameIndex = cursor.getColumnIndex(Document.COLUMN_DISPLAY_NAME)
+                val mimeTypeIndex = cursor.getColumnIndex(Document.COLUMN_MIME_TYPE)
                 while (cursor.moveToNext()) {
                     if (documentIdIndex < 0 || displayNameIndex < 0) {
                         continue
@@ -614,6 +650,15 @@ class MainActivity : FlutterActivity() {
                         continue
                     }
                     if (cursor.getString(displayNameIndex) != displayName) {
+                        continue
+                    }
+                    val mimeType =
+                        if (mimeTypeIndex >= 0 && !cursor.isNull(mimeTypeIndex)) {
+                            cursor.getString(mimeTypeIndex)
+                        } else {
+                            null
+                        }
+                    if (SafTreeEntries.isDirectoryMime(mimeType) != expectDirectory) {
                         continue
                     }
                     return DocumentsContract.buildDocumentUriUsingTree(
@@ -626,6 +671,43 @@ class MainActivity : FlutterActivity() {
         } catch (_: Exception) {
             null
         }
+    }
+
+    /**
+     * 在授权树内逐级定位（必要时创建）目录，返回目标目录的 document id。
+     *
+     * 每一级都用 treeUri + 当前目录 id 构造 URI，目录名来自 Dart 侧已校验的相对段，
+     * 因此不会越出用户授权的子树。
+     */
+    private fun resolveDirectoryDocumentId(
+        treeUri: Uri,
+        rootDocumentId: String,
+        segments: List<String>,
+    ): String {
+        var currentDocumentId = rootDocumentId
+        for (segment in segments) {
+            val existing =
+                findChildDocumentUri(
+                    treeUri = treeUri,
+                    parentDocumentId = currentDocumentId,
+                    displayName = segment,
+                    expectDirectory = true,
+                )
+            if (existing != null) {
+                currentDocumentId = DocumentsContract.getDocumentId(existing)
+                continue
+            }
+            val parentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, currentDocumentId)
+            val created =
+                DocumentsContract.createDocument(
+                    contentResolver,
+                    parentUri,
+                    Document.MIME_TYPE_DIR,
+                    segment,
+                ) ?: throw IOException("创建目录失败: $segment")
+            currentDocumentId = DocumentsContract.getDocumentId(created)
+        }
+        return currentDocumentId
     }
 
     private fun deleteDocumentQuietly(uri: Uri) {

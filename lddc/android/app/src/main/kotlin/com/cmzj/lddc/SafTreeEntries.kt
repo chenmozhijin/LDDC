@@ -60,4 +60,37 @@ internal object SafTreeEntries {
      * 负数会让整个目录页（最多 128 项）作废并被记成一次错误。
      */
     fun nonNegativeOrNull(value: Long?): Long? = value?.takeIf { it >= 0 }
+
+    /**
+     * 校验单个目录段能否安全地拼进授权树内部的路径。
+     *
+     * 拒绝空段、`.`、`..` 以及包含 `/` 或 `\` 的段：这些值一旦进入目录创建或文档 id
+     * 拼接，就可能落到预期目录之外或产生歧义路径。上游只传"相对授权树的目录名"。
+     */
+    fun isSafeSegment(segment: String): Boolean {
+        val trimmed = segment.trim()
+        if (trimmed.isEmpty() || trimmed == "." || trimmed == "..") {
+            return false
+        }
+        return !trimmed.contains('/') && !trimmed.contains('\\')
+    }
+
+    /**
+     * 规范化目录段列表：null 视为空（写树根），任一段非法则整体返回 null。
+     *
+     * 非法时调用方必须直接失败而不是"尽力猜测"，否则歌词可能写到授权树之外。
+     */
+    fun normalizeSegments(segments: List<String>?): List<String>? {
+        if (segments == null) {
+            return emptyList()
+        }
+        val normalized = ArrayList<String>(segments.size)
+        for (segment in segments) {
+            if (!isSafeSegment(segment)) {
+                return null
+            }
+            normalized.add(segment.trim())
+        }
+        return normalized
+    }
 }

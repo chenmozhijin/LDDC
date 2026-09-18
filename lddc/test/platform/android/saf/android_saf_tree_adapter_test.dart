@@ -152,6 +152,7 @@ void main() {
 
       final AndroidSafWriteDocumentResult result = await adapter.writeDocument(
         treeUri: 'content://tree/primary%3AMusic',
+        directorySegments: const <String>['Album', 'Disc 1'],
         displayName: 'song-1.lrc',
         mimeType: 'text/plain',
         bytes: Uint8List.fromList(<int>[1, 2, 3]),
@@ -163,6 +164,8 @@ void main() {
       final Map<Object?, Object?> arguments =
           receivedCall?.arguments as Map<Object?, Object?>;
       expect(arguments['treeUri'], 'content://tree/primary%3AMusic');
+      // 目录层级必须与写入参数一起透传：原生据此逐级定位/创建目录。
+      expect(arguments['directorySegments'], <String>['Album', 'Disc 1']);
       expect(arguments['displayName'], 'song-1.lrc');
       expect(arguments['mimeType'], 'text/plain');
       expect(arguments.containsKey('overwritePolicy'), isFalse);
