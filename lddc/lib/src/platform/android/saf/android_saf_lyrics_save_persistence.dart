@@ -3,8 +3,6 @@ import 'dart:typed_data';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
-import 'android_saf_save_paths.dart';
-
 /// 保存目标无法推导时抛出的异常（缺少保存根树 / 歌曲不在授权树内）。
 ///
 /// 必须是 `Exception`：上层执行链只对 `Exception` 做结构化分类，

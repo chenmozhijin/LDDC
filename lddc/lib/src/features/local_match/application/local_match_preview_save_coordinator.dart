@@ -1,7 +1,6 @@
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
-import '../../../platform/android/saf/android_saf_save_paths.dart';
 import 'local_match_page_state.dart';
 
 /// 生成队列预览所需的不可变配置快照。
