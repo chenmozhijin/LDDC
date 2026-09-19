@@ -189,6 +189,11 @@ class DocumentsUiPlatformPocTest {
                 "歌词转换后文件保存按钮仍不可用",
             ).click()
             waitForDocumentsUi()
+            // 保存结果现在由 test-only provider 按文件名回读（界面不再显示原始 URI），
+            // 因此必须先把保存位置导航到本次 run 的受控目录：ACTION_CREATE_DOCUMENT
+            // 会记住上次所在位置（可能是 Downloads），那样导出会落在受控目录之外，
+            // 用例既回读不到正文、也无法删除自己创建的文件。
+            openFixtureRunDirectoryInDocumentsUi()
             val fileNameInput = waitForDocumentsUiFileNameInput()
             fileNameInput.text = outputName
             assertTrue(

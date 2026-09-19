@@ -265,10 +265,11 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(androidChannel, (MethodCall call) async {
             receivedCall = call;
-            // 原生在持有授权时查回了系统显示名：界面只该看到它，而不是编码 URI。
+            // 原生在持有授权时查回了所在相对目录与文件名：界面只该看到这个可读文本。
             return <String, Object?>{
               'uri': 'content://documents/document/lyrics.json',
               'displayName': 'lyrics.json',
+              'relativePath': 'Documents',
             };
           });
       final AppFilePickerImpl picker = AppFilePickerImpl(
@@ -284,7 +285,7 @@ void main() {
 
       expect(saveResult?.kind, SavedTextFileResultKind.contentUri);
       expect(saveResult?.uri, 'content://documents/document/lyrics.json');
-      expect(saveResult?.displayPath, 'lyrics.json');
+      expect(saveResult?.displayPath, 'Documents / lyrics.json');
       expect(receivedCall?.method, 'saveTextFile');
       final Map<Object?, Object?> arguments =
           receivedCall?.arguments as Map<Object?, Object?>;
@@ -305,6 +306,7 @@ void main() {
             return <String, Object?>{
               'uri': 'content://documents/document/lyrics.json',
               'displayName': '   ',
+              'relativePath': 'Documents',
             };
           });
       final AppFilePickerImpl picker = AppFilePickerImpl(
