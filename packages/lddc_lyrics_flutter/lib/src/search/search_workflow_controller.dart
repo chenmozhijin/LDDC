@@ -1420,27 +1420,29 @@ class SearchWorkflowController extends ChangeNotifier {
       SearchPreviewFileAction.saveDirectory,
     );
     try {
-      final String savePath = await _saveCoordinator.savePreviewToDirectory(
-        folder: folder,
-        fileNameFormat: _options.fileNameFormat,
-        lyrics: lyrics,
-        langs: state.selectedLangs,
-        lyricsFormat: state.lyricsFormat,
-        text: preview,
-      );
+      final LyricsSaveOutcome outcome = await _saveCoordinator
+          .savePreviewToDirectory(
+            folder: folder,
+            fileNameFormat: _options.fileNameFormat,
+            lyrics: lyrics,
+            langs: state.selectedLangs,
+            lyricsFormat: state.lyricsFormat,
+            text: preview,
+          );
       if (!_isCurrentPreviewSave(saveGeneration)) {
         return;
       }
       state = state.copyWith(
         isSavingPreview: false,
         saveDirectoryPath: folder,
-        lastSavedPath: savePath,
+        // 展示与状态都用可读落点：安卓端真实路径是 SAF 编码 URI。
+        lastSavedPath: outcome.displayPath,
         clearLastFileError: true,
       );
       _emitNotice(
         SearchNoticeCode.lyricsSaveSucceeded,
         PageNoticeSeverity.success,
-        detail: savePath,
+        detail: outcome.displayPath,
       );
     } on Exception catch (error) {
       if (!_isCurrentPreviewSave(saveGeneration)) {

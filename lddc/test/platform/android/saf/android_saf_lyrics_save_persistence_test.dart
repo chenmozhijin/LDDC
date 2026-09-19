@@ -209,6 +209,66 @@ void main() {
       );
     });
   });
+
+  group('展示落点回可读文本', () {
+    test('song 模式拼出授权树显示名 / 相对目录 / 文件名', () {
+      final AndroidSafLyricsSavePersistence persistence =
+          AndroidSafLyricsSavePersistence(
+            treePort: _FakeTreePort(),
+            treeUri: songTree,
+            saveMode: LocalMatchSaveMode.song,
+            treeLabel: '内部存储',
+          );
+
+      final String displayPath = persistence.displayPathFor(
+        requestFor(nestedSongUri),
+        'content://com.android.externalstorage.documents/tree/primary%3AMusic/document/primary%3AMusic%2FAlbum%2FDemo.lrc',
+      );
+
+      // 界面拿到的必须是可读文本，而不是真实的编码 URI。
+      expect(displayPath, '内部存储 / Album / Demo.lrc');
+      expect(displayPath, isNot(contains('content://')));
+      expect(displayPath, isNot(contains('%2F')));
+    });
+
+    test('mirror 模式用保存根显示名而不是歌曲树名', () {
+      final AndroidSafLyricsSavePersistence persistence =
+          AndroidSafLyricsSavePersistence(
+            treePort: _FakeTreePort(),
+            treeUri: songTree,
+            saveMode: LocalMatchSaveMode.mirror,
+            saveTreeUri: saveTree,
+            saveTreeLabel: '歌词库',
+          );
+
+      expect(
+        persistence.displayPathFor(
+          requestFor(nestedSongUri),
+          'content://com.android.externalstorage.documents/tree/primary%3ALyrics/document/primary%3ALyrics%2FAlbum%2FDemo.lrc',
+        ),
+        '歌词库 / Album / Demo.lrc',
+      );
+    });
+
+    test('目标不可推导时退回真实路径，保证有内容可展示', () {
+      final AndroidSafLyricsSavePersistence persistence =
+          AndroidSafLyricsSavePersistence(
+            treePort: _FakeTreePort(),
+            treeUri: songTree,
+            saveMode: LocalMatchSaveMode.song,
+            treeLabel: '内部存储',
+          );
+
+      // 本地路径无法推导授权树目标：此时仍要返回调用方给的真实路径。
+      expect(
+        persistence.displayPathFor(
+          requestFor(r'D:\music\a.mp3'),
+          r'D:\music\Demo.lrc',
+        ),
+        r'D:\music\Demo.lrc',
+      );
+    });
+  });
 }
 
 /// 记录写入请求的最小 tree port；目录内容按目录 URI 存放，供 exists 分页枚举。

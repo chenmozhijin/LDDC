@@ -1058,6 +1058,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
               (LocalMatchQueueItem item) => LocalMatchSongEntry(
                 songInfo: item.songInfo,
                 rootPath: item.songRootPath,
+                displayPath: item.displaySongPath,
               ),
             )
             .toList(growable: false),
@@ -1399,6 +1400,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
         savePlan: const LocalMatchSavePlan(kind: LocalMatchSavePlanKind.none),
         lastStatus: null,
         outputPath: null,
+        displaySongPath: entry.displayPath,
       );
       if (existingById.containsKey(item.id)) {
         continue;
@@ -1520,6 +1522,7 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
             (LocalMatchQueueItem item) => LocalMatchSongEntry(
               songInfo: item.songInfo,
               rootPath: item.songRootPath,
+              displayPath: item.displaySongPath,
             ),
           )
           .toList(growable: false),

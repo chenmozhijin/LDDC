@@ -74,6 +74,24 @@ final class PlatformFixtureStore {
         return files;
     }
 
+    /**
+     * 按显示名在受控根目录内查找系统保存器（`ACTION_CREATE_DOCUMENT`）产出的文件。
+     *
+     * 文档 URI 的读取权限由系统只授予发起保存的应用进程，测试进程直接 `query` 会撞
+     * `SecurityException`；而 test APK 与 provider 同 uid，可以直接读自己存的文件，
+     * 因此这里取代了过去"扫描界面上的 content:// 文本"的取回方式。
+     */
+    static File findFixtureByDisplayName(Context context, String displayName) {
+        for (File file : allFixtures(context)) {
+            if (file.getName().equals(displayName)) return file;
+        }
+        return null;
+    }
+
+    static Uri documentUri(Context context, File fixture) throws FileNotFoundException {
+        return DocumentsContract.buildDocumentUri(DOCUMENT_AUTHORITY, documentId(context, fixture));
+    }
+
     static List<File> allRunDirectories(Context context) {
         List<File> directories = new ArrayList<>();
         File[] children = root(context).listFiles();

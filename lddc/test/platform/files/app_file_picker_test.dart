@@ -265,7 +265,11 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(androidChannel, (MethodCall call) async {
             receivedCall = call;
-            return 'content://documents/document/lyrics.json';
+            // 原生在持有授权时查回了系统显示名：界面只该看到它，而不是编码 URI。
+            return <String, Object?>{
+              'uri': 'content://documents/document/lyrics.json',
+              'displayName': 'lyrics.json',
+            };
           });
       final AppFilePickerImpl picker = AppFilePickerImpl(
         androidSearchFileChannel: androidChannel,
@@ -280,10 +284,7 @@ void main() {
 
       expect(saveResult?.kind, SavedTextFileResultKind.contentUri);
       expect(saveResult?.uri, 'content://documents/document/lyrics.json');
-      expect(
-        saveResult?.displayPath,
-        'content://documents/document/lyrics.json',
-      );
+      expect(saveResult?.displayPath, 'lyrics.json');
       expect(receivedCall?.method, 'saveTextFile');
       final Map<Object?, Object?> arguments =
           receivedCall?.arguments as Map<Object?, Object?>;
@@ -296,13 +297,42 @@ void main() {
       expect(arguments['bytes'], isA<Uint8List>());
     });
 
+    test('Android 保存结果缺少显示名时退回 URI 文本', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(androidChannel, (MethodCall call) async {
+            // 老设备/第三方 provider 查不到 DISPLAY_NAME 时的降级路径。
+            return <String, Object?>{
+              'uri': 'content://documents/document/lyrics.json',
+              'displayName': '   ',
+            };
+          });
+      final AppFilePickerImpl picker = AppFilePickerImpl(
+        androidSearchFileChannel: androidChannel,
+      );
+
+      final SavedTextFileResult? saveResult = await picker.saveTextFile(
+        fileName: 'lyrics.json',
+        text: '{"demo":true}',
+      );
+
+      expect(
+        saveResult?.displayPath,
+        'content://documents/document/lyrics.json',
+      );
+      expect(saveResult?.uri, 'content://documents/document/lyrics.json');
+    });
+
     test('Android 保存 LRC 时使用专用 MIME 并保留扩展名', () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       MethodCall? receivedCall;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(androidChannel, (MethodCall call) async {
             receivedCall = call;
-            return 'content://documents/document/lyrics.lrc';
+            return <String, Object?>{
+              'uri': 'content://documents/document/lyrics.lrc',
+              'displayName': 'lyrics.lrc',
+            };
           });
       final AppFilePickerImpl picker = AppFilePickerImpl(
         androidSearchFileChannel: androidChannel,

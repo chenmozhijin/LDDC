@@ -7,7 +7,9 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 
 /** 只负责当前 runId 的 seed/cleanup，不提供 query 或 openFile。 */
 public final class PlatformFixtureSeedProvider extends ContentProvider {
@@ -16,6 +18,7 @@ public final class PlatformFixtureSeedProvider extends ContentProvider {
     public static final String METHOD_CLEANUP_RUN = "cleanupRun";
     public static final String METHOD_GRANT_MISSING_AUDIO = "grantMissingAudio";
     public static final String METHOD_REVOKE_URI = "revokeUri";
+    public static final String METHOD_RESOLVE_SAVED_DOCUMENT = "resolveSavedDocument";
     public static final String EXTRA_RUN_ID = "runId";
     public static final String EXTRA_DISPLAY_NAME = "displayName";
     public static final String EXTRA_BYTES = "bytes";
@@ -63,6 +66,22 @@ public final class PlatformFixtureSeedProvider extends ContentProvider {
                         Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 Bundle result = new Bundle();
                 result.putString(EXTRA_URI, uri.toString());
+                return result;
+            }
+            if (METHOD_RESOLVE_SAVED_DOCUMENT.equals(method)) {
+                // 通过 provider 自己的 uid 读取系统保存器写出的文件：文档 URI 的读取权限
+                // 只授予发起保存的应用进程，测试进程直接 query 会抛 SecurityException，
+                // 因此不能再靠"扫描界面上显示的原始 URI"来取回保存结果。
+                String displayName = requireText(
+                        extras == null ? null : extras.getString(EXTRA_DISPLAY_NAME),
+                        EXTRA_DISPLAY_NAME);
+                File fixture = PlatformFixtureStore.findFixtureByDisplayName(getContext(), displayName);
+                if (fixture == null) return new Bundle();
+                Bundle result = new Bundle();
+                result.putString(
+                        EXTRA_URI,
+                        PlatformFixtureStore.documentUri(getContext(), fixture).toString());
+                result.putByteArray(EXTRA_BYTES, Files.readAllBytes(fixture.toPath()));
                 return result;
             }
             if (METHOD_REVOKE_URI.equals(method)) {

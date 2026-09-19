@@ -72,6 +72,7 @@ class _OpenLyricsPageState extends ConsumerState<OpenLyricsPage> {
         final Widget previewCard = _PreviewCard(
           state: state,
           contentHeight: fillsAvailableHeight ? null : _scrollingPreviewHeight,
+          isDesktopPlatform: isDesktopPlatform,
         );
         final Widget controlCard = _ControlCard(
           state: state,
@@ -255,16 +256,26 @@ String _openLyricsNoticeText(BuildContext context, OpenLyricsNotice notice) {
 }
 
 class _PreviewCard extends StatelessWidget {
-  const _PreviewCard({required this.state, required this.contentHeight});
+  const _PreviewCard({
+    required this.state,
+    required this.contentHeight,
+    required this.isDesktopPlatform,
+  });
 
   final OpenLyricsPageState state;
   final double? contentHeight;
+  final bool isDesktopPlatform;
 
   @override
   Widget build(BuildContext context) {
+    // 移动端输入路径是 `content://…` 或插件缓存副本路径（`/data/user/0/…/cache/…`），
+    // 对用户没有意义：优先展示选择时就已拿到的文件名（原生/插件随结果返回，
+    // 不需要在展示层解析 URI）；桌面端继续显示完整路径，便于确认具体位置。
+    final String inputName = state.inputName.trim();
     final String? inputDisplayText = switch (state.inputPath?.trim()) {
-      final String path when path.isNotEmpty => path,
-      _ when state.inputName.trim().isNotEmpty => state.inputName,
+      final String path when path.isNotEmpty =>
+        isDesktopPlatform || inputName.isEmpty ? path : inputName,
+      _ when inputName.isNotEmpty => inputName,
       _ => null,
     };
     final Lyrics? lyrics = state.currentLyrics;

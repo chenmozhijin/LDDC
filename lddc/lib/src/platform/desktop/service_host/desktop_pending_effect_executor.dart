@@ -340,7 +340,7 @@ final class DesktopPendingEffectExecutor {
     final LyricsSavePersistencePort persistence = _fileSavePersistenceFactory(
       autoSaveDir.path,
     );
-    return persistence.saveText(
+    final LyricsSaveOutcome outcome = await persistence.saveText(
       request: LyricsSaveRequest(
         songInfo: effect.lyrics.songInfo,
         lyricLangs: effect.lyrics.data.keys.toList(growable: false),
@@ -349,6 +349,7 @@ final class DesktopPendingEffectExecutor {
       ),
       text: convert2(lyrics: effect.lyrics, lyricsFormat: LyricsFormat.json),
     );
+    return outcome.path;
   }
 
   String _normalizeFileNameFormat(String suggestedFileName) {

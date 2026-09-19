@@ -84,7 +84,7 @@ final class SearchBatchSaveExecutor {
         if (token.isCancelled) {
           break;
         }
-        final String savePath = await _persistencePort.saveText(
+        final LyricsSaveOutcome outcome = await _persistencePort.saveText(
           request: LyricsSaveRequest(
             songInfo: song,
             lyricLangs: langs,
@@ -103,7 +103,7 @@ final class SearchBatchSaveExecutor {
             song: song,
             status: SearchBatchSaveEntryStatus.saved,
             message: SearchBatchSaveEntryStatus.saved.name,
-            savePath: savePath,
+            savePath: outcome.displayPath,
           ),
         );
       } on LddcLyricsNotFoundException catch (error) {

@@ -5,6 +5,9 @@ import io.flutter.plugin.common.MethodChannel
 internal data class PendingSaveTextFile(
     val result: MethodChannel.Result,
     val bytes: ByteArray,
+    // 请求时的建议文件名：保存成功后若系统 provider 查不到显示名，用它兜底，
+    // 保证界面永远有可读文本可显示，不需要回落到原始 content:// URI。
+    val fileName: String,
 )
 
 /** 统一三个系统 Picker 的单请求状态、busy 错误和 Activity 销毁清理。 */

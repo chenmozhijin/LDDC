@@ -114,6 +114,16 @@ FILE "disc.flac" WAVE
         ),
         isTrue,
       );
+      // 可读位置在扫描阶段就拼好：安卓端 songInfo.path 是编码 URI，
+      // 展示层不允许再解析 URI，所以必须由这里随条目返回。
+      expect(
+        result.entries.every(
+          (LocalMatchSongEntry item) =>
+              (item.displayPath ?? '').startsWith('root / ') &&
+              !(item.displayPath ?? '').contains('content://'),
+        ),
+        isTrue,
+      );
       expect(progress.first.text, '遍历文件...');
       expect(progress.last.text, isEmpty);
     });
@@ -177,6 +187,9 @@ FILE "album.flac" WAVE
       expect(result.entries, hasLength(2));
       expect(result.entries[0].songInfo.title, 'Track A');
       expect(result.entries[1].songInfo.title, 'Track B');
+      // CUE 多轨条目同样要带可读位置：按 CUE 声明的位置拼，不解析 URI。
+      expect(result.entries[0].displayPath, 'root / album.flac');
+      expect(result.entries[1].displayPath, 'root / album.flac');
       expect(
         result.entries.every(
           (LocalMatchSongEntry item) => item.songInfo.fromCue,

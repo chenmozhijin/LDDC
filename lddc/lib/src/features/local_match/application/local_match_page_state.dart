@@ -147,6 +147,7 @@ class LocalMatchQueueItem {
     required this.savePlan,
     required this.lastStatus,
     required this.outputPath,
+    this.displaySongPath,
   });
 
   final String id;
@@ -156,6 +157,12 @@ class LocalMatchQueueItem {
   final LocalMatchSavePlan savePlan;
   final LocalMatchingStatus? lastStatus;
   final String? outputPath;
+
+  /// 歌曲位置的可展示文本（安卓端由扫描层用"授权树显示名 + 相对层级"给出）。
+  ///
+  /// 安卓端 [SongInfo.path] 是编码 URI，展示层不得再解析 URI，因此可读文本随扫描
+  /// 结果一起带出来；桌面端为 null，直接展示本地路径。
+  final String? displaySongPath;
 
   bool get hasCompleted => lastStatus != null;
 
@@ -187,6 +194,7 @@ class LocalMatchQueueItem {
     bool clearLastStatus = false,
     String? outputPath,
     bool clearOutputPath = false,
+    String? displaySongPath,
   }) {
     return LocalMatchQueueItem(
       id: id ?? this.id,
@@ -200,6 +208,7 @@ class LocalMatchQueueItem {
       savePlan: savePlan ?? this.savePlan,
       lastStatus: clearLastStatus ? null : (lastStatus ?? this.lastStatus),
       outputPath: clearOutputPath ? null : (outputPath ?? this.outputPath),
+      displaySongPath: displaySongPath ?? this.displaySongPath,
     );
   }
 }

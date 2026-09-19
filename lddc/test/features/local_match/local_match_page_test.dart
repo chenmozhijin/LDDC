@@ -614,22 +614,24 @@ void main() {
               LyricsSavePersistencePort? lyricsPersistencePort,
               LocalMatchProgressCallback? onProgress,
             }) async {
-              final String outputPath = await lyricsPersistencePort!.saveText(
-                request: LyricsSaveRequest(
-                  songInfo: entries.single.songInfo,
-                  lyricLangs: options.langs,
-                  lyricsFormat: options.lyricsFormat,
-                  fileNameFormat:
-                      config?.lyrics.fileNameFormat ??
-                      ConfigDefaults.current.lyrics.fileNameFormat,
-                ),
-                text: '[00:00.000]歌词',
-              );
+              final LyricsSaveOutcome outcome = await lyricsPersistencePort!
+                  .saveText(
+                    request: LyricsSaveRequest(
+                      songInfo: entries.single.songInfo,
+                      lyricLangs: options.langs,
+                      lyricsFormat: options.lyricsFormat,
+                      fileNameFormat:
+                          config?.lyrics.fileNameFormat ??
+                          ConfigDefaults.current.lyrics.fileNameFormat,
+                    ),
+                    text: '[00:00.000]歌词',
+                  );
               final LocalMatchingStatus status = LocalMatchingStatus(
                 type: LocalMatchingStatusType.success,
                 index: 0,
                 text: '已写入',
-                path: outputPath,
+                path: outcome.path,
+                displayPath: outcome.displayPath,
               );
               onProgress?.call(
                 LocalMatchProgress(
@@ -1703,6 +1705,93 @@ void main() {
       expect(find.text('先导入文件或文件夹以建立任务队列'), findsNothing);
       expect(find.text('选择目录树后会自动扫描并建立任务队列，无需另外导入。'), findsOneWidget);
       expect(find.text('选择目录树并执行'), findsOneWidget);
+    });
+
+    testWidgets('安卓队列行展示可读位置而不是编码 URI', (WidgetTester tester) async {
+      // 视口放大，确保队列卡片真的被构建（窄屏时它可能落在视口外）。
+      _setTestViewport(tester, const Size(1000, 1200));
+      const String songUri =
+          'content://com.android.externalstorage.documents/tree/root/document/root%2FAlbum%2Fsong.mp3';
+      final _StubAndroidSafLocalMatchGetInfosUseCase androidGetInfosUseCase =
+          _StubAndroidSafLocalMatchGetInfosUseCase(
+            resultBuilder: (AndroidSafTreeToken rootTree) =>
+                AndroidSafLocalMatchGetInfosResult(
+                  entries: <LocalMatchSongEntry>[
+                    LocalMatchSongEntry(
+                      songInfo: SongInfo(
+                        source: Source.local,
+                        path: songUri,
+                        title: 'Song',
+                        artist: SongArtist(<String>['Singer']),
+                      ),
+                      rootPath: rootTree.uri,
+                      // 扫描层已经算好的可读位置（安卓端不解析 URI 的关键）。
+                      displayPath: '根目录 / Album / song.mp3',
+                    ),
+                  ],
+                  errors: const <String>[],
+                  cancelled: false,
+                  checkpoint: null,
+                ),
+          );
+      final _StubLocalMatchUseCase localMatchUseCase = _StubLocalMatchUseCase(
+        runHandler:
+            ({
+              required List<LocalMatchSongEntry> entries,
+              required LocalMatchRunOptions options,
+              AppConfig? config,
+              LocalMatchCancellationToken? cancellationToken,
+              LyricsSavePersistencePort? lyricsPersistencePort,
+              LocalMatchProgressCallback? onProgress,
+            }) async {
+              // 真实写入结果是编码 URI，可读落点由保存实现随状态一起给出。
+              final LocalMatchingStatus status = LocalMatchingStatus(
+                type: LocalMatchingStatusType.success,
+                index: 0,
+                text: '成功',
+                path:
+                    'content://com.android.externalstorage.documents/tree/root/document/root%2FAlbum%2Fsong.lrc',
+                displayPath: '根目录 / Album / song.lrc',
+              );
+              onProgress?.call(
+                LocalMatchProgress(
+                  text: '正在写入歌词',
+                  value: 1,
+                  maxValue: 1,
+                  status: status,
+                ),
+              );
+              return LocalMatchResult(
+                total: 1,
+                successCount: 1,
+                failCount: 0,
+                skipCount: 0,
+                cancelled: false,
+                statuses: <LocalMatchingStatus>[status],
+              );
+            },
+      );
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        picker: _FakeLocalMatchInputPicker(androidTreeToken: _androidTree),
+        androidGetInfosUseCase: androidGetInfosUseCase,
+        localMatchUseCase: localMatchUseCase,
+      );
+      addTearDown(container.dispose);
+      final LocalMatchPageController controller = container.read(
+        localMatchPageControllerProvider.notifier,
+      );
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await controller.selectAndroidTree();
+      await tester.pumpAndSettle();
+      await controller.startOrCancel();
+      await tester.pumpAndSettle();
+
+      // 歌曲位置与歌词落点都必须是可读文本：整页不允许出现编码 URI。
+      expect(find.textContaining('content://'), findsNothing);
+      expect(find.textContaining('%2F'), findsNothing);
+      expect(find.byTooltip('根目录 / Album / song.mp3'), findsOneWidget);
     });
 
     testWidgets('扫描失败明细在页面上可展开查看', (WidgetTester tester) async {
