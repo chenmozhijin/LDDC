@@ -49,7 +49,11 @@ public final class PlatformFixtureDocumentsProvider extends DocumentsProvider {
         addRow(cursor, columns, new Object[][] {
                 {Root.COLUMN_ROOT_ID, PlatformFixtureStore.ROOT_ID},
                 {Root.COLUMN_FLAGS, Root.FLAG_LOCAL_ONLY | Root.FLAG_SUPPORTS_RECENTS
-                        | Root.FLAG_SUPPORTS_SEARCH | Root.FLAG_SUPPORTS_IS_CHILD},
+                        | Root.FLAG_SUPPORTS_SEARCH | Root.FLAG_SUPPORTS_IS_CHILD
+                        // 保存场景必须声明可创建：ACTION_CREATE_DOCUMENT 的选择器只列出
+                        // 支持创建的 root，否则用例无法把导出文件放进受控目录，
+                        // 也就无法在不依赖界面显示原始 URI 的前提下回读保存结果。
+                        | Root.FLAG_SUPPORTS_CREATE},
                 {Root.COLUMN_TITLE, "LDDC Platform Fixtures"},
                 {Root.COLUMN_DOCUMENT_ID, PlatformFixtureStore.ROOT_DOCUMENT_ID},
                 {Root.COLUMN_MIME_TYPES, "*/*"},
