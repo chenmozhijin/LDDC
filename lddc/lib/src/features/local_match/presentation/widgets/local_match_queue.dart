@@ -239,6 +239,13 @@ class LocalMatchQueueRowCardState extends State<LocalMatchQueueRowCard> {
                   context,
                   item,
                 );
+                // 安卓端歌曲路径是 `content://…%2F…` 编码 URI：扫描阶段已经算好可读
+                // 文本并随条目返回，展示层直接用，不再解析 URI。
+                final String displaySongPath = (item.displaySongPath ?? '')
+                    .trim();
+                final String songPathText = displaySongPath.isNotEmpty
+                    ? displaySongPath
+                    : (item.songInfo.path ?? '-');
                 final String? failureSummary =
                     localMatchQueueItemFailureSummary(context, item);
                 return RepaintBoundary(
@@ -387,7 +394,7 @@ class LocalMatchQueueRowCardState extends State<LocalMatchQueueRowCard> {
                                     'local_match_path_song_${item.id}',
                                   ),
                                   label: context.l10n.localMatchSongPathLabel,
-                                  fullText: item.songInfo.path ?? '-',
+                                  fullText: songPathText,
                                 ),
                                 const SizedBox(height: 10),
                                 QueueExpandedPathBlock(
@@ -409,7 +416,7 @@ class LocalMatchQueueRowCardState extends State<LocalMatchQueueRowCard> {
                                         label: context
                                             .l10n
                                             .localMatchSongPathLabel,
-                                        value: item.songInfo.path ?? '-',
+                                        value: songPathText,
                                       ),
                                     ),
                                     const SizedBox(width: 14),

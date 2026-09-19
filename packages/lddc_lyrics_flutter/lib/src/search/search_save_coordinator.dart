@@ -36,7 +36,7 @@ final class SearchSaveCoordinator {
     );
   }
 
-  Future<String> savePreviewToDirectory({
+  Future<LyricsSaveOutcome> savePreviewToDirectory({
     required String folder,
     required String fileNameFormat,
     required Lyrics lyrics,

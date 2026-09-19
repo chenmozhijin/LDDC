@@ -396,9 +396,66 @@ FILE "disc.flac" WAVE
       expect(result.successCount, 1);
       expect(result.failCount, 0);
       expect(result.statuses.single.path, 'content://tree/root/Persisted.lrc');
+      // 未提供可读落点时（桌面端），展示文本与真实路径一致。
+      expect(
+        result.statuses.single.displayPath,
+        'content://tree/root/Persisted.lrc',
+      );
       expect(persistence.savedRequests, hasLength(1));
       expect(persistence.savedRequests.single.songInfo.title, 'Persisted');
       expect(persistence.savedTexts.single, contains('[00:00.000]'));
+    });
+
+    test('状态随可读落点一起返回，界面不必再解析编码 URI', () async {
+      final SongInfo localSong = SongInfo(
+        source: Source.local,
+        path: 'content://doc/song.mp3',
+        title: 'Persisted',
+        artist: SongArtist(<String>['Singer']),
+      );
+      final SongInfo remoteSong = SongInfo(
+        source: Source.qm,
+        id: 'qm-persisted-2',
+        title: 'Persisted',
+        artist: SongArtist(<String>['Singer']),
+      );
+      final _FakeLyricsSavePersistence persistence =
+          _FakeLyricsSavePersistence()
+            ..displayPathResult = '内部存储 / Album / Persisted.lrc';
+      final LocalMatchUseCase useCase = LocalMatchUseCase(
+        autoFetchExecutor: (AutoFetchRequest request) async => AutoFetchResult(
+          lyrics: _buildLyrics(remoteSong),
+          matchedSongInfo: remoteSong,
+          score: 99,
+        ),
+        mediaGateway: _FakeLocalMatchMediaGateway(),
+      );
+
+      final LocalMatchResult result = await useCase.run(
+        entries: <LocalMatchSongEntry>[
+          LocalMatchSongEntry(
+            songInfo: localSong,
+            rootPath: 'content://tree/root',
+          ),
+        ],
+        options: LocalMatchRunOptions(
+          saveMode: LocalMatchSaveMode.song,
+          fileNameMode: LocalMatchFileNameMode.song,
+          saveToTagMode: LocalMatchSaveToTagMode.onlyFile,
+          lyricsFormat: LyricsFormat.lineByLineLrc,
+          langs: <String>['orig'],
+          minScore: 55,
+          sources: <Source>[Source.qm],
+          skipExistingLyrics: false,
+        ),
+        lyricsPersistencePort: persistence,
+      );
+
+      final LocalMatchingStatus status = result.statuses.single;
+      // 真实路径仍是 URI（读写要用），展示字段必须是可读文本。
+      expect(status.path, 'content://tree/root/Persisted.lrc');
+      expect(status.displayPath, '内部存储 / Album / Persisted.lrc');
+      expect(status.displayPath, isNot(contains('content://')));
     });
 
     test('skipExistingLyrics 可复用 lyricsPersistencePort 的 exists 判定', () async {
@@ -1037,7 +1094,15 @@ class _FakeLyricsSavePersistence extends LyricsSavePersistencePort
   final List<LyricsSaveRequest> savedRequests = <LyricsSaveRequest>[];
   final List<String> savedTexts = <String>[];
   final List<LyricsSaveRequest> existsRequests = <LyricsSaveRequest>[];
+
+  /// 模拟安卓实现给出的可读落点（真实实现由授权树显示名拼出）。
+  String? displayPathResult;
   bool existsResult = false;
+
+  @override
+  String displayPathFor(LyricsSaveRequest request, String path) {
+    return displayPathResult ?? super.displayPathFor(request, path);
+  }
 
   @override
   Future<bool> exists({required LyricsSaveRequest request}) async {

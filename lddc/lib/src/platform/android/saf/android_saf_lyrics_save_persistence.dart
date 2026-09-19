@@ -85,6 +85,20 @@ final class AndroidSafLyricsSavePersistence extends LyricsSavePersistencePort
   }
 
   @override
+  String displayPathFor(LyricsSaveRequest request, String path) {
+    // 落点是 SAF 编码 URI，用户看不懂；这里用**已知的**授权树显示名与相对目录
+    // 拼出可读文本（同一套 resolveAndroidSafSaveTarget 推导，和真实写入一致），
+    // 展示层因此不需要再解析 URI。推导失败时退回真实路径，保证有内容可显示。
+    final AndroidSafSaveTarget? target = _resolveTargetOrNull(request);
+    if (target == null) {
+      return path;
+    }
+    final String directoryLabel = target.directoryLabel.trim();
+    final String fileName = _buildFileName(request);
+    return directoryLabel.isEmpty ? fileName : '$directoryLabel / $fileName';
+  }
+
+  @override
   Future<bool> exists({required LyricsSaveRequest request}) async {
     final AndroidSafSaveTarget? target = _resolveTargetOrNull(request);
     if (target == null) {

@@ -21,6 +21,18 @@ class LyricsSaveRequest {
   String get resolvedFileNameFormat => '$fileNameFormat${lyricsFormat.ext}';
 }
 
+/// 歌词写入结果。
+///
+/// [path] 是真实写入位置（安卓端为 SAF `content://` URI），供读写、去重与打开文件使用；
+/// [displayPath] 是可直接展示给用户的文本，安卓端由授权树显示名与已知相对层级拼出，
+/// 不含任何编码 URI；桌面端两者相同。
+class LyricsSaveOutcome {
+  const LyricsSaveOutcome({required this.path, required this.displayPath});
+
+  final String path;
+  final String displayPath;
+}
+
 /// 歌词写入端口。
 ///
 /// 由上层只传入“写什么”，由不同实现决定“写到哪里”。
@@ -30,13 +42,24 @@ abstract class LyricsSavePersistencePort {
     required Uint8List bytes,
   });
 
-  Future<String> saveText({
+  /// [path] 对应的可展示文本。
+  ///
+  /// 默认与 [path] 相同（桌面端本地路径本身就是可读文本）；安卓端由实现覆盖为
+  /// “授权树显示名 / 相对目录 / 文件名”，因为此时 [path] 是用户看不懂的
+  /// `content://…%2F…`，而展示层不允许再解析 URI。
+  String displayPathFor(LyricsSaveRequest request, String path) => path;
+
+  Future<LyricsSaveOutcome> saveText({
     required LyricsSaveRequest request,
     required String text,
-  }) {
-    return saveBytes(
+  }) async {
+    final String path = await saveBytes(
       request: request,
       bytes: Uint8List.fromList(utf8.encode(text)),
+    );
+    return LyricsSaveOutcome(
+      path: path,
+      displayPath: displayPathFor(request, path),
     );
   }
 }

@@ -407,15 +407,24 @@ final class AppFilePickerImpl implements AppFilePicker {
     required String mimeType,
   }) async {
     try {
-      final String? result = await _androidSearchFileChannel
-          .invokeMethod<String>('saveTextFile', <String, Object?>{
+      // 原生返回 {uri, displayName}：uri 供后续读写，displayName 是系统在持有
+      // 授权时查回的可读文件名，界面直接展示它，不再暴露编码 URI。
+      final Map<Object?, Object?>? result = await _androidSearchFileChannel
+          .invokeMapMethod<Object?, Object?>('saveTextFile', <String, Object?>{
             'fileName': fileName,
             'bytes': bytes,
             'initialDirectory': initialDirectory,
             'mimeType': mimeType,
           });
-      final String? normalized = _normalizeInitialDirectory(result);
-      return normalized == null ? null : SavedTextFileResult.uri(normalized);
+      final String? normalized = _normalizeInitialDirectory(
+        result?['uri'] as String?,
+      );
+      return normalized == null
+          ? null
+          : SavedTextFileResult.uri(
+              normalized,
+              displayName: result?['displayName'] as String?,
+            );
     } on PlatformException catch (error) {
       if (error.code == 'cancelled') {
         return null;

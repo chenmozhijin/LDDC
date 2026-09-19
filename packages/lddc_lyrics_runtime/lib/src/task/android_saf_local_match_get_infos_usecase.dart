@@ -326,8 +326,14 @@ class AndroidSafLocalMatchGetInfosUseCase {
           audioExistsChecker: resolved.containsUri,
         )
         .map(
-          (SongInfo song) =>
-              LocalMatchSongEntry(songInfo: song, rootPath: rootTree.uri),
+          (SongInfo song) => LocalMatchSongEntry(
+            songInfo: song,
+            rootPath: rootTree.uri,
+            displayPath: _buildAndroidDisplayPath(
+              treeLabel: rootTree.displayName ?? '',
+              relativePath: resolved.displayPathFor(song.path) ?? '',
+            ),
+          ),
         )
         .toList(growable: false);
   }
@@ -375,8 +381,14 @@ class AndroidSafLocalMatchGetInfosUseCase {
             audioExistsChecker: resolved.containsUri,
           )
           .map(
-            (SongInfo song) =>
-                LocalMatchSongEntry(songInfo: song, rootPath: rootTree.uri),
+            (SongInfo song) => LocalMatchSongEntry(
+              songInfo: song,
+              rootPath: rootTree.uri,
+              displayPath: _buildAndroidDisplayPath(
+                treeLabel: rootTree.displayName ?? '',
+                relativePath: resolved.displayPathFor(song.path) ?? '',
+              ),
+            ),
           )
           .toList(growable: false);
     }
@@ -393,6 +405,10 @@ class AndroidSafLocalMatchGetInfosUseCase {
           id: metadata.trackNumber?.toString(),
         ),
         rootPath: rootTree.uri,
+        displayPath: _buildAndroidDisplayPath(
+          treeLabel: rootTree.displayName ?? '',
+          relativePath: file.relativePath,
+        ),
       ),
     ];
   }
@@ -409,15 +425,26 @@ class AndroidSafLocalMatchGetInfosUseCase {
       pageSize: _directoryPageSize,
     );
     final Map<CueAudioFile, String?> uriByFile = <CueAudioFile, String?>{};
+    final Map<String, String> displayPathByUri = <String, String>{};
     for (final CueAudioFile audioFile in cue.files) {
       _throwIfCancelled(token);
-      uriByFile[audioFile] = await resolver.resolve(
+      final String? resolvedUri = await resolver.resolve(
         cueFileRelativePath: cueFileRelativePath,
         cueFileReference: audioFile.filename,
       );
+      uriByFile[audioFile] = resolvedUri;
+      if (resolvedUri != null) {
+        // CUE 里声明的位置就是用户认知中的位置：用它拼可读文本。
+        displayPathByUri[resolvedUri] = _joinRelativePath(
+          p.posix.dirname(cueFileRelativePath) == '.'
+              ? ''
+              : p.posix.dirname(cueFileRelativePath),
+          audioFile.filename,
+        );
+      }
     }
     _throwIfCancelled(token);
-    return _AndroidSafResolvedCueFiles(uriByFile);
+    return _AndroidSafResolvedCueFiles(uriByFile, displayPathByUri);
   }
 
   Future<void> _loadNextDirectoryPage({
@@ -713,13 +740,22 @@ final class _AndroidSafRunCache {
 }
 
 final class _AndroidSafResolvedCueFiles {
-  _AndroidSafResolvedCueFiles(this._uriByFile)
+  _AndroidSafResolvedCueFiles(this._uriByFile, this._displayPathByUri)
     : referencedAudioUris = _uriByFile.values.whereType<String>().toSet();
 
   final Map<CueAudioFile, String?> _uriByFile;
+
+  /// 音频 URI → 可读位置（树内相对路径）。展示层不允许解析 URI，所以在扫描阶段
+  /// 就按 CUE 声明的相对引用把可读文本算好，随条目一起交给界面。
+  final Map<String, String> _displayPathByUri;
   final Set<String> referencedAudioUris;
 
   String? resolve(CueData _, CueAudioFile file) => _uriByFile[file];
+
+  String? displayPathFor(String? uri) {
+    final String text = uri?.trim() ?? '';
+    return text.isEmpty ? null : _displayPathByUri[text];
+  }
 
   bool containsUri(String uri) => referencedAudioUris.contains(uri);
 }
@@ -892,6 +928,22 @@ bool _isSupportedAudioName(String displayName) {
       ? extension.substring(1)
       : extension;
   return audioFileExtensionSet.contains(withoutDot);
+}
+
+/// 用"授权树显示名 + 树内相对路径"拼出可读位置。
+///
+/// 安卓端 `SongInfo.path` 是 `content://…%2F…` 编码 URI，展示层不允许再解析 URI，
+/// 因此可读文本必须在这里（信息最全、且不额外查询）就算好并随结果返回。
+String _buildAndroidDisplayPath({
+  required String treeLabel,
+  required String relativePath,
+}) {
+  final String label = treeLabel.trim();
+  final String relative = _normalizeRelativePath(relativePath);
+  if (label.isEmpty) {
+    return relative;
+  }
+  return relative.isEmpty ? label : '$label / $relative';
 }
 
 String _joinRelativePath(String parent, String child) {

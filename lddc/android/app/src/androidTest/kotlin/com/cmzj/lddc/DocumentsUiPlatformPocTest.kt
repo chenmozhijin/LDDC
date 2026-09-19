@@ -206,7 +206,7 @@ class DocumentsUiPlatformPocTest {
             ).click()
 
             assertTrue("保存后没有返回 LDDC", waitForLddcForeground())
-            val output = waitForSavedDocumentFromUi(outputName)
+            val output = waitForSavedDocumentFromStore(outputName)
             seededExportUri = output.first
             assertTrue("真实 ACTION_CREATE_DOCUMENT 输出没有歌词正文", output.second.toString(Charsets.UTF_8).contains(EMBEDDED_LYRICS))
             recordArtifact(outputName, output.second)
@@ -731,53 +731,33 @@ class DocumentsUiPlatformPocTest {
         throw AssertionError(message)
     }
 
-    private fun waitForSavedDocumentFromUi(displayName: String): Pair<Uri, ByteArray> {
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val resolver = context.contentResolver
+    /**
+     * 取回系统保存器刚写出的文件。
+     *
+     * 过去这里扫描界面上带 `content://` 的文本节点再逐个 `query`，把"界面必须显示原始
+     * URI"当成了隐式契约：一旦界面改为展示可读文件名（用户要求），用例就取不到结果；
+     * 而且它对屏幕上任何无授权 URI 都会抛 `SecurityException` 直接判失败。
+     * 现在改为让 test APK 的 provider 按文件名在受控目录里读回正文，既不再依赖界面
+     * 文本，也避免了 URI 授权差异。
+     */
+    private fun waitForSavedDocumentFromStore(displayName: String): Pair<Uri, ByteArray> {
         val deadline = System.currentTimeMillis() + TIMEOUT_MS
-        var lastObservedName: String? = null
         while (System.currentTimeMillis() < deadline) {
-            val nodes =
-                (device.findObjects(By.textContains("content://")) +
-                    device.findObjects(By.descContains("content://"))).distinct()
-            for (node in nodes) {
-                val value =
-                    try {
-                        listOfNotNull(node.text, node.contentDescription).joinToString(" ")
-                    } catch (_: StaleObjectException) {
-                        continue
-                    }
-                val uriText = Regex("""content://[^\s，。；]+""").find(value)?.value ?: continue
-                val uri = Uri.parse(uriText.trimEnd(',', ';', ')', ']', '}'))
-                val observedName =
-                    resolver.query(
-                        uri,
-                        arrayOf(OpenableColumns.DISPLAY_NAME),
-                        null,
-                        null,
-                        null,
-                    )?.use { cursor ->
-                        if (!cursor.moveToFirst()) {
-                            null
-                        } else {
-                            cursor.getString(
-                                cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME),
-                            )
-                        }
-                    }
-                lastObservedName = observedName
-                if (observedName == displayName) {
-                    val bytes = resolver.openInputStream(uri)?.use { input -> input.readBytes() }
-                    if (bytes != null) {
-                        return uri to bytes
-                    }
-                }
+            val result =
+                callFixtureSeedProvider(
+                    PlatformFixtureSeedProvider.METHOD_RESOLVE_SAVED_DOCUMENT,
+                    Bundle().apply {
+                        putString(PlatformFixtureSeedProvider.EXTRA_DISPLAY_NAME, displayName)
+                    },
+                )
+            val uriText = result.getString(PlatformFixtureSeedProvider.EXTRA_URI)
+            val bytes = result.getByteArray(PlatformFixtureSeedProvider.EXTRA_BYTES)
+            if (!uriText.isNullOrEmpty() && bytes != null) {
+                return Uri.parse(uriText) to bytes
             }
             Thread.sleep(100)
         }
-        throw AssertionError(
-            "保存成功界面没有返回可回读的精确目标 URI；expected=$displayName, observed=$lastObservedName",
-        )
+        throw AssertionError("受控目录里没有出现系统保存器写出的目标文件: $displayName")
     }
 
     private fun deleteSavedDocument(uri: Uri): Boolean {

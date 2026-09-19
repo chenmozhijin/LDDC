@@ -26,13 +26,18 @@ class SavedTextFileResult {
     );
   }
 
-  factory SavedTextFileResult.uri(String uri) {
+  /// [displayName] 是平台在**仍持有 URI 授权时**查回来的系统显示名（安卓端
+  /// `OpenableColumns.DISPLAY_NAME`）。界面只该展示 [displayPath]，而原始
+  /// `content://…%2F…` URI 对用户没有意义，因此这里优先用显示名；
+  /// 拿不到显示名时退回 URI 文本，展示层不做任何 URI 解析。
+  factory SavedTextFileResult.uri(String uri, {String? displayName}) {
     final String normalized = _requireNonEmpty(uri, 'uri');
+    final String label = displayName?.trim() ?? '';
     return SavedTextFileResult._(
       kind: normalized.startsWith('content://')
           ? SavedTextFileResultKind.contentUri
           : SavedTextFileResultKind.externalUri,
-      displayPath: normalized,
+      displayPath: label.isEmpty ? normalized : label,
       uri: normalized,
     );
   }

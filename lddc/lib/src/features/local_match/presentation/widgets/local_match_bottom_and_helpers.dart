@@ -433,6 +433,13 @@ String localMatchQueueItemDisplayLyricsPath(
   BuildContext context,
   LocalMatchQueueItem item,
 ) {
+  // 写入完成后优先用保存实现给出的可读落点（授权树显示名 + 相对层级），
+  // 而不是 outputPath 里那条对用户无意义的编码 URI；拿不到可读落点时才退回它，
+  // 保证任何情况下都有内容可显示。
+  final String writtenDisplayPath = item.lastStatus?.displayPath?.trim() ?? '';
+  if (writtenDisplayPath.isNotEmpty) {
+    return writtenDisplayPath;
+  }
   final String resolvedOutputPath = item.outputPath?.trim() ?? '';
   if (resolvedOutputPath.isNotEmpty) {
     return resolvedOutputPath;

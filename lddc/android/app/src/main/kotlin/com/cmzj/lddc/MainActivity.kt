@@ -104,7 +104,10 @@ class MainActivity : FlutterActivity() {
             result.error("invalid_argument", "fileName/bytes 不能为空", null)
             return
         }
-        if (!pendingPickers.beginSave(PendingSaveTextFile(result = result, bytes = bytes))) {
+        if (!pendingPickers.beginSave(
+                PendingSaveTextFile(result = result, bytes = bytes, fileName = fileName),
+            )
+        ) {
             return
         }
         try {
@@ -240,7 +243,16 @@ class MainActivity : FlutterActivity() {
                 result.error("write_failed", "打开输出流失败", null)
                 return
             }
-            result.success(uri.toString())
+            // 这里仍持有本次 ACTION_CREATE_DOCUMENT 的 URI 授权，是查询系统显示名
+            // 最可靠的时刻：把可读名字一起回给 Dart，界面就不必再展示
+            // `content://…%2F…` 这类对用户无意义的编码 URI（provider 查不到时用
+            // 请求时的建议文件名兜底）。uri 原样保留，读写逻辑不受影响。
+            result.success(
+                mapOf(
+                    "uri" to uri.toString(),
+                    "displayName" to (queryDisplayName(uri) ?: request.fileName),
+                )
+            )
         } catch (error: SecurityException) {
             result.error("permission_denied", "写入文件失败，权限不足: ${error.message}", null)
         } catch (error: FileNotFoundException) {

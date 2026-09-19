@@ -13,10 +13,20 @@ import 'lyrics_save_planner.dart';
 
 /// 本地匹配扫描结果条目：歌曲信息 + 遍历根目录。
 class LocalMatchSongEntry {
-  const LocalMatchSongEntry({required this.songInfo, required this.rootPath});
+  const LocalMatchSongEntry({
+    required this.songInfo,
+    required this.rootPath,
+    this.displayPath,
+  });
 
   final SongInfo songInfo;
   final String? rootPath;
+
+  /// 可直接展示给用户的歌曲位置（安卓端由扫描层用"授权树显示名 + 相对层级"拼出）。
+  ///
+  /// 安卓端 [SongInfo.path] 是 `content://…%2F…` 编码 URI，展示层不得再解析 URI，
+  /// 因此这里在扫描阶段就把可读文本随条目带出来；桌面端为 null，直接展示本地路径。
+  final String? displayPath;
 }
 
 /// 本地匹配保存模式，对齐Python版 `SaveMode`。
@@ -66,12 +76,16 @@ class LocalMatchingStatus {
     required this.index,
     required this.text,
     this.path,
+    this.displayPath,
   });
 
   final LocalMatchingStatusType type;
   final int index;
   final String text;
   final String? path;
+
+  /// [path] 对应的可展示文本（安卓端由保存实现给出可读落点）。
+  final String? displayPath;
 }
 
 /// `GetInfos` 阶段进度，对齐Python版 `text/value/max` 结构。
@@ -631,6 +645,7 @@ class LocalMatchUseCase {
         );
 
         String? savePath;
+        String? saveDisplayPath;
         bool fileWriteCompleted = false;
         if (info.fromCue ||
             options.saveToTagMode != LocalMatchSaveToTagMode.onlyTag) {
@@ -641,15 +656,18 @@ class LocalMatchUseCase {
             fileNameMode: options.fileNameMode,
           );
           if (lyricsPersistencePort != null) {
-            savePath = await lyricsPersistencePort.saveText(
-              request: LyricsSaveRequest(
-                songInfo: persistenceSongInfo,
-                lyricLangs: options.langs,
-                lyricsFormat: options.lyricsFormat,
-                fileNameFormat: fileNameFormat,
-              ),
-              text: lyricsText,
-            );
+            final LyricsSaveOutcome outcome = await lyricsPersistencePort
+                .saveText(
+                  request: LyricsSaveRequest(
+                    songInfo: persistenceSongInfo,
+                    lyricLangs: options.langs,
+                    lyricsFormat: options.lyricsFormat,
+                    fileNameFormat: fileNameFormat,
+                  ),
+                  text: lyricsText,
+                );
+            savePath = outcome.path;
+            saveDisplayPath = outcome.displayPath;
           } else {
             final LyricsSavePlan savePlan = LyricsSavePlanner.planLocalMatch(
               directoryMode: _toPlannerDirectoryMode(options.saveMode),
@@ -714,6 +732,7 @@ class LocalMatchUseCase {
           index: index,
           text: '成功',
           path: savePath,
+          displayPath: saveDisplayPath,
         );
         successCount += 1;
         statuses.add(latestStatus);

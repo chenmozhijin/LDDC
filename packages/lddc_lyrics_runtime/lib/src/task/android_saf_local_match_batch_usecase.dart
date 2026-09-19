@@ -367,6 +367,8 @@ class AndroidSafLocalMatchBatchUseCase {
       index: index,
       text: status.text,
       path: status.path,
+      // 可读落点必须一起带过去，否则界面只剩编码 URI 可显示。
+      displayPath: status.displayPath,
     );
   }
 }

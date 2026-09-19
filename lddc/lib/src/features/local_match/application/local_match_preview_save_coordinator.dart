@@ -96,6 +96,8 @@ final class LocalMatchPreviewSaveCoordinator {
       savePlan: const LocalMatchSavePlan(kind: LocalMatchSavePlanKind.none),
       lastStatus: null,
       outputPath: null,
+      // 扫描阶段算好的可读位置：安卓端 SongInfo.path 是编码 URI，展示层不解析 URI。
+      displaySongPath: entry.displayPath,
     );
     return item.copyWith(
       savePlan: buildAndroidSavePlan(item.songInfo, options),
