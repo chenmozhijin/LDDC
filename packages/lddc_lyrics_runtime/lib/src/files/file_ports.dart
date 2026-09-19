@@ -26,26 +26,21 @@ class SavedTextFileResult {
     );
   }
 
-  /// [displayName] / [relativePath] 由平台在**仍持有 URI 授权时**查回：安卓端分别是
-  /// `OpenableColumns.DISPLAY_NAME`（文件名）与 `Document.COLUMN_RELATIVE_PATH`
-  /// （所在相对目录，API 26+ 且部分 provider 不提供）。界面只该展示 [displayPath]：
-  /// 优先"相对目录 / 文件名"，只有文件名时退化为文件名，两者都没有才退回 URI 文本；
-  /// 展示层不做任何 URI 解析。
-  factory SavedTextFileResult.uri(
-    String uri, {
-    String? displayName,
-    String? relativePath,
-  }) {
+  /// [displayName] 由平台在**仍持有 URI 授权时**查回（安卓端
+  /// `OpenableColumns.DISPLAY_NAME`）。界面只该展示 [displayPath]：优先系统显示名，
+  /// 拿不到才退回 URI 文本；展示层不做任何 URI 解析。
+  ///
+  /// 注：文档所在目录**无法**通过公开 API 稳定获得（`DocumentsContract.Document`
+  /// 没有 `relative_path` 列，文档 URL 里的 opaque docId 也不含层级），因此保存结果
+  /// 只展示文件名；需要目录时必须由用户在系统选择器里确认。
+  factory SavedTextFileResult.uri(String uri, {String? displayName}) {
     final String normalized = _requireNonEmpty(uri, 'uri');
+    final String label = displayName?.trim() ?? '';
     return SavedTextFileResult._(
       kind: normalized.startsWith('content://')
           ? SavedTextFileResultKind.contentUri
           : SavedTextFileResultKind.externalUri,
-      displayPath: _readableDisplayPath(
-        displayName: displayName,
-        relativePath: relativePath,
-        fallback: normalized,
-      ),
+      displayPath: label.isEmpty ? normalized : label,
       uri: normalized,
     );
   }
@@ -54,27 +49,6 @@ class SavedTextFileResult {
   final String displayPath;
   final String? localPath;
   final String? uri;
-}
-
-/// 把平台查回的显示名与相对目录拼成"UI 可直接展示文本"。
-String _readableDisplayPath({
-  required String? displayName,
-  required String? relativePath,
-  required String fallback,
-}) {
-  final String name = displayName?.trim() ?? '';
-  if (name.isEmpty) {
-    return fallback;
-  }
-  final String folder = (relativePath ?? '').trim().replaceAll('\\', '/');
-  if (folder.isEmpty || folder == '.') {
-    return name;
-  }
-  // 少数 provider 的 relativePath 已经包含文件名，避免拼成 "a/b.lrc / b.lrc"。
-  if (folder == name || folder.endsWith('/$name')) {
-    return folder;
-  }
-  return '$folder / $name';
 }
 
 /// 公用文件句柄：只描述业务层需要的文件名称、路径和按需读取能力。

@@ -269,7 +269,6 @@ void main() {
             return <String, Object?>{
               'uri': 'content://documents/document/lyrics.json',
               'displayName': 'lyrics.json',
-              'relativePath': 'Documents',
             };
           });
       final AppFilePickerImpl picker = AppFilePickerImpl(
@@ -285,7 +284,7 @@ void main() {
 
       expect(saveResult?.kind, SavedTextFileResultKind.contentUri);
       expect(saveResult?.uri, 'content://documents/document/lyrics.json');
-      expect(saveResult?.displayPath, 'Documents / lyrics.json');
+      expect(saveResult?.displayPath, 'lyrics.json');
       expect(receivedCall?.method, 'saveTextFile');
       final Map<Object?, Object?> arguments =
           receivedCall?.arguments as Map<Object?, Object?>;
@@ -306,7 +305,6 @@ void main() {
             return <String, Object?>{
               'uri': 'content://documents/document/lyrics.json',
               'displayName': '   ',
-              'relativePath': 'Documents',
             };
           });
       final AppFilePickerImpl picker = AppFilePickerImpl(
