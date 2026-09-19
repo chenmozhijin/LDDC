@@ -27,13 +27,21 @@ class PickerPendingRequestRegistryTest {
         assertEquals(firstAudio, registry.takeAudio())
 
         val firstSaveResult = RecordingMethodResult()
-        val firstSave = PendingSaveTextFile(firstSaveResult, byteArrayOf(1))
+        val firstSave = PendingSaveTextFile(firstSaveResult, byteArrayOf(1), "demo.lrc")
         val secondSaveResult = RecordingMethodResult()
         assertTrue(registry.beginSave(firstSave))
-        assertFalse(registry.beginSave(PendingSaveTextFile(secondSaveResult, byteArrayOf(2))))
+        assertFalse(
+            registry.beginSave(
+                PendingSaveTextFile(secondSaveResult, byteArrayOf(2), "other.lrc"),
+            ),
+        )
         assertEquals("busy", secondSaveResult.errorCode)
         assertEquals("已有文件保存请求未完成", secondSaveResult.errorMessage)
-        assertEquals(firstSave, registry.takeSave())
+        val taken = registry.takeSave()
+        assertEquals(firstSave, taken)
+        // 保存请求必须保留建议文件名：provider 查不到显示名时用它兜底，
+        // 界面才不会回落到展示原始 URI。
+        assertEquals("demo.lrc", taken?.fileName)
         assertEquals(0, registry.count())
     }
 
@@ -45,7 +53,7 @@ class PickerPendingRequestRegistryTest {
         val save = RecordingMethodResult()
         registry.beginTree(tree)
         registry.beginAudio(audio)
-        registry.beginSave(PendingSaveTextFile(save, byteArrayOf()))
+        registry.beginSave(PendingSaveTextFile(save, byteArrayOf(), "demo.lrc"))
 
         registry.completeDestroyedRequests()
 
@@ -66,7 +74,7 @@ class PickerPendingRequestRegistryTest {
         val save = RecordingMethodResult()
         registry.beginTree(throwingTree)
         registry.beginAudio(audio)
-        registry.beginSave(PendingSaveTextFile(save, byteArrayOf()))
+        registry.beginSave(PendingSaveTextFile(save, byteArrayOf(), "demo.lrc"))
 
         registry.completeDestroyedRequests()
 
