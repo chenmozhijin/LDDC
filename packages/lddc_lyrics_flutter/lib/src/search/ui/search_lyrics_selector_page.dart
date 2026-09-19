@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
-import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
 import '../../ui/search_ui_strings.dart';
 import '../search_lyrics_selector_models.dart';
@@ -543,12 +542,8 @@ class _SearchLyricsSelectorPageState extends State<SearchLyricsSelectorPage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        // 这里承载保存结果与错误详情，安卓端会带 content:// 编码 URI，统一可读化。
-        content: Text(humanizeAndroidSafUris(message)),
-        action: action,
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), action: action));
   }
 }
