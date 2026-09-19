@@ -27,6 +27,26 @@ void main() {
       expect(() => SavedTextFileResult.localPath('  '), throwsArgumentError);
       expect(() => SavedTextFileResult.uri(''), throwsArgumentError);
     });
+
+    test('平台给出显示名时用它作为展示文本', () {
+      // 安卓端 URI 对用户没有意义：展示文本必须是平台查回的显示名。
+      final SavedTextFileResult named = SavedTextFileResult.uri(
+        'content://documents/document/primary%3ADocuments%2Fdemo.lrc',
+        displayName: '  demo.lrc  ',
+      );
+      expect(named.displayPath, 'demo.lrc');
+      expect(
+        named.uri,
+        'content://documents/document/primary%3ADocuments%2Fdemo.lrc',
+      );
+
+      // 查不到显示名时退回 URI，保证展示层永远有文本可用。
+      final SavedTextFileResult unnamed = SavedTextFileResult.uri(
+        'content://documents/document/demo.lrc',
+        displayName: '   ',
+      );
+      expect(unnamed.displayPath, 'content://documents/document/demo.lrc');
+    });
   });
 
   group('PickedFileHandle', () {
