@@ -744,35 +744,6 @@ void main() {
       expect(find.text('demo.lrc'), findsNothing);
     });
 
-    testWidgets('安卓 content:// 输入路径在预览卡显示为可读层级路径', (WidgetTester tester) async {
-      _setTestViewport(tester, const Size(1366, 1024));
-      const String androidInputUri =
-          'content://com.android.externalstorage.documents/tree/root/document/root%2FAlbum%2Fdemo.lrc';
-      final _FakeOpenLyricsInputPicker picker = _FakeOpenLyricsInputPicker(
-        pickedLyricsFile: _MemoryPickedFileHandle(
-          name: 'demo.lrc',
-          path: androidInputUri,
-          bytes: _lyricsFileBytes('[00:00.00]原文'),
-        ),
-      );
-      final ProviderContainer container = _createContainer(
-        picker: picker,
-        lyricsApi: _FakeLyricsApi(lyrics: _buildLyrics()),
-      );
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(_buildTestApp(container));
-      await tester.tap(
-        find.byKey(const ValueKey<String>('open_lyrics_open_lyrics_button')),
-      );
-      await tester.pumpAndSettle();
-
-      // 展示层只还原路径文本，state.inputPath 仍是原始 URI，读取逻辑不受影响。
-      expect(find.text('root / Album / demo.lrc'), findsOneWidget);
-      expect(find.textContaining('content://'), findsNothing);
-      expect(find.textContaining('%2F'), findsNothing);
-    });
-
     testWidgets('桌面快捷键 Ctrl+O 走默认歌词文件打开链路', (WidgetTester tester) async {
       _setTestViewport(tester, const Size(1366, 1024));
       final _FakeOpenLyricsInputPicker picker = _FakeOpenLyricsInputPicker(

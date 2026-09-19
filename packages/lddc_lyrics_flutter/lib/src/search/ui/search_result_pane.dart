@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
-import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
 import '../../state/async_view_state.dart';
 import '../../ui/search_ui_strings.dart';
@@ -711,14 +710,9 @@ String? _searchTableStatusText(SearchUiStrings strings, String? message) {
   if (message == null || message.isEmpty) {
     return null;
   }
-  final (String code, String? rawDetail) = SearchTableStatusMessage.decode(
+  final (String code, String? detail) = SearchTableStatusMessage.decode(
     message,
   );
-  // 状态文案里的 detail 会带原生错误（安卓保存失败时含编码 URI），
-  // 渲染前统一还原成可读层级路径，用户才能对上具体文件。
-  final String? detail = rawDetail == null
-      ? null
-      : humanizeAndroidSafUris(rawDetail);
   return switch (code) {
     SearchTableStatusMessageCode.autoFetching => strings.text(
       SearchUiTextKey.tableStatusAutoFetching,

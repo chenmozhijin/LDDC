@@ -1,13 +1,11 @@
 import 'package:flutter/widgets.dart';
-import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
 import '../../../core/i18n/i18n.dart';
 import '../application/batch_convert_page_state.dart';
 
 String batchConvertNoticeText(BuildContext context, BatchConvertNotice notice) {
   final l10n = context.l10n;
-  // detail 可能带 content:// 编码 URI（安卓端保存/读取失败），映射层统一可读化。
-  final String detail = humanizeAndroidSafUris(notice.detail ?? '');
+  final String detail = notice.detail ?? '';
   final int count = notice.count ?? 0;
   final int success = notice.successCount ?? 0;
   final int failure = notice.failureCount ?? 0;

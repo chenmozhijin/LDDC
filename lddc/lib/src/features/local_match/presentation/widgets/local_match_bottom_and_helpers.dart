@@ -410,21 +410,18 @@ String localMatchPendingLyricsPathText(
 
 String localMatchSavePlanPreviewText(
   BuildContext context,
-  LocalMatchSavePlan plan, {
-  required LocalMatchAndroidTreeLabels androidLabels,
-}) {
+  LocalMatchSavePlan plan,
+) {
   if (plan.hasBlockingError) {
     return localMatchSavePlanBlockingText(context, plan.blocker);
   }
-  // 计划里的目标路径在安卓端同样是编码 URI，展示前统一还原成可读层级路径。
-  final String targetPathText = androidLabels.formatPath(plan.targetPath);
   final List<String> fragments = <String>[
     if (plan.kind == LocalMatchSavePlanKind.tagOnly)
       context.l10n.localMatchPreviewTagOnly,
     if (plan.kind == LocalMatchSavePlanKind.fileAndTag)
       context.l10n.localMatchPreviewWriteTag,
-    if (targetPathText.isNotEmpty) targetPathText,
-    if (targetPathText.isEmpty && plan.waitsForLyricsFileName)
+    if ((plan.targetPath ?? '').trim().isNotEmpty) plan.targetPath!.trim(),
+    if ((plan.targetPath ?? '').trim().isEmpty && plan.waitsForLyricsFileName)
       localMatchPendingLyricsPathText(context, plan),
   ];
   return fragments.isEmpty
@@ -434,10 +431,9 @@ String localMatchSavePlanPreviewText(
 
 String localMatchQueueItemDisplayLyricsPath(
   BuildContext context,
-  LocalMatchQueueItem item, {
-  required LocalMatchAndroidTreeLabels androidLabels,
-}) {
-  final String resolvedOutputPath = androidLabels.formatPath(item.outputPath);
+  LocalMatchQueueItem item,
+) {
+  final String resolvedOutputPath = item.outputPath?.trim() ?? '';
   if (resolvedOutputPath.isNotEmpty) {
     return resolvedOutputPath;
   }
@@ -447,70 +443,13 @@ String localMatchQueueItemDisplayLyricsPath(
   if (item.savePlan.waitsForLyricsFileName) {
     return localMatchPendingLyricsPathText(context, item.savePlan);
   }
-  return localMatchSavePlanPreviewText(
-    context,
-    item.savePlan,
-    androidLabels: androidLabels,
-  );
-}
-
-/// 本地匹配页面展示安卓路径时已知的授权树标签。
-///
-/// 安卓端业务数据里保存的是 `content://…%2F…` 这类编码 URI，直接渲染对用户毫无意义；
-/// 这里把当前页面已知的"歌曲树 / 保存根树"打包，供各处把 URI 还原成
-/// `内部存储 / Music / Album / demo.lrc` 形式的层级路径。
-final class LocalMatchAndroidTreeLabels {
-  const LocalMatchAndroidTreeLabels({this.songTree, this.saveTree});
-
-  factory LocalMatchAndroidTreeLabels.of(LocalMatchPageState state) {
-    return LocalMatchAndroidTreeLabels.fromTokens(
-      songTreeToken: state.androidTreeToken,
-      saveTreeToken: state.androidSaveTreeToken,
-    );
-  }
-
-  /// 供只订阅 token（而不是整个 state）的 widget 使用，避免额外重建。
-  factory LocalMatchAndroidTreeLabels.fromTokens({
-    required AndroidSafTreeToken? songTreeToken,
-    required AndroidSafTreeToken? saveTreeToken,
-  }) {
-    return LocalMatchAndroidTreeLabels(
-      songTree: _treeLabel(songTreeToken),
-      saveTree: _treeLabel(saveTreeToken),
-    );
-  }
-
-  final AndroidSafTreeLabel? songTree;
-  final AndroidSafTreeLabel? saveTree;
-
-  /// 把单个 URI 转成可读路径；非 SAF 路径原样返回。
-  String formatPath(String? uri) {
-    return formatAndroidSafPath(uri, songTree: songTree, saveTree: saveTree);
-  }
-
-  /// 把文案里内嵌的 SAF URI 就地替换成可读路径（失败明细、通知等）。
-  String humanize(String text) {
-    return humanizeAndroidSafUris(text, songTree: songTree, saveTree: saveTree);
-  }
-
-  static AndroidSafTreeLabel? _treeLabel(AndroidSafTreeToken? token) {
-    final String uri = token?.uri.trim() ?? '';
-    if (uri.isEmpty) {
-      return null;
-    }
-    final String displayName = token?.displayName?.trim() ?? '';
-    return AndroidSafTreeLabel(
-      uri: uri,
-      label: displayName.isNotEmpty ? displayName : uri,
-    );
-  }
+  return localMatchSavePlanPreviewText(context, item.savePlan);
 }
 
 String? localMatchQueueItemFailureSummary(
   BuildContext context,
-  LocalMatchQueueItem item, {
-  required LocalMatchAndroidTreeLabels androidLabels,
-}) {
+  LocalMatchQueueItem item,
+) {
   if (item.savePlan.hasBlockingError) {
     final String message = localMatchSavePlanBlockingText(
       context,
@@ -524,6 +463,5 @@ String? localMatchQueueItemFailureSummary(
   if (text.isEmpty || !item.hasFailed) {
     return null;
   }
-  // 原生错误信息里会带原始 URI，这里换成可读路径，用户才能对上具体文件。
-  return androidLabels.humanize(text);
+  return text;
 }
