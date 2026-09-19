@@ -5,6 +5,85 @@ import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
 void main() {
   group('AndroidSafLocalMatchGetInfosUseCase', () {
+    test('子目录里的 CUE 也能拼出可读位置', () async {
+      // 覆盖"CUE 位于子目录"时的展示路径分支：dirname 非空时要把目录拼进去。
+      const String rootUri = 'content://tree/root';
+      const String albumUri = 'content://doc/album-dir';
+      const String cueUri = 'content://doc/album/disc.cue';
+      const String discUri = 'content://doc/album/disc.flac';
+      final _FakeAndroidSafTreePort treePort = _FakeAndroidSafTreePort(
+        childrenByUri: <String, List<AndroidSafTreeEntry>>{
+          rootUri: const <AndroidSafTreeEntry>[
+            AndroidSafTreeEntry(
+              uri: albumUri,
+              displayName: 'Album',
+              mimeType: 'vnd.android.document/directory',
+              isDirectory: true,
+              isFile: false,
+            ),
+          ],
+          albumUri: const <AndroidSafTreeEntry>[
+            AndroidSafTreeEntry(
+              uri: cueUri,
+              displayName: 'disc.cue',
+              mimeType: 'text/plain',
+              isDirectory: false,
+              isFile: true,
+            ),
+            AndroidSafTreeEntry(
+              uri: discUri,
+              displayName: 'disc.flac',
+              mimeType: 'audio/flac',
+              isDirectory: false,
+              isFile: true,
+            ),
+          ],
+        },
+        bytesByUri: <String, Uint8List>{},
+      );
+      final _FakeAndroidSafContentPort contentPort = _FakeAndroidSafContentPort(
+        bytesByUri: <String, Uint8List>{
+          cueUri: Uint8List.fromList(
+            '''
+FILE "disc.flac" WAVE
+  TRACK 01 AUDIO
+    TITLE "Nested Track"
+    PERFORMER "Cue Artist"
+    INDEX 01 00:00:00
+'''
+                .codeUnits,
+          ),
+        },
+      );
+      final _FakeAndroidSafAudioMetadataPort metadataPort =
+          _FakeAndroidSafAudioMetadataPort(
+            metadataByUri: const <String, AndroidSafAudioMetadata>{
+              discUri: AndroidSafAudioMetadata(
+                nameHint: 'disc.flac',
+                title: 'Disc',
+                artist: 'Cue Artist',
+                album: 'Cue Album',
+                durationMs: 180000,
+                trackNumber: 1,
+                cuesheet: null,
+              ),
+            },
+          );
+      final AndroidSafLocalMatchGetInfosUseCase useCase =
+          AndroidSafLocalMatchGetInfosUseCase(
+            treePort: treePort,
+            contentPort: contentPort,
+            audioMetadataPort: metadataPort,
+          );
+
+      final AndroidSafLocalMatchGetInfosResult result = await useCase.run(
+        rootTree: const AndroidSafTreeToken(uri: rootUri, displayName: 'root'),
+      );
+
+      expect(result.entries, hasLength(1));
+      expect(result.entries.single.displayPath, 'root / Album/disc.flac');
+    });
+
     test('先解析外部 cue 并排除已覆盖音频，再解析普通音频', () async {
       const String rootUri = 'content://tree/root';
       const String cueUri = 'content://doc/disc.cue';

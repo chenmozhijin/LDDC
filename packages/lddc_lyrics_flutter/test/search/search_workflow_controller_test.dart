@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
@@ -6,6 +7,63 @@ import 'package:lddc_lyrics_flutter/lddc_lyrics_flutter.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
 void main() {
+  test('保存预览到目录时把可读落点写入状态与通知', () async {
+    // 目录保存的真实落点是本地路径/URI，但展示文本必须由保存实现给出（安卓端是
+    // 授权树显示名拼出的可读文本），控制器不得自己解析路径。
+    final _DirectorySaveLyricsClient lyricsClient =
+        _DirectorySaveLyricsClient();
+    final _ReadablePathPersistence persistence = _ReadablePathPersistence();
+    final SearchWorkflowController controller = SearchWorkflowController(
+      dependencies: SearchWorkflowDependencies(
+        optionsResolver: () => SearchWorkflowOptions(
+          defaultSaveDirectory: 'D:/lyrics',
+          fileNameFormat: '%<artist> - %<title>',
+          id3Version: Id3Version.v23,
+          autoSelect: true,
+          translationSource: TranslateSource.bing,
+          searchSources: const <Source>[Source.qm],
+          convertOptions: LyricsConvertOptions(),
+          skipInstrumental: true,
+        ),
+        capabilities: const SearchWorkflowCapabilities(
+          multiWindow: true,
+          androidSafTreeAccess: false,
+          audioTagWrite: false,
+        ),
+        lyricsApi: lyricsClient,
+        translateApi: const _FakeTranslationClient(),
+        mediaGateway: _UnusedMediaGateway(),
+        filePicker: _UnusedFilePicker(),
+        dragDropPort: const UnsupportedDragDropPort(),
+        androidSafTreePort: _UnusedAndroidSafTreePort(),
+        batchSaveUseCase: SearchBatchSaveLyricsUseCase(
+          lyricsApi: lyricsClient,
+          persistenceFactory: (_) => persistence,
+        ),
+        androidSafBatchSaveUseCase: SearchAndroidSafBatchSaveLyricsUseCase(
+          lyricsApi: lyricsClient,
+          persistenceFactory: (_) => persistence,
+        ),
+        fileSavePersistenceFactory: (_) => persistence,
+        autoFetchUseCase: AutoFetchUseCase(
+          gateway: _UnusedAutoFetchLyricsGateway(),
+        ),
+      ),
+    );
+    addTearDown(controller.dispose);
+
+    controller.setKeyword('save-dir');
+    await controller.search();
+    await controller.openResult(0);
+    controller.updateSaveDirectoryPath('D:/lyrics');
+    await controller.savePreviewToDirectory();
+
+    expect(persistence.savedRequests, hasLength(1));
+    expect(controller.state.lastSavedPath, 'Drivers / demo.lrc');
+    expect(controller.state.notice?.code, SearchNoticeCode.lyricsSaveSucceeded);
+    expect(controller.state.notice?.detail, 'Drivers / demo.lrc');
+  });
+
   test('公开能力契约可直接驱动搜索控制器，不依赖宿主 Provider', () async {
     final _FakeLyricsClient lyricsClient = _FakeLyricsClient();
     LyricsSavePersistencePort persistenceFactory(String _) =>
@@ -769,6 +827,91 @@ final class _UnusedAndroidSafTreePort extends Fake
 
 final class _UnusedLyricsSavePersistence extends Fake
     implements LyricsSavePersistencePort {}
+
+/// 目录保存用例：返回一首歌与对应歌词，让预览具备可保存内容。
+final class _DirectorySaveLyricsClient implements LyricsClient {
+  @override
+  Future<APIResultList<SourceAware>> search({
+    required Source source,
+    required String keyword,
+    required SearchType searchType,
+    int page = 1,
+    RequestCancellationToken? cancellationToken,
+  }) async {
+    return APIResultList<SourceAware>(
+      <SourceAware>[
+        SongInfo(source: source, id: 'dir-song', title: 'Directory Song'),
+      ],
+      info: SearchInfo(
+        source: source,
+        keyword: keyword,
+        searchType: searchType,
+        page: page,
+      ),
+      ranges: <Source, SourceRange>{
+        source: const SourceRange(start: 0, end: 0, total: 1),
+      },
+    );
+  }
+
+  @override
+  Future<LyricsResolveResult> resolveSongLyrics({
+    required SongInfo songInfo,
+    required bool autoSelect,
+  }) async {
+    return LyricsResolvedResult(lyrics: _lyrics('保存到目录'));
+  }
+
+  @override
+  Future<Lyrics> getLyrics({Object? info, String? path, Object? data}) {
+    throw UnsupportedError('本测试不需要按路径读取歌词');
+  }
+
+  @override
+  Future<APIResultList<LyricInfo>> getLyricslist(SongInfo songInfo) {
+    throw UnsupportedError('本测试不获取歌词候选');
+  }
+
+  @override
+  Future<APIResultList<SongInfo>> getSonglist(SongListInfo songListInfo) {
+    throw UnsupportedError('本测试不获取歌单');
+  }
+}
+
+/// 记录写入并给出可读落点（模拟安卓实现的显示文本）。
+final class _ReadablePathPersistence extends Fake
+    implements LyricsSavePersistencePort {
+  final List<LyricsSaveRequest> savedRequests = <LyricsSaveRequest>[];
+
+  @override
+  Future<String> saveBytes({
+    required LyricsSaveRequest request,
+    required Uint8List bytes,
+  }) async {
+    savedRequests.add(request);
+    return 'content://documents/document/primary%3ADrivers%2Fdemo.lrc';
+  }
+
+  @override
+  Future<LyricsSaveOutcome> saveText({
+    required LyricsSaveRequest request,
+    required String text,
+  }) async {
+    // implements 不会继承端口默认实现，这里显式模拟"真实路径 + 可读落点"。
+    savedRequests.add(request);
+    const String uri =
+        'content://documents/document/primary%3ADrivers%2Fdemo.lrc';
+    return LyricsSaveOutcome(
+      path: uri,
+      displayPath: displayPathFor(request, uri),
+    );
+  }
+
+  @override
+  String displayPathFor(LyricsSaveRequest request, String path) {
+    return 'Drivers / demo.lrc';
+  }
+}
 
 final class _UnusedAutoFetchLyricsGateway extends Fake
     implements AutoFetchLyricsGateway {}
