@@ -243,15 +243,14 @@ class MainActivity : FlutterActivity() {
                 result.error("write_failed", "打开输出流失败", null)
                 return
             }
-            // 这里仍持有本次 ACTION_CREATE_DOCUMENT 的 URI 授权，是查询系统显示名与所在
-            // 相对目录最可靠的时刻：把可读信息一起回给 Dart，界面就不必再展示
-            // `content://…%2F…` 这类对用户无意义的编码 URI（provider 查不到时用请求时的
-            // 建议文件名兜底）。uri 原样保留，读写逻辑不受影响。
+            // 这里仍持有本次 ACTION_CREATE_DOCUMENT 的 URI 授权，是查询系统显示名
+            // 最可靠的时刻：把可读名字一起回给 Dart，界面就不必再展示
+            // `content://…%2F…` 这类对用户无意义的编码 URI（provider 查不到时用
+            // 请求时的建议文件名兜底）。uri 原样保留，读写逻辑不受影响。
             result.success(
                 mapOf(
                     "uri" to uri.toString(),
                     "displayName" to (queryDisplayName(uri) ?: request.fileName),
-                    "relativePath" to queryRelativePath(uri),
                 )
             )
         } catch (error: SecurityException) {
@@ -608,40 +607,6 @@ class MainActivity : FlutterActivity() {
                         null
                     }
                 }
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    /**
-     * 文档在所属存储根内的相对目录，例如 `Documents/Lyrics`（不含文件名）。
-     *
-     * `COLUMN_RELATIVE_PATH` 是 API 26+ 的约定，且并非所有 provider 都返回
-     * （Downloads、MediaDocuments 常为 null）：拿不到时返回 null，由展示层退化为
-     * 只显示文件名，而不是回落到编码 URI。
-     */
-    private fun queryRelativePath(uri: Uri): String? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            return null
-        }
-        return try {
-            contentResolver.query(
-                uri,
-                arrayOf(Document.COLUMN_RELATIVE_PATH),
-                null,
-                null,
-                null,
-            )?.use { cursor ->
-                if (!cursor.moveToFirst()) {
-                    return@use null
-                }
-                val index = cursor.getColumnIndex(Document.COLUMN_RELATIVE_PATH)
-                if (index >= 0 && !cursor.isNull(index)) {
-                    cursor.getString(index)?.trim()?.takeIf { it.isNotEmpty() }
-                } else {
-                    null
-                }
-            }
         } catch (_: Exception) {
             null
         }
