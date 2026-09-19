@@ -407,8 +407,8 @@ final class AppFilePickerImpl implements AppFilePicker {
     required String mimeType,
   }) async {
     try {
-      // 原生返回 {uri, displayName}：uri 供后续读写，displayName 是系统在持有
-      // 授权时查回的可读文件名，界面直接展示它，不再暴露编码 URI。
+      // 原生返回 {uri, displayName, relativePath}：uri 供后续读写，后两者是系统在
+      // 持有授权时查回的可读信息（所在相对目录 + 文件名），界面直接展示它们。
       final Map<Object?, Object?>? result = await _androidSearchFileChannel
           .invokeMapMethod<Object?, Object?>('saveTextFile', <String, Object?>{
             'fileName': fileName,
@@ -424,6 +424,7 @@ final class AppFilePickerImpl implements AppFilePicker {
           : SavedTextFileResult.uri(
               normalized,
               displayName: result?['displayName'] as String?,
+              relativePath: result?['relativePath'] as String?,
             );
     } on PlatformException catch (error) {
       if (error.code == 'cancelled') {

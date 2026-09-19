@@ -28,22 +28,39 @@ void main() {
       expect(() => SavedTextFileResult.uri(''), throwsArgumentError);
     });
 
-    test('平台给出显示名时用它作为展示文本', () {
-      // 安卓端 URI 对用户没有意义：展示文本必须是平台查回的显示名。
+    test('平台给出显示名与相对目录时拼成可读展示文本', () {
+      // 安卓端 URI 对用户没有意义：展示文本必须是平台查回的"目录 / 文件名"。
       final SavedTextFileResult named = SavedTextFileResult.uri(
         'content://documents/document/primary%3ADocuments%2Fdemo.lrc',
         displayName: '  demo.lrc  ',
+        relativePath: 'Documents',
       );
-      expect(named.displayPath, 'demo.lrc');
+      expect(named.displayPath, 'Documents / demo.lrc');
       expect(
         named.uri,
         'content://documents/document/primary%3ADocuments%2Fdemo.lrc',
       );
 
-      // 查不到显示名时退回 URI，保证展示层永远有文本可用。
+      // provider 不提供 relativePath（Downloads/MediaDocuments 常见）时退化为文件名。
+      final SavedTextFileResult nameOnly = SavedTextFileResult.uri(
+        'content://downloads/document/msf%3A123',
+        displayName: 'demo.lrc',
+      );
+      expect(nameOnly.displayPath, 'demo.lrc');
+
+      // 少数 provider 的 relativePath 已含文件名，不能重复拼接。
+      final SavedTextFileResult alreadyFull = SavedTextFileResult.uri(
+        'content://documents/document/demo.lrc',
+        displayName: 'demo.lrc',
+        relativePath: 'Documents/demo.lrc',
+      );
+      expect(alreadyFull.displayPath, 'Documents/demo.lrc');
+
+      // 连显示名都拿不到时退回 URI，保证展示层永远有文本可用。
       final SavedTextFileResult unnamed = SavedTextFileResult.uri(
         'content://documents/document/demo.lrc',
         displayName: '   ',
+        relativePath: 'Documents',
       );
       expect(unnamed.displayPath, 'content://documents/document/demo.lrc');
     });
