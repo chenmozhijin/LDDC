@@ -43,7 +43,10 @@ void main() {
     // 安卓端 pickDirectory 不支持时会写这个码：必须渲染成用户能看懂的能力缺失提示，
     // 而不是把内部码名直接抛给用户。
     expect(
-      settingsNoticeText(context, SettingsNoticeCode.directoryPickerUnsupported.name),
+      settingsNoticeText(
+        context,
+        SettingsNoticeCode.directoryPickerUnsupported.name,
+      ),
       l10n.commonUnsupportedOperation,
     );
   });
