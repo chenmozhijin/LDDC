@@ -55,15 +55,26 @@ class SettingsPageController extends _$SettingsPageController {
     }, successCode: SettingsNoticeCode.defaultSavePathUpdated);
   }
 
+  /// 选择默认保存目录。
+  ///
+  /// 安卓端不支持 `pickDirectory`（SAF 没有"选目录并返回本地路径"的能力），
+  /// 依赖实现会抛 `UnsupportedError`。此前未捕获，用户看到的是"按钮点了没反应"
+  /// 加一条未处理异常；这里按搜索页同样的方式捕获并给出可解释提示。
   Future<void> pickDefaultSavePath() async {
     final SettingsPageDependencies dependencies = ref.read(
       settingsPageDependenciesProvider,
     );
     final String initialDirectory = dependencies.config.storage.defaultSavePath
         .trim();
-    final String? selectedPath = await dependencies.pickDirectory(
-      initialDirectory: initialDirectory.isEmpty ? null : initialDirectory,
-    );
+    final String? selectedPath;
+    try {
+      selectedPath = await dependencies.pickDirectory(
+        initialDirectory: initialDirectory.isEmpty ? null : initialDirectory,
+      );
+    } on UnsupportedError {
+      setNotice(SettingsNoticeCode.directoryPickerUnsupported);
+      return;
+    }
     if (selectedPath == null || selectedPath.trim().isEmpty) {
       return;
     }

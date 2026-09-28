@@ -26,6 +26,7 @@ enum SettingsTranslateField {
 enum SettingsNoticeCode {
   defaultSavePathUpdated,
   defaultSavePathRestored,
+  directoryPickerUnsupported,
   lyricsFileNameFormatUpdated,
   id3VersionUpdated,
   lyricsLangOrderEmpty,

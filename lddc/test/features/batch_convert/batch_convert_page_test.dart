@@ -684,6 +684,78 @@ void main() {
       );
     });
 
+    testWidgets('移动端队列行只展示输出文件名而不是缓存或 SAF 全路径', (WidgetTester tester) async {
+      await _setViewport(tester, const Size(420, 900));
+      final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
+        files: const <PickedFileHandle>[
+          PickedFileHandle(
+            name: 'demo.lrc',
+            path: '/data/user/0/com.cmzj.lddc/cache/picked/demo.lrc',
+          ),
+        ],
+        saveRootDirectory:
+            'content://com.android.externalstorage.documents/tree/primary%3AMusic',
+      );
+      final ProviderContainer container = _createContainer(
+        picker: picker,
+        capability: _mobileCapability(),
+      );
+      addTearDown(container.dispose);
+      await container
+          .read(batchConvertPageControllerProvider.notifier)
+          .addFiles();
+      await container
+          .read(batchConvertPageControllerProvider.notifier)
+          .selectSaveRootDirectory();
+      final String targetPath = container
+          .read(batchConvertPageControllerProvider)
+          .queueItems
+          .single
+          .targetPath;
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await tester.pumpAndSettle();
+
+      // 移动端只给文件名：安卓输出路径是插件缓存或 SAF 全路径，既长又不可读。
+      expect(find.text('输出路径'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is Tooltip && widget.message == p.basename(targetPath),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(targetPath), findsNothing);
+    });
+
+    test('安卓端不支持目录选择时给出提示而不是泄漏异常', () async {
+      final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
+        unsupportedDirectoryPick: true,
+      );
+      final ProviderContainer container = _createContainer(
+        picker: picker,
+        capability: _mobileCapability(),
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      // UnsupportedError 属于 Error，此前只声明了 `on Exception`：安卓端
+      // "导入文件夹"与"选择保存目录"两个入口的异常都会直接泄漏，表现为按钮无反应。
+      await controller.addDirectories();
+      expect(
+        container.read(batchConvertPageControllerProvider).notice?.code,
+        BatchConvertNoticeCode.unsupportedOperation,
+      );
+
+      await controller.selectSaveRootDirectory();
+      expect(
+        container.read(batchConvertPageControllerProvider).notice?.code,
+        BatchConvertNoticeCode.unsupportedOperation,
+      );
+    });
+
     testWidgets('桌面快捷键会触发导入、打开、启动与清空选中', (WidgetTester tester) async {
       await _setViewport(tester, const Size(1366, 1024));
       final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
@@ -795,12 +867,14 @@ ProviderContainer _createContainer({
   _FakeBatchConvertDirectoryScanner? scanner,
   BatchConvertUseCase? useCase,
   AppPathOpener? pathOpener,
+  AppCapability? capability,
   Future<void> Function(String lyricsPath)? openInOpenLyrics,
   Future<bool> Function(BatchConvertOverwriteSummary summary)? confirmOverwrite,
 }) {
   final _FixedConfigRepository repository = _FixedConfigRepository(
     ConfigDefaults.current,
   );
+  final AppCapability resolvedCapability = capability ?? _desktopCapability();
   final _FakeBatchConvertInputPicker resolvedPicker =
       picker ?? _FakeBatchConvertInputPicker();
   final BatchConvertUseCase resolvedUseCase =
@@ -808,11 +882,11 @@ ProviderContainer _createContainer({
   final AppPathOpener resolvedPathOpener = pathOpener ?? _FakePathOpener();
   return ProviderContainer(
     overrides: [
-      appCapabilityProvider.overrideWith((Ref ref) => _desktopCapability()),
+      appCapabilityProvider.overrideWith((Ref ref) => resolvedCapability),
       configRepositoryProvider.overrideWithValue(repository),
       batchConvertDependenciesProvider.overrideWithValue(
         BatchConvertDependencies(
-          capability: _desktopCapability(),
+          capability: resolvedCapability,
           configRepository: repository,
           inputPicker: resolvedPicker,
           useCase: resolvedUseCase,
@@ -970,6 +1044,23 @@ AppCapability _desktopCapability() {
   );
 }
 
+/// 安卓手机形态：桌面专属能力关闭，线程/SAF 能力开启。
+AppCapability _mobileCapability() {
+  return const AppCapability(
+    multiWindow: false,
+    desktopPanelDetached: false,
+    desktopPanelEmbedded: false,
+    systemTray: false,
+    globalHotkey: false,
+    audioTagWrite: true,
+    directoryRecursiveScan: true,
+    androidSafTreeAccess: true,
+    androidCueTrackResolve: true,
+    webFileSystemAccess: false,
+    webTaglibWasmReady: false,
+  );
+}
+
 class _FixedConfigRepository implements ConfigRepository {
   _FixedConfigRepository(this._config);
 
@@ -1000,12 +1091,16 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
     List<PickedFileHandle>? files,
     List<String>? directories,
     this.saveRootDirectory,
+    this.unsupportedDirectoryPick = false,
   }) : _files = files ?? const <PickedFileHandle>[],
        _directories = directories ?? const <String>[];
 
   final List<PickedFileHandle> _files;
   final List<String> _directories;
   final String? saveRootDirectory;
+
+  /// 模拟安卓端 `AppFilePicker.pickDirectory` 的能力缺失（抛 `UnsupportedError`）。
+  final bool unsupportedDirectoryPick;
   int filePickCount = 0;
   int directoryPickCount = 0;
   int saveRootPickCount = 0;
@@ -1021,12 +1116,18 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
   @override
   Future<List<String>> pickLyricsDirectories({String? initialDirectory}) async {
     directoryPickCount += 1;
+    if (unsupportedDirectoryPick) {
+      throw UnsupportedError('当前平台不支持目录选择');
+    }
     return _directories;
   }
 
   @override
   Future<String?> pickSaveRootDirectory({String? initialDirectory}) async {
     saveRootPickCount += 1;
+    if (unsupportedDirectoryPick) {
+      throw UnsupportedError('当前平台不支持目录选择');
+    }
     return saveRootDirectory;
   }
 }

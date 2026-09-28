@@ -242,6 +242,38 @@ void main() {
       );
     });
 
+    test('平台不支持选择目录时给出可解释提示且不写入配置', () async {
+      final _MemoryConfigRepository repository = _MemoryConfigRepository(
+        ConfigDefaults.current,
+      );
+      final ProviderContainer container = ProviderContainer(
+        overrides: _settingsOverrides(
+          repository,
+          pickDirectory: ({String? initialDirectory}) async =>
+              throw UnsupportedError('当前平台不支持目录选择'),
+        ),
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(settingsPageControllerProvider.notifier)
+          .pickDefaultSavePath();
+
+      // 安卓端 pickDirectory 会抛 UnsupportedError：此前未捕获，用户看到的是
+      // "按钮点了没反应"外加一条未处理异常，这里必须转成可解释提示且不改配置。
+      expect(
+        container.read(settingsPageControllerProvider).action.message,
+        SettingsNoticeCode.directoryPickerUnsupported.name,
+      );
+      final SettingsPagePayload payload = _payloadOf(
+        container.read(settingsPageControllerProvider),
+      );
+      expect(
+        payload.config.storage.defaultSavePath,
+        ConfigDefaults.current.storage.defaultSavePath,
+      );
+    });
+
     test('连续设置写入会串行执行并以最后一次提交为准', () async {
       final Completer<void> firstWrite = Completer<void>();
       final Completer<void> secondWrite = Completer<void>();

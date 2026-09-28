@@ -140,6 +140,15 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
         return;
       }
       await _scanDirectories(directories);
+    } on UnsupportedError catch (error) {
+      // UnsupportedError 属于 Error 而不是 Exception，`on Exception` 捕获不到：
+      // 安卓端 AppFilePicker.pickDirectory 不支持目录选择时抛出的正是它，此前异常
+      // 会直接泄漏到 Flutter 错误链路，用户看到的是"按钮点了没反应"。
+      _emitNotice(
+        BatchConvertNoticeCode.unsupportedOperation,
+        PageNoticeSeverity.warning,
+        detail: error.message ?? error.toString(),
+      );
     } on Exception catch (error) {
       _setPageError('选择文件夹失败：$error');
     }
@@ -202,6 +211,14 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
       _rebuildQueue(
         saveRootPath: picked.trim(),
         targetFormat: state.targetFormat,
+      );
+    } on UnsupportedError catch (error) {
+      // 同 addDirectories：安卓端没有"选择保存目录"能力，必须转成可解释提示，
+      // 不能让 Error 越过 `on Exception` 泄漏出去。
+      _emitNotice(
+        BatchConvertNoticeCode.unsupportedOperation,
+        PageNoticeSeverity.warning,
+        detail: error.message ?? error.toString(),
       );
     } on Exception catch (error) {
       _emitNotice(

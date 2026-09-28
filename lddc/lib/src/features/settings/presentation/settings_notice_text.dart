@@ -14,6 +14,10 @@ String settingsNoticeText(BuildContext context, String codeName) {
       l10n.settingsNoticeDefaultSavePathUpdated,
     SettingsNoticeCode.defaultSavePathRestored =>
       l10n.settingsNoticeDefaultSavePathRestored,
+    // 复用通用的"当前平台不支持此操作"：安卓端没有"选择文件夹返回路径"的能力，
+    // 这里只是把能力缺失如实告诉用户，不新增 7 语言键。
+    SettingsNoticeCode.directoryPickerUnsupported =>
+      l10n.commonUnsupportedOperation,
     SettingsNoticeCode.lyricsFileNameFormatUpdated =>
       l10n.settingsNoticeLyricsFileNameFormatUpdated,
     SettingsNoticeCode.id3VersionUpdated =>
