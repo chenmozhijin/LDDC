@@ -24,6 +24,12 @@ import 'package:lddc/src/platform/drag_drop/drag_drop_port.dart';
 import 'package:lddc/src/shared/ui/components/desktop_page_interaction_scope.dart';
 import 'package:path/path.dart' as p;
 
+/// 安卓端批量转换使用的授权树与树内文档（形态与 DocumentsUI 返回一致）。
+const String _safTreeUri =
+    'content://com.android.externalstorage.documents/tree/primary%3AMusic';
+const String _safLyricsUri =
+    'content://com.android.externalstorage.documents/tree/primary%3AMusic/document/primary%3AMusic%2Fa.lrc';
+
 void main() {
   group('BatchConvertDirectoryScannerImpl', () {
     test('大目录扫描按 chunk 刷新进度，避免每个文件都触发 UI 更新', () async {
@@ -520,6 +526,297 @@ void main() {
         openedLyricsPath,
         _localTargetPathOf(batchState.queueItems.single),
       );
+    });
+
+    test('安卓端取消 SAF 保存树选择时保持原保存根', () async {
+      final _FakeBatchConvertInputPicker picker =
+          _FakeBatchConvertInputPicker();
+      final ProviderContainer container = _createContainer(
+        picker: picker,
+        capability: _mobileCapability(),
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      // `saveTree` 为 null 表示用户在系统选择器里取消：既不能写入保存根，也不能
+      // 当成失败弹出错误提示。
+      await controller.selectSaveRootDirectory();
+
+      final BatchConvertPageState state = _readState(container);
+      expect(state.saveRoot, isNull);
+      expect(state.notice, isNull);
+      // 安卓端不会回落到本地目录选择器：SAF 保存树入口必须被走到。
+      expect(picker.saveRootPickCount, 1);
+    });
+
+    test('安卓端选定 SAF 保存树后整条队列的落点重算到该树', () async {
+      final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
+        files: const <PickedFileHandle>[
+          PickedFileHandle(
+            name: 'demo.lrc',
+            path: '/data/user/0/com.cmzj.lddc/cache/picked/demo.lrc',
+          ),
+        ],
+        saveTree: (treeUri: _safTreeUri, treeLabel: '内部存储'),
+      );
+      final ProviderContainer container = _createContainer(
+        picker: picker,
+        capability: _mobileCapability(),
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      await controller.addFiles();
+      await controller.selectSaveRootDirectory();
+
+      final BatchConvertPageState state = _readState(container);
+      expect(state.saveRoot?.treeUri, _safTreeUri);
+      expect(state.saveRoot?.displayLabel, '内部存储');
+      // 插件缓存副本没有树内层级：平铺写到授权树根，落点是可读文本而不是缓存路径。
+      expect(state.queueItems.single.target, isA<SafDocumentTarget>());
+      expect(state.queueItems.single.targetDisplayPath, '内部存储 / demo.lrc');
+      expect(picker.saveRootPickCount, 1);
+    });
+
+    test('保存根为空时清空保存目录不产生任何副作用', () async {
+      final ProviderContainer container = _createContainer(
+        picker: _FakeBatchConvertInputPicker(),
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      controller.clearSaveRootDirectory();
+
+      final BatchConvertPageState state = _readState(container);
+      expect(state.saveRoot, isNull);
+      expect(state.notice, isNull);
+    });
+
+    test('队列中存在 SAF 文档源时拒绝清空保存目录并给出提示', () async {
+      final _SafFixture fixture = _createSafImportedContainer();
+      addTearDown(fixture.container.dispose);
+      final BatchConvertPageController controller = fixture.container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      await controller.addDirectories();
+      controller.clearSaveRootDirectory();
+
+      final BatchConvertPageState state = _readState(fixture.container);
+      // 树内源不存在"源文件旁边的本地目录"：保存根一清空，落点规划会直接抛
+      // ArgumentError，这里必须提前拒绝并保留保存根。
+      expect(state.saveRoot?.treeUri, _safTreeUri);
+      expect(state.notice?.code, BatchConvertNoticeCode.unsupportedOperation);
+      expect(state.notice?.detail, '队列中存在 SAF 文档源，必须保留保存目录');
+      expect(state.queueItems, hasLength(1));
+    });
+
+    test('SAF 源与 SAF 目标不会交给本地路径打开与文件管理器', () async {
+      String? openedLyricsPath;
+      final _SafFixture fixture = _createSafImportedContainer(
+        openInOpenLyrics: (String lyricsPath) async {
+          openedLyricsPath = lyricsPath;
+        },
+      );
+      addTearDown(fixture.container.dispose);
+      final BatchConvertPageController controller = fixture.container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      await controller.addDirectories();
+      final String itemId = _readState(fixture.container).queueItems.single.id;
+
+      await controller.openSourceDirectory(itemId);
+      expect(
+        _readState(fixture.container).notice?.detail,
+        'SAF 文档源暂时无法在文件管理器中定位',
+      );
+
+      await controller.openSaveDirectory(itemId);
+      expect(
+        _readState(fixture.container).notice?.detail,
+        'SAF 保存位置暂时无法在文件管理器中打开',
+      );
+
+      await controller.openOutputFile(itemId);
+      expect(_readState(fixture.container).notice?.detail, 'SAF 文档暂时无法用外部应用打开');
+
+      await controller.openInOpenLyrics(itemId);
+      expect(
+        _readState(fixture.container).notice?.detail,
+        'SAF 文档暂时无法在打开歌词页载入',
+      );
+
+      // `content://` 既不能交给 dart:io，也不能交给路径打开器。
+      expect(fixture.pathOpener.openedDirectories, isEmpty);
+      expect(fixture.pathOpener.openedFiles, isEmpty);
+      expect(openedLyricsPath, isNull);
+    });
+
+    test('本地目标已存在时用系统默认应用打开输出文件', () async {
+      final Directory dir = await Directory.systemTemp.createTemp(
+        'lddc_batch_convert_open_output_',
+      );
+      addTearDown(() async {
+        if (dir.existsSync()) {
+          await dir.delete(recursive: true);
+        }
+      });
+      final String source = '${dir.path}${Platform.pathSeparator}demo.lrc';
+      await File(source).writeAsString('[00:00.00]打开输出文件');
+      final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
+        files: <PickedFileHandle>[
+          PickedFileHandle(name: 'demo.lrc', path: source),
+        ],
+      );
+      final _FakePathOpener pathOpener = _FakePathOpener();
+      final ProviderContainer container = _createContainer(
+        picker: picker,
+        pathOpener: pathOpener,
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      await controller.addFiles();
+      // 未选保存根时目标就是源文件旁边的新文件；源码里写入后它确实存在，
+      // 因此这里必须走到路径打开器（而不是"文件不存在"提示）。
+      final BatchConvertQueueItem item = _readState(
+        container,
+      ).queueItems.single;
+      await controller.openOutputFile(item.id);
+
+      expect(pathOpener.openedFiles, <String>[_localTargetPathOf(item)]);
+      // 导入本身会留下"已导入"提示，成功打开不会再改写它；这里只要求不是
+      // "输出文件不可用"——那才是走了失败分支的证据。
+      expect(
+        _readState(container).notice?.code,
+        isNot(BatchConvertNoticeCode.outputFileUnavailable),
+      );
+    });
+
+    test('打开已不存在的条目时静默返回，不打开任何路径', () async {
+      final _FakePathOpener pathOpener = _FakePathOpener();
+      final ProviderContainer container = _createContainer(
+        picker: _FakeBatchConvertInputPicker(),
+        pathOpener: pathOpener,
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      // 条目可能已被删除：`_findItem` 找不到时必须直接返回，不能抛异常。
+      await controller.openSourceDirectory('missing-item');
+      await controller.openSaveDirectory('missing-item');
+      await controller.openOutputFile('missing-item');
+      await controller.openInOpenLyrics('missing-item');
+
+      expect(_readState(container).notice, isNull);
+      expect(pathOpener.openedDirectories, isEmpty);
+      expect(pathOpener.openedFiles, isEmpty);
+    });
+
+    test('SAF 扫描过程中的进度映射到页面扫描状态', () async {
+      final _PausedPagingAndroidSafTreePort treePort =
+          _PausedPagingAndroidSafTreePort(
+            childrenByUri: <String, List<AndroidSafTreeEntry>>{
+              _safTreeUri: const <AndroidSafTreeEntry>[
+                AndroidSafTreeEntry(
+                  uri: _safLyricsUri,
+                  displayName: 'a.lrc',
+                  mimeType: 'application/octet-stream',
+                  isDirectory: false,
+                  isFile: true,
+                ),
+              ],
+            },
+          );
+      final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
+        importTree: (treeUri: _safTreeUri, treeLabel: '内部存储'),
+      );
+      final ProviderContainer container = _createContainer(
+        picker: picker,
+        safTreePort: treePort,
+        capability: _mobileCapability(),
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      final Future<void> pendingScan = controller.addDirectories();
+      // 续页被挂起：此时第一页已经交付过进度，页面必须停在 scanning 状态。
+      await treePort.secondPageStarted.future;
+
+      BatchConvertPageState state = _readState(container);
+      expect(state.taskPhase, BatchConvertTaskPhase.scanning);
+      expect(state.progressCurrent, 1);
+      // SAF 枚举前不知道总数，固定用 0 表示"进度不确定"。
+      expect(state.progressTotal, 0);
+      expect(
+        state.progressMessage.code,
+        BatchConvertProgressMessageCode.scanningDirectory,
+      );
+      expect(state.progressMessage.detail, '内部存储');
+
+      treePort.releaseSecondPage.complete();
+      await pendingScan;
+
+      state = _readState(container);
+      expect(state.taskPhase, BatchConvertTaskPhase.completed);
+      expect(
+        state.progressMessage.code,
+        BatchConvertProgressMessageCode.scanCompleted,
+      );
+      expect(state.queueItems, hasLength(1));
+      expect(state.queueItems.single.id, _safLyricsUri);
+    });
+
+    test('SAF 扫描遇到无法推导落点的文档时给出页面错误', () async {
+      // 端口返回了别的授权树里的文档（异常 provider）：落点无法推导属于"会写错位置"，
+      // 必须变成可解释的页面错误，而不是把 ArgumentError 泄漏到按钮回调。
+      const String foreignLyricsUri =
+          'content://com.android.externalstorage.documents/tree/primary%3ADownload/document/primary%3ADownload%2Fb.lrc';
+      final _FakeAndroidSafTreePort treePort = _FakeAndroidSafTreePort(
+        childrenByUri: <String, List<AndroidSafTreeEntry>>{
+          _safTreeUri: const <AndroidSafTreeEntry>[
+            AndroidSafTreeEntry(
+              uri: foreignLyricsUri,
+              displayName: 'b.lrc',
+              mimeType: 'application/octet-stream',
+              isDirectory: false,
+              isFile: true,
+            ),
+          ],
+        },
+      );
+      final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
+        importTree: (treeUri: _safTreeUri, treeLabel: '内部存储'),
+      );
+      final ProviderContainer container = _createContainer(
+        picker: picker,
+        safTreePort: treePort,
+        capability: _mobileCapability(),
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      await controller.addDirectories();
+
+      final BatchConvertPageState state = _readState(container);
+      expect(state.errorMessage, startsWith('导入 SAF 目录失败'));
+      expect(state.notice?.code, BatchConvertNoticeCode.pageError);
+      expect(state.queueItems, isEmpty);
     });
   });
 
@@ -1572,5 +1869,110 @@ class _FakePathOpener implements AppPathOpener {
   @override
   Future<void> openFile(String path) async {
     openedFiles.add(path);
+  }
+}
+
+/// 读取最新页面状态：一次测试里会有多个动作，状态会被后续动作改写。
+BatchConvertPageState _readState(ProviderContainer container) {
+  return container.read(batchConvertPageControllerProvider);
+}
+
+/// "安卓端已导入 SAF 目录"的测试环境。
+///
+/// 导入树会顺手成为保存根（生产行为：SAF 源必须有树内落点），后续 SAF 分支都依赖
+/// 这个状态；树端口与容器都注入内存替身，不会触碰平台通道。
+_SafFixture _createSafImportedContainer({
+  Future<void> Function(String lyricsPath)? openInOpenLyrics,
+}) {
+  final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
+    importTree: (treeUri: _safTreeUri, treeLabel: '内部存储'),
+  );
+  final _FakeAndroidSafTreePort treePort = _FakeAndroidSafTreePort(
+    childrenByUri: <String, List<AndroidSafTreeEntry>>{
+      _safTreeUri: const <AndroidSafTreeEntry>[
+        AndroidSafTreeEntry(
+          uri: _safLyricsUri,
+          displayName: 'a.lrc',
+          mimeType: 'application/octet-stream',
+          isDirectory: false,
+          isFile: true,
+        ),
+      ],
+    },
+  );
+  final _FakePathOpener pathOpener = _FakePathOpener();
+  return (
+    container: _createContainer(
+      picker: picker,
+      safTreePort: treePort,
+      capability: _mobileCapability(),
+      pathOpener: pathOpener,
+      openInOpenLyrics: openInOpenLyrics,
+    ),
+    pathOpener: pathOpener,
+  );
+}
+
+typedef _SafFixture = ({
+  ProviderContainer container,
+  _FakePathOpener pathOpener,
+});
+
+/// 分页枚举可暂停的 SAF 树端口：首页立即返回并请求续页，续页挂起。
+///
+/// 扫描进度只在"页与页之间"写入状态，扫描结束后会被收尾逻辑覆盖；挂起续页才能
+/// 观察到 `scanningDirectory` 这条中间态映射。
+class _PausedPagingAndroidSafTreePort implements AndroidSafTreePort {
+  _PausedPagingAndroidSafTreePort({required this.childrenByUri});
+
+  final Map<String, List<AndroidSafTreeEntry>> childrenByUri;
+  final Completer<void> secondPageStarted = Completer<void>();
+  final Completer<void> releaseSecondPage = Completer<void>();
+
+  @override
+  Future<AndroidSafTreePage> listChildrenPage({
+    required String uri,
+    required int offset,
+    required int limit,
+  }) async {
+    if (offset == 0) {
+      return AndroidSafTreePage(
+        entries: childrenByUri[uri] ?? const <AndroidSafTreeEntry>[],
+        nextOffset: 1,
+      );
+    }
+    if (!secondPageStarted.isCompleted) {
+      secondPageStarted.complete();
+    }
+    await releaseSecondPage.future;
+    return AndroidSafTreePage(
+      entries: const <AndroidSafTreeEntry>[],
+      nextOffset: null,
+    );
+  }
+
+  @override
+  Future<List<AndroidSafPersistedTree>> listPersistedTrees() async {
+    return const <AndroidSafPersistedTree>[];
+  }
+
+  @override
+  Future<AndroidSafTreeToken> pickTree({String? initialUri}) {
+    // 目录选择必须由 picker 的替身完成：走到这里说明测试触碰了真实平台通道。
+    throw StateError('测试不允许调用真实目录选择');
+  }
+
+  @override
+  Future<void> persistTreePermission(String uri) async {}
+
+  @override
+  Future<AndroidSafWriteDocumentResult> writeDocument({
+    required String treeUri,
+    required List<String> directorySegments,
+    required String displayName,
+    required String mimeType,
+    required Uint8List bytes,
+  }) {
+    throw StateError('批量转换单测不写 SAF 文档');
   }
 }

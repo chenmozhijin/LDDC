@@ -256,10 +256,10 @@ class _QueueItemCard extends StatelessWidget {
                       label: context.l10n.batchConvertOutputPathLabel,
                       // 落点文本由运行时规划器统一给出：本地目标就是完整路径，SAF 目标
                       // 是"树名 / 层级 / 文件名"。这里不再按平台退化成文件名，否则用户
-                      // 无法确认输出到底写进了哪个目录。
-                      value: item.targetDisplayPath.trim().isEmpty
-                          ? item.source.displayName
-                          : item.targetDisplayPath,
+                      // 无法确认输出到底写进了哪个目录；规划器保证落点文本非空，因此
+                      // 不再保留"为空则退回源文件名"的兜底分支：该分支不可达，留着只会
+                      // 掩盖规划器的真实行为。
+                      value: item.targetDisplayPath,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
