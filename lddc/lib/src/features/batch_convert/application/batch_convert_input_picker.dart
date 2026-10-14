@@ -1,18 +1,33 @@
+import 'package:flutter/services.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
+
+/// 批量转换页选定的保存根（安卓端 SAF 授权树）。
+///
+/// [treeLabel] 优先用目录选择器给出的显示名；平台不给显示名时才退回 URI，
+/// 保证落点预览永远是一段完整文本（与本地匹配页的保存树标签处理一致）。
+typedef PickedBatchConvertSaveTree = ({String treeUri, String treeLabel});
 
 abstract interface class BatchConvertInputPicker {
   Future<List<PickedFileHandle>> pickLyricsFiles({String? initialDirectory});
 
   Future<List<String>> pickLyricsDirectories({String? initialDirectory});
 
+  /// 桌面端的保存目录选择；安卓端没有本地目录选择能力。
   Future<String?> pickSaveRootDirectory({String? initialDirectory});
+
+  /// 安卓端的保存树选择，内部完成持久授权；用户取消时返回 null。
+  Future<PickedBatchConvertSaveTree?> pickSaveTree({String? initialUri});
 }
 
 class BatchConvertInputPickerImpl implements BatchConvertInputPicker {
-  const BatchConvertInputPickerImpl({required AppFilePicker filePicker})
-    : _filePicker = filePicker;
+  const BatchConvertInputPickerImpl({
+    required AppFilePicker filePicker,
+    required AndroidSafTreePort treePort,
+  }) : _filePicker = filePicker,
+       _treePort = treePort;
 
   final AppFilePicker _filePicker;
+  final AndroidSafTreePort _treePort;
 
   @override
   Future<List<PickedFileHandle>> pickLyricsFiles({String? initialDirectory}) {
@@ -37,5 +52,32 @@ class BatchConvertInputPickerImpl implements BatchConvertInputPicker {
   @override
   Future<String?> pickSaveRootDirectory({String? initialDirectory}) {
     return _filePicker.pickDirectory(initialDirectory: initialDirectory);
+  }
+
+  @override
+  Future<PickedBatchConvertSaveTree?> pickSaveTree({String? initialUri}) async {
+    try {
+      final AndroidSafTreeToken tree = await _treePort.pickTree(
+        initialUri: initialUri,
+      );
+      // 保存树会在批量写入时反复使用；进入队列前必须先持久授权，否则应用重启或
+      // 系统回收权限后，批量转换会带着已失效的 URI 继续写并整批失败。
+      await _treePort.persistTreePermission(tree.uri);
+      // 目录选择器偶尔不给显示名，此时退回 URI，保证落点预览永远是完整可读文本
+      // （与本地匹配页的保存树标签处理保持一致）。
+      return (
+        treeUri: tree.uri,
+        treeLabel: tree.displayName?.trim().isNotEmpty == true
+            ? tree.displayName!.trim()
+            : tree.uri,
+      );
+    } on PlatformException catch (error) {
+      // 用户在系统目录选择器里取消是正常操作：用 null 表示"没有选到目录"，
+      // 否则控制器会把取消当成失败并弹出错误提示。
+      if (error.code == 'cancelled') {
+        return null;
+      }
+      rethrow;
+    }
   }
 }

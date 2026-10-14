@@ -17,7 +17,7 @@ typedef BatchConvertStatusView = ({
 
 typedef BatchConvertControlsView = ({
   LyricsFormat targetFormat,
-  String? saveRootPath,
+  BatchConvertSaveRoot? saveRoot,
   bool recursive,
   bool isBusy,
   bool isScanning,
@@ -44,7 +44,7 @@ BatchConvertControlsView batchConvertControlsViewOf(
   BatchConvertPageState state,
 ) => (
   targetFormat: state.targetFormat,
-  saveRootPath: state.saveRootPath,
+  saveRoot: state.saveRoot,
   recursive: state.recursive,
   isBusy: state.isBusy,
   isScanning: state.isScanning,

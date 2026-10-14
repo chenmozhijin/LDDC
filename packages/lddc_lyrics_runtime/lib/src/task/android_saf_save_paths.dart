@@ -120,9 +120,9 @@ AndroidSafSaveTargetResult resolveAndroidSafSaveTarget({
   String? songTreeLabel,
   String? saveTreeLabel,
 }) {
-  final List<String>? songSegments = _songRelativeDirectorySegments(
-    songPath: songPath,
-    songTreeUri: songTreeUri,
+  final List<String>? songSegments = safSourceRelativeDirectorySegments(
+    documentUri: songPath,
+    treeUri: songTreeUri,
   );
   switch (saveMode) {
     case LocalMatchSaveMode.song:
@@ -201,33 +201,37 @@ AndroidSafSaveTargetFailure _songTreeFailure({
   return AndroidSafSaveTargetFailure.songOutsideTree;
 }
 
-List<String>? _songRelativeDirectorySegments({
-  required String? songPath,
-  required String songTreeUri,
+/// 由"文档 URI + 该文档所属树 URI"反推文档相对树根的目录层级。
+///
+/// 返回 `null` 表示不可推导（URI 不合法、文档不在该树内、或 provider 返回了异常 id）；
+/// 调用方必须据此报错，**不得**静默回退到树根——批量转换的"镜像层级"正是靠它。
+List<String>? safSourceRelativeDirectorySegments({
+  required String? documentUri,
+  required String treeUri,
 }) {
-  final String? songId = safDocumentIdOf(songPath);
-  final String? treeId = safDocumentIdOf(songTreeUri);
-  if (songId == null || treeId == null) {
+  final String? documentId = safDocumentIdOf(documentUri);
+  final String? treeId = safDocumentIdOf(treeUri);
+  if (documentId == null || treeId == null) {
     return null;
   }
-  if (songId == treeId) {
+  if (documentId == treeId) {
     // 文档 id 与树根相同：只可能出现在异常 provider 返回上，视为不可推导。
     return null;
   }
-  final int lastSlash = songId.lastIndexOf('/');
+  final int lastSlash = documentId.lastIndexOf('/');
   if (lastSlash < 0) {
     // 文件直接位于树根之下。
     return const <String>[];
   }
-  final String songDirectory = songId.substring(0, lastSlash);
-  if (songDirectory == treeId) {
+  final String documentDirectory = documentId.substring(0, lastSlash);
+  if (documentDirectory == treeId) {
     return const <String>[];
   }
   final String prefix = '$treeId/';
-  if (!songDirectory.startsWith(prefix)) {
+  if (!documentDirectory.startsWith(prefix)) {
     return null;
   }
-  return songDirectory
+  return documentDirectory
       .substring(prefix.length)
       .split('/')
       .where((String segment) => segment.isNotEmpty)

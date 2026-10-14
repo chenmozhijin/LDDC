@@ -44,9 +44,9 @@ void main() {
 
       final BatchConvertResult result = await useCase.run(
         items: <BatchConvertItem>[
-          BatchConvertItem(sourcePath: source1, targetPath: output1),
-          BatchConvertItem(sourcePath: source2, targetPath: output2),
-          BatchConvertItem(sourcePath: source3, targetPath: output3),
+          _localItem(source1, output1),
+          _localItem(source2, output2),
+          _localItem(source3, output3),
         ],
         targetFormat: LyricsFormat.lineByLineLrc,
         onProgress: progressEvents.add,
@@ -118,10 +118,7 @@ void main() {
       final BatchConvertResult result = await useCase.run(
         items: <BatchConvertItem>[
           for (int index = 0; index < sources.length; index += 1)
-            BatchConvertItem(
-              sourcePath: sources[index],
-              targetPath: outputs[index],
-            ),
+            _localItem(sources[index], outputs[index]),
         ],
         targetFormat: LyricsFormat.srt,
         cancellationToken: token,
@@ -156,9 +153,7 @@ void main() {
       await File(source).writeAsString(originalText);
 
       final BatchConvertResult refused = await useCase.run(
-        items: <BatchConvertItem>[
-          BatchConvertItem(sourcePath: source, targetPath: source),
-        ],
+        items: <BatchConvertItem>[_localItem(source, source)],
         targetFormat: LyricsFormat.srt,
       );
 
@@ -167,9 +162,7 @@ void main() {
       expect(await File(source).readAsString(), originalText);
 
       final BatchConvertResult confirmed = await useCase.run(
-        items: <BatchConvertItem>[
-          BatchConvertItem(sourcePath: source, targetPath: source),
-        ],
+        items: <BatchConvertItem>[_localItem(source, source)],
         targetFormat: LyricsFormat.srt,
         allowOverwrite: true,
       );
@@ -194,9 +187,7 @@ void main() {
       await File(source).writeAsString('[00:00.00]未知扩展名歌词');
 
       final BatchConvertResult result = await useCase.run(
-        items: <BatchConvertItem>[
-          BatchConvertItem(sourcePath: source, targetPath: output),
-        ],
+        items: <BatchConvertItem>[_localItem(source, output)],
         targetFormat: LyricsFormat.lineByLineLrc,
       );
 
@@ -219,14 +210,8 @@ void main() {
         fileIo: fileIo,
       );
       final List<BatchConvertItem> items = <BatchConvertItem>[
-        const BatchConvertItem(
-          sourcePath: 'first.lrc',
-          targetPath: 'first.srt',
-        ),
-        const BatchConvertItem(
-          sourcePath: 'second.lrc',
-          targetPath: 'second.srt',
-        ),
+        _localItem('first.lrc', 'first.srt'),
+        _localItem('second.lrc', 'second.srt'),
       ];
       final BatchConvertCancellationToken token =
           BatchConvertCancellationToken();
@@ -251,6 +236,15 @@ void main() {
   });
 }
 
+/// 构造"本地源 → 本地目标"的条目，测试里最常见的形态。
+BatchConvertItem _localItem(String source, String target) {
+  return BatchConvertItem(
+    source: LocalFileSource(source),
+    target: LocalFileTarget(target),
+    targetDisplayPath: target,
+  );
+}
+
 class _ControlledBatchConvertFileIo implements BatchConvertFileIo {
   _ControlledBatchConvertFileIo({
     required this.writeStarted,
@@ -262,22 +256,24 @@ class _ControlledBatchConvertFileIo implements BatchConvertFileIo {
   final List<String> writeTargets = <String>[];
 
   @override
-  Future<Uint8List> readBytes(String path) async {
+  Future<Uint8List> readBytes(BatchConvertSource source) async {
     return Uint8List.fromList(utf8.encode('[00:00.00]snapshot'));
   }
 
   @override
-  Future<String> writeText({
-    required String sourcePath,
-    required String targetPath,
+  Future<void> writeText({
+    required BatchConvertSource source,
+    required BatchConvertTarget target,
     required String text,
     required bool allowOverwrite,
   }) async {
-    writeTargets.add(targetPath);
+    writeTargets.add(target.fileName);
     if (!writeStarted.isCompleted) {
       writeStarted.complete();
     }
     await writeGate.future;
-    return targetPath;
   }
+
+  @override
+  Future<bool?> targetExists(BatchConvertTarget target) async => false;
 }

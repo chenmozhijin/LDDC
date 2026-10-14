@@ -86,41 +86,6 @@ final class LyricsSavePlanner {
     );
   }
 
-  static LyricsSavePlan planBatchConvert({
-    required String sourcePath,
-    required LyricsFormat targetFormat,
-    String? saveRootPath,
-  }) {
-    final String normalizedSource = sourcePath.trim();
-    if (normalizedSource.isEmpty) {
-      return LyricsSavePlan.error(LyricsSavePlanErrorCode.missingSongPath);
-    }
-    final String normalizedRoot = saveRootPath?.trim() ?? '';
-    final String folder = normalizedRoot.isEmpty
-        ? p.dirname(normalizedSource)
-        : normalizedRoot;
-    final String fileName =
-        '${p.basenameWithoutExtension(normalizedSource)}${targetFormat.ext}';
-    final SongInfo songInfo = SongInfo(
-      source: Source.local,
-      path: normalizedSource,
-      title: p.basenameWithoutExtension(normalizedSource),
-    );
-    return LyricsSavePlan.success(
-      lyricsFormat: targetFormat,
-      fileName: fileName,
-      displayPath: p.normalize(
-        p.join(LyricsPathTemplateFormatter.sanitizePath(folder), fileName),
-      ),
-      request: LyricsSaveRequest(
-        songInfo: songInfo,
-        lyricLangs: const <String>['orig'],
-        lyricsFormat: targetFormat,
-        fileNameFormat: p.basenameWithoutExtension(normalizedSource),
-      ),
-    );
-  }
-
   static LyricsSavePlan planLocalMatch({
     required LyricsSaveDirectoryMode directoryMode,
     required LyricsSaveFileNameMode fileNameMode,

@@ -278,7 +278,10 @@ class _OutputSettings extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                view.saveRootPath ?? l10n.batchConvertSaveDirectoryDefault,
+                // 安卓端展示 SAF 树显示名、桌面端展示本地目录；两者都不直接暴露
+                // `content://` 这类既长又没有可读信息的 URI。
+                view.saveRoot?.displayLabel ??
+                    l10n.batchConvertSaveDirectoryDefault,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 10),
@@ -304,7 +307,7 @@ class _OutputSettings extends StatelessWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: view.isBusy || view.saveRootPath == null
+                    onPressed: view.isBusy || view.saveRoot == null
                         ? null
                         : controller.clearSaveRootDirectory,
                     child: Text(l10n.batchConvertRestoreOriginalDirectory),

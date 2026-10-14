@@ -112,8 +112,14 @@ void main() {
         batchConvertPageControllerProvider,
       );
       expect(state.queueItems, hasLength(2));
-      expect(state.queueItems.first.targetPath, p.join(saveRoot, 'a.ass'));
-      expect(state.queueItems.last.targetPath, p.join(saveRoot, 'b.ass'));
+      expect(
+        _localTargetPathOf(state.queueItems.first),
+        p.join(saveRoot, 'a.ass'),
+      );
+      expect(
+        _localTargetPathOf(state.queueItems.last),
+        p.join(saveRoot, 'b.ass'),
+      );
     });
 
     test('目录扫描按分片追加并更新扫描进度', () async {
@@ -510,7 +516,10 @@ void main() {
       );
       await controller.openInOpenLyrics(batchState.queueItems.single.id);
 
-      expect(openedLyricsPath, batchState.queueItems.single.targetPath);
+      expect(
+        openedLyricsPath,
+        _localTargetPathOf(batchState.queueItems.single),
+      );
     });
   });
 
@@ -665,11 +674,11 @@ void main() {
       await container
           .read(batchConvertPageControllerProvider.notifier)
           .selectSaveRootDirectory();
-      final String targetPath = container
+      final BatchConvertQueueItem item = container
           .read(batchConvertPageControllerProvider)
           .queueItems
-          .single
-          .targetPath;
+          .single;
+      final String targetPath = item.targetDisplayPath;
 
       await tester.pumpWidget(_buildTestApp(container));
       await tester.pumpAndSettle();
@@ -684,8 +693,10 @@ void main() {
       );
     });
 
-    testWidgets('移动端队列行只展示输出文件名而不是缓存或 SAF 全路径', (WidgetTester tester) async {
+    testWidgets('移动端队列行展示可读落点而不是缓存路径或 SAF 树 URI', (WidgetTester tester) async {
       await _setViewport(tester, const Size(420, 900));
+      const String treeUri =
+          'content://com.android.externalstorage.documents/tree/primary%3AMusic';
       final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
         files: const <PickedFileHandle>[
           PickedFileHandle(
@@ -693,8 +704,7 @@ void main() {
             path: '/data/user/0/com.cmzj.lddc/cache/picked/demo.lrc',
           ),
         ],
-        saveRootDirectory:
-            'content://com.android.externalstorage.documents/tree/primary%3AMusic',
+        saveTree: (treeUri: treeUri, treeLabel: '内部存储'),
       );
       final ProviderContainer container = _createContainer(
         picker: picker,
@@ -707,25 +717,34 @@ void main() {
       await container
           .read(batchConvertPageControllerProvider.notifier)
           .selectSaveRootDirectory();
-      final String targetPath = container
+      final BatchConvertQueueItem item = container
           .read(batchConvertPageControllerProvider)
           .queueItems
-          .single
-          .targetPath;
+          .single;
 
       await tester.pumpWidget(_buildTestApp(container));
       await tester.pumpAndSettle();
 
-      // 移动端只给文件名：安卓输出路径是插件缓存或 SAF 全路径，既长又不可读。
+      // 落点由运行时规划器给出可读文本：SAF 目标是"树名 / 文件名"，既不是插件缓存
+      // 全路径，也不是 `content://` 树 URI；保存根同样只暴露树显示名。
+      expect(item.targetDisplayPath, '内部存储 / demo.lrc');
+      expect(
+        container
+            .read(batchConvertPageControllerProvider)
+            .saveRoot
+            ?.displayLabel,
+        '内部存储',
+      );
       expect(find.text('输出路径'), findsOneWidget);
       expect(
         find.byWidgetPredicate(
           (Widget widget) =>
-              widget is Tooltip && widget.message == p.basename(targetPath),
+              widget is Tooltip && widget.message == item.targetDisplayPath,
         ),
         findsOneWidget,
       );
-      expect(find.text(targetPath), findsNothing);
+      expect(find.textContaining('content://'), findsNothing);
+      expect(find.textContaining('/data/user/0/'), findsNothing);
     });
 
     test('安卓端不支持目录选择时给出提示而不是泄漏异常', () async {
@@ -890,6 +909,8 @@ ProviderContainer _createContainer({
           configRepository: repository,
           inputPicker: resolvedPicker,
           useCase: resolvedUseCase,
+          // 单测全部走本地源与本地目标，直接用默认本地 IO 即可。
+          fileIo: const DefaultBatchConvertFileIo(),
           pathOpener: resolvedPathOpener,
           dragDropPort: const DragDropPortImpl(),
           openInOpenLyrics: openInOpenLyrics ?? (_) async {},
@@ -904,6 +925,13 @@ ProviderContainer _createContainer({
     ],
   );
 }
+
+/// 取出本地目标的实际写入路径。
+///
+/// 队列条目持有的是类型化目标（本地或 SAF），断言本地落点时统一走这里，
+/// 避免测试直接依赖可读文本。
+String _localTargetPathOf(BatchConvertQueueItem item) =>
+    (item.target as LocalFileTarget).path;
 
 Widget _buildTestApp(
   ProviderContainer container, {
@@ -1091,6 +1119,7 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
     List<PickedFileHandle>? files,
     List<String>? directories,
     this.saveRootDirectory,
+    this.saveTree,
     this.unsupportedDirectoryPick = false,
   }) : _files = files ?? const <PickedFileHandle>[],
        _directories = directories ?? const <String>[];
@@ -1098,6 +1127,9 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
   final List<PickedFileHandle> _files;
   final List<String> _directories;
   final String? saveRootDirectory;
+
+  /// 模拟安卓端 SAF 保存树选择结果；为 null 表示用户取消。
+  final PickedBatchConvertSaveTree? saveTree;
 
   /// 模拟安卓端 `AppFilePicker.pickDirectory` 的能力缺失（抛 `UnsupportedError`）。
   final bool unsupportedDirectoryPick;
@@ -1129,6 +1161,15 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
       throw UnsupportedError('当前平台不支持目录选择');
     }
     return saveRootDirectory;
+  }
+
+  @override
+  Future<PickedBatchConvertSaveTree?> pickSaveTree({String? initialUri}) async {
+    saveRootPickCount += 1;
+    if (unsupportedDirectoryPick) {
+      throw UnsupportedError('当前平台不支持目录选择');
+    }
+    return saveTree;
   }
 }
 

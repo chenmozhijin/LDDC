@@ -67,13 +67,11 @@ class _BatchConvertPageState extends ConsumerState<BatchConvertPage> {
           child: isDesktop
               ? BatchConvertDesktopLayout(
                   controller: controller,
-                  isDesktopPlatform: isDesktopPlatform,
                   selectedItemId: selectedItemId,
                   onSelectItem: controller.selectQueueItem,
                 )
               : BatchConvertCompactLayout(
                   controller: controller,
-                  isDesktopPlatform: isDesktopPlatform,
                   selectedItemId: selectedItemId,
                   onSelectItem: controller.selectQueueItem,
                   controlsExpanded: _mobileControlsExpanded,

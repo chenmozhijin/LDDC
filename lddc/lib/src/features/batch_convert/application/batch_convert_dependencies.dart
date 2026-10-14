@@ -13,6 +13,7 @@ class BatchConvertDependencies {
     required this.configRepository,
     required this.inputPicker,
     required this.useCase,
+    required this.fileIo,
     required this.pathOpener,
     required this.dragDropPort,
     required this.openInOpenLyrics,
@@ -23,6 +24,12 @@ class BatchConvertDependencies {
   final ConfigRepository configRepository;
   final BatchConvertInputPicker inputPicker;
   final BatchConvertUseCase useCase;
+
+  /// 覆盖预检用的文件 IO。
+  ///
+  /// 必须与 [useCase] 使用同一份实现：安卓端 SAF 目标的"是否已存在"只能由
+  /// SAF IO 枚举授权树得出，本地 IO 会直接抛 UnsupportedError。
+  final BatchConvertFileIo fileIo;
   final AppPathOpener pathOpener;
   final DragDropPort dragDropPort;
   final Future<void> Function(String lyricsPath) openInOpenLyrics;

@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -199,6 +199,7 @@ Future<IntegrationAppHandle> launchIntegrationApp(
   debugPrint('integration[$scenarioName] workspace=${workspace.root.path}');
   final IntegrationFilePicker filePicker = IntegrationFilePicker();
   final IntegrationPathOpener pathOpener = IntegrationPathOpener();
+  final IntegrationSafTreePort safTreePort = IntegrationSafTreePort();
   final IntegrationHybridMediaGateway mediaGateway =
       IntegrationHybridMediaGateway(
         realMediaEnabled: runtimeConfig.realMediaEnabled,
@@ -211,6 +212,9 @@ Future<IntegrationAppHandle> launchIntegrationApp(
       ...buildIntegrationOfflineApiOverrides(
         songInfoResolver: mediaGateway.resolveSearchSongInfo,
       ),
+    // SAF 目录授权也是平台通道：批量转换等页面在 Android 上会直接调用它，
+    // 统一注入替身后，自动化流程永远不会弹出系统目录选择器。
+    androidSafTreePortProvider.overrideWithValue(safTreePort),
     // 平台系统界面测试必须保留生产 AppFilePickerImpl；其余现有场景默认继续
     // 注入确定性选择器，避免离线回归意外弹出系统对话框。
     if (!useRealFilePicker) appFilePickerProvider.overrideWithValue(filePicker),
@@ -821,6 +825,67 @@ class IntegrationPathOpener implements AppPathOpener {
   @override
   Future<void> openFile(String path) async {
     openedFiles.add(path);
+  }
+}
+
+/// 集成测试用的 SAF 授权树端口替身。
+///
+/// 批量转换页在 Android 上的"选择保存目录"会直接调用 [AndroidSafTreePort]；
+/// 场景测试若不注入替身就会打到真实 MethodChannel，既有超时风险，也不是
+/// 离线业务测试该覆盖的内容。默认行为模拟"用户在系统选择器里取消"，
+/// 需要真实落点的场景可以设置 [pickedTree]。
+class IntegrationSafTreePort implements AndroidSafTreePort {
+  IntegrationSafTreePort({this.pickedTree});
+
+  /// 下一次 `pickTree` 返回的授权树；为空表示用户取消。
+  AndroidSafTreeToken? pickedTree;
+
+  final List<String?> pickedInitialUris = <String?>[];
+  final List<String> persistedUris = <String>[];
+
+  @override
+  Future<AndroidSafTreeToken> pickTree({String? initialUri}) async {
+    pickedInitialUris.add(initialUri);
+    final AndroidSafTreeToken? tree = pickedTree;
+    if (tree == null) {
+      // 与平台层保持一致：取消是 PlatformException(code: 'cancelled')，
+      // 由选择器映射成 null，而不是抛出一个业务异常。
+      throw PlatformException(code: 'cancelled');
+    }
+    return tree;
+  }
+
+  @override
+  Future<void> persistTreePermission(String uri) async {
+    persistedUris.add(uri);
+  }
+
+  @override
+  Future<List<AndroidSafPersistedTree>> listPersistedTrees() async {
+    return const <AndroidSafPersistedTree>[];
+  }
+
+  @override
+  Future<AndroidSafTreePage> listChildrenPage({
+    required String uri,
+    required int offset,
+    required int limit,
+  }) async {
+    return AndroidSafTreePage(
+      entries: const <AndroidSafTreeEntry>[],
+      nextOffset: null,
+    );
+  }
+
+  @override
+  Future<AndroidSafWriteDocumentResult> writeDocument({
+    required String treeUri,
+    required List<String> directorySegments,
+    required String displayName,
+    required String mimeType,
+    required Uint8List bytes,
+  }) {
+    throw UnsupportedError('集成测试替身不写入真实 SAF 文档：$treeUri/$displayName');
   }
 }
 

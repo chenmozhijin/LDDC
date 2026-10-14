@@ -44,34 +44,103 @@ class BatchConvertRunSummary {
   final bool cancelled;
 }
 
+/// 批量转换的保存根：桌面端是本地目录，安卓端是 SAF 授权树。
+///
+/// 两种形态互斥（同一时刻只会命中一种），但语义都是"输出去哪"；收进一个值对象后，
+/// [BatchConvertPageState.copyWith] 只需要替换或清空一处状态，不会留下
+/// "本地路径已清空但树 URI 还留着"的中间态。
+class BatchConvertSaveRoot {
+  /// 桌面端：写到本地目录根。
+  const BatchConvertSaveRoot.local(String path)
+    : localPath = path,
+      treeUri = null,
+      treeLabel = null;
+
+  /// 安卓端：写到用户选定的 SAF 授权树；[treeLabel] 是目录选择器给出的可读树名。
+  const BatchConvertSaveRoot.saf({
+    required this.treeUri,
+    required this.treeLabel,
+  }) : localPath = null;
+
+  /// 本地目录根（桌面端才有值）。
+  final String? localPath;
+
+  /// 授权树 URI（安卓端才有值）；不得交给 dart:io 或桌面目录选择器。
+  final String? treeUri;
+
+  /// 授权树显示名，供控制区直接展示。
+  final String? treeLabel;
+
+  /// 控制区展示文本：安卓端只给树显示名，桌面端给本地目录。
+  ///
+  /// 这里刻意不返回树 URI：`content://…` 既长又没有可读信息，用户看到后无法
+  /// 判断 lyrics 到底写到了哪里。
+  String? get displayLabel {
+    final String? path = localPath?.trim();
+    if (path != null && path.isNotEmpty) {
+      return path;
+    }
+    final String? label = treeLabel?.trim();
+    if (label != null && label.isNotEmpty) {
+      return label;
+    }
+    return null;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is BatchConvertSaveRoot &&
+      other.localPath == localPath &&
+      other.treeUri == treeUri &&
+      other.treeLabel == treeLabel;
+
+  @override
+  int get hashCode => Object.hash(localPath, treeUri, treeLabel);
+}
+
 class BatchConvertQueueItem {
   const BatchConvertQueueItem({
     required this.id,
-    required this.sourcePath,
+    required this.source,
+    required this.target,
+    required this.targetDisplayPath,
     required this.fileName,
-    required this.targetPath,
     required this.status,
     this.shortMessage,
   });
 
+  /// 条目身份：本地源用路径，SAF 源用文档 URI。
+  ///
+  /// 身份必须只由源决定，不随保存根或目标格式变化，否则每次改保存目录都会让
+  /// "重复导入去重"失效，同一条目会被重复入队。
   final String id;
-  final String sourcePath;
+
+  /// 读源：本地文件路径或 SAF 授权树内的文档。
+  final BatchConvertSource source;
+
+  /// 写目标：本地文件路径或 SAF 授权树内的新文档。
+  final BatchConvertTarget target;
+
+  /// 目标落点的可读文本，与 use case 日志同源。
+  final String targetDisplayPath;
+
   final String fileName;
-  final String targetPath;
   final BatchConvertQueueItemStatus status;
   final BatchConvertProgressMessage? shortMessage;
 
   BatchConvertQueueItem copyWith({
-    String? targetPath,
+    BatchConvertTarget? target,
+    String? targetDisplayPath,
     BatchConvertQueueItemStatus? status,
     BatchConvertProgressMessage? shortMessage,
     bool clearShortMessage = false,
   }) {
     return BatchConvertQueueItem(
       id: id,
-      sourcePath: sourcePath,
+      source: source,
+      target: target ?? this.target,
+      targetDisplayPath: targetDisplayPath ?? this.targetDisplayPath,
       fileName: fileName,
-      targetPath: targetPath ?? this.targetPath,
       status: status ?? this.status,
       shortMessage: clearShortMessage
           ? null
@@ -84,7 +153,7 @@ class BatchConvertPageState {
   const BatchConvertPageState({
     required this.queueItems,
     required this.targetFormat,
-    required this.saveRootPath,
+    required this.saveRoot,
     required this.recursive,
     required this.taskPhase,
     required this.progressCurrent,
@@ -98,7 +167,10 @@ class BatchConvertPageState {
 
   final List<BatchConvertQueueItem> queueItems;
   final LyricsFormat targetFormat;
-  final String? saveRootPath;
+
+  /// 用户选定的保存根；为空表示"输出写在每个源文件旁边"。
+  final BatchConvertSaveRoot? saveRoot;
+
   final bool recursive;
   final BatchConvertTaskPhase taskPhase;
   final int progressCurrent;
@@ -150,8 +222,8 @@ class BatchConvertPageState {
   BatchConvertPageState copyWith({
     List<BatchConvertQueueItem>? queueItems,
     LyricsFormat? targetFormat,
-    String? saveRootPath,
-    bool clearSaveRootPath = false,
+    BatchConvertSaveRoot? saveRoot,
+    bool clearSaveRoot = false,
     bool? recursive,
     BatchConvertTaskPhase? taskPhase,
     int? progressCurrent,
@@ -169,9 +241,7 @@ class BatchConvertPageState {
     return BatchConvertPageState(
       queueItems: queueItems ?? this.queueItems,
       targetFormat: targetFormat ?? this.targetFormat,
-      saveRootPath: clearSaveRootPath
-          ? null
-          : (saveRootPath ?? this.saveRootPath),
+      saveRoot: clearSaveRoot ? null : (saveRoot ?? this.saveRoot),
       recursive: recursive ?? this.recursive,
       taskPhase: taskPhase ?? this.taskPhase,
       progressCurrent: progressCurrent ?? this.progressCurrent,
@@ -192,7 +262,7 @@ class BatchConvertPageState {
     return const BatchConvertPageState(
       queueItems: <BatchConvertQueueItem>[],
       targetFormat: LyricsFormat.lineByLineLrc,
-      saveRootPath: null,
+      saveRoot: null,
       recursive: false,
       taskPhase: BatchConvertTaskPhase.idle,
       progressCurrent: 0,

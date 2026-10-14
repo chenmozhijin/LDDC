@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/i18n/i18n.dart';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc_lyrics_flutter/lddc_lyrics_flutter.dart';
-import 'package:path/path.dart' as p;
 import '../../../../shared/ui/components/components.dart';
 import '../../application/batch_convert_page_controller.dart';
 import '../../application/batch_convert_page_state.dart';
@@ -18,20 +17,12 @@ class BatchConvertQueueCard extends ConsumerWidget {
     super.key,
     required this.controller,
     required this.compact,
-    required this.isDesktopPlatform,
     this.selectedItemId,
     this.onSelectItem,
   });
 
   final BatchConvertPageController controller;
   final bool compact;
-
-  /// 桌面端展示可读的完整输出路径；移动端只展示文件名。
-  ///
-  /// 安卓端的输出路径来自 SAF 或插件缓存（形如 `/data/user/0/…/cache/…`、
-  /// `content://…`），既长又没有用户可读信息，按设计文档 §9 的展示约定
-  /// 退化为文件名；桌面端路径本身就是可读文本，保持不变。
-  final bool isDesktopPlatform;
   final String? selectedItemId;
   final ValueChanged<String>? onSelectItem;
 
@@ -142,7 +133,6 @@ class BatchConvertQueueCard extends ConsumerWidget {
                 itemId: itemId,
                 controller: controller,
                 compact: compact,
-                isDesktopPlatform: isDesktopPlatform,
                 busy: isBusy,
                 selected: selectedItemId == itemId,
                 onSelected: onSelectItem == null
@@ -162,7 +152,6 @@ class _QueueItemCard extends StatelessWidget {
     required this.itemId,
     required this.controller,
     required this.compact,
-    required this.isDesktopPlatform,
     required this.busy,
     required this.selected,
     this.onSelected,
@@ -171,7 +160,6 @@ class _QueueItemCard extends StatelessWidget {
   final String itemId;
   final BatchConvertPageController controller;
   final bool compact;
-  final bool isDesktopPlatform;
   final bool busy;
   final bool selected;
   final VoidCallback? onSelected;
@@ -266,11 +254,12 @@ class _QueueItemCard extends StatelessWidget {
                     const SizedBox(height: 10),
                     QueuePathPreview(
                       label: context.l10n.batchConvertOutputPathLabel,
-                      // 移动端只给文件名：安卓的输出路径是 SAF 或插件缓存的完整
-                      // 路径，既长又没有可读信息量；桌面端仍展示完整路径。
-                      value: isDesktopPlatform
-                          ? item.targetPath
-                          : p.basename(item.targetPath),
+                      // 落点文本由运行时规划器统一给出：本地目标就是完整路径，SAF 目标
+                      // 是"树名 / 层级 / 文件名"。这里不再按平台退化成文件名，否则用户
+                      // 无法确认输出到底写进了哪个目录。
+                      value: item.targetDisplayPath.trim().isEmpty
+                          ? item.source.displayName
+                          : item.targetDisplayPath,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],

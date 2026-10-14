@@ -194,28 +194,6 @@ void main() {
       expect(plan.fileName, 'fallback-name.srt');
     });
 
-    test('BatchConvert 输出路径复用保存规划', () {
-      final LyricsSavePlan plan = LyricsSavePlanner.planBatchConvert(
-        sourcePath: p.join('input', 'demo.ass'),
-        targetFormat: LyricsFormat.srt,
-        saveRootPath: p.join('out'),
-      );
-
-      expect(plan.isSuccess, isTrue);
-      expect(plan.displayPath, p.join('out', 'demo.srt'));
-      expect(plan.fileName, 'demo.srt');
-    });
-
-    test('BatchConvert 空源路径返回明确错误', () {
-      final LyricsSavePlan plan = LyricsSavePlanner.planBatchConvert(
-        sourcePath: '   ',
-        targetFormat: LyricsFormat.srt,
-      );
-
-      expect(plan.isSuccess, isFalse);
-      expect(plan.errorCode, LyricsSavePlanErrorCode.missingSongPath);
-    });
-
     test('LocalMatch mirror 拒绝将根目录外歌曲写出保存根目录', () {
       final LyricsSavePlan plan = LyricsSavePlanner.planLocalMatch(
         directoryMode: LyricsSaveDirectoryMode.mirrorSourceRoot,

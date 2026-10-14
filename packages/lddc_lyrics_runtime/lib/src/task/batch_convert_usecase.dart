@@ -6,13 +6,24 @@ import 'package:path/path.dart' as path;
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import '../files/background_file_io.dart';
 import '../lyrics_source/lyrics_source.dart';
+import 'batch_convert_locations.dart';
 
-/// 批量转换单条任务：输入文件与输出文件路径。
+/// 批量转换单条任务：读源与写目标（本地路径或 SAF 文档），外加可直接展示的目标落点。
 class BatchConvertItem {
-  const BatchConvertItem({required this.sourcePath, required this.targetPath});
+  const BatchConvertItem({
+    required this.source,
+    required this.target,
+    required this.targetDisplayPath,
+  });
 
-  final String sourcePath;
-  final String targetPath;
+  final BatchConvertSource source;
+  final BatchConvertTarget target;
+
+  /// 目标落点的可读文本（SAF 为"树名 / 层级 / 文件名"，桌面端为本地路径）。
+  ///
+  /// 由规划阶段算好后随条目传递：展示层不得自行解析 URI，写入侧也不重复推导，
+  /// 避免"界面显示的位置"与"真实写入的位置"出现两套算法。
+  final String targetDisplayPath;
 }
 
 /// 单条转换状态类型，对齐Python版 `ConverStatusType` 语义。
@@ -88,16 +99,20 @@ class BatchConvertProgress {
 class BatchConvertLogEntry {
   const BatchConvertLogEntry({
     required this.index,
-    required this.sourcePath,
-    required this.targetPath,
+    required this.sourceDisplayPath,
+    required this.targetDisplayPath,
     required this.status,
     required this.message,
     this.error,
   });
 
   final int index;
-  final String sourcePath;
-  final String targetPath;
+
+  /// 源的可读文本（本地为路径，SAF 为"树名 / 层级 / 文件名"）。
+  final String sourceDisplayPath;
+
+  /// 目标的可读落点，与队列行展示的文本同源。
+  final String targetDisplayPath;
   final BatchConvertStatusType status;
   final String message;
   final Object? error;
@@ -137,31 +152,52 @@ typedef BatchConvertProgressCallback =
 /// use case 通过端口读写文件，测试可以注入慢 IO 或失败 IO 来验证取消边界；
 /// 默认实现仍使用 Dart 的异步文件 API 与后台写入 helper。
 abstract interface class BatchConvertFileIo {
-  Future<Uint8List> readBytes(String path);
+  /// 读取源内容：本地路径走 dart:io，SAF 文档由平台层经内容端口读取。
+  Future<Uint8List> readBytes(BatchConvertSource source);
 
-  Future<String> writeText({
-    required String sourcePath,
-    required String targetPath,
+  /// 写出转换结果。
+  ///
+  /// [allowOverwrite] 为 false 时实现**必须**先确认目标不存在再写：Android 的
+  /// `writeDocument` 本身总是覆盖同名文档，端口没有"仅新建"的原子语义，
+  /// 因此拒绝覆盖只能由调用方预检完成。
+  Future<void> writeText({
+    required BatchConvertSource source,
+    required BatchConvertTarget target,
     required String text,
     required bool allowOverwrite,
   });
+
+  /// 启动前预检目标是否已存在（本地文件，或 SAF 树内同名文件/目录）。
+  ///
+  /// 返回 `null` 表示**无法确认**（例如树枚举失败）：调用方必须按失败处理，
+  /// 不能当成"不存在"，否则权限问题会被误判为"无冲突"，
+  /// 随后每个条目都会因拒绝覆盖而失败。
+  Future<bool?> targetExists(BatchConvertTarget target);
 }
 
 final class DefaultBatchConvertFileIo implements BatchConvertFileIo {
   const DefaultBatchConvertFileIo();
 
   @override
-  Future<Uint8List> readBytes(String path) {
-    return File(path).readAsBytes();
+  Future<Uint8List> readBytes(BatchConvertSource source) {
+    if (source is! LocalFileSource) {
+      throw UnsupportedError('本地文件 IO 不能读取 SAF 文档源，请改用 SafBatchConvertFileIo');
+    }
+    return File(source.path).readAsBytes();
   }
 
   @override
-  Future<String> writeText({
-    required String sourcePath,
-    required String targetPath,
+  Future<void> writeText({
+    required BatchConvertSource source,
+    required BatchConvertTarget target,
     required String text,
     required bool allowOverwrite,
   }) async {
+    if (source is! LocalFileSource || target is! LocalFileTarget) {
+      throw UnsupportedError('本地文件 IO 不能写入 SAF 目标，请改用 SafBatchConvertFileIo');
+    }
+    final String sourcePath = source.path;
+    final String targetPath = target.path;
     final bool sameFile = _sameFilePath(sourcePath, targetPath);
     if (sameFile && !allowOverwrite) {
       throw LddcApiParamsException('导出目标与源文件相同: $targetPath');
@@ -172,12 +208,23 @@ final class DefaultBatchConvertFileIo implements BatchConvertFileIo {
       throw LddcApiParamsException('导出目标已存在: $targetPath');
     }
     if (sameFile) {
-      return _writeReplacingOriginal(path: targetPath, text: text);
+      await _writeReplacingOriginal(path: targetPath, text: text);
+      return;
     }
-    return BackgroundFileIo.writeText(path: targetPath, text: text);
+    await BackgroundFileIo.writeText(path: targetPath, text: text);
   }
 
-  Future<String> _writeReplacingOriginal({
+  @override
+  Future<bool?> targetExists(BatchConvertTarget target) {
+    if (target is! LocalFileTarget) {
+      throw UnsupportedError('本地文件 IO 不能预检 SAF 目标，请改用 SafBatchConvertFileIo');
+    }
+    // 批量转换可能处理网络盘；异步检查避免阻塞 UI isolate。
+    // ignore: avoid_slow_async_io
+    return File(target.path).exists();
+  }
+
+  Future<void> _writeReplacingOriginal({
     required String path,
     required String text,
   }) async {
@@ -192,7 +239,6 @@ final class DefaultBatchConvertFileIo implements BatchConvertFileIo {
       // 在当前 isolate 上执行完整落盘流程。
       await BackgroundFileIo.writeText(path: temporaryPath, text: text);
       await temporary.copy(path);
-      return target.path;
     } finally {
       // 清理临时文件不参与用户交互路径，仍用异步 IO 避免阻塞当前 isolate。
       // ignore: avoid_slow_async_io
@@ -256,7 +302,7 @@ class BatchConvertUseCase {
         BatchConvertProgress(
           message: BatchConvertProgressMessage(
             code: BatchConvertProgressMessageCode.convertingFile,
-            detail: path.basename(item.sourcePath),
+            detail: item.source.displayName,
           ),
           value: index,
           maxValue: itemSnapshot.length,
@@ -266,7 +312,7 @@ class BatchConvertUseCase {
 
       try {
         _throwIfCancelled(token);
-        final Lyrics lyrics = await _loadLyrics(item.sourcePath);
+        final Lyrics lyrics = await _loadLyrics(item.source);
         _throwIfCancelled(token);
         final String converted = convert2(
           lyrics: lyrics,
@@ -276,8 +322,8 @@ class BatchConvertUseCase {
         );
         _throwIfCancelled(token);
         await _writeConvertedFile(
-          sourcePath: item.sourcePath,
-          targetPath: item.targetPath,
+          source: item.source,
+          target: item.target,
           content: converted,
           allowOverwrite: allowOverwrite,
         );
@@ -292,8 +338,8 @@ class BatchConvertUseCase {
         logs.add(
           BatchConvertLogEntry(
             index: index,
-            sourcePath: item.sourcePath,
-            targetPath: item.targetPath,
+            sourceDisplayPath: item.source.displayName,
+            targetDisplayPath: item.targetDisplayPath,
             status: BatchConvertStatusType.success,
             message: '转换成功',
           ),
@@ -309,8 +355,8 @@ class BatchConvertUseCase {
         logs.add(
           BatchConvertLogEntry(
             index: index,
-            sourcePath: item.sourcePath,
-            targetPath: item.targetPath,
+            sourceDisplayPath: item.source.displayName,
+            targetDisplayPath: item.targetDisplayPath,
             status: BatchConvertStatusType.failure,
             message: '转换失败',
             error: error,
@@ -338,24 +384,25 @@ class BatchConvertUseCase {
     );
   }
 
-  Future<Lyrics> _loadLyrics(String sourcePath) async {
-    final Uint8List data = await _fileIo.readBytes(sourcePath);
+  Future<Lyrics> _loadLyrics(BatchConvertSource source) async {
+    final Uint8List data = await _fileIo.readBytes(source);
     // 所有格式统一交给本地 provider。解密、未知编码读取、扩展名路由和无扩展名
     // 回退顺序都由同一个入口维护，避免批量转换与“打开歌词”出现解析差异。
+    // SAF 文档没有文件系统路径，用含扩展名的可读名作为解析提示。
     return _localProvider.getLyrics(
-      LocalLyricsRequest(path: sourcePath, data: data),
+      LocalLyricsRequest(path: source.parserPath, data: data),
     );
   }
 
   Future<void> _writeConvertedFile({
-    required String sourcePath,
-    required String targetPath,
+    required BatchConvertSource source,
+    required BatchConvertTarget target,
     required String content,
     required bool allowOverwrite,
   }) async {
     await _fileIo.writeText(
-      sourcePath: sourcePath,
-      targetPath: targetPath,
+      source: source,
+      target: target,
       text: content,
       allowOverwrite: allowOverwrite,
     );

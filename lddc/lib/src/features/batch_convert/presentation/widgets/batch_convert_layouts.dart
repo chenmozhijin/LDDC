@@ -13,13 +13,11 @@ class BatchConvertDesktopLayout extends StatelessWidget {
   const BatchConvertDesktopLayout({
     super.key,
     required this.controller,
-    required this.isDesktopPlatform,
     required this.selectedItemId,
     required this.onSelectItem,
   });
 
   final BatchConvertPageController controller;
-  final bool isDesktopPlatform;
   final String? selectedItemId;
   final ValueChanged<String> onSelectItem;
 
@@ -49,7 +47,6 @@ class BatchConvertDesktopLayout extends StatelessWidget {
                 child: BatchConvertQueueCard(
                   controller: controller,
                   compact: false,
-                  isDesktopPlatform: isDesktopPlatform,
                   selectedItemId: selectedItemId,
                   onSelectItem: onSelectItem,
                 ),
@@ -85,7 +82,6 @@ class BatchConvertCompactLayout extends StatelessWidget {
   const BatchConvertCompactLayout({
     super.key,
     required this.controller,
-    required this.isDesktopPlatform,
     required this.selectedItemId,
     required this.onSelectItem,
     required this.controlsExpanded,
@@ -93,7 +89,6 @@ class BatchConvertCompactLayout extends StatelessWidget {
   });
 
   final BatchConvertPageController controller;
-  final bool isDesktopPlatform;
   final String? selectedItemId;
   final ValueChanged<String> onSelectItem;
   final bool controlsExpanded;
@@ -159,7 +154,6 @@ class BatchConvertCompactLayout extends StatelessWidget {
                       child: BatchConvertQueueCard(
                         controller: controller,
                         compact: true,
-                        isDesktopPlatform: isDesktopPlatform,
                         selectedItemId: selectedItemId,
                         onSelectItem: onSelectItem,
                       ),

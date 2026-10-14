@@ -214,10 +214,27 @@ localMatchAudioMetadataPortProvider = Provider<LocalMatchAudioMetadataPort>((
   return createDefaultBackgroundAudioMetadataPort();
 });
 
+/// 批量转换文件 IO Provider。
+///
+/// 安卓端必须用 [SafBatchConvertFileIo]：SAF 文档源/目标不能交给 dart:io，
+/// 必须经授权树与内容端口读写；其余平台沿用本地文件 IO。use case 与页面覆盖
+/// 预检共用同一个实例，避免"写入用 SAF、预检用本地"这种分叉。
+final Provider<BatchConvertFileIo> batchConvertFileIoProvider =
+    Provider<BatchConvertFileIo>((Ref ref) {
+      if (!ref.watch(appCapabilityProvider).androidSafTreeAccess) {
+        return const DefaultBatchConvertFileIo();
+      }
+      return SafBatchConvertFileIo(
+        treePort: ref.watch(androidSafTreePortProvider),
+        contentPort: ref.watch(androidSafContentPortProvider),
+      );
+    });
+
 /// 批量转换工作流 Provider。
 final Provider<BatchConvertUseCase> batchConvertUseCaseProvider =
     Provider<BatchConvertUseCase>((Ref ref) {
       return BatchConvertUseCase(
         localProvider: createDefaultLocalLyricsProvider(),
+        fileIo: ref.watch(batchConvertFileIoProvider),
       );
     });

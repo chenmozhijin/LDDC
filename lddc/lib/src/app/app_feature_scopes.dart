@@ -232,8 +232,11 @@ class AppBatchConvertPageScope extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 安卓端"选择保存目录"实际是选择 SAF 授权树，因此选择器需要树端口；
+    // 桌面端该端口不会被调用（能力门在 controller 里判断）。
     final BatchConvertInputPicker inputPicker = BatchConvertInputPickerImpl(
       filePicker: ref.watch(appFilePickerProvider),
+      treePort: ref.watch(androidSafTreePortProvider),
     );
     return ProviderScope(
       overrides: <Override>[
@@ -243,6 +246,8 @@ class AppBatchConvertPageScope extends ConsumerWidget {
             configRepository: ref.watch(configRepositoryProvider),
             inputPicker: inputPicker,
             useCase: ref.watch(batchConvertUseCaseProvider),
+            // 与 use case 共用同一份 IO：SAF 目标的存在性预检只能由它完成。
+            fileIo: ref.watch(batchConvertFileIoProvider),
             pathOpener: ref.watch(appPathOpenerProvider),
             dragDropPort: ref.watch(dragDropPortProvider),
             openInOpenLyrics: (String lyricsPath) async {
