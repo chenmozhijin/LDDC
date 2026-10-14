@@ -1,11 +1,14 @@
 import 'package:flutter/services.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
-/// 批量转换页选定的保存根（安卓端 SAF 授权树）。
+/// 批量转换页选定的 SAF 目录（保存根或导入源）。
 ///
 /// [treeLabel] 优先用目录选择器给出的显示名；平台不给显示名时才退回 URI，
 /// 保证落点预览永远是一段完整文本（与本地匹配页的保存树标签处理一致）。
 typedef PickedBatchConvertSaveTree = ({String treeUri, String treeLabel});
+
+/// 批量转换"导入文件夹"选定的 SAF 导入树。
+typedef PickedBatchConvertImportTree = ({String treeUri, String treeLabel});
 
 abstract interface class BatchConvertInputPicker {
   Future<List<PickedFileHandle>> pickLyricsFiles({String? initialDirectory});
@@ -17,6 +20,12 @@ abstract interface class BatchConvertInputPicker {
 
   /// 安卓端的保存树选择，内部完成持久授权；用户取消时返回 null。
   Future<PickedBatchConvertSaveTree?> pickSaveTree({String? initialUri});
+
+  /// 安卓端的"导入文件夹"选择，同样内部完成持久授权；用户取消时返回 null。
+  ///
+  /// 复用 [pickSaveTree] 的实现：两端都是"选一棵 SAF 树 + 持久授权 + 取消转 null"，
+  /// 只是语义不同，没必要维护第二份平台调用。
+  Future<PickedBatchConvertImportTree?> pickImportTree({String? initialUri});
 }
 
 class BatchConvertInputPickerImpl implements BatchConvertInputPicker {
@@ -55,13 +64,26 @@ class BatchConvertInputPickerImpl implements BatchConvertInputPicker {
   }
 
   @override
-  Future<PickedBatchConvertSaveTree?> pickSaveTree({String? initialUri}) async {
+  Future<PickedBatchConvertSaveTree?> pickSaveTree({String? initialUri}) {
+    return _pickTree(initialUri: initialUri);
+  }
+
+  @override
+  Future<PickedBatchConvertImportTree?> pickImportTree({String? initialUri}) {
+    return _pickTree(initialUri: initialUri);
+  }
+
+  /// 选择一棵 SAF 授权树并完成持久授权；用户取消返回 null。
+  ///
+  /// 保存树与导入树只差语义，平台调用（选树 → 持久授权 → 取消转 null）完全相同，
+  /// 因此收敛在这里一份实现。
+  Future<PickedBatchConvertSaveTree?> _pickTree({String? initialUri}) async {
     try {
       final AndroidSafTreeToken tree = await _treePort.pickTree(
         initialUri: initialUri,
       );
-      // 保存树会在批量写入时反复使用；进入队列前必须先持久授权，否则应用重启或
-      // 系统回收权限后，批量转换会带着已失效的 URI 继续写并整批失败。
+      // 授权树会在后续扫描与批量写入中反复使用；进入队列前必须先持久授权，否则应用
+      // 重启或系统回收权限后，批量转换会带着已失效的 URI 继续读/写并整批失败。
       await _treePort.persistTreePermission(tree.uri);
       // 目录选择器偶尔不给显示名，此时退回 URI，保证落点预览永远是完整可读文本
       // （与本地匹配页的保存树标签处理保持一致）。

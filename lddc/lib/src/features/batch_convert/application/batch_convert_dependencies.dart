@@ -13,6 +13,7 @@ class BatchConvertDependencies {
     required this.configRepository,
     required this.inputPicker,
     required this.useCase,
+    required this.androidLyricsScanUseCase,
     required this.fileIo,
     required this.pathOpener,
     required this.dragDropPort,
@@ -24,6 +25,12 @@ class BatchConvertDependencies {
   final ConfigRepository configRepository;
   final BatchConvertInputPicker inputPicker;
   final BatchConvertUseCase useCase;
+
+  /// 安卓端"导入文件夹"的 SAF 歌词扫描用例。
+  ///
+  /// 桌面端不会调用它（能力门在 controller 里判断）：`dart:io` 拿不到 `content://`，
+  /// 两端必须走各自的扫描实现。
+  final AndroidSafLyricsScanUseCase androidLyricsScanUseCase;
 
   /// 覆盖预检用的文件 IO。
   ///

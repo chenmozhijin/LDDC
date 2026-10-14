@@ -63,7 +63,22 @@ final class SafDocumentSource extends BatchConvertSource {
   final String displayPath;
 
   @override
-  String get displayName => p.basename(displayPath);
+  String get displayName {
+    // displayPath 是"树名 / 层级 / 文件名"（posix 分隔、段与段之间带空格）。
+    // 不能用 p.basename 直接取：分隔符两侧的空格会被当成名字的一部分（实测
+    // `p.posix.basename('音乐 / a.lrc')` 得到 `' a.lrc'`），Windows 上更是整串返回。
+    // 目标文件名与队列行都拿这个值，必须只留最后一段文件名。
+    final List<String> segments = displayPath
+        .split('/')
+        .map((String segment) => segment.trim())
+        .toList(growable: false);
+    for (int index = segments.length - 1; index >= 0; index -= 1) {
+      if (segments[index].isNotEmpty) {
+        return segments[index];
+      }
+    }
+    return '';
+  }
 
   @override
   String get parserPath => displayName;

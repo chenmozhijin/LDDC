@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:path/path.dart' as p;
+
 /// Android SAF 目录授权令牌。
 ///
 /// SAF 是 Android 的 Storage Access Framework。用户选择目录后，系统会给应用
@@ -171,4 +173,52 @@ abstract interface class AndroidSafAudioMetadataPort {
     required String uri,
     required String? nameHint,
   });
+}
+
+/// 把"树内相对路径"归一成 `a/b/c` 形式。
+///
+/// SAF 直接子项名一般不含分隔符，但 provider 可能返回带反斜杠或 `./` 前缀的名字；
+/// 展示文本与相对路径拼接都必须先归一，避免同一位置在界面上出现两种写法。
+String normalizeAndroidSafRelativePath(String value) {
+  String normalized = value.replaceAll('\\', '/').trim();
+  if (normalized.isEmpty) {
+    return '';
+  }
+  while (normalized.startsWith('./')) {
+    normalized = normalized.substring(2);
+  }
+  if (normalized.startsWith('/')) {
+    normalized = normalized.substring(1);
+  }
+  return p.posix.normalize(normalized);
+}
+
+/// 拼接"父目录相对路径 + 子项名"，得到新的树内相对路径。
+///
+/// 本地匹配与批量转换都要按目录层级累加相对路径，规则必须只有这一份实现。
+String joinAndroidSafRelativePath(String parent, String child) {
+  final String normalizedChild = child.replaceAll('\\', '/').trim();
+  if (parent.isEmpty) {
+    return p.posix.normalize(normalizedChild);
+  }
+  return p.posix.normalize('$parent/$normalizedChild');
+}
+
+/// 用"授权树显示名 + 树内相对路径"拼出可读位置。
+///
+/// 安卓端文档位置是 `content://…%2F…` 编码 URI，展示层不允许再解析 URI，
+/// 因此可读文本必须在信息最全的扫描阶段就算好并随结果返回。
+///
+/// 只有"树显示名"与"树内相对路径"之间用 ` / ` 连接，路径内部保持 `a/b` 形态：
+/// 这样按 `/` 切最后一段就能直接取出文件名，展示层不必再解析路径。
+String buildAndroidSafDisplayPath({
+  required String treeLabel,
+  required String relativePath,
+}) {
+  final String label = treeLabel.trim();
+  final String relative = normalizeAndroidSafRelativePath(relativePath);
+  if (label.isEmpty) {
+    return relative;
+  }
+  return relative.isEmpty ? label : '$label / $relative';
 }

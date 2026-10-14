@@ -775,6 +775,125 @@ void main() {
       );
     });
 
+    testWidgets('安卓端导入文件夹读取 SAF 树并复用同一棵树作为保存根', (WidgetTester tester) async {
+      const String treeUri =
+          'content://com.android.externalstorage.documents/tree/primary%3AMusic';
+      const String albumUri = 'content://doc/album-dir';
+      const String topLyricsUri =
+          'content://com.android.externalstorage.documents/tree/primary%3AMusic/document/primary%3AMusic%2Fa.lrc';
+      const String nestedLyricsUri =
+          'content://com.android.externalstorage.documents/tree/primary%3AMusic/document/primary%3AMusic%2FAlbum%2Fb.lrc';
+      const String nestedAudioUri =
+          'content://com.android.externalstorage.documents/tree/primary%3AMusic/document/primary%3AMusic%2FAlbum%2Fb.flac';
+      final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
+        importTree: (treeUri: treeUri, treeLabel: '内部存储'),
+      );
+      final _FakeAndroidSafTreePort treePort = _FakeAndroidSafTreePort(
+        childrenByUri: <String, List<AndroidSafTreeEntry>>{
+          treeUri: const <AndroidSafTreeEntry>[
+            AndroidSafTreeEntry(
+              uri: topLyricsUri,
+              displayName: 'a.lrc',
+              mimeType: 'application/octet-stream',
+              isDirectory: false,
+              isFile: true,
+            ),
+            AndroidSafTreeEntry(
+              uri: albumUri,
+              displayName: 'Album',
+              mimeType: 'vnd.android.document/directory',
+              isDirectory: true,
+              isFile: false,
+            ),
+          ],
+          albumUri: const <AndroidSafTreeEntry>[
+            AndroidSafTreeEntry(
+              uri: nestedLyricsUri,
+              displayName: 'b.lrc',
+              mimeType: 'application/octet-stream',
+              isDirectory: false,
+              isFile: true,
+            ),
+            AndroidSafTreeEntry(
+              uri: nestedAudioUri,
+              displayName: 'b.flac',
+              mimeType: 'audio/flac',
+              isDirectory: false,
+              isFile: true,
+            ),
+          ],
+        },
+      );
+      final ProviderContainer container = _createContainer(
+        picker: picker,
+        safTreePort: treePort,
+        capability: _mobileCapability(),
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(_buildTestApp(container));
+      await tester.pumpAndSettle();
+
+      // 默认非递归：只导入树根的直接子项（音频与子目录被过滤）。
+      await container
+          .read(batchConvertPageControllerProvider.notifier)
+          .addDirectories();
+      // 导入后需要重建组件树，否则下面按落点文本做的 widget 断言仍看旧状态。
+      await tester.pumpAndSettle();
+      BatchConvertPageState state = container.read(
+        batchConvertPageControllerProvider,
+      );
+
+      expect(state.queueItems, hasLength(1));
+      expect(state.queueItems.single.source, isA<SafDocumentSource>());
+      expect(state.queueItems.single.id, topLyricsUri);
+      expect(state.queueItems.single.fileName, 'a.lrc');
+      // 导入树顺手成为保存根：SAF 源必须有树内落点，否则落点规划会直接抛异常。
+      expect(state.saveRoot?.treeUri, treeUri);
+      expect(state.saveRoot?.displayLabel, '内部存储');
+      // 落点必须是可读文本：既不是缓存路径，也不是 `content://` URI。
+      expect(state.queueItems.single.targetDisplayPath, '内部存储 / a.lrc');
+      // 行内文本会被中间省略，完整落点以 Tooltip 呈现（与既有输出路径用例同款断言）。
+      expect(
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is Tooltip && widget.message == '内部存储 / a.lrc',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('content://'), findsNothing);
+
+      // 递归模式：子目录里的歌词按相对层级镜像落点。
+      container
+          .read(batchConvertPageControllerProvider.notifier)
+          .toggleRecursive(true);
+      await container
+          .read(batchConvertPageControllerProvider.notifier)
+          .addDirectories();
+      state = container.read(batchConvertPageControllerProvider);
+      expect(state.queueItems, hasLength(2));
+      expect(state.queueItems.last.id, nestedLyricsUri);
+      // 目标落点由保存目标模型（`AndroidSafSaveTarget.directoryLabel`）拼出：树名与
+      // 每一级目录都用 ` / ` 连接，所以子目录里的条目是 `内部存储 / Album / b.lrc`。
+      expect(state.queueItems.last.targetDisplayPath, '内部存储 / Album / b.lrc');
+
+      // 再次导入同一棵树：按文档 URI 去重，不会重复入队。
+      await container
+          .read(batchConvertPageControllerProvider.notifier)
+          .addDirectories();
+      expect(
+        container.read(batchConvertPageControllerProvider).queueItems,
+        hasLength(2),
+      );
+      // 安卓端不会回落到本地目录选择器，导入只走 SAF 树端口。
+      expect(picker.directoryPickCount, 0);
+      expect(picker.importTreePickCount, 3);
+      expect(treePort.listChildrenPageCalls, greaterThan(0));
+      expect(
+        state.progressMessage.code,
+        BatchConvertProgressMessageCode.scanCompleted,
+      );
+    });
+
     testWidgets('桌面快捷键会触发导入、打开、启动与清空选中', (WidgetTester tester) async {
       await _setViewport(tester, const Size(1366, 1024));
       final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
@@ -884,6 +1003,7 @@ void main() {
 ProviderContainer _createContainer({
   _FakeBatchConvertInputPicker? picker,
   _FakeBatchConvertDirectoryScanner? scanner,
+  AndroidSafTreePort? safTreePort,
   BatchConvertUseCase? useCase,
   AppPathOpener? pathOpener,
   AppCapability? capability,
@@ -899,6 +1019,10 @@ ProviderContainer _createContainer({
   final BatchConvertUseCase resolvedUseCase =
       useCase ?? BatchConvertUseCase(localProvider: _FakeLocalLyricsProvider());
   final AppPathOpener resolvedPathOpener = pathOpener ?? _FakePathOpener();
+  // 安卓端"导入文件夹"走真实扫描用例 + 内存 fake 树端口：这样可以断言用法与
+  // MethodChannel 完全解耦，测试环境永远不会弹出系统目录选择器。
+  final AndroidSafTreePort resolvedSafTreePort =
+      safTreePort ?? _ThrowingAndroidSafTreePort();
   return ProviderContainer(
     overrides: [
       appCapabilityProvider.overrideWith((Ref ref) => resolvedCapability),
@@ -909,6 +1033,9 @@ ProviderContainer _createContainer({
           configRepository: repository,
           inputPicker: resolvedPicker,
           useCase: resolvedUseCase,
+          androidLyricsScanUseCase: AndroidSafLyricsScanUseCase(
+            treePort: resolvedSafTreePort,
+          ),
           // 单测全部走本地源与本地目标，直接用默认本地 IO 即可。
           fileIo: const DefaultBatchConvertFileIo(),
           pathOpener: resolvedPathOpener,
@@ -1120,6 +1247,7 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
     List<String>? directories,
     this.saveRootDirectory,
     this.saveTree,
+    this.importTree,
     this.unsupportedDirectoryPick = false,
   }) : _files = files ?? const <PickedFileHandle>[],
        _directories = directories ?? const <String>[];
@@ -1131,11 +1259,15 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
   /// 模拟安卓端 SAF 保存树选择结果；为 null 表示用户取消。
   final PickedBatchConvertSaveTree? saveTree;
 
+  /// 模拟安卓端 SAF 导入树选择结果；为 null 表示用户取消。
+  final PickedBatchConvertImportTree? importTree;
+
   /// 模拟安卓端 `AppFilePicker.pickDirectory` 的能力缺失（抛 `UnsupportedError`）。
   final bool unsupportedDirectoryPick;
   int filePickCount = 0;
   int directoryPickCount = 0;
   int saveRootPickCount = 0;
+  int importTreePickCount = 0;
 
   @override
   Future<List<PickedFileHandle>> pickLyricsFiles({
@@ -1170,6 +1302,17 @@ class _FakeBatchConvertInputPicker implements BatchConvertInputPicker {
       throw UnsupportedError('当前平台不支持目录选择');
     }
     return saveTree;
+  }
+
+  @override
+  Future<PickedBatchConvertImportTree?> pickImportTree({
+    String? initialUri,
+  }) async {
+    importTreePickCount += 1;
+    if (unsupportedDirectoryPick) {
+      throw UnsupportedError('当前平台不支持目录选择');
+    }
+    return importTree;
   }
 }
 
@@ -1269,6 +1412,110 @@ class _FakeLocalLyricsProvider implements LyricsLocalSourceProvider {
   @override
   Future<Lyrics> getLyrics(LocalLyricsRequest request) {
     throw UnsupportedError('测试场景未配置 JSON/QRC/KRC 本地歌词解析');
+  }
+}
+
+/// 内存 SAF 目录树：只按 `listChildrenPage` 的契约分页返回，不触碰平台通道。
+class _FakeAndroidSafTreePort implements AndroidSafTreePort {
+  _FakeAndroidSafTreePort({required this.childrenByUri});
+
+  final Map<String, List<AndroidSafTreeEntry>> childrenByUri;
+
+  /// 每次分页只返回 1 条：强制走 `nextOffset` 续页分支。
+  ///
+  /// 真实端口对同一 limit 每次返回一致页大小，所以这里固定 1 条，不按 limit 收缩；
+  /// 否则续页会把剩余条目一次性返回，扫描的分页分支就验证不到。
+  static const int _pageSize = 1;
+  int listChildrenPageCalls = 0;
+
+  @override
+  Future<AndroidSafTreePage> listChildrenPage({
+    required String uri,
+    required int offset,
+    required int limit,
+  }) async {
+    listChildrenPageCalls += 1;
+    final List<AndroidSafTreeEntry> entries =
+        childrenByUri[uri] ?? const <AndroidSafTreeEntry>[];
+    if (offset >= entries.length) {
+      return AndroidSafTreePage(
+        entries: const <AndroidSafTreeEntry>[],
+        nextOffset: null,
+      );
+    }
+    final int end = offset + _pageSize < entries.length
+        ? offset + _pageSize
+        : entries.length;
+    return AndroidSafTreePage(
+      entries: entries.sublist(offset, end),
+      nextOffset: end < entries.length ? end : null,
+    );
+  }
+
+  @override
+  Future<List<AndroidSafPersistedTree>> listPersistedTrees() async {
+    return const <AndroidSafPersistedTree>[];
+  }
+
+  @override
+  Future<AndroidSafTreeToken> pickTree({String? initialUri}) {
+    // 目录选择必须由 picker 的替身完成：走到这里说明测试触碰了真实平台通道。
+    throw StateError('测试不允许调用真实目录选择');
+  }
+
+  @override
+  Future<void> persistTreePermission(String uri) async {}
+
+  @override
+  Future<AndroidSafWriteDocumentResult> writeDocument({
+    required String treeUri,
+    required List<String> directorySegments,
+    required String displayName,
+    required String mimeType,
+    required Uint8List bytes,
+  }) {
+    throw StateError('批量转换单测不写 SAF 文档');
+  }
+}
+
+/// 任何调用都视为"碰到了真实 MethodChannel"的树端口。
+///
+/// 未显式注入 SAF 树端口的用例（例如保存树 `pickTree` 分支）用它兜底：一旦有代码
+/// 绕过注入直接调用平台能力，测试会立刻失败而不是弹出系统目录选择器。
+class _ThrowingAndroidSafTreePort implements AndroidSafTreePort {
+  @override
+  Future<AndroidSafTreePage> listChildrenPage({
+    required String uri,
+    required int offset,
+    required int limit,
+  }) {
+    throw StateError('测试环境不允许访问真实 SAF 目录树');
+  }
+
+  @override
+  Future<List<AndroidSafPersistedTree>> listPersistedTrees() {
+    throw StateError('测试环境不允许访问真实 SAF 目录树');
+  }
+
+  @override
+  Future<AndroidSafTreeToken> pickTree({String? initialUri}) {
+    throw StateError('测试环境不允许访问真实 SAF 目录树');
+  }
+
+  @override
+  Future<void> persistTreePermission(String uri) {
+    throw StateError('测试环境不允许访问真实 SAF 目录树');
+  }
+
+  @override
+  Future<AndroidSafWriteDocumentResult> writeDocument({
+    required String treeUri,
+    required List<String> directorySegments,
+    required String displayName,
+    required String mimeType,
+    required Uint8List bytes,
+  }) {
+    throw StateError('测试环境不允许访问真实 SAF 目录树');
   }
 }
 

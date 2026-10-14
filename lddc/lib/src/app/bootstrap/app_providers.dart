@@ -238,3 +238,16 @@ final Provider<BatchConvertUseCase> batchConvertUseCaseProvider =
         fileIo: ref.watch(batchConvertFileIoProvider),
       );
     });
+
+/// 批量转换"导入 SAF 目录"扫描 Provider。
+///
+/// 安卓端的歌词导入源是 `content://` 授权树，`dart:io` 枚举不到；这里复用本地匹配
+/// 同一份 [AndroidSafTreePort] 实现，桌面端不会调用它（能力门在 controller 里判断）。
+final Provider<AndroidSafLyricsScanUseCase>
+androidSafLyricsScanUseCaseProvider = Provider<AndroidSafLyricsScanUseCase>((
+  Ref ref,
+) {
+  return AndroidSafLyricsScanUseCase(
+    treePort: ref.watch(androidSafTreePortProvider),
+  );
+});

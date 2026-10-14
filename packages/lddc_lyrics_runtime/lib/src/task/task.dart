@@ -1,4 +1,5 @@
 export 'android_saf_ports.dart';
+export 'android_saf_lyrics_scan_usecase.dart';
 export 'android_saf_local_match_batch_usecase.dart';
 export 'android_saf_local_match_get_infos_usecase.dart';
 export 'android_saf_save_paths.dart';

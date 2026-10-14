@@ -329,7 +329,7 @@ class AndroidSafLocalMatchGetInfosUseCase {
           (SongInfo song) => LocalMatchSongEntry(
             songInfo: song,
             rootPath: rootTree.uri,
-            displayPath: _buildAndroidDisplayPath(
+            displayPath: buildAndroidSafDisplayPath(
               treeLabel: rootTree.displayName ?? '',
               relativePath: resolved.displayPathFor(song.path) ?? '',
             ),
@@ -384,7 +384,7 @@ class AndroidSafLocalMatchGetInfosUseCase {
             (SongInfo song) => LocalMatchSongEntry(
               songInfo: song,
               rootPath: rootTree.uri,
-              displayPath: _buildAndroidDisplayPath(
+              displayPath: buildAndroidSafDisplayPath(
                 treeLabel: rootTree.displayName ?? '',
                 relativePath: resolved.displayPathFor(song.path) ?? '',
               ),
@@ -405,7 +405,7 @@ class AndroidSafLocalMatchGetInfosUseCase {
           id: metadata.trackNumber?.toString(),
         ),
         rootPath: rootTree.uri,
-        displayPath: _buildAndroidDisplayPath(
+        displayPath: buildAndroidSafDisplayPath(
           treeLabel: rootTree.displayName ?? '',
           relativePath: file.relativePath,
         ),
@@ -435,7 +435,7 @@ class AndroidSafLocalMatchGetInfosUseCase {
       uriByFile[audioFile] = resolvedUri;
       if (resolvedUri != null) {
         // CUE 里声明的位置就是用户认知中的位置：用它拼可读文本。
-        displayPathByUri[resolvedUri] = _joinRelativePath(
+        displayPathByUri[resolvedUri] = joinAndroidSafRelativePath(
           p.posix.dirname(cueFileRelativePath) == '.'
               ? ''
               : p.posix.dirname(cueFileRelativePath),
@@ -479,7 +479,7 @@ class AndroidSafLocalMatchGetInfosUseCase {
       }
 
       for (final AndroidSafTreeEntry child in children) {
-        final String relativePath = _joinRelativePath(
+        final String relativePath = joinAndroidSafRelativePath(
           directory.relativeDirectoryPath,
           child.displayName,
         );
@@ -775,16 +775,18 @@ final class _AndroidSafAudioResolver {
     required String cueFileRelativePath,
     required String cueFileReference,
   }) async {
-    final String normalizedReference = _normalizeRelativePath(cueFileReference);
+    final String normalizedReference = normalizeAndroidSafRelativePath(
+      cueFileReference,
+    );
     if (normalizedReference.isEmpty) {
       return null;
     }
-    final String cueDirectory = _normalizeRelativePath(
+    final String cueDirectory = normalizeAndroidSafRelativePath(
       p.posix.dirname(cueFileRelativePath),
     );
     final String relativeCandidate = cueDirectory.isEmpty || cueDirectory == '.'
         ? normalizedReference
-        : _normalizeRelativePath('$cueDirectory/$normalizedReference');
+        : normalizeAndroidSafRelativePath('$cueDirectory/$normalizedReference');
     if (relativeCandidate != '..' && !relativeCandidate.startsWith('../')) {
       final String? exact = await _resolveExactRelativePath(relativeCandidate);
       if (exact != null) {
@@ -928,42 +930,4 @@ bool _isSupportedAudioName(String displayName) {
       ? extension.substring(1)
       : extension;
   return audioFileExtensionSet.contains(withoutDot);
-}
-
-/// 用"授权树显示名 + 树内相对路径"拼出可读位置。
-///
-/// 安卓端 `SongInfo.path` 是 `content://…%2F…` 编码 URI，展示层不允许再解析 URI，
-/// 因此可读文本必须在这里（信息最全、且不额外查询）就算好并随结果返回。
-String _buildAndroidDisplayPath({
-  required String treeLabel,
-  required String relativePath,
-}) {
-  final String label = treeLabel.trim();
-  final String relative = _normalizeRelativePath(relativePath);
-  if (label.isEmpty) {
-    return relative;
-  }
-  return relative.isEmpty ? label : '$label / $relative';
-}
-
-String _joinRelativePath(String parent, String child) {
-  final String normalizedChild = child.replaceAll('\\', '/');
-  if (parent.isEmpty) {
-    return p.posix.normalize(normalizedChild);
-  }
-  return p.posix.normalize('$parent/$normalizedChild');
-}
-
-String _normalizeRelativePath(String value) {
-  String normalized = value.replaceAll('\\', '/').trim();
-  if (normalized.isEmpty) {
-    return '';
-  }
-  while (normalized.startsWith('./')) {
-    normalized = normalized.substring(2);
-  }
-  if (normalized.startsWith('/')) {
-    normalized = normalized.substring(1);
-  }
-  return p.posix.normalize(normalized);
 }

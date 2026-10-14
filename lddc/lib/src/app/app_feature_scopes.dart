@@ -246,6 +246,10 @@ class AppBatchConvertPageScope extends ConsumerWidget {
             configRepository: ref.watch(configRepositoryProvider),
             inputPicker: inputPicker,
             useCase: ref.watch(batchConvertUseCaseProvider),
+            // 安卓端"导入文件夹"扫描 SAF 授权树：与保存树选择共用同一个树端口。
+            androidLyricsScanUseCase: ref.watch(
+              androidSafLyricsScanUseCaseProvider,
+            ),
             // 与 use case 共用同一份 IO：SAF 目标的存在性预检只能由它完成。
             fileIo: ref.watch(batchConvertFileIoProvider),
             pathOpener: ref.watch(appPathOpenerProvider),

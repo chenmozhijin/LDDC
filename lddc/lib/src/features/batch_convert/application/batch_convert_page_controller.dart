@@ -39,6 +39,8 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
       ref.read(batchConvertDependenciesProvider).inputPicker;
   BatchConvertDirectoryScanner get _directoryScanner =>
       ref.read(batchConvertDirectoryScannerProvider);
+  AndroidSafLyricsScanUseCase get _androidLyricsScanUseCase =>
+      ref.read(batchConvertDependenciesProvider).androidLyricsScanUseCase;
   BatchConvertUseCase get _useCase =>
       ref.read(batchConvertDependenciesProvider).useCase;
   AppCapability get _capability =>
@@ -127,7 +129,7 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
         );
         return;
       }
-      _appendSourcePaths(paths);
+      _appendSources(paths.map(LocalFileSource.new));
       _emitNotice(
         BatchConvertNoticeCode.importFilesCompleted,
         PageNoticeSeverity.success,
@@ -143,6 +145,12 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
       return;
     }
     try {
+      // 安卓端目录选择器不可用：导入源必须是 SAF 授权树，否则拿到的假路径连
+      // `content://` 子项都枚举不了（读源需要 documentUri，不是目录 URI）。
+      if (_capability.androidSafTreeAccess) {
+        await _importSafTree();
+        return;
+      }
       final List<String> directories = await _inputPicker.pickLyricsDirectories(
         initialDirectory: _resolveInitialDirectory(),
       );
@@ -192,7 +200,7 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
       }
     }
     if (filePaths.isNotEmpty) {
-      _appendSourcePaths(filePaths);
+      _appendSources(filePaths.map(LocalFileSource.new));
     }
     if (directoryPaths.isNotEmpty) {
       await _scanDirectories(directoryPaths);
@@ -594,6 +602,112 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
     );
   }
 
+  /// 安卓端"导入文件夹"：先拿到 SAF 导入树，再交给 SAF 扫描用例。
+  Future<void> _importSafTree() async {
+    final PickedBatchConvertSaveTree? picked = await _inputPicker
+        .pickImportTree();
+    if (picked == null || picked.treeUri.trim().isEmpty) {
+      return;
+    }
+    final String treeUri = picked.treeUri.trim();
+    final String treeLabel = picked.treeLabel.trim();
+    if (state.saveRoot?.treeUri?.trim() != treeUri) {
+      // 让"镜像源目录层级"有落点：SAF 源的写目标必须落在同一棵授权树内，
+      // 否则 planBatchConvertTarget 会直接抛 ArgumentError。
+      _rebuildQueue(
+        saveRoot: BatchConvertSaveRoot.saf(
+          treeUri: treeUri,
+          treeLabel: treeLabel.isEmpty ? treeUri : treeLabel,
+        ),
+        targetFormat: state.targetFormat,
+      );
+    }
+    await _scanSafTree(
+      AndroidSafTreeToken(uri: treeUri, displayName: treeLabel),
+    );
+  }
+
+  /// 安卓端 SAF 歌词扫描：分片追加队列，进度复用目录扫描的文案。
+  Future<void> _scanSafTree(AndroidSafTreeToken tree) async {
+    final int generation = _taskEpoch.next();
+    state = state.copyWith(
+      taskPhase: BatchConvertTaskPhase.scanning,
+      progressCurrent: 0,
+      progressTotal: 0,
+      progressMessage: const BatchConvertProgressMessage(
+        code: BatchConvertProgressMessageCode.scanningFolders,
+      ),
+      clearErrorMessage: true,
+      clearRunSummary: true,
+      clearNotice: true,
+    );
+    try {
+      final AndroidSafLyricsScanResult result = await _androidLyricsScanUseCase
+          .run(
+            rootTree: tree,
+            recursive: state.recursive,
+            onChunk: (List<SafDocumentSource> sources) {
+              if (!_isCurrentTask(generation)) {
+                return;
+              }
+              _appendSources(sources, silent: true);
+            },
+            onProgress: (AndroidSafLyricsScanProgress progress) {
+              _applySafScanProgress(generation, progress);
+            },
+            // 复用本地扫描的中断语义：generation 失效（页面销毁或新建扫描）
+            // 等同于取消，迟到结果不再写回状态。
+            shouldCancel: () => !_isCurrentTask(generation),
+          );
+      if (!_isCurrentTask(generation)) {
+        return;
+      }
+      // 取消/无结果/失败的收尾提示统一由这里给出，SAF 与本地扫描共用同一份语义。
+      _completeDirectoryScan(
+        generation,
+        BatchConvertDirectoryScanResult(
+          foundCount: result.foundCount,
+          cancelled: result.cancelled,
+          errors: result.errors,
+        ),
+      );
+    } on ArgumentError catch (error) {
+      // 落点规划失败（例如保存树已被清空）属于"会写错位置"，必须解释清楚；
+      // ArgumentError 是 Error，`on Exception` 捕获不到，不能让它泄漏出去。
+      if (!_isCurrentTask(generation)) {
+        return;
+      }
+      _setPageError('导入 SAF 目录失败：${error.message}');
+    } on Exception catch (error) {
+      if (!_isCurrentTask(generation)) {
+        return;
+      }
+      _setPageError('扫描文件夹失败：$error');
+    }
+  }
+
+  void _applySafScanProgress(
+    int generation,
+    AndroidSafLyricsScanProgress progress,
+  ) {
+    if (!_isCurrentTask(generation)) {
+      return;
+    }
+    final String label = progress.currentDirectoryLabel.trim();
+    state = state.copyWith(
+      taskPhase: BatchConvertTaskPhase.scanning,
+      progressCurrent: progress.scannedDirectoryCount,
+      // SAF 枚举前不知道总数，固定用 0 表示"进度不确定"（与本地扫描一致）。
+      progressTotal: 0,
+      progressMessage: label.isEmpty
+          ? state.progressMessage
+          : BatchConvertProgressMessage(
+              code: BatchConvertProgressMessageCode.scanningDirectory,
+              detail: label,
+            ),
+    );
+  }
+
   Future<void> _scanDirectories(List<String> directories) async {
     final int generation = _taskEpoch.next();
     state = state.copyWith(
@@ -616,7 +730,10 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
               if (!_isCurrentTask(generation)) {
                 return;
               }
-              _appendSourcePaths(sourcePaths, silent: true);
+              _appendSources(
+                sourcePaths.map(LocalFileSource.new),
+                silent: true,
+              );
             },
             onProgress:
                 (BatchConvertProgressMessage message, int value, int maxValue) {
@@ -635,39 +752,7 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
       if (!_isCurrentTask(generation)) {
         return;
       }
-      state = state.copyWith(
-        taskPhase: BatchConvertTaskPhase.completed,
-        progressCurrent: _queueItems.length,
-        progressTotal: _queueItems.length,
-        progressMessage: result.cancelled
-            ? const BatchConvertProgressMessage(
-                code: BatchConvertProgressMessageCode.scanCancelled,
-              )
-            : (result.foundCount == 0
-                  ? const BatchConvertProgressMessage(
-                      code:
-                          BatchConvertProgressMessageCode.scanNoSupportedFiles,
-                    )
-                  : const BatchConvertProgressMessage(
-                      code: BatchConvertProgressMessageCode.scanCompleted,
-                    )),
-      );
-      if (result.errors.isNotEmpty && _queueItems.isEmpty) {
-        _setPageError('扫描失败：${result.errors.first}');
-        return;
-      }
-      if (result.foundCount == 0) {
-        _emitNotice(
-          BatchConvertNoticeCode.scanNoSupportedFiles,
-          PageNoticeSeverity.info,
-        );
-      } else {
-        _emitNotice(
-          BatchConvertNoticeCode.scanImportedFromDirectory,
-          PageNoticeSeverity.success,
-          count: result.foundCount,
-        );
-      }
+      _completeDirectoryScan(generation, result);
     } on Exception catch (error) {
       if (!_isCurrentTask(generation)) {
         return;
@@ -676,20 +761,71 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
     }
   }
 
-  void _appendSourcePaths(List<String> sourcePaths, {bool silent = false}) {
+  /// 一次目录扫描（本地或 SAF）结束后的统一收尾。
+  ///
+  /// 两种扫描的进度文案与结果语义完全一致，因此结束状态与提示必须只有这一份实现，
+  /// 避免本地扫描改文案后 SAF 分支留着旧行为。
+  void _completeDirectoryScan(
+    int generation,
+    BatchConvertDirectoryScanResult result,
+  ) {
+    if (!_isCurrentTask(generation)) {
+      return;
+    }
+    state = state.copyWith(
+      taskPhase: BatchConvertTaskPhase.completed,
+      progressCurrent: _queueItems.length,
+      progressTotal: _queueItems.length,
+      progressMessage: result.cancelled
+          ? const BatchConvertProgressMessage(
+              code: BatchConvertProgressMessageCode.scanCancelled,
+            )
+          : (result.foundCount == 0
+                ? const BatchConvertProgressMessage(
+                    code: BatchConvertProgressMessageCode.scanNoSupportedFiles,
+                  )
+                : const BatchConvertProgressMessage(
+                    code: BatchConvertProgressMessageCode.scanCompleted,
+                  )),
+    );
+    if (result.errors.isNotEmpty && _queueItems.isEmpty) {
+      _setPageError('扫描失败：${result.errors.first}');
+      return;
+    }
+    if (result.foundCount == 0) {
+      _emitNotice(
+        BatchConvertNoticeCode.scanNoSupportedFiles,
+        PageNoticeSeverity.info,
+      );
+    } else {
+      _emitNotice(
+        BatchConvertNoticeCode.scanImportedFromDirectory,
+        PageNoticeSeverity.success,
+        count: result.foundCount,
+      );
+    }
+  }
+
+  /// 追加读源并重建队列。
+  ///
+  /// 去重按条目 id（本地源=路径，SAF 源=文档 URI）落地；条目 id 与 `_buildQueueItem`
+  /// 使用同一个 [itemIdOf]，因此"用哪些键去重"只有一处实现，不会出现两套规则。
+  void _appendSources(
+    Iterable<BatchConvertSource> sources, {
+    bool silent = false,
+  }) {
     final Map<String, BatchConvertQueueItem> existing =
         <String, BatchConvertQueueItem>{
           for (final BatchConvertQueueItem item in _queueItems) item.id: item,
         };
     bool changed = false;
-    for (final String rawPath in sourcePaths) {
-      final String sourcePath = rawPath.trim();
-      if (sourcePath.isEmpty || existing.containsKey(sourcePath)) {
+    for (final BatchConvertSource source in sources) {
+      final String itemId = itemIdOf(source);
+      if (itemId.isEmpty || existing.containsKey(itemId)) {
         continue;
       }
-      // 本地源的身份就是路径本身，因此这里可以直接用路径作为去重键。
-      existing[sourcePath] = _buildQueueItem(
-        source: LocalFileSource(sourcePath),
+      existing[itemId] = _buildQueueItem(
+        source: source,
         targetFormat: state.targetFormat,
         saveRoot: state.saveRoot,
       );
@@ -979,7 +1115,7 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
       saveRoot: saveRoot,
     );
     return BatchConvertQueueItem(
-      id: _itemIdOf(source),
+      id: itemIdOf(source),
       source: source,
       target: plan.target,
       targetDisplayPath: plan.displayPath,
@@ -1004,12 +1140,6 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
       targetDisplayPath: plan.displayPath,
     );
   }
-
-  /// 条目身份：本地源用路径，SAF 源用文档 URI（保存根变化不影响身份）。
-  String _itemIdOf(BatchConvertSource source) => switch (source) {
-    LocalFileSource(:final String path) => path,
-    SafDocumentSource(:final String documentUri) => documentUri,
-  };
 
   /// 规划单条条目的写目标。
   ///
@@ -1093,3 +1223,12 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
     );
   }
 }
+
+/// 队列条目的身份键：本地源用路径，SAF 源用文档 URI。
+///
+/// 入队、去重和删除都依赖同一个身份；放在这里作为唯一实现，避免"新建条目用一套
+/// 规则、去重用另一套规则"导致同一条目被重复入队。
+String itemIdOf(BatchConvertSource source) => switch (source) {
+  LocalFileSource(:final String path) => path.trim(),
+  SafDocumentSource(:final String documentUri) => documentUri.trim(),
+};
