@@ -185,11 +185,9 @@ final class AndroidSafLyricsSavePersistence extends LyricsSavePersistencePort
   }
 
   String _resolveMimeType(LyricsFormat format) {
-    return switch (format) {
-      LyricsFormat.json => 'application/json',
-      LyricsFormat.ass => 'text/x-ssa',
-      LyricsFormat.srt => 'application/x-subrip',
-      _ => 'text/plain',
-    };
+    // 复用运行时的歌词 MIME 映射（唯一一份实现）。注意不能随手给 `text/plain`：
+    // 原生 `createDocument` 会按 MIME 的规范扩展名补全文件名，真机实测把 `.lrc` 报成
+    // `text/plain` 会写出 `x.lrc.txt`（覆盖已有文件时不会，只有新建才会）。
+    return lyricsMimeTypeForName('lyrics${format.ext}');
   }
 }
