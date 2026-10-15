@@ -151,7 +151,7 @@ final class LocalMatchPreviewSaveCoordinator {
                     songInfo: songInfo,
                     lyricLangs: options.selectedLangs,
                   )
-                : '$directoryLabel / '
+                : '$directoryLabel/'
                       '${LyricsPathTemplateFormatter.buildFileName(fileNameFormat: '${options.fileNameFormat}${options.lyricsFormat.ext}', songInfo: songInfo, lyricLangs: options.selectedLangs)}');
       return LocalMatchSavePlan(
         kind: kind,

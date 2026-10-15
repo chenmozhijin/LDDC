@@ -45,7 +45,7 @@ abstract class LyricsSavePersistencePort {
   /// [path] 对应的可展示文本。
   ///
   /// 默认与 [path] 相同（桌面端本地路径本身就是可读文本）；安卓端由实现覆盖为
-  /// “授权树显示名 / 相对目录 / 文件名”，因为此时 [path] 是用户看不懂的
+  /// “授权树显示名/相对目录/文件名”，因为此时 [path] 是用户看不懂的
   /// `content://…%2F…`，而展示层不允许再解析 URI。
   String displayPathFor(LyricsSaveRequest request, String path) => path;
 

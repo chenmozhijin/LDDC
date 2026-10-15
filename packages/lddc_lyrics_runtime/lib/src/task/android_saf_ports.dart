@@ -220,5 +220,5 @@ String buildAndroidSafDisplayPath({
   if (label.isEmpty) {
     return relative;
   }
-  return relative.isEmpty ? label : '$label / $relative';
+  return relative.isEmpty ? label : '$label/$relative';
 }

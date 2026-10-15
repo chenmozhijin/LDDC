@@ -46,7 +46,7 @@ void main() {
           documentUri: 'content://provider/tree/t/document/d',
           treeUri: _treeUri,
           treeLabel: '内部存储',
-          displayPath: '内部存储 / a.lrc',
+          displayPath: '内部存储/a.lrc',
         ),
       );
 

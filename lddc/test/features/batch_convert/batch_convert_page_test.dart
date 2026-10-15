@@ -578,7 +578,7 @@ void main() {
       expect(state.saveRoot?.displayLabel, '内部存储');
       // 插件缓存副本没有树内层级：平铺写到授权树根，落点是可读文本而不是缓存路径。
       expect(state.queueItems.single.target, isA<SafDocumentTarget>());
-      expect(state.queueItems.single.targetDisplayPath, '内部存储 / demo.lrc');
+      expect(state.queueItems.single.targetDisplayPath, '内部存储/demo.lrc');
       expect(picker.saveRootPickCount, 1);
     });
 
@@ -1024,7 +1024,7 @@ void main() {
 
       // 落点由运行时规划器给出可读文本：SAF 目标是"树名 / 文件名"，既不是插件缓存
       // 全路径，也不是 `content://` 树 URI；保存根同样只暴露树显示名。
-      expect(item.targetDisplayPath, '内部存储 / demo.lrc');
+      expect(item.targetDisplayPath, '内部存储/demo.lrc');
       expect(
         container
             .read(batchConvertPageControllerProvider)
@@ -1148,12 +1148,12 @@ void main() {
       expect(state.saveRoot?.treeUri, treeUri);
       expect(state.saveRoot?.displayLabel, '内部存储');
       // 落点必须是可读文本：既不是缓存路径，也不是 `content://` URI。
-      expect(state.queueItems.single.targetDisplayPath, '内部存储 / a.lrc');
+      expect(state.queueItems.single.targetDisplayPath, '内部存储/a.lrc');
       // 行内文本会被中间省略，完整落点以 Tooltip 呈现（与既有输出路径用例同款断言）。
       expect(
         find.byWidgetPredicate(
           (Widget widget) =>
-              widget is Tooltip && widget.message == '内部存储 / a.lrc',
+              widget is Tooltip && widget.message == '内部存储/a.lrc',
         ),
         findsOneWidget,
       );
@@ -1169,9 +1169,9 @@ void main() {
       state = container.read(batchConvertPageControllerProvider);
       expect(state.queueItems, hasLength(2));
       expect(state.queueItems.last.id, nestedLyricsUri);
-      // 目标落点由保存目标模型（`AndroidSafSaveTarget.directoryLabel`）拼出：树名与
-      // 每一级目录都用 ` / ` 连接，所以子目录里的条目是 `内部存储 / Album / b.lrc`。
-      expect(state.queueItems.last.targetDisplayPath, '内部存储 / Album / b.lrc');
+      // 目标落点由保存目标模型（`AndroidSafSaveTarget.displayPathFor`）拼出：树名与
+      // 每一级目录都用 `/` 连接，所以子目录里的条目是 `内部存储/Album/b.lrc`。
+      expect(state.queueItems.last.targetDisplayPath, '内部存储/Album/b.lrc');
 
       // 再次导入同一棵树：按文档 URI 去重，不会重复入队。
       await container

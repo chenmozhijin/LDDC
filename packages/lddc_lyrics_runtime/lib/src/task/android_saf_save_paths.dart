@@ -19,11 +19,19 @@ class AndroidSafSaveTarget {
   /// 目标树显示名，仅用于预览文案。
   final String treeLabel;
 
-  /// 目标目录的展示标签，例如 `根目录 / Album / Disc 1`。
+  /// 目标目录的展示标签，例如 `根目录/Album/Disc 1`。
   String get directoryLabel => <String>[
     if (treeLabel.trim().isNotEmpty) treeLabel.trim(),
     ...directorySegments,
-  ].join(' / ');
+  ].join('/');
+
+  /// 目标文件的展示落点：`展示标签/文件名`（标签为空时只剩文件名）。
+  ///
+  /// 落点文案只有这一份实现：展示层既不解析 URI 也不拼层级，避免同一位置出现两种写法。
+  String displayPathFor(String fileName) {
+    final String label = directoryLabel;
+    return label.isEmpty ? fileName : '$label/$fileName';
+  }
 }
 
 /// 保存目标推导失败原因。

@@ -1726,7 +1726,7 @@ void main() {
                       ),
                       rootPath: rootTree.uri,
                       // 扫描层已经算好的可读位置（安卓端不解析 URI 的关键）。
-                      displayPath: '根目录 / Album / song.mp3',
+                      displayPath: '根目录/Album/song.mp3',
                     ),
                   ],
                   errors: const <String>[],
@@ -1751,7 +1751,7 @@ void main() {
                 text: '成功',
                 path:
                     'content://com.android.externalstorage.documents/tree/root/document/root%2FAlbum%2Fsong.lrc',
-                displayPath: '根目录 / Album / song.lrc',
+                displayPath: '根目录/Album/song.lrc',
               );
               onProgress?.call(
                 LocalMatchProgress(
@@ -1791,7 +1791,7 @@ void main() {
       // 歌曲位置与歌词落点都必须是可读文本：整页不允许出现编码 URI。
       expect(find.textContaining('content://'), findsNothing);
       expect(find.textContaining('%2F'), findsNothing);
-      expect(find.byTooltip('根目录 / Album / song.mp3'), findsOneWidget);
+      expect(find.byTooltip('根目录/Album/song.mp3'), findsOneWidget);
     });
 
     testWidgets('扫描失败明细在页面上可展开查看', (WidgetTester tester) async {

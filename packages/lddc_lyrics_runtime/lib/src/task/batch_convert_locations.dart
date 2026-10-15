@@ -59,15 +59,15 @@ final class SafDocumentSource extends BatchConvertSource {
   /// 树显示名，可读落点的第一段。
   final String treeLabel;
 
-  /// 扫描阶段算好的可读落点，例如 `内部存储 / Album / a.lrc`。
+  /// 扫描阶段算好的可读落点，例如 `内部存储/Album/a.lrc`。
   final String displayPath;
 
   @override
   String get displayName {
-    // displayPath 是"树名 / 层级 / 文件名"（posix 分隔、段与段之间带空格）。
-    // 不能用 p.basename 直接取：分隔符两侧的空格会被当成名字的一部分（实测
-    // `p.posix.basename('音乐 / a.lrc')` 得到 `' a.lrc'`），Windows 上更是整串返回。
-    // 目标文件名与队列行都拿这个值，必须只留最后一段文件名。
+    // displayPath 是"树名/层级/文件名"（posix 分隔符），不能用 `p.basename` 取：
+    // `p` 按**运行平台**选分隔符，Windows 上 `p.basename('内部存储/a.lrc')` 会把整串
+    // 当成名字返回。这里固定按 `/` 切段并取最后一段非空值，结果与平台无关。
+    // 目标文件名与队列行都用这个值，必须只留文件名。
     final List<String> segments = displayPath
         .split('/')
         .map((String segment) => segment.trim())

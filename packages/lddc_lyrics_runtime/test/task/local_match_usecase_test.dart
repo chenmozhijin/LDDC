@@ -421,7 +421,7 @@ FILE "disc.flac" WAVE
       );
       final _FakeLyricsSavePersistence persistence =
           _FakeLyricsSavePersistence()
-            ..displayPathResult = '内部存储 / Album / Persisted.lrc';
+            ..displayPathResult = '内部存储/Album/Persisted.lrc';
       final LocalMatchUseCase useCase = LocalMatchUseCase(
         autoFetchExecutor: (AutoFetchRequest request) async => AutoFetchResult(
           lyrics: _buildLyrics(remoteSong),
@@ -454,7 +454,7 @@ FILE "disc.flac" WAVE
       final LocalMatchingStatus status = result.statuses.single;
       // 真实路径仍是 URI（读写要用），展示字段必须是可读文本。
       expect(status.path, 'content://tree/root/Persisted.lrc');
-      expect(status.displayPath, '内部存储 / Album / Persisted.lrc');
+      expect(status.displayPath, '内部存储/Album/Persisted.lrc');
       expect(status.displayPath, isNot(contains('content://')));
     });
 

@@ -245,7 +245,7 @@ void main() {
       expect(state.saveRoot?.treeUri, _musicTreeUri);
       expect(state.saveRoot?.displayLabel, '内部存储');
       expect(state.queueItems.single.source, isA<SafDocumentSource>());
-      expect(state.queueItems.single.targetDisplayPath, '内部存储 / a.lrc');
+      expect(state.queueItems.single.targetDisplayPath, '内部存储/a.lrc');
       // 保存树与导入树各自选一次，两次都要完成持久授权（选树走 scope 注入的端口）。
       expect(treePort.pickCalls, 2);
       expect(treePort.persistedUris, <String>[_musicTreeUri, _musicTreeUri]);

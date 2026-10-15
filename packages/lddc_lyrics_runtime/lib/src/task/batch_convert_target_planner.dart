@@ -13,7 +13,7 @@ class BatchConvertTargetPlan {
 
   final BatchConvertTarget target;
 
-  /// 可直接展示的落点：SAF 为"树名 / 层级 / 文件名"，本地为规范化路径。
+  /// 可直接展示的落点：SAF 为"树名/层级/文件名"，本地为规范化路径。
   final String displayPath;
 }
 
@@ -56,7 +56,7 @@ BatchConvertTargetPlan planBatchConvertTarget({
     );
     return BatchConvertTargetPlan(
       target: SafDocumentTarget(target: target, fileName: fileName),
-      displayPath: '${target.directoryLabel} / $fileName',
+      displayPath: target.displayPathFor(fileName),
     );
   }
 

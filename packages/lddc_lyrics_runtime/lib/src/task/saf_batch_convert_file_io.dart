@@ -59,12 +59,12 @@ final class SafBatchConvertFileIo implements BatchConvertFileIo {
       if (exists == null) {
         // 无法确认时宁可失败：把权限/枚举问题当成"不存在"会写出用户没确认过的覆盖。
         throw StateError(
-          '无法确认目标是否已存在，已停止写入：${safTarget.target.directoryLabel} / ${safTarget.fileName}',
+          '无法确认目标是否已存在，已停止写入：${safTarget.target.displayPathFor(safTarget.fileName)}',
         );
       }
       if (exists) {
         throw LddcApiParamsException(
-          '导出目标已存在: ${safTarget.target.directoryLabel} / ${safTarget.fileName}',
+          '导出目标已存在: ${safTarget.target.displayPathFor(safTarget.fileName)}',
         );
       }
     }

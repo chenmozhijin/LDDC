@@ -19,7 +19,7 @@ class BatchConvertItem {
   final BatchConvertSource source;
   final BatchConvertTarget target;
 
-  /// 目标落点的可读文本（SAF 为"树名 / 层级 / 文件名"，桌面端为本地路径）。
+  /// 目标落点的可读文本（SAF 为"树名/层级/文件名"，桌面端为本地路径）。
   ///
   /// 由规划阶段算好后随条目传递：展示层不得自行解析 URI，写入侧也不重复推导，
   /// 避免"界面显示的位置"与"真实写入的位置"出现两套算法。
@@ -108,7 +108,7 @@ class BatchConvertLogEntry {
 
   final int index;
 
-  /// 源的可读文本（本地为路径，SAF 为"树名 / 层级 / 文件名"）。
+  /// 源的可读文本（本地为路径，SAF 为"树名/层级/文件名"）。
   final String sourceDisplayPath;
 
   /// 目标的可读落点，与队列行展示的文本同源。

@@ -93,9 +93,7 @@ final class AndroidSafLyricsSavePersistence extends LyricsSavePersistencePort
     if (target == null) {
       return path;
     }
-    final String directoryLabel = target.directoryLabel.trim();
-    final String fileName = _buildFileName(request);
-    return directoryLabel.isEmpty ? fileName : '$directoryLabel / $fileName';
+    return target.displayPathFor(_buildFileName(request));
   }
 
   @override

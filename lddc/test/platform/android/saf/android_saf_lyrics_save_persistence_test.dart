@@ -226,7 +226,7 @@ void main() {
       );
 
       // 界面拿到的必须是可读文本，而不是真实的编码 URI。
-      expect(displayPath, '内部存储 / Album / Demo.lrc');
+      expect(displayPath, '内部存储/Album/Demo.lrc');
       expect(displayPath, isNot(contains('content://')));
       expect(displayPath, isNot(contains('%2F')));
     });
@@ -246,7 +246,7 @@ void main() {
           requestFor(nestedSongUri),
           'content://com.android.externalstorage.documents/tree/primary%3ALyrics/document/primary%3ALyrics%2FAlbum%2FDemo.lrc',
         ),
-        '歌词库 / Album / Demo.lrc',
+        '歌词库/Album/Demo.lrc',
       );
     });
 

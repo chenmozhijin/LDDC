@@ -77,7 +77,7 @@ void main() {
       expect(result.failure, isNull);
       expect(result.target!.treeUri, songTree);
       expect(result.target!.directorySegments, <String>['Album']);
-      expect(result.target!.directoryLabel, 'Music / Album');
+      expect(result.target!.directoryLabel, 'Music/Album');
     });
 
     test('song 模式下位于树根的歌曲写树根', () {
@@ -104,7 +104,7 @@ void main() {
 
       expect(result.target!.treeUri, saveTree);
       expect(result.target!.directorySegments, <String>['Album']);
-      expect(result.target!.directoryLabel, 'Lyrics / Album');
+      expect(result.target!.directoryLabel, 'Lyrics/Album');
     });
 
     test('mirror 保存根就是歌曲树时与 song 等价', () {

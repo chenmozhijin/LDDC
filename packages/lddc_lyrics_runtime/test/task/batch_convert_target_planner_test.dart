@@ -48,7 +48,7 @@ void main() {
       );
       expect(safTarget.target.directorySegments, isEmpty);
       expect(safTarget.fileName, 'demo.srt');
-      expect(plan.displayPath, '内部存储 / demo.srt');
+      expect(plan.displayPath, '内部存储/demo.srt');
     });
 
     test('树内源镜像其相对目录（多层）', () {
@@ -58,7 +58,7 @@ void main() {
               'content://provider/tree/primary%3AMusic/document/primary%3AMusic%2FAlbum%2Fdisc%2Fa.lrc',
           treeUri: 'content://provider/tree/primary%3AMusic',
           treeLabel: '内部存储',
-          displayPath: '内部存储 / Album / disc / a.lrc',
+          displayPath: '内部存储/Album/disc/a.lrc',
         ),
         targetFileName: 'a.srt',
         saveTreeUri: 'content://provider/tree/primary%3AMusic',
@@ -67,7 +67,7 @@ void main() {
 
       final SafDocumentTarget safTarget = plan.target as SafDocumentTarget;
       expect(safTarget.target.directorySegments, <String>['Album', 'disc']);
-      expect(plan.displayPath, '内部存储 / Album / disc / a.srt');
+      expect(plan.displayPath, '内部存储/Album/disc/a.srt');
     });
 
     test('树根下的源平铺到树根', () {
@@ -77,7 +77,7 @@ void main() {
               'content://provider/tree/primary%3AMusic/document/primary%3AMusic%2Fa.lrc',
           treeUri: 'content://provider/tree/primary%3AMusic',
           treeLabel: '内部存储',
-          displayPath: '内部存储 / a.lrc',
+          displayPath: '内部存储/a.lrc',
         ),
         targetFileName: 'a.srt',
         saveTreeUri: 'content://provider/tree/primary%3AMusic',
@@ -98,7 +98,7 @@ void main() {
                 'content://provider/tree/primary%3AMusic/document/primary%3AMusic%2Fa.lrc',
             treeUri: 'content://provider/tree/primary%3AMusic',
             treeLabel: '内部存储',
-            displayPath: '内部存储 / a.lrc',
+            displayPath: '内部存储/a.lrc',
           ),
           targetFileName: 'a.srt',
         ),
@@ -113,7 +113,7 @@ void main() {
               'content://provider/tree/primary%3ADownload/document/primary%3ADownload%2Fsub%2Fa.lrc',
           treeUri: 'content://provider/tree/primary%3ADownload',
           treeLabel: '下载',
-          displayPath: '下载 / sub / a.lrc',
+          displayPath: '下载/sub/a.lrc',
         ),
         targetFileName: 'a.srt',
         saveTreeUri: _musicTreeUri,
@@ -124,7 +124,7 @@ void main() {
       // 与本地匹配 mirror 同义：目标树 = 所选树，层级 = 源在自己树内的相对目录。
       expect(safTarget.target.treeUri, _musicTreeUri);
       expect(safTarget.target.directorySegments, <String>['sub']);
-      expect(plan.displayPath, '内部存储 / sub / a.srt');
+      expect(plan.displayPath, '内部存储/sub/a.srt');
     });
 
     test('源文档 URI 不可解析时直接报错', () {

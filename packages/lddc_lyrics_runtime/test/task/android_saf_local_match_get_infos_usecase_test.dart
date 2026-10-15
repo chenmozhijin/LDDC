@@ -81,7 +81,7 @@ FILE "disc.flac" WAVE
       );
 
       expect(result.entries, hasLength(1));
-      expect(result.entries.single.displayPath, 'root / Album/disc.flac');
+      expect(result.entries.single.displayPath, 'root/Album/disc.flac');
     });
 
     test('先解析外部 cue 并排除已覆盖音频，再解析普通音频', () async {
@@ -198,7 +198,7 @@ FILE "disc.flac" WAVE
       expect(
         result.entries.every(
           (LocalMatchSongEntry item) =>
-              (item.displayPath ?? '').startsWith('root / ') &&
+              (item.displayPath ?? '').startsWith('root/') &&
               !(item.displayPath ?? '').contains('content://'),
         ),
         isTrue,
@@ -267,8 +267,8 @@ FILE "album.flac" WAVE
       expect(result.entries[0].songInfo.title, 'Track A');
       expect(result.entries[1].songInfo.title, 'Track B');
       // CUE 多轨条目同样要带可读位置：按 CUE 声明的位置拼，不解析 URI。
-      expect(result.entries[0].displayPath, 'root / album.flac');
-      expect(result.entries[1].displayPath, 'root / album.flac');
+      expect(result.entries[0].displayPath, 'root/album.flac');
+      expect(result.entries[1].displayPath, 'root/album.flac');
       expect(
         result.entries.every(
           (LocalMatchSongEntry item) => item.songInfo.fromCue,

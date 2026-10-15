@@ -167,7 +167,7 @@ void main() {
       expect(plan.kind, LocalMatchSavePlanKind.fileOnly);
       expect(plan.targetPath, isNull);
       // song 模式的目标是歌曲所在目录，预览标签必须显示"歌曲树 / 相对目录"。
-      expect(plan.pendingFileNameRootLabel, 'Music / Album');
+      expect(plan.pendingFileNameRootLabel, 'Music/Album');
     });
 
     test('Android specify 模式预览扁平写到保存根', () {
@@ -184,7 +184,7 @@ void main() {
       );
 
       expect(plan.blocker, LocalMatchSavePlanBlocker.none);
-      expect(plan.targetPath, startsWith('Lyrics / '));
+      expect(plan.targetPath, startsWith('Lyrics/'));
       expect(plan.targetPath, contains('Singer - Song'));
     });
 

@@ -68,9 +68,9 @@ void main() {
       expect(
         sources.map((SafDocumentSource source) => source.displayPath),
         <String>[
-          '音乐 / top.lrc',
-          '音乐 / Album/album.srt',
-          '音乐 / Album/Disc 1/disc.ass',
+          '音乐/top.lrc',
+          '音乐/Album/album.srt',
+          '音乐/Album/Disc 1/disc.ass',
         ],
       );
       // 可读落点里只有"树显示名"和"树内相对路径"之间用 ` / ` 连接，取文件名才能
@@ -151,7 +151,7 @@ void main() {
       expect(result.foundCount, 1);
       expect(
         sources.map((SafDocumentSource source) => source.displayPath),
-        <String>['音乐 / top.lrc'],
+        <String>['音乐/top.lrc'],
       );
       // 子目录根本不会被枚举。
       expect(treePort.requestedUris, <String>[rootUri]);
@@ -222,7 +222,7 @@ void main() {
       expect(result.errors, hasLength(1));
       expect(result.errors.single, contains(brokenUri));
       expect(result.foundCount, 1);
-      expect(sources.single.displayPath, '音乐 / Album/ok.lrc');
+      expect(sources.single.displayPath, '音乐/Album/ok.lrc');
     });
 
     test('目录项既不是文件也不是目录时留下错误而不是静默跳过', () async {
