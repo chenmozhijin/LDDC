@@ -1680,6 +1680,48 @@ abstract class AppLocalizations {
   /// **'{count} items, output format {format}'**
   String batchConvertQueueSubtitle(int count, String format);
 
+  /// No description provided for @batchConvertOverwriteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Overwriting Files'**
+  String get batchConvertOverwriteDialogTitle;
+
+  /// No description provided for @batchConvertOverwriteDialogMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This conversion will overwrite existing files. Continue to start converting, or cancel to stop before anything is written.'**
+  String get batchConvertOverwriteDialogMessage;
+
+  /// No description provided for @batchConvertOverwriteSourceCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Source lyrics files to overwrite: {count}'**
+  String batchConvertOverwriteSourceCount(int count);
+
+  /// No description provided for @batchConvertOverwriteExistingTargetCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Existing target files to overwrite: {count}'**
+  String batchConvertOverwriteExistingTargetCount(int count);
+
+  /// No description provided for @batchConvertOverwriteDuplicateTargetCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Entries writing to the same target: {count} groups'**
+  String batchConvertOverwriteDuplicateTargetCount(int count);
+
+  /// No description provided for @batchConvertOverwritePathsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Files to be overwritten'**
+  String get batchConvertOverwritePathsLabel;
+
+  /// No description provided for @batchConvertOverwriteContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Conversion'**
+  String get batchConvertOverwriteContinue;
+
   /// No description provided for @batchConvertPageErrorFallback.
   ///
   /// In en, this message translates to:

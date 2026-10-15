@@ -551,6 +551,34 @@
       }
     }
   },
+  "batchConvertOverwriteDialogTitle": "確認覆蓋檔案",
+  "batchConvertOverwriteDialogMessage": "本次轉換會覆蓋既有檔案。確認後會繼續執行，取消則不會開始轉換。",
+  "batchConvertOverwriteSourceCount": "覆蓋來源歌詞檔案：{count} 項",
+  "@batchConvertOverwriteSourceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertOverwriteExistingTargetCount": "覆蓋既有的目標檔案：{count} 項",
+  "@batchConvertOverwriteExistingTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertOverwriteDuplicateTargetCount": "多個項目寫入同一目標：{count} 組",
+  "@batchConvertOverwriteDuplicateTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertOverwritePathsLabel": "將被覆蓋的檔案",
+  "batchConvertOverwriteContinue": "繼續轉換",
   "batchConvertPageErrorFallback": "批次轉換頁面出現錯誤",
   "batchConvertRetryImport": "重新匯入",
   "batchConvertEmptyQueue": "新增歌詞檔案或資料夾後，這裡會顯示批次轉換佇列。",

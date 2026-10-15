@@ -949,6 +949,36 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get batchConvertOverwriteDialogTitle =>
+      'Подтверждение перезаписи файлов';
+
+  @override
+  String get batchConvertOverwriteDialogMessage =>
+      'Это преобразование перезапишет существующие файлы. Продолжите, чтобы начать преобразование, или отмените, чтобы не начинать.';
+
+  @override
+  String batchConvertOverwriteSourceCount(int count) {
+    return 'Исходных файлов с текстами песен будет перезаписано: $count';
+  }
+
+  @override
+  String batchConvertOverwriteExistingTargetCount(int count) {
+    return 'Существующих целевых файлов будет перезаписано: $count';
+  }
+
+  @override
+  String batchConvertOverwriteDuplicateTargetCount(int count) {
+    return 'Записей с одинаковым целевым файлом: $count групп';
+  }
+
+  @override
+  String get batchConvertOverwritePathsLabel =>
+      'Файлы, которые будут перезаписаны';
+
+  @override
+  String get batchConvertOverwriteContinue => 'Продолжить преобразование';
+
+  @override
   String get batchConvertPageErrorFallback =>
       'На странице пакетного преобразования произошла ошибка';
 

@@ -283,6 +283,27 @@
       }
     }
   },
+  "@batchConvertOverwriteSourceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertOverwriteExistingTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertOverwriteDuplicateTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@batchConvertHintCancelled": {
     "placeholders": {
       "success": {
@@ -978,6 +999,13 @@
   "batchConvertCancel": "Отменить преобразование",
   "batchConvertQueueTitle": "Очередь конверсий",
   "batchConvertQueueSubtitle": "{count} элементов, формат вывода {format}",
+  "batchConvertOverwriteDialogTitle": "Подтверждение перезаписи файлов",
+  "batchConvertOverwriteDialogMessage": "Это преобразование перезапишет существующие файлы. Продолжите, чтобы начать преобразование, или отмените, чтобы не начинать.",
+  "batchConvertOverwriteSourceCount": "Исходных файлов с текстами песен будет перезаписано: {count}",
+  "batchConvertOverwriteExistingTargetCount": "Существующих целевых файлов будет перезаписано: {count}",
+  "batchConvertOverwriteDuplicateTargetCount": "Записей с одинаковым целевым файлом: {count} групп",
+  "batchConvertOverwritePathsLabel": "Файлы, которые будут перезаписаны",
+  "batchConvertOverwriteContinue": "Продолжить преобразование",
   "batchConvertPageErrorFallback": "На странице пакетного преобразования произошла ошибка",
   "batchConvertRetryImport": "Импортировать снова",
   "batchConvertEmptyQueue": "Добавьте файлы или папки с текстами песен, и здесь появится очередь пакетного преобразования.",

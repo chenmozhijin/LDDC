@@ -6,6 +6,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
 
 import 'package:lddc_lyrics_flutter/lddc_lyrics_flutter.dart';
 import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
+import '../core/i18n/i18n.dart';
 import '../core/logging/logging.dart';
 import '../features/about/application/about_page_dependencies.dart';
 import '../features/about/presentation/about_page.dart';
@@ -279,37 +280,76 @@ Future<bool> _confirmBatchConvertOverwrite(
   final bool? confirmed = await showDialog<bool>(
     context: context,
     builder: (BuildContext dialogContext) {
+      final l10n = dialogContext.l10n;
+      // 行高随系统字号缩放；列表用固定行高才能惰性滚动，缩放后文字也不会被裁掉。
+      final double rowExtent = MediaQuery.textScalerOf(dialogContext).scale(24);
+      // 对话框必须给出**显式有界尺寸**：AlertDialog 会对内容做固有尺寸（intrinsic）测量，
+      // 而 ListView 无法提供固有尺寸（会在 performLayout 断言失败）。同时限制成屏幕比例，
+      // 保证小屏/大字号下按钮仍然可达。
+      final Size screen = MediaQuery.sizeOf(dialogContext);
+      final double dialogWidth = (screen.width * 0.82).clamp(260.0, 460.0);
+      final double dialogHeight = (screen.height * 0.5).clamp(180.0, 460.0);
       return AlertDialog(
-        title: const Text('确认覆盖文件'),
-        content: SingleChildScrollView(
+        title: Text(l10n.batchConvertOverwriteDialogTitle),
+        content: SizedBox(
+          width: dialogWidth,
+          height: dialogHeight,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text('本次转换会覆盖已有文件。确认后会继续执行，取消则不会开始转换。'),
-              const SizedBox(height: 12),
-              if (summary.sourceOverwriteCount > 0)
-                Text('覆盖源歌词文件：${summary.sourceOverwriteCount} 项'),
-              if (summary.existingTargetCount > 0)
-                Text('覆盖已存在的目标文件：${summary.existingTargetCount} 项'),
-              if (summary.duplicateTargetGroupCount > 0)
-                Text('多个条目写入同一目标：${summary.duplicateTargetGroupCount} 组'),
-              if (summary.samplePaths.isNotEmpty) ...<Widget>[
+              // 说明与计数放在可滚动区：大字号时不会把清单挤到 0 高。
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(l10n.batchConvertOverwriteDialogMessage),
+                      const SizedBox(height: 12),
+                      if (summary.sourceOverwriteCount > 0)
+                        Text(
+                          l10n.batchConvertOverwriteSourceCount(
+                            summary.sourceOverwriteCount,
+                          ),
+                        ),
+                      if (summary.existingTargetCount > 0)
+                        Text(
+                          l10n.batchConvertOverwriteExistingTargetCount(
+                            summary.existingTargetCount,
+                          ),
+                        ),
+                      if (summary.duplicateTargetGroupCount > 0)
+                        Text(
+                          l10n.batchConvertOverwriteDuplicateTargetCount(
+                            summary.duplicateTargetGroupCount,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              if (summary.overwritePaths.isNotEmpty) ...<Widget>[
                 const SizedBox(height: 12),
                 Text(
-                  '示例路径',
+                  l10n.batchConvertOverwritePathsLabel,
                   style: Theme.of(dialogContext).textTheme.labelLarge,
                 ),
                 const SizedBox(height: 6),
-                for (final String path in summary.samplePaths)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      path,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                // 覆盖清单逐条列出（可能上千条）：固定行高 + ListView.builder 只构建可见行，
+                // 不做一次性测量；父级已给有界高度，因此这里不再用 shrinkWrap。
+                Expanded(
+                  child: ListView.builder(
+                    itemExtent: rowExtent,
+                    itemCount: summary.overwritePaths.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return Text(
+                        summary.overwritePaths[index],
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      );
+                    },
                   ),
+                ),
               ],
             ],
           ),
@@ -317,11 +357,11 @@ Future<bool> _confirmBatchConvertOverwrite(
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('继续转换'),
+            child: Text(l10n.batchConvertOverwriteContinue),
           ),
         ],
       );

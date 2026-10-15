@@ -283,6 +283,27 @@
       }
     }
   },
+  "@batchConvertOverwriteSourceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertOverwriteExistingTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertOverwriteDuplicateTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@batchConvertHintCancelled": {
     "placeholders": {
       "success": {
@@ -978,6 +999,13 @@
   "batchConvertCancel": "変換のキャンセル",
   "batchConvertQueueTitle": "変換キュー",
   "batchConvertQueueSubtitle": "{count} 項目、出力形式 {format}",
+  "batchConvertOverwriteDialogTitle": "ファイルの上書き確認",
+  "batchConvertOverwriteDialogMessage": "この変換では既存のファイルを上書きします。続行すると変換を開始し、キャンセルすると開始しません。",
+  "batchConvertOverwriteSourceCount": "上書きする元の歌詞ファイル：{count} 件",
+  "batchConvertOverwriteExistingTargetCount": "上書きする既存の出力ファイル：{count} 件",
+  "batchConvertOverwriteDuplicateTargetCount": "同じ出力先に書き込む項目：{count} 組",
+  "batchConvertOverwritePathsLabel": "上書きされるファイル",
+  "batchConvertOverwriteContinue": "変換を続行",
   "batchConvertPageErrorFallback": "バッチ変換ページでエラーが発生しました",
   "batchConvertRetryImport": "再インポート",
   "batchConvertEmptyQueue": "歌詞ファイルまたはフォルダーを追加すると、バッチ変換キューがここに表示されます。",

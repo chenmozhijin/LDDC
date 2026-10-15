@@ -547,6 +547,34 @@
       }
     }
   },
+  "batchConvertOverwriteDialogTitle": "确认覆盖文件",
+  "batchConvertOverwriteDialogMessage": "本次转换会覆盖已有文件。确认后会继续执行，取消则不会开始转换。",
+  "batchConvertOverwriteSourceCount": "覆盖源歌词文件：{count} 项",
+  "@batchConvertOverwriteSourceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertOverwriteExistingTargetCount": "覆盖已存在的目标文件：{count} 项",
+  "@batchConvertOverwriteExistingTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertOverwriteDuplicateTargetCount": "多个条目写入同一目标：{count} 组",
+  "@batchConvertOverwriteDuplicateTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertOverwritePathsLabel": "将被覆盖的文件",
+  "batchConvertOverwriteContinue": "继续转换",
   "batchConvertPageErrorFallback": "批量转换页面出现错误",
   "batchConvertRetryImport": "重新导入",
   "batchConvertEmptyQueue": "添加歌词文件或文件夹后，这里会显示批量转换队列。",

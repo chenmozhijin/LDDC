@@ -906,6 +906,34 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get batchConvertOverwriteDialogTitle => '파일 덮어쓰기 확인';
+
+  @override
+  String get batchConvertOverwriteDialogMessage =>
+      '이번 변환은 기존 파일을 덮어씁니다. 계속하면 변환이 시작되고, 취소하면 시작되지 않습니다.';
+
+  @override
+  String batchConvertOverwriteSourceCount(int count) {
+    return '덮어쓸 원본 가사 파일: $count개';
+  }
+
+  @override
+  String batchConvertOverwriteExistingTargetCount(int count) {
+    return '덮어쓸 기존 대상 파일: $count개';
+  }
+
+  @override
+  String batchConvertOverwriteDuplicateTargetCount(int count) {
+    return '같은 대상에 쓰는 항목: $count개 그룹';
+  }
+
+  @override
+  String get batchConvertOverwritePathsLabel => '덮어쓸 파일';
+
+  @override
+  String get batchConvertOverwriteContinue => '변환 계속';
+
+  @override
   String get batchConvertPageErrorFallback => '일괄 변환 페이지에 오류가 발생했습니다.';
 
   @override

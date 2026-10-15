@@ -905,6 +905,34 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get batchConvertOverwriteDialogTitle => 'ファイルの上書き確認';
+
+  @override
+  String get batchConvertOverwriteDialogMessage =>
+      'この変換では既存のファイルを上書きします。続行すると変換を開始し、キャンセルすると開始しません。';
+
+  @override
+  String batchConvertOverwriteSourceCount(int count) {
+    return '上書きする元の歌詞ファイル：$count 件';
+  }
+
+  @override
+  String batchConvertOverwriteExistingTargetCount(int count) {
+    return '上書きする既存の出力ファイル：$count 件';
+  }
+
+  @override
+  String batchConvertOverwriteDuplicateTargetCount(int count) {
+    return '同じ出力先に書き込む項目：$count 組';
+  }
+
+  @override
+  String get batchConvertOverwritePathsLabel => '上書きされるファイル';
+
+  @override
+  String get batchConvertOverwriteContinue => '変換を続行';
+
+  @override
   String get batchConvertPageErrorFallback => 'バッチ変換ページでエラーが発生しました';
 
   @override

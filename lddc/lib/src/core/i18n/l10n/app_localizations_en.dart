@@ -935,6 +935,34 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get batchConvertOverwriteDialogTitle => 'Confirm Overwriting Files';
+
+  @override
+  String get batchConvertOverwriteDialogMessage =>
+      'This conversion will overwrite existing files. Continue to start converting, or cancel to stop before anything is written.';
+
+  @override
+  String batchConvertOverwriteSourceCount(int count) {
+    return 'Source lyrics files to overwrite: $count';
+  }
+
+  @override
+  String batchConvertOverwriteExistingTargetCount(int count) {
+    return 'Existing target files to overwrite: $count';
+  }
+
+  @override
+  String batchConvertOverwriteDuplicateTargetCount(int count) {
+    return 'Entries writing to the same target: $count groups';
+  }
+
+  @override
+  String get batchConvertOverwritePathsLabel => 'Files to be overwritten';
+
+  @override
+  String get batchConvertOverwriteContinue => 'Continue Conversion';
+
+  @override
   String get batchConvertPageErrorFallback =>
       'The batch conversion page encountered an error';
 

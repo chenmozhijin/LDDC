@@ -435,6 +435,16 @@ void main() {
 
       expect(runCount, 0);
       expect(capturedSummary?.sourceOverwriteCount, 1);
+      // 确认清单必须完整：这里断言清单与队列条目的落点文本一一对应（不依赖平台
+      // 路径分隔符），旧实现只给最多 5 条"示例路径"，第一个条目之后就可能被截断。
+      final BatchConvertQueueItem queuedItem = container
+          .read(batchConvertPageControllerProvider)
+          .queueItems
+          .single;
+      expect(capturedSummary?.overwritePaths, <String>[
+        queuedItem.targetDisplayPath,
+      ]);
+      expect(capturedSummary?.overwritePaths.single, endsWith('same.lrc'));
       expect(
         container.read(batchConvertPageControllerProvider).notice?.code,
         BatchConvertNoticeCode.overwriteCancelled,
@@ -484,6 +494,113 @@ void main() {
         container.read(batchConvertPageControllerProvider).runSummary,
         isNotNull,
       );
+    });
+
+    test('超过 5 个覆盖目标时确认清单一条不漏', () async {
+      final Directory dir = await Directory.systemTemp.createTemp(
+        'lddc_batch_convert_overwrite_',
+      );
+      addTearDown(() async {
+        if (dir.existsSync()) {
+          await dir.delete(recursive: true);
+        }
+      });
+      final List<PickedFileHandle> pickedFiles = <PickedFileHandle>[];
+      for (int index = 1; index <= 8; index += 1) {
+        final String source = p.join(dir.path, 's$index.lrc');
+        await File(source).writeAsString('[00:00.00]覆盖清单');
+        // 目标格式改成 srt 后，同名 .srt 已经存在：每条都走"覆盖已存在目标"分支。
+        await File(
+          p.join(dir.path, 's$index.srt'),
+        ).writeAsString('1\n00:00:00,000 --> 00:00:01,000\n覆盖清单');
+        pickedFiles.add(
+          PickedFileHandle(name: p.basename(source), path: source),
+        );
+      }
+
+      BatchConvertOverwriteSummary? capturedSummary;
+      final ProviderContainer container = _createContainer(
+        picker: _FakeBatchConvertInputPicker(files: pickedFiles),
+        confirmOverwrite: (BatchConvertOverwriteSummary summary) async {
+          capturedSummary = summary;
+          return false;
+        },
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      await controller.addFiles();
+      controller.updateTargetFormat(LyricsFormat.srt);
+      await controller.startOrCancel();
+
+      final BatchConvertPageState state = container.read(
+        batchConvertPageControllerProvider,
+      );
+      // 旧实现最多只取 5 条示例路径；现在 8 条都要在清单里，顺序与队列一致。
+      expect(capturedSummary?.existingTargetCount, 8);
+      expect(state.queueItems, hasLength(8));
+      expect(capturedSummary?.overwritePaths, <String>[
+        for (final BatchConvertQueueItem item in state.queueItems)
+          item.targetDisplayPath,
+      ]);
+      expect(capturedSummary?.overwritePaths.last, endsWith('s8.srt'));
+    });
+
+    test('多条条目写同一目标时清单按目标去重', () async {
+      final Directory dir = await Directory.systemTemp.createTemp(
+        'lddc_batch_convert_duplicate_target_',
+      );
+      addTearDown(() async {
+        if (dir.existsSync()) {
+          await dir.delete(recursive: true);
+        }
+      });
+      final String saveRoot = p.join(dir.path, 'out');
+      final List<PickedFileHandle> pickedFiles = <PickedFileHandle>[];
+      for (final String folder in <String>['left', 'right']) {
+        final String source = p.join(dir.path, folder, 'song.lrc');
+        // 先建子目录：两个源分处不同目录、却会规划到同一个目标，本用例要的就是这种重复。
+        await Directory(p.dirname(source)).create(recursive: true);
+        await File(source).writeAsString('[00:00.00]$folder');
+        pickedFiles.add(PickedFileHandle(name: 'song.lrc', path: source));
+      }
+
+      BatchConvertOverwriteSummary? capturedSummary;
+      final ProviderContainer container = _createContainer(
+        picker: _FakeBatchConvertInputPicker(
+          files: pickedFiles,
+          saveRootDirectory: saveRoot,
+        ),
+        confirmOverwrite: (BatchConvertOverwriteSummary summary) async {
+          capturedSummary = summary;
+          return false;
+        },
+      );
+      addTearDown(container.dispose);
+      final BatchConvertPageController controller = container.read(
+        batchConvertPageControllerProvider.notifier,
+      );
+
+      await controller.addFiles();
+      await controller.selectSaveRootDirectory();
+      controller.updateTargetFormat(LyricsFormat.srt);
+      await controller.startOrCancel();
+
+      // 两个条目落到同一个目标：算一组重复目标，清单里只占一行（目标是同一个文件，
+      // 展示两行完全相同的路径只会让用户误以为会有两次写入）。
+      expect(capturedSummary?.duplicateTargetGroupCount, 1);
+      expect(capturedSummary?.existingTargetCount, 0);
+      expect(capturedSummary?.sourceOverwriteCount, 0);
+      final BatchConvertQueueItem firstItem = container
+          .read(batchConvertPageControllerProvider)
+          .queueItems
+          .first;
+      expect(capturedSummary?.overwritePaths, <String>[
+        firstItem.targetDisplayPath,
+      ]);
+      expect(capturedSummary?.overwritePaths.single, endsWith('song.srt'));
     });
 
     test('成功后可切到打开歌词页并载入生成文件', () async {

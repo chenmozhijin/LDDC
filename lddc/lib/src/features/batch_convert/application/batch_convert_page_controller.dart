@@ -1026,40 +1026,42 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
     int sourceOverwriteCount = 0;
     int existingTargetCount = 0;
     final Set<String> duplicateTargetKeys = <String>{};
-    final List<String> samplePaths = <String>[];
+    // 覆盖清单必须完整：确认对话框用惰性列表逐行展示，因此这里不做数量上限，
+    // 每个会被覆盖的目标都要出现在清单里，用户才能确认到底会动到哪些文件。
+    final List<String> overwritePaths = <String>[];
+    final Set<String> recordedTargetKeys = <String>{};
 
     for (final BatchConvertQueueItem item in items) {
       final String targetKey = _targetKey(item.target);
+      bool affected = false;
       if (_isSameFileAsSource(item)) {
         sourceOverwriteCount += 1;
-        _addSamplePath(samplePaths, item.targetDisplayPath);
+        affected = true;
       } else {
         final bool? exists = await _fileIo.targetExists(item.target);
         // null 表示"无法确认"（例如 SAF 树枚举失败或权限已失效）：必须按冲突处理，
         // 否则确认对话框不出现，随后每条写入都会因"目标已存在/无法确认"而失败。
         if (exists == null || exists) {
           existingTargetCount += 1;
-          _addSamplePath(samplePaths, item.targetDisplayPath);
+          affected = true;
         }
       }
       if ((targetCounts[targetKey] ?? 0) > 1) {
         duplicateTargetKeys.add(targetKey);
-        _addSamplePath(samplePaths, item.targetDisplayPath);
+        affected = true;
+      }
+      // 同一目标可能被多个条目命中（重复目标组）或同时命中多种风险：按目标唯一键
+      // 去重，保证"一个会被覆盖的目标只占一行"，清单长度不会超过目标个数。
+      if (affected && recordedTargetKeys.add(targetKey)) {
+        overwritePaths.add(item.targetDisplayPath);
       }
     }
     return BatchConvertOverwriteSummary(
       sourceOverwriteCount: sourceOverwriteCount,
       existingTargetCount: existingTargetCount,
       duplicateTargetGroupCount: duplicateTargetKeys.length,
-      samplePaths: List<String>.unmodifiable(samplePaths),
+      overwritePaths: List<String>.unmodifiable(overwritePaths),
     );
-  }
-
-  void _addSamplePath(List<String> paths, String value) {
-    if (paths.length >= 5 || paths.contains(value)) {
-      return;
-    }
-    paths.add(value);
   }
 
   /// 源与目标是否指向同一个本地文件（"覆盖源歌词"风险）。

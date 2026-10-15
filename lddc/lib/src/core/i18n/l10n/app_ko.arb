@@ -283,6 +283,27 @@
       }
     }
   },
+  "@batchConvertOverwriteSourceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertOverwriteExistingTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@batchConvertOverwriteDuplicateTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@batchConvertHintCancelled": {
     "placeholders": {
       "success": {
@@ -978,6 +999,13 @@
   "batchConvertCancel": "변환 취소",
   "batchConvertQueueTitle": "전환 대기열",
   "batchConvertQueueSubtitle": "{count} 항목, 출력 형식 {format}",
+  "batchConvertOverwriteDialogTitle": "파일 덮어쓰기 확인",
+  "batchConvertOverwriteDialogMessage": "이번 변환은 기존 파일을 덮어씁니다. 계속하면 변환이 시작되고, 취소하면 시작되지 않습니다.",
+  "batchConvertOverwriteSourceCount": "덮어쓸 원본 가사 파일: {count}개",
+  "batchConvertOverwriteExistingTargetCount": "덮어쓸 기존 대상 파일: {count}개",
+  "batchConvertOverwriteDuplicateTargetCount": "같은 대상에 쓰는 항목: {count}개 그룹",
+  "batchConvertOverwritePathsLabel": "덮어쓸 파일",
+  "batchConvertOverwriteContinue": "변환 계속",
   "batchConvertPageErrorFallback": "일괄 변환 페이지에 오류가 발생했습니다.",
   "batchConvertRetryImport": "다시 가져오기",
   "batchConvertEmptyQueue": "가사 파일이나 폴더를 추가하면 일괄 변환 대기열이 여기에 나타납니다.",

@@ -881,6 +881,34 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get batchConvertOverwriteDialogTitle => '确认覆盖文件';
+
+  @override
+  String get batchConvertOverwriteDialogMessage =>
+      '本次转换会覆盖已有文件。确认后会继续执行，取消则不会开始转换。';
+
+  @override
+  String batchConvertOverwriteSourceCount(int count) {
+    return '覆盖源歌词文件：$count 项';
+  }
+
+  @override
+  String batchConvertOverwriteExistingTargetCount(int count) {
+    return '覆盖已存在的目标文件：$count 项';
+  }
+
+  @override
+  String batchConvertOverwriteDuplicateTargetCount(int count) {
+    return '多个条目写入同一目标：$count 组';
+  }
+
+  @override
+  String get batchConvertOverwritePathsLabel => '将被覆盖的文件';
+
+  @override
+  String get batchConvertOverwriteContinue => '继续转换';
+
+  @override
   String get batchConvertPageErrorFallback => '批量转换页面出现错误';
 
   @override
@@ -3142,6 +3170,34 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
+  String get batchConvertOverwriteDialogTitle => '确认覆盖文件';
+
+  @override
+  String get batchConvertOverwriteDialogMessage =>
+      '本次转换会覆盖已有文件。确认后会继续执行，取消则不会开始转换。';
+
+  @override
+  String batchConvertOverwriteSourceCount(int count) {
+    return '覆盖源歌词文件：$count 项';
+  }
+
+  @override
+  String batchConvertOverwriteExistingTargetCount(int count) {
+    return '覆盖已存在的目标文件：$count 项';
+  }
+
+  @override
+  String batchConvertOverwriteDuplicateTargetCount(int count) {
+    return '多个条目写入同一目标：$count 组';
+  }
+
+  @override
+  String get batchConvertOverwritePathsLabel => '将被覆盖的文件';
+
+  @override
+  String get batchConvertOverwriteContinue => '继续转换';
+
+  @override
   String get batchConvertPageErrorFallback => '批量转换页面出现错误';
 
   @override
@@ -5401,6 +5457,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String batchConvertQueueSubtitle(int count, String format) {
     return '共 $count 項，輸出格式為 $format';
   }
+
+  @override
+  String get batchConvertOverwriteDialogTitle => '確認覆蓋檔案';
+
+  @override
+  String get batchConvertOverwriteDialogMessage =>
+      '本次轉換會覆蓋既有檔案。確認後會繼續執行，取消則不會開始轉換。';
+
+  @override
+  String batchConvertOverwriteSourceCount(int count) {
+    return '覆蓋來源歌詞檔案：$count 項';
+  }
+
+  @override
+  String batchConvertOverwriteExistingTargetCount(int count) {
+    return '覆蓋既有的目標檔案：$count 項';
+  }
+
+  @override
+  String batchConvertOverwriteDuplicateTargetCount(int count) {
+    return '多個項目寫入同一目標：$count 組';
+  }
+
+  @override
+  String get batchConvertOverwritePathsLabel => '將被覆蓋的檔案';
+
+  @override
+  String get batchConvertOverwriteContinue => '繼續轉換';
 
   @override
   String get batchConvertPageErrorFallback => '批次轉換頁面出現錯誤';

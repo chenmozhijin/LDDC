@@ -547,6 +547,34 @@
       }
     }
   },
+  "batchConvertOverwriteDialogTitle": "Confirm Overwriting Files",
+  "batchConvertOverwriteDialogMessage": "This conversion will overwrite existing files. Continue to start converting, or cancel to stop before anything is written.",
+  "batchConvertOverwriteSourceCount": "Source lyrics files to overwrite: {count}",
+  "@batchConvertOverwriteSourceCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertOverwriteExistingTargetCount": "Existing target files to overwrite: {count}",
+  "@batchConvertOverwriteExistingTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertOverwriteDuplicateTargetCount": "Entries writing to the same target: {count} groups",
+  "@batchConvertOverwriteDuplicateTargetCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "batchConvertOverwritePathsLabel": "Files to be overwritten",
+  "batchConvertOverwriteContinue": "Continue Conversion",
   "batchConvertPageErrorFallback": "The batch conversion page encountered an error",
   "batchConvertRetryImport": "Import Again",
   "batchConvertEmptyQueue": "Add lyrics files or folders and the batch conversion queue will appear here.",
