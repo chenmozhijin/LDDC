@@ -1588,6 +1588,80 @@ void main() {
       expect(find.text('打开歌曲目录'), findsOneWidget);
     });
 
+    testWidgets('窄屏底栏直出开始前问题并可展开完整清单', (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 844));
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        picker: _FakeLocalMatchInputPicker(),
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await tester.pumpAndSettle();
+
+      final AppLocalizations l10n = lookupAppLocalizations(const Locale('zh'));
+      final LocalMatchPageController controller = container.read(
+        localMatchPageControllerProvider.notifier,
+      );
+      final Finder details = find.byKey(
+        const ValueKey<String>('local_match_validation_details'),
+      );
+
+      // 安卓未选目录树时，"未选目录树"与"队列为空"两项校验落到同一句「请先选择目录树」，
+      // 底栏只能显示一条、也不该出现 +N 徽标（重复展示会让用户以为有两件事要处理）。
+      expect(details, findsOneWidget);
+      expect(
+        find.text(l10n.localMatchAndroidValidationEmptyQueue),
+        findsOneWidget,
+      );
+      expect(find.textContaining('+'), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('local_match_start_or_cancel')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: details,
+          matching: find.byIcon(Icons.error_outline),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.localMatchValidationTitle), findsNothing);
+
+      // 再制造一条彼此不同的问题：语言为空。此时底栏显示首条并用 +1 提示其余条数。
+      controller.updateSelectedLangs(const <String>{});
+      await tester.pump();
+      expect(find.text(l10n.localMatchValidationEmptyLangs), findsOneWidget);
+      expect(find.text('+1'), findsOneWidget);
+
+      await tester.tap(details);
+      await tester.pumpAndSettle();
+
+      // 完整清单一次列全，不再折叠成"还有 N 个问题需要先处理"。
+      expect(find.text(l10n.localMatchValidationTitle), findsOneWidget);
+      expect(
+        find.text('• ${l10n.localMatchValidationEmptyLangs}'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('• ${l10n.localMatchAndroidValidationEmptyQueue}'),
+        findsOneWidget,
+      );
+
+      Navigator.of(
+        tester.element(find.text(l10n.localMatchValidationTitle)),
+      ).pop();
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.localMatchValidationTitle), findsNothing);
+
+      // 展开匹配规则卡片后，卡片内不应再出现第二份同样的提示。
+      await tester.tap(find.text(l10n.localMatchRulesTitle));
+      await tester.pumpAndSettle();
+      expect(find.text('保存模式'), findsOneWidget);
+      expect(find.byType(LocalMatchValidationNotice), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('Android 模式隐藏桌面路径型导入动作', (WidgetTester tester) async {
       _setTestViewport(tester, const Size(390, 844));
       const AndroidSafTreeToken tree = AndroidSafTreeToken(

@@ -46,6 +46,9 @@ class LocalMatchCompactLayout extends StatelessWidget {
               controller: controller,
               collapseAdvanced: false,
               collapseCard: true,
+              // 窄屏的校验信息统一由页面底部启动栏和问题清单抽屉展示，
+              // 卡片内不再重复渲染，避免同一句话出现两次。
+              includeValidation: false,
             );
           },
         ),

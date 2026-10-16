@@ -676,12 +676,19 @@ class LocalMatchRuleCard extends StatelessWidget {
     required this.controller,
     required this.collapseAdvanced,
     required this.collapseCard,
+    this.includeValidation = true,
   });
 
   final LocalMatchPageState state;
   final LocalMatchPageController controller;
   final bool collapseAdvanced;
   final bool collapseCard;
+
+  /// 是否在卡片内渲染校验提示。
+  ///
+  /// 窄屏会把校验信息放到常驻底部启动栏与问题清单抽屉里，卡片内再渲染一份会让
+  /// 同一句话出现两次；因此由调用方按布局决定，而不是按屏幕宽度在卡片里判断。
+  final bool includeValidation;
 
   @override
   Widget build(BuildContext context) {
@@ -692,6 +699,7 @@ class LocalMatchRuleCard extends StatelessWidget {
       sourceWidth: collapseAdvanced ? 320 : 360,
       wideFieldWidth: 320,
       narrowFieldWidth: collapseAdvanced ? 320 : 220,
+      includeValidation: includeValidation,
     );
     return Card(
       child: collapseCard
@@ -911,13 +919,23 @@ class LocalMatchMinScoreControl extends StatelessWidget {
 }
 
 class LocalMatchValidationNotice extends StatelessWidget {
-  const LocalMatchValidationNotice({super.key, required this.messages});
+  const LocalMatchValidationNotice({
+    super.key,
+    required this.messages,
+    this.collapseOverflow = true,
+  });
 
   final List<String> messages;
 
+  /// 问题超过 3 条时是否折叠为"还有 N 个"。
+  ///
+  /// 卡片内空间紧张需要折叠；问题清单抽屉本身就是为了看全部，必须展开。
+  final bool collapseOverflow;
+
   @override
   Widget build(BuildContext context) {
-    final List<String> visibleMessages = messages.length <= 3
+    final List<String> visibleMessages =
+        !collapseOverflow || messages.length <= 3
         ? messages
         : <String>[
             ...messages.take(3),

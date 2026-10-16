@@ -8,6 +8,7 @@ import '../../application/local_match_page_controller.dart';
 import '../../application/local_match_page_state.dart';
 import '../../application/local_match_run_validator.dart';
 import '../local_match_notice_text.dart';
+import 'local_match_issues_sheet.dart';
 
 class LocalMatchBottomActionBar extends StatelessWidget {
   const LocalMatchBottomActionBar({
@@ -25,6 +26,15 @@ class LocalMatchBottomActionBar extends StatelessWidget {
       context,
       state,
     );
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final bool isBusy = state.isBusy;
+    final String primaryText = isBusy
+        ? localMatchProgressMessageText(context, state)
+        : validationMessages.isEmpty
+        ? context.l10n.localMatchReadyToStart
+        : validationMessages.first;
+    // 底栏一行放不下全部问题，除首条外用徽标提示剩余条数，点按弹出完整清单。
+    final int hiddenIssueCount = validationMessages.length - 1;
     return SafeArea(
       top: false,
       child: Card(
@@ -34,15 +44,80 @@ class LocalMatchBottomActionBar extends StatelessWidget {
           child: Row(
             children: <Widget>[
               Expanded(
-                child: Text(
-                  state.isBusy
-                      ? localMatchProgressMessageText(context, state)
-                      : validationMessages.isEmpty
-                      ? context.l10n.localMatchReadyToStart
-                      : validationMessages.first,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: isBusy || validationMessages.isEmpty
+                    ? Text(
+                        primaryText,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    // 启动被阻止的原因必须在不展开「匹配规则」卡片的前提下可见：
+                    // 首条问题直接写在常驻底栏，其余条数用徽标提示并可点开完整清单。
+                    : InkWell(
+                        key: const ValueKey<String>(
+                          'local_match_validation_details',
+                        ),
+                        onTap: () => showLocalMatchIssuesSheet(
+                          context: context,
+                          messages: validationMessages,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: <Widget>[
+                              Icon(
+                                Icons.error_outline,
+                                size: 18,
+                                color: colorScheme.error,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  primaryText,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (hiddenIssueCount > 0) ...<Widget>[
+                                const SizedBox(width: 8),
+                                Semantics(
+                                  label: context.l10n
+                                      .localMatchValidationMoreIssues(
+                                        hiddenIssueCount,
+                                      ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 1,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.errorContainer,
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      '+$hiddenIssueCount',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: colorScheme.onErrorContainer,
+                                            fontFeatures: const <FontFeature>[
+                                              FontFeature.tabularFigures(),
+                                            ],
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              Icon(
+                                Icons.chevron_right,
+                                size: 18,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
               ),
               const SizedBox(width: 12),
               AppActionSemantics(
@@ -107,7 +182,7 @@ List<String> localMatchInlineValidationMessages(
   BuildContext context,
   LocalMatchPageState state,
 ) {
-  return validateLocalMatchRun(state)
+  final List<String> messages = validateLocalMatchRun(state)
       .map(
         (LocalMatchRunValidationIssue issue) => localMatchValidationIssueText(
           context,
@@ -116,6 +191,10 @@ List<String> localMatchInlineValidationMessages(
         ),
       )
       .toList(growable: false);
+  // 不同的校验码可能落到同一句话：安卓未选目录树时"未选目录树"和"队列为空"都是
+  // 「请先选择目录树」。同一句话重复展示会让用户以为有两件事要处理，这里按文案
+  // 去重并保留首次出现顺序（集合字面量本身是有序的 LinkedHashSet）。
+  return List<String>.unmodifiable(<String>{...messages});
 }
 
 List<String> localMatchVisualValidationMessages(
