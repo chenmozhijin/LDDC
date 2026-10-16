@@ -1161,6 +1161,51 @@ void main() {
       expect(find.textContaining('/data/user/0/'), findsNothing);
     });
 
+    testWidgets('已选保存目录但平台没给显示名时展示统一占位文案', (WidgetTester tester) async {
+      await _setViewport(tester, const Size(1280, 800));
+      final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
+        files: const <PickedFileHandle>[
+          PickedFileHandle(
+            name: 'demo.lrc',
+            path: '/data/user/0/com.cmzj.lddc/cache/picked/demo.lrc',
+          ),
+        ],
+        // 目录选择器偶尔不给显示名：界面必须用统一占位文案补齐——既不能是空字符串
+        // （用户不知道自己选了哪个目录），更不能回退成 `content://` 树 URI。
+        saveTree: (treeUri: _safTreeUri, treeLabel: ''),
+      );
+      final ProviderContainer container = _createContainer(
+        picker: picker,
+        capability: _mobileCapability(),
+      );
+      addTearDown(container.dispose);
+      await container
+          .read(batchConvertPageControllerProvider.notifier)
+          .addFiles();
+      await container
+          .read(batchConvertPageControllerProvider.notifier)
+          .selectSaveRootDirectory();
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(batchConvertPageControllerProvider).saveRoot?.treeUri,
+        _safTreeUri,
+      );
+      // 空显示名在状态层就是 null（`displayLabel` 不回退成 URI）：界面必须自己
+      // 补统一占位文案，否则用户看不到自己选了哪个目录。
+      expect(
+        container
+            .read(batchConvertPageControllerProvider)
+            .saveRoot
+            ?.displayLabel,
+        isNull,
+      );
+      expect(find.text('所选文件夹'), findsOneWidget);
+      expect(find.textContaining('content://'), findsNothing);
+    });
+
     test('安卓端不支持目录选择时给出提示而不是泄漏异常', () async {
       final _FakeBatchConvertInputPicker picker = _FakeBatchConvertInputPicker(
         unsupportedDirectoryPick: true,

@@ -24,6 +24,9 @@ import 'package:lddc/src/features/search/application/search_workflow_providers.d
 import 'package:lddc/src/infra/storage/file_lyrics_save_persistence.dart';
 import 'package:lddc/src/platform/desktop/window/desktop_window_providers.dart';
 import 'package:lddc/src/platform/drag_drop/drag_drop_port.dart';
+import 'package:lddc/src/features/local_match/application/local_match_dependencies.dart';
+import 'package:lddc/src/features/local_match/presentation/local_match_page.dart';
+import 'package:lddc/src/platform/android/saf/android_saf_lyrics_save_persistence.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
 
 import '../support/in_memory_library_link_repository.dart';
@@ -194,6 +197,76 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('本地匹配页注入的 SAF 持久化使用可读树名而不是 content:// URI', (
+    WidgetTester tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1280, 800));
+
+    final ProviderContainer container = _createContainer();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const AppShellPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    container.read(appShellRouteListenableProvider).value =
+        AppShellRoute.localMatch;
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 壳层用嵌套 ProviderScope 注入本地匹配依赖，这里取注入后的依赖实例直接调用：
+    // 落点标签必须是"授权树显示名"，一旦回退成编码 URI，界面就会出现 content:// 。
+    final ProviderContainer scopeContainer = ProviderScope.containerOf(
+      tester.element(find.byType(LocalMatchPage, skipOffstage: false)),
+      listen: false,
+    );
+    final LocalMatchDependencies dependencies = scopeContainer.read(
+      localMatchDependenciesProvider,
+    );
+    final LyricsSavePersistencePort persistence = dependencies
+        .androidLyricsPersistenceFactory(
+          const AndroidSafTreeToken(
+            uri: 'content://com.android.externalstorage.documents/tree/music',
+            displayName: '内部存储',
+          ),
+          const AndroidSafTreeToken(
+            uri: 'content://com.android.externalstorage.documents/tree/exports',
+            displayName: '导出目录',
+          ),
+          LocalMatchSaveMode.specify,
+        );
+
+    expect(persistence, isA<AndroidSafLyricsSavePersistence>());
+
+    const String songDocumentUri =
+        'content://com.android.externalstorage.documents/tree/music/document/music%2FAlbum%2Fsong.mp3';
+    final SongInfo songInfo = SongInfo(
+      source: Source.local,
+      path: songDocumentUri,
+      title: 'Song',
+    );
+    final String displayPath = persistence.displayPathFor(
+      LyricsSaveRequest(
+        songInfo: songInfo,
+        lyricLangs: const <String>['zh'],
+        lyricsFormat: LyricsFormat.verbatimLrc,
+        fileNameFormat: '{title}',
+      ),
+      songDocumentUri,
+    );
+
+    expect(displayPath, startsWith('导出目录/'));
+    expect(displayPath.contains('content://'), isFalse);
   });
 
   testWidgets('界面语言配置为英文时导航文案即时切换', (WidgetTester tester) async {

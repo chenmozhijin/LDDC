@@ -680,6 +680,72 @@ void main() {
       expect(state.queueItems.single.outputPath, contains('root%2FAlbum'));
     });
 
+    test('Android 选中保存根树后预览落点用可读显示名而不是树 URI', () async {
+      const AndroidSafTreeToken songTree = AndroidSafTreeToken(
+        uri: 'content://com.android.externalstorage.documents/tree/music',
+        displayName: '内部存储',
+      );
+      const AndroidSafTreeToken saveTree = AndroidSafTreeToken(
+        uri: 'content://com.android.externalstorage.documents/tree/exports',
+        displayName: '导出目录',
+      );
+      final _FakeLocalMatchInputPicker picker = _FakeLocalMatchInputPicker(
+        androidTreeToken: songTree,
+        androidSaveTreeToken: saveTree,
+      );
+      final _StubAndroidSafLocalMatchGetInfosUseCase androidGetInfosUseCase =
+          _StubAndroidSafLocalMatchGetInfosUseCase(
+            resultBuilder: (AndroidSafTreeToken rootTree) =>
+                AndroidSafLocalMatchGetInfosResult(
+                  entries: <LocalMatchSongEntry>[
+                    LocalMatchSongEntry(
+                      songInfo: SongInfo(
+                        source: Source.local,
+                        path:
+                            '${songTree.uri}/document/music%2FAlbum%2Fsong.mp3',
+                        title: 'Song',
+                      ),
+                      rootPath: songTree.uri,
+                      displayPath: '内部存储/Album/song.mp3',
+                    ),
+                  ],
+                  errors: const <String>[],
+                  cancelled: false,
+                  checkpoint: null,
+                ),
+          );
+      final ProviderContainer container = _createContainer(
+        capability: _androidCapability(),
+        picker: picker,
+        androidGetInfosUseCase: androidGetInfosUseCase,
+      );
+      addTearDown(container.dispose);
+      final LocalMatchPageController controller = container.read(
+        localMatchPageControllerProvider.notifier,
+      );
+
+      // 两次独立选择：先选歌曲树入队，切到"保存到保存根树"模式后选保存根树，
+      // 触发预览重算——只有该模式才会真正用到保存根的显示名。
+      await controller.selectAndroidTree();
+      controller.updateSaveMode(LocalMatchSaveMode.specify);
+      await controller.selectAndroidSaveTree();
+
+      final LocalMatchPageState state = container.read(
+        localMatchPageControllerProvider,
+      );
+      expect(picker.androidTreePickCount, 2);
+      expect(state.androidSaveTreeToken?.displayName, '导出目录');
+
+      // 预览与真实写入共用同一个推导函数：展示文本里只允许出现授权树显示名，
+      // 编码 URI 一旦出现在预览里，界面就会显示用户看不懂的 content:// 。
+      final LocalMatchSavePlan savePlan = state.queueItems.single.savePlan;
+      expect(savePlan.blocker, LocalMatchSavePlanBlocker.none);
+      final String rootLabel =
+          savePlan.targetPath ?? savePlan.pendingFileNameRootLabel ?? '';
+      expect(rootLabel, startsWith('导出目录'));
+      expect(rootLabel.contains('content://'), isFalse);
+    });
+
     test('Android 目录树匹配取消后再次启动会从 batch checkpoint 继续', () async {
       const AndroidSafTreeToken tree = AndroidSafTreeToken(
         uri: 'content://com.android.externalstorage.documents/tree/root',
@@ -1997,8 +2063,9 @@ ProviderContainer _createContainer({
                 treeUri: songTree.uri,
                 saveMode: saveMode,
                 saveTreeUri: saveTree?.uri,
-                treeLabel: songTree.displayName ?? songTree.uri,
-                saveTreeLabel: saveTree?.displayName ?? saveTree?.uri ?? '',
+                // 与生产实现保持一致：显示名缺失时留空，绝不回退成 `content://` URI。
+                treeLabel: songTree.displayName ?? '',
+                saveTreeLabel: saveTree?.displayName ?? '',
               ),
           openInSearch: openInSearch ?? (_, _) async {},
         ),
@@ -2100,17 +2167,29 @@ class _FakeLocalMatchInputPicker implements LocalMatchInputPicker {
   _FakeLocalMatchInputPicker({
     this.songFiles = const <PickedFileHandle>[],
     this.androidTreeToken,
+    this.androidSaveTreeToken,
     this.directoryPaths = const <String>[],
   });
 
   final List<PickedFileHandle> songFiles;
   final AndroidSafTreeToken? androidTreeToken;
+
+  /// 保存根授权树（mirror / specify 模式使用）。
+  ///
+  /// 为空时第二次及以后的选择都返回 [androidTreeToken]，保持既有用例
+  /// "重复选择同一棵树"的语义不变。
+  final AndroidSafTreeToken? androidSaveTreeToken;
   final List<String> directoryPaths;
   int songFilePickCount = 0;
   int songDirectoryPickCount = 0;
+  int androidTreePickCount = 0;
 
   @override
   Future<AndroidSafTreeToken?> pickAndroidTree({String? initialUri}) async {
+    androidTreePickCount += 1;
+    if (androidTreePickCount > 1 && androidSaveTreeToken != null) {
+      return androidSaveTreeToken;
+    }
     return androidTreeToken;
   }
 

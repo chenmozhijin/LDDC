@@ -3,8 +3,8 @@ import 'package:lddc_lyrics_runtime/lddc_lyrics_runtime.dart';
 
 /// 批量转换页选定的 SAF 目录（保存根或导入源）。
 ///
-/// [treeLabel] 优先用目录选择器给出的显示名；平台不给显示名时才退回 URI，
-/// 保证落点预览永远是一段完整文本（与本地匹配页的保存树标签处理一致）。
+/// [treeLabel] 用目录选择器给出的显示名；平台不给显示名时**留空**，由展示层用
+/// 统一占位文案补齐——绝不退回 URI，界面一旦出现 `content://` 用户就读不懂了。
 typedef PickedBatchConvertSaveTree = ({String treeUri, String treeLabel});
 
 /// 批量转换"导入文件夹"选定的 SAF 导入树。
