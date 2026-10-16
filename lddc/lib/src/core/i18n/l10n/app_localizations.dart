@@ -184,12 +184,6 @@ abstract class AppLocalizations {
   /// **'Disabled by default'**
   String get commonDisabledByDefault;
 
-  /// No description provided for @commonFormat.
-  ///
-  /// In en, this message translates to:
-  /// **'Format'**
-  String get commonFormat;
-
   /// No description provided for @commonOffset.
   ///
   /// In en, this message translates to:

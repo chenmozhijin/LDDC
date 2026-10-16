@@ -48,9 +48,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commonDisabledByDefault => 'デフォルトでは無効になっています';
 
   @override
-  String get commonFormat => '形式';
-
-  @override
   String get commonOffset => 'オフセット';
 
   @override

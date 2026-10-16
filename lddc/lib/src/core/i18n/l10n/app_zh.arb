@@ -1,5 +1,8 @@
 {
-  "commonSelectedFolder": "所选文件夹",   "@commonSelectedFolder": { "description": "SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）" },
+  "commonSelectedFolder": "所选文件夹",
+  "@commonSelectedFolder": {
+    "description": "SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）"
+  },
   "@@locale": "zh",
   "appTitle": "LDDC",
   "commonWarning": "警告",
@@ -13,7 +16,6 @@
   "commonRestoreDefault": "恢复默认",
   "commonEnabled": "已启用",
   "commonDisabledByDefault": "默认关闭",
-  "commonFormat": "格式",
   "commonOffset": "偏移",
   "commonSaving": "保存中...",
   "commonAddFiles": "添加文件",
@@ -24,8 +26,12 @@
   "commonLyricsLanguageTypeSummary": "{language}（{type}）",
   "@commonLyricsLanguageTypeSummary": {
     "placeholders": {
-      "language": {"type": "String"},
-      "type": {"type": "String"}
+      "language": {
+        "type": "String"
+      },
+      "type": {
+        "type": "String"
+      }
     }
   },
   "commonTranslationCancelled": "已取消翻译",

@@ -48,9 +48,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get commonDisabledByDefault => 'Отключено по умолчанию';
 
   @override
-  String get commonFormat => 'Формат';
-
-  @override
   String get commonOffset => 'Компенсировать';
 
   @override

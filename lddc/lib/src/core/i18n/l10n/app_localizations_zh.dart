@@ -48,9 +48,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonDisabledByDefault => '默认关闭';
 
   @override
-  String get commonFormat => '格式';
-
-  @override
   String get commonOffset => '偏移';
 
   @override
@@ -2340,9 +2337,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get commonDisabledByDefault => '默认关闭';
 
   @override
-  String get commonFormat => '格式';
-
-  @override
   String get commonOffset => '偏移';
 
   @override
@@ -4630,9 +4624,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get commonDisabledByDefault => '預設關閉';
-
-  @override
-  String get commonFormat => '格式';
 
   @override
   String get commonOffset => '偏移';

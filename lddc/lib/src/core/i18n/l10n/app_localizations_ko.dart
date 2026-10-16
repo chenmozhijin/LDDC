@@ -48,9 +48,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commonDisabledByDefault => '기본적으로 비활성화됨';
 
   @override
-  String get commonFormat => '체재';
-
-  @override
   String get commonOffset => '오프셋';
 
   @override

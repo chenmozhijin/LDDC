@@ -570,6 +570,97 @@ void main() {
       );
     });
 
+    testWidgets('紧凑布局下参数同行且六个操作按钮都可点', (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 844));
+      final ProviderContainer container = _createContainer(
+        picker: _FakeOpenLyricsInputPicker(),
+        lyricsApi: _FakeLyricsApi(lyrics: _buildLyrics()),
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await tester.pumpAndSettle();
+
+      // 格式与偏移必须同处一行：旧实现各自独占一行，把操作区挤到需要滚动才能看到。
+      final double formatTop = tester
+          .getTopLeft(
+            find.byKey(const ValueKey<String>('open_lyrics_format_dropdown')),
+          )
+          .dy;
+      final double offsetTop = tester
+          .getTopLeft(
+            find.byKey(const ValueKey<String>('open_lyrics_offset_stepper')),
+          )
+          .dy;
+      expect(
+        (formatTop - offsetTop).abs(),
+        lessThanOrEqualTo(12),
+        reason: '格式下拉与偏移步进器应在同一行',
+      );
+
+      final Finder actionBar = find.byKey(
+        const ValueKey<String>('open_lyrics_action_bar'),
+      );
+      await tester.dragUntilVisible(
+        actionBar,
+        find.byType(ListView).first,
+        const Offset(0, -300),
+      );
+
+      // 六个操作按钮都在，且都能直接点按（不再是每个按钮独占一行被裁到屏幕外）。
+      for (final String key in <String>[
+        'open_lyrics_open_lyrics_button',
+        'open_lyrics_open_song_button',
+        'open_lyrics_convert_button',
+        'open_lyrics_save_button',
+        'open_lyrics_save_to_tag_button',
+        'open_lyrics_translate_button',
+      ]) {
+        expect(
+          find.byKey(ValueKey<String>(key)).hitTestable(),
+          findsOneWidget,
+          reason: '$key 应可见可点',
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('紧凑布局在两倍文字缩放下操作按钮仍完整可点', (WidgetTester tester) async {
+      _setTestViewport(tester, const Size(390, 844));
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final ProviderContainer container = _createContainer(
+        picker: _FakeOpenLyricsInputPicker(),
+        lyricsApi: _FakeLyricsApi(lyrics: _buildLyrics()),
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(_buildTestApp(container));
+      await tester.pumpAndSettle();
+
+      final Finder actionBar = find.byKey(
+        const ValueKey<String>('open_lyrics_action_bar'),
+      );
+      await tester.dragUntilVisible(
+        actionBar,
+        find.byType(ListView).first,
+        const Offset(0, -300),
+      );
+
+      // 文本放大后按钮允许换行变高，但不能横向溢出或互相遮挡。
+      expect(
+        find
+            .byKey(const ValueKey<String>('open_lyrics_translate_button'))
+            .hitTestable(),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('open_lyrics_save_button')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('打开歌词文件按钮直接触发歌词文件选择', (WidgetTester tester) async {
       _setTestViewport(tester, const Size(390, 844));
       final _FakeOpenLyricsInputPicker picker = _FakeOpenLyricsInputPicker(

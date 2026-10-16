@@ -48,9 +48,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonDisabledByDefault => 'Disabled by default';
 
   @override
-  String get commonFormat => 'Format';
-
-  @override
   String get commonOffset => 'Offset';
 
   @override

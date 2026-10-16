@@ -1,5 +1,8 @@
 {
-  "commonSelectedFolder": "선택한 폴더",   "@commonSelectedFolder": { "description": "SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）" },
+  "commonSelectedFolder": "선택한 폴더",
+  "@commonSelectedFolder": {
+    "description": "SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）"
+  },
   "@@locale": "ko",
   "@commonLyricsLanguageTypeSummary": {
     "placeholders": {
@@ -744,7 +747,6 @@
   "commonRestoreDefault": "기본값 복원",
   "commonEnabled": "활성화됨",
   "commonDisabledByDefault": "기본적으로 비활성화됨",
-  "commonFormat": "체재",
   "commonOffset": "오프셋",
   "commonSaving": "절약...",
   "commonAddFiles": "파일 추가",

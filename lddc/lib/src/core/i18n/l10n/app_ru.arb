@@ -1,5 +1,8 @@
 {
-  "commonSelectedFolder": "Выбранная папка",   "@commonSelectedFolder": { "description": "SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）" },
+  "commonSelectedFolder": "Выбранная папка",
+  "@commonSelectedFolder": {
+    "description": "SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）"
+  },
   "@@locale": "ru",
   "@commonLyricsLanguageTypeSummary": {
     "placeholders": {
@@ -744,7 +747,6 @@
   "commonRestoreDefault": "Восстановить настройки по умолчанию",
   "commonEnabled": "Включено",
   "commonDisabledByDefault": "Отключено по умолчанию",
-  "commonFormat": "Формат",
   "commonOffset": "Компенсировать",
   "commonSaving": "Сохранение...",
   "commonAddFiles": "Добавить файлы",

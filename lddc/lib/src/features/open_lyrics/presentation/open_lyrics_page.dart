@@ -435,155 +435,114 @@ class _ControlCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double formatWidth = compact
-                ? constraints.maxWidth
-                : constraints.maxWidth >= 900
-                ? 210
-                : 184;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            // 参数行（语言 / 格式 / 偏移）与搜索预览抽屉共用同一实现：格式与偏移
+            // 同行显示，窄屏不再各自独占一行，把操作区挤到需要滚动才能看到。
+            LyricsParameterRow(
+              strings: context.l10n.toLyricsUiStrings(),
+              selectedLangs: state.selectedLangs.toSet(),
+              onLangsChanged: controller.updateSelectedLangs,
+              format: state.lyricsFormat,
+              onFormatChanged: controller.updateLyricsFormat,
+              offsetMs: state.offsetMs,
+              onOffsetChanged: controller.updateOffsetMs,
+              compact: compact,
+              languageKey: const ValueKey<String>(
+                'open_lyrics_language_segments',
+              ),
+              formatKey: const ValueKey<String>('open_lyrics_format_dropdown'),
+              offsetKey: const ValueKey<String>('open_lyrics_offset_stepper'),
+            ),
+            const SizedBox(height: 8),
+            // 六个操作按钮排成等宽网格：窄屏两列、宽屏一行。旧实现的 OverflowBar
+            // 在窄屏会把按钮逐个挤成独立一行，真机上最后两个还会被裁到屏幕外。
+            LyricsActionGrid(
+              key: const ValueKey<String>('open_lyrics_action_bar'),
               children: <Widget>[
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: LyricsLanguageSegments(
+                AppActionSemantics(
+                  identifier: AppSemanticsIdentifiers.openLyricsFile,
+                  label: openLyricsLabel,
+                  onTap: openLyricsAction,
+                  child: FilledButton.icon(
                     key: const ValueKey<String>(
-                      'open_lyrics_language_segments',
+                      'open_lyrics_open_lyrics_button',
                     ),
-                    compact: compact,
-                    strings: context.l10n.toLyricsUiStrings(),
-                    selected: state.selectedLangs.toSet(),
-                    onSelectionChanged: controller.updateSelectedLangs,
+                    onPressed: openLyricsAction,
+                    icon: const Icon(Icons.file_open_outlined),
+                    label: Text(openLyricsLabel),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: <Widget>[
-                    SizedBox(
-                      width: formatWidth,
-                      child: LyricsFormatDropdown(
-                        key: const ValueKey<String>(
-                          'open_lyrics_format_dropdown',
-                        ),
-                        value: state.lyricsFormat,
-                        strings: context.l10n.toLyricsUiStrings(),
-                        compact: true,
-                        labelText: context.l10n.commonFormat,
-                        onChanged: controller.updateLyricsFormat,
-                      ),
-                    ),
-                    LyricsOffsetStepper(
-                      key: const ValueKey<String>('open_lyrics_offset_stepper'),
-                      offsetMs: state.offsetMs,
-                      strings: context.l10n.toLyricsUiStrings(),
-                      compact: true,
-                      labelText: context.l10n.commonOffset,
-                      onChanged: controller.updateOffsetMs,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                OverflowBar(
-                  key: const ValueKey<String>('open_lyrics_action_bar'),
-                  spacing: 6,
-                  overflowSpacing: 6,
-                  alignment: MainAxisAlignment.start,
-                  overflowAlignment: OverflowBarAlignment.start,
-                  children: <Widget>[
-                    AppActionSemantics(
-                      identifier: AppSemanticsIdentifiers.openLyricsFile,
-                      label: openLyricsLabel,
-                      onTap: openLyricsAction,
-                      child: FilledButton.icon(
-                        key: const ValueKey<String>(
-                          'open_lyrics_open_lyrics_button',
-                        ),
-                        onPressed: openLyricsAction,
-                        icon: const Icon(Icons.file_open_outlined),
-                        label: Text(openLyricsLabel),
-                      ),
-                    ),
-                    AppActionSemantics(
-                      identifier: AppSemanticsIdentifiers.openSongFile,
-                      label: context.l10n.openLyricsActionOpenSongFile,
-                      onTap: openSongAction,
-                      child: FilledButton.icon(
-                        key: const ValueKey<String>(
-                          'open_lyrics_open_song_button',
-                        ),
-                        onPressed: openSongAction,
-                        icon: const Icon(Icons.audiotrack_outlined),
-                        label: Text(context.l10n.openLyricsActionOpenSongFile),
-                      ),
-                    ),
-                    AppActionSemantics(
-                      identifier: AppSemanticsIdentifiers.convertOpenLyrics,
-                      label: context.l10n.openLyricsActionConvertFormat,
-                      onTap: state.canConvert ? controller.convert : null,
-                      child: FilledButton(
-                        key: const ValueKey<String>(
-                          'open_lyrics_convert_button',
-                        ),
-                        onPressed: state.canConvert ? controller.convert : null,
-                        child: Text(context.l10n.openLyricsActionConvertFormat),
-                      ),
-                    ),
-                    AppActionSemantics(
-                      identifier: AppSemanticsIdentifiers.saveLyricsFile,
-                      label: context.l10n.openLyricsActionSaveLyrics,
-                      onTap: saveFileAction,
-                      child: FilledButton(
-                        key: const ValueKey<String>('open_lyrics_save_button'),
-                        onPressed: saveFileAction,
-                        child: Text(context.l10n.openLyricsActionSaveLyrics),
-                      ),
-                    ),
-                    AppActionSemantics(
-                      identifier: AppSemanticsIdentifiers.saveLyricsTag,
-                      label: context.l10n.openLyricsActionSaveToTag,
-                      onTap: saveTagAction,
-                      child: OutlinedButton(
-                        key: const ValueKey<String>(
-                          'open_lyrics_save_to_tag_button',
-                        ),
-                        onPressed: saveTagAction,
-                        child: Text(context.l10n.openLyricsActionSaveToTag),
-                      ),
-                    ),
-                    AppActionSemantics(
-                      identifier: AppSemanticsIdentifiers.translateLyrics,
-                      label: translateLabel,
-                      onTap: translateAction,
-                      child: FilledButton.tonal(
-                        key: const ValueKey<String>(
-                          'open_lyrics_translate_button',
-                        ),
-                        onPressed: translateAction,
-                        child: Text(translateLabel),
-                      ),
-                    ),
-                  ],
-                ),
-                if (state.currentLyrics != null) ...<Widget>[
-                  const SizedBox(height: 8),
-                  Text(
-                    LyricsFormatCapabilities.isLrcFamily(state.lyricsFormat)
-                        ? context.l10n.openLyricsExportFormatCanWriteTag(
-                            context.l10n.lyricsFormatLabel(state.lyricsFormat),
-                          )
-                        : context.l10n.openLyricsExportFormatFileOnly(
-                            context.l10n.lyricsFormatLabel(state.lyricsFormat),
-                          ),
-                    style: Theme.of(context).textTheme.bodySmall,
+                AppActionSemantics(
+                  identifier: AppSemanticsIdentifiers.openSongFile,
+                  label: context.l10n.openLyricsActionOpenSongFile,
+                  onTap: openSongAction,
+                  child: FilledButton.icon(
+                    key: const ValueKey<String>('open_lyrics_open_song_button'),
+                    onPressed: openSongAction,
+                    icon: const Icon(Icons.audiotrack_outlined),
+                    label: Text(context.l10n.openLyricsActionOpenSongFile),
                   ),
-                ],
+                ),
+                AppActionSemantics(
+                  identifier: AppSemanticsIdentifiers.convertOpenLyrics,
+                  label: context.l10n.openLyricsActionConvertFormat,
+                  onTap: state.canConvert ? controller.convert : null,
+                  child: FilledButton(
+                    key: const ValueKey<String>('open_lyrics_convert_button'),
+                    onPressed: state.canConvert ? controller.convert : null,
+                    child: Text(context.l10n.openLyricsActionConvertFormat),
+                  ),
+                ),
+                AppActionSemantics(
+                  identifier: AppSemanticsIdentifiers.saveLyricsFile,
+                  label: context.l10n.openLyricsActionSaveLyrics,
+                  onTap: saveFileAction,
+                  child: FilledButton(
+                    key: const ValueKey<String>('open_lyrics_save_button'),
+                    onPressed: saveFileAction,
+                    child: Text(context.l10n.openLyricsActionSaveLyrics),
+                  ),
+                ),
+                AppActionSemantics(
+                  identifier: AppSemanticsIdentifiers.saveLyricsTag,
+                  label: context.l10n.openLyricsActionSaveToTag,
+                  onTap: saveTagAction,
+                  child: OutlinedButton(
+                    key: const ValueKey<String>(
+                      'open_lyrics_save_to_tag_button',
+                    ),
+                    onPressed: saveTagAction,
+                    child: Text(context.l10n.openLyricsActionSaveToTag),
+                  ),
+                ),
+                AppActionSemantics(
+                  identifier: AppSemanticsIdentifiers.translateLyrics,
+                  label: translateLabel,
+                  onTap: translateAction,
+                  child: FilledButton.tonal(
+                    key: const ValueKey<String>('open_lyrics_translate_button'),
+                    onPressed: translateAction,
+                    child: Text(translateLabel),
+                  ),
+                ),
               ],
-            );
-          },
+            ),
+            if (state.currentLyrics != null) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                LyricsFormatCapabilities.isLrcFamily(state.lyricsFormat)
+                    ? context.l10n.openLyricsExportFormatCanWriteTag(
+                        context.l10n.lyricsFormatLabel(state.lyricsFormat),
+                      )
+                    : context.l10n.openLyricsExportFormatFileOnly(
+                        context.l10n.lyricsFormatLabel(state.lyricsFormat),
+                      ),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ],
         ),
       ),
     );

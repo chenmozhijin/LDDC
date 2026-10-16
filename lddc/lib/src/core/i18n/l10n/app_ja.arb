@@ -1,5 +1,8 @@
 {
-  "commonSelectedFolder": "選択したフォルダー",   "@commonSelectedFolder": { "description": "SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）" },
+  "commonSelectedFolder": "選択したフォルダー",
+  "@commonSelectedFolder": {
+    "description": "SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）"
+  },
   "@@locale": "ja",
   "@commonLyricsLanguageTypeSummary": {
     "placeholders": {
@@ -744,7 +747,6 @@
   "commonRestoreDefault": "デフォルトに戻す",
   "commonEnabled": "有効",
   "commonDisabledByDefault": "デフォルトでは無効になっています",
-  "commonFormat": "形式",
   "commonOffset": "オフセット",
   "commonSaving": "保存中...",
   "commonAddFiles": "ファイルの追加",
