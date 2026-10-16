@@ -10,6 +10,13 @@ import '../../ui/widgets/translation_progress_ui.dart';
 import '../search_workflow_controller.dart';
 import '../search_workflow_state.dart';
 
+/// 抽屉内固定布局所需的最小高度。低于它（例如横屏手机）改为整屏滚动：
+/// 宁可让用户滚动，也不能把底部操作按钮裁掉或压成 0 高。
+const double _sheetFixedLayoutMinHeight = 480;
+
+/// 抽屉走滚动兜底时歌词预览的固定高度，保证滚动状态下也能看到预览内容。
+const double _sheetScrollPreviewHeight = 180;
+
 /// 搜索预览区：负责歌词预览、预览参数与保存/翻译动作。
 class SearchPreviewPane extends StatelessWidget {
   const SearchPreviewPane({
@@ -74,30 +81,48 @@ class SearchPreviewPane extends StatelessWidget {
     if (inSheet) {
       return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-          final double maximumControlHeight = (constraints.maxHeight * 0.42)
-              .clamp(96.0, 180.0);
+          // 抽屉内的固定布局：歌词预览吃掉剩余高度，参数块与操作区常驻抽屉底部。
+          // 高度不足（如横屏手机、抽屉只有 300 多 dp）时不再把控制区塞进内部滚动
+          // 区——那正是旧实现把最下面的按钮裁掉的原因——而是整屏滚动，宁可滚动
+          // 也不裁切，和打开歌词页 fillsAvailableHeight ? Column : ListView 同一思路。
+          final bool fixedLayout =
+              constraints.maxHeight >= _sheetFixedLayoutMinHeight;
+          final Widget previewSlot = fixedLayout
+              ? Expanded(child: preview)
+              : SizedBox(height: _sheetScrollPreviewHeight, child: preview);
+          final Widget content = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                strings.text(SearchUiTextKey.previewTitle),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              _SearchPreviewMetadata(state: state, strings: strings),
+              const SizedBox(height: 8),
+              previewSlot,
+              const SizedBox(height: 10),
+              _PreviewParamsBlock(
+                state: state,
+                controller: controller,
+                strings: strings,
+              ),
+              const SizedBox(height: 10),
+              _BottomActions(
+                state: state,
+                controller: controller,
+                strings: strings,
+                showDirectorySave: effectiveShowDirectorySave,
+                showFileSave: effectiveShowFileSave,
+                showTagSave: showTagSave,
+              ),
+            ],
+          );
           return Padding(
             padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  strings.text(SearchUiTextKey.previewTitle),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                _SearchPreviewMetadata(state: state, strings: strings),
-                const SizedBox(height: 8),
-                Expanded(child: preview),
-                const SizedBox(height: 10),
-                // 小窗口的语言、格式和偏移控件可能高于剩余空间。只让控制区
-                // 自身滚动，歌词预览仍保持稳定视口，不会再次挤压到零高度。
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: maximumControlHeight),
-                  child: SingleChildScrollView(child: controls),
-                ),
-              ],
-            ),
+            child: fixedLayout
+                ? content
+                : SingleChildScrollView(child: content),
           );
         },
       );
@@ -227,33 +252,79 @@ class _SearchPreviewControlBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    if (!showSavePath) {
+      // 移动端（没有保存路径字段）：参数块与操作区分成两块，操作区始终排在最后，
+      // 不再被参数区的高度限制裁掉。
+      return _MobilePreviewControlLayout(
+        state: state,
+        controller: controller,
+        strings: strings,
+        showDirectorySave: showDirectorySave,
+        showFileSave: showFileSave,
+        showTagSave: showTagSave,
+      );
+    }
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.outlineVariant),
+      decoration: _previewControlDecoration(context),
+      child: _DesktopPreviewControlLayout(
+        state: state,
+        controller: controller,
+        strings: strings,
+        savePathController: savePathController,
+        showDirectorySave: showDirectorySave,
+        showFileSave: showFileSave,
+        showTagSave: showTagSave,
       ),
-      child: showSavePath
-          ? _DesktopPreviewControlLayout(
-              state: state,
-              controller: controller,
-              strings: strings,
-              savePathController: savePathController,
-              showDirectorySave: showDirectorySave,
-              showFileSave: showFileSave,
-              showTagSave: showTagSave,
-            )
-          : _MobilePreviewControlLayout(
-              state: state,
-              controller: controller,
-              strings: strings,
-              showDirectorySave: showDirectorySave,
-              showFileSave: showFileSave,
-              showTagSave: showTagSave,
-            ),
+    );
+  }
+}
+
+/// 预览控制块的统一底色与描边：桌面控制块与移动参数块共用，避免两处样式漂移。
+BoxDecoration _previewControlDecoration(BuildContext context) {
+  final ColorScheme colorScheme = Theme.of(context).colorScheme;
+  return BoxDecoration(
+    color: colorScheme.surfaceContainerLow,
+    borderRadius: BorderRadius.circular(8),
+    border: Border.all(color: colorScheme.outlineVariant),
+  );
+}
+
+/// 移动端参数块：语言、格式、偏移三项参数。抽屉与内嵌控制块共用。
+class _PreviewParamsBlock extends StatelessWidget {
+  const _PreviewParamsBlock({
+    required this.state,
+    required this.controller,
+    required this.strings,
+  });
+
+  final SearchWorkflowState state;
+  final SearchWorkflowController controller;
+  final SearchUiStrings strings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: _previewControlDecoration(context),
+      child: LyricsParameterRow(
+        strings: strings.lyrics,
+        selectedLangs: state.selectedLangs.toSet(),
+        onLangsChanged: controller.updateSelectedLangs,
+        format: state.lyricsFormat,
+        onFormatChanged: (LyricsFormat value) {
+          controller.updatePreviewOptions(lyricsFormat: value);
+        },
+        offsetMs: state.offsetMs,
+        onOffsetChanged: (int nextOffset) {
+          controller.updatePreviewOptions(offsetMs: nextOffset);
+        },
+        languageKey: const ValueKey<String>('search_preview_language_segments'),
+        formatKey: const ValueKey<String>('search_preview_format_field'),
+        offsetKey: const ValueKey<String>('search_preview_offset_control'),
+      ),
     );
   }
 }
@@ -487,78 +558,10 @@ class _MobilePreviewControlLayout extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            if (constraints.maxWidth >= 860) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: _LanguageSegments(
-                          state: state,
-                          controller: controller,
-                          strings: strings,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 188,
-                    child: _FormatField(
-                      state: state,
-                      controller: controller,
-                      strings: strings,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _OffsetControl(
-                    state: state,
-                    controller: controller,
-                    strings: strings,
-                  ),
-                ],
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: _LanguageSegments(
-                    state: state,
-                    controller: controller,
-                    strings: strings,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 8,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: <Widget>[
-                    SizedBox(
-                      width: 196,
-                      child: _FormatField(
-                        state: state,
-                        controller: controller,
-                        strings: strings,
-                      ),
-                    ),
-                    _OffsetControl(
-                      state: state,
-                      controller: controller,
-                      strings: strings,
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
+        _PreviewParamsBlock(
+          state: state,
+          controller: controller,
+          strings: strings,
         ),
         const SizedBox(height: 10),
         _BottomActions(

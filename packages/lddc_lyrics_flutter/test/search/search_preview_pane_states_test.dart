@@ -104,6 +104,80 @@ void main() {
       expect(tester.takeException(), isNull, reason: 'width=${layout.$1}');
     }
   });
+
+  testWidgets('抽屉布局把操作按钮固定在参数区下方且任何高度都不裁切', (WidgetTester tester) async {
+    final SearchWorkflowController controller =
+        createIdleSearchWorkflowController();
+    final TextEditingController savePathController = TextEditingController();
+    addTearDown(() {
+      savePathController.dispose();
+      controller.dispose();
+    });
+    await controller.applyExternalPreset(
+      lyrics: _lyrics(),
+      selectedLangs: const <String>['orig'],
+    );
+
+    // 竖屏抽屉（744dp 逻辑高度）走固定布局：参数与操作区常驻，预览吃掉剩余高度。
+    await _pumpPreview(
+      tester,
+      controller: controller,
+      savePathController: savePathController,
+      state: controller.state,
+      width: 390,
+      height: 744,
+      inSheet: true,
+      showTagSave: true,
+      showDirectorySave: false,
+      showFileSave: true,
+    );
+
+    final Finder saveButton = find.byKey(
+      const ValueKey<String>('search_preview_save_file_button'),
+    );
+    final Finder tagButton = find.byKey(
+      const ValueKey<String>('search_preview_save_tag_button'),
+    );
+    final Finder translateButton = find.byKey(
+      const ValueKey<String>('search_preview_translate_button'),
+    );
+    final Finder params = find.byKey(
+      const ValueKey<String>('search_preview_language_segments'),
+    );
+
+    expect(saveButton.hitTestable(), findsOneWidget);
+    expect(tagButton.hitTestable(), findsOneWidget);
+    expect(translateButton.hitTestable(), findsOneWidget);
+    // 操作区必须排在参数区下面，且整块都在抽屉高度内（不会被裁掉）。
+    expect(
+      tester.getTopLeft(saveButton).dy,
+      greaterThan(tester.getBottomLeft(params).dy),
+    );
+    expect(tester.getBottomLeft(translateButton).dy, lessThanOrEqualTo(744));
+    expect(tester.takeException(), isNull);
+
+    // 横屏极矮抽屉（408dp）改走整屏滚动：按钮仍可滚动到并点按，不会被裁切。
+    await _pumpPreview(
+      tester,
+      controller: controller,
+      savePathController: savePathController,
+      state: controller.state,
+      width: 700,
+      height: 408,
+      inSheet: true,
+      showTagSave: true,
+      showDirectorySave: false,
+      showFileSave: true,
+    );
+    expect(find.byType(SingleChildScrollView), findsWidgets);
+    await tester.dragUntilVisible(
+      translateButton,
+      find.byType(SingleChildScrollView).first,
+      const Offset(0, -80),
+    );
+    expect(translateButton.hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 Future<void> _pumpPreview(
@@ -112,6 +186,8 @@ Future<void> _pumpPreview(
   required TextEditingController savePathController,
   required SearchWorkflowState state,
   required double width,
+  double height = 600,
+  bool inSheet = false,
   bool showTagSave = false,
   bool? showDirectorySave,
   bool? showFileSave,
@@ -122,7 +198,7 @@ Future<void> _pumpPreview(
         body: Center(
           child: SizedBox(
             width: width,
-            height: 600,
+            height: height,
             child: SearchPreviewPane(
               state: state,
               controller: controller,
@@ -132,6 +208,7 @@ Future<void> _pumpPreview(
               showTagSave: showTagSave,
               showDirectorySave: showDirectorySave,
               showFileSave: showFileSave,
+              inSheet: inSheet,
             ),
           ),
         ),

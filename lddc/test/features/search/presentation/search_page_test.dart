@@ -1043,6 +1043,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('保存到歌曲标签'), findsOneWidget);
     expect(find.text('保存到文件'), findsOneWidget);
+    // 抽屉底部操作必须无需滚动即可点按：旧实现把控制区限制在 180dp 内部滚动区里，
+    // 真机上最后一个按钮需要滑动才能点到。
+    for (final String key in <String>[
+      'search_preview_save_file_button',
+      'search_preview_save_tag_button',
+      'search_preview_translate_button',
+    ]) {
+      expect(
+        find.byKey(ValueKey<String>(key)).hitTestable(),
+        findsOneWidget,
+        reason: '$key 应在抽屉里直接可点',
+      );
+    }
     expect(find.text('保存路径'), findsNothing);
     expect(find.text('保存专辑/歌单的歌词'), findsNothing);
     expect(find.textContaining('移动端歌词'), findsOneWidget);

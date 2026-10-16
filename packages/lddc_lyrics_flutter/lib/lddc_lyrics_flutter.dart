@@ -25,6 +25,7 @@ export 'src/state/state.dart';
 export 'src/ui/lyrics_language_summary_text.dart';
 export 'src/ui/lyrics_ui_strings.dart';
 export 'src/ui/search_ui_strings.dart';
+export 'src/ui/widgets/lyrics_action_grid.dart';
 export 'src/ui/widgets/lyrics_preview_controls.dart';
 export 'src/ui/widgets/lyrics_preview_viewport.dart';
 export 'src/ui/widgets/lyrics_translation_progress_overlay.dart';

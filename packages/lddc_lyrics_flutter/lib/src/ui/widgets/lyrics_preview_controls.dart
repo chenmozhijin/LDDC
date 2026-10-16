@@ -133,6 +133,92 @@ final class LyricsOffsetStepper extends StatelessWidget {
   }
 }
 
+/// 歌词参数行：语言分段在上，格式与偏移同处一行。
+///
+/// 搜索预览（抽屉与内嵌控制块）与打开歌词页共用同一套参数排布。此前两处都是
+/// 「格式独占一行 + 偏移独占一行」的竖向堆叠，移动端要占掉两行高度。这里改为
+/// 一行：格式下拉用 [Flexible] 吃掉剩余宽度并限制上限，偏移步进器保持自身宽度，
+/// 因此任何窗口宽度都不会横向溢出，也不会在大窗口里被拉成一整条。
+final class LyricsParameterRow extends StatelessWidget {
+  const LyricsParameterRow({
+    super.key,
+    required this.strings,
+    required this.selectedLangs,
+    required this.onLangsChanged,
+    required this.format,
+    required this.onFormatChanged,
+    required this.offsetMs,
+    required this.onOffsetChanged,
+    this.compact = false,
+    this.languageKey,
+    this.formatKey,
+    this.offsetKey,
+  });
+
+  final LyricsUiStrings strings;
+  final Set<String> selectedLangs;
+  final ValueChanged<Set<String>> onLangsChanged;
+  final LyricsFormat format;
+  final ValueChanged<LyricsFormat> onFormatChanged;
+  final int offsetMs;
+  final ValueChanged<int> onOffsetChanged;
+  final bool compact;
+
+  /// 三个子控件的 key。各宿主页面的测试依赖各自稳定的 key，因此由调用方传入。
+  final Key? languageKey;
+  final Key? formatKey;
+  final Key? offsetKey;
+
+  /// 格式下拉的最大宽度：宽屏上不跟着窗口一起变宽，避免出现一整条下拉框。
+  static const double _maximumFormatWidth = 240;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: LyricsLanguageSegments(
+            key: languageKey,
+            compact: compact,
+            strings: strings,
+            selected: selectedLangs,
+            onSelectionChanged: onLangsChanged,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: <Widget>[
+            Flexible(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: _maximumFormatWidth,
+                ),
+                child: LyricsFormatDropdown(
+                  key: formatKey,
+                  value: format,
+                  strings: strings,
+                  compact: compact,
+                  onChanged: onFormatChanged,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            LyricsOffsetStepper(
+              key: offsetKey,
+              offsetMs: offsetMs,
+              strings: strings,
+              compact: compact,
+              onChanged: onOffsetChanged,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 /// 歌词语言分段按钮：仅接收选择集与回调，不绑定业务状态对象。
 final class LyricsLanguageSegments extends StatelessWidget {
   const LyricsLanguageSegments({
