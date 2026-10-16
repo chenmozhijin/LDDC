@@ -471,6 +471,52 @@ void main() {
     );
   });
 
+  testWidgets('移动能力下隐藏桌面歌词分组', (WidgetTester tester) async {
+    await _setViewport(tester, const Size(390, 844));
+    await AppBootstrap.ensureInitialized(
+      configRepository: _FixedConfigRepository(ConfigDefaults.current),
+      capabilityOverride: _mobileCapability(),
+    );
+    addTearDown(AppBootstrap.resetForTest);
+
+    await tester.pumpWidget(_buildApp());
+    await tester.pumpAndSettle();
+
+    // 移动端没有桌面歌词窗口，分组入口必须整体消失，否则用户只能看到无法生效的设置。
+    expect(
+      find.byKey(
+        const ValueKey<String>('settings_compact_entry_desktopLyrics'),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('settings_compact_entry_lyrics')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('桌面能力下保留桌面歌词分组与自动获取来源', (WidgetTester tester) async {
+    await _setViewport(tester, const Size(1260, 880));
+    await AppBootstrap.ensureInitialized(
+      configRepository: _FixedConfigRepository(ConfigDefaults.current),
+      capabilityOverride: _desktopCapability(),
+    );
+    addTearDown(AppBootstrap.resetForTest);
+
+    await tester.pumpWidget(_buildApp());
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey<String>('settings_anchor_desktopLyrics')),
+      findsOneWidget,
+    );
+    // 该 key 会同时出现在外层组件与内部 ReorderableListView 上，因此用 findsWidgets。
+    expect(
+      find.byKey(const ValueKey<String>('settings_desktop_sources')),
+      findsWidgets,
+    );
+  });
+
   testWidgets('翻译设置仅显示当前翻译源对应字段', (WidgetTester tester) async {
     await _setViewport(tester, const Size(1280, 900));
     final AppConfig openAiConfig = AppConfig(

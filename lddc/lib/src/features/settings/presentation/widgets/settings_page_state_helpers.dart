@@ -22,15 +22,18 @@ import 'settings_section_components.dart';
 // 这样 Flutter 初学者也能清楚看到“状态修改仍由 State 对象负责”。
 extension SettingsPageStateHelpers on SettingsPageState {
   List<SettingsSection> visibleSections(SettingsPagePayload payload) {
+    // 「桌面歌词」和「工具」的全部字段只在桌面平台有消费者（桌面歌词窗口、系统托盘、
+    // 全局热键等）。移动端过去仍会列出桌面歌词分组，用户点进去只能看到无法生效的
+    // 设置；这里按同一能力开关一起过滤，紧凑概览、锚点栏与滚动定位都会自动跟随。
     final List<SettingsSection> sections = <SettingsSection>[
       SettingsSection.save,
       SettingsSection.search,
-      SettingsSection.desktopLyrics,
+      if (payload.showDesktopSections) SettingsSection.desktopLyrics,
       SettingsSection.lyrics,
       SettingsSection.translate,
       SettingsSection.app,
     ];
-    if (payload.showDesktopTools) {
+    if (payload.showDesktopSections) {
       sections.add(SettingsSection.tools);
     }
     return sections;

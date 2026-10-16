@@ -24,8 +24,9 @@ class SettingsPageController extends _$SettingsPageController {
     );
     final AppConfig config = dependencies.config;
     final AppCapability capability = dependencies.capability;
-    if (_activeSection == SettingsSection.tools &&
-        !_showDesktopTools(capability)) {
+    if (_showDesktopSections(capability) == false &&
+        (_activeSection == SettingsSection.tools ||
+            _activeSection == SettingsSection.desktopLyrics)) {
       _activeSection = SettingsSection.save;
     }
     return _compose(config, capability);
@@ -366,7 +367,7 @@ class SettingsPageController extends _$SettingsPageController {
         data: SettingsPagePayload(
           config: config,
           activeSection: _activeSection,
-          showDesktopTools: _showDesktopTools(capability),
+          showDesktopSections: _showDesktopSections(capability),
           visibleTranslateFields: _visibleTranslateFields(
             config.translate.source,
           ),
@@ -392,7 +393,7 @@ class SettingsPageController extends _$SettingsPageController {
         data: SettingsPagePayload(
           config: current,
           activeSection: _activeSection,
-          showDesktopTools: _showDesktopTools(capability),
+          showDesktopSections: _showDesktopSections(capability),
           visibleTranslateFields: _visibleTranslateFields(
             current.translate.source,
           ),
@@ -437,7 +438,10 @@ class SettingsPageController extends _$SettingsPageController {
     return write;
   }
 
-  static bool _showDesktopTools(AppCapability capability) {
+  /// 桌面专属能力判定：任一项为真说明当前是原生桌面平台。
+  ///
+  /// 桌面歌词分区与工具分区共用它，避免两处谓词漂移导致"一个隐藏、另一个仍显示"。
+  static bool _showDesktopSections(AppCapability capability) {
     return capability.multiWindow ||
         capability.systemTray ||
         capability.desktopPanelDetached ||

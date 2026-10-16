@@ -101,25 +101,30 @@ class SettingsPagePayload {
   const SettingsPagePayload({
     required this.config,
     required this.activeSection,
-    required this.showDesktopTools,
+    required this.showDesktopSections,
     required this.visibleTranslateFields,
   });
 
   final AppConfig config;
   final SettingsSection activeSection;
-  final bool showDesktopTools;
+
+  /// 是否展示桌面专属分区（桌面歌词、工具）。
+  ///
+  /// 这两个分区的全部字段只被 Windows 桌面歌词窗口与桌面工具消费，移动端和 Web
+  /// 没有对应能力；继续展示会让用户在设置里找不存在的功能，因此统一由能力开关控制。
+  final bool showDesktopSections;
   final Set<SettingsTranslateField> visibleTranslateFields;
 
   SettingsPagePayload copyWith({
     AppConfig? config,
     SettingsSection? activeSection,
-    bool? showDesktopTools,
+    bool? showDesktopSections,
     Set<SettingsTranslateField>? visibleTranslateFields,
   }) {
     return SettingsPagePayload(
       config: config ?? this.config,
       activeSection: activeSection ?? this.activeSection,
-      showDesktopTools: showDesktopTools ?? this.showDesktopTools,
+      showDesktopSections: showDesktopSections ?? this.showDesktopSections,
       visibleTranslateFields:
           visibleTranslateFields ?? this.visibleTranslateFields,
     );

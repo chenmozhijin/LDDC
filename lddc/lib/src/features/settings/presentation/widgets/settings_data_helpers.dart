@@ -12,7 +12,7 @@ SettingsPagePayload payloadOf(AsyncViewState<SettingsPagePayload> view) {
     _ => SettingsPagePayload(
       config: ConfigDefaults.current,
       activeSection: SettingsSection.save,
-      showDesktopTools: false,
+      showDesktopSections: false,
       visibleTranslateFields: const <SettingsTranslateField>{},
     ),
   };

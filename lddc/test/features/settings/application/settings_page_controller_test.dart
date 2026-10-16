@@ -13,7 +13,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
 
 void main() {
   group('SettingsPageController', () {
-    test('默认分组为保存并按能力决定工具分组可见性', () {
+    test('默认分组为保存并按能力决定桌面专属分组可见性', () {
       final _MemoryConfigRepository repository = _MemoryConfigRepository(
         ConfigDefaults.current,
       );
@@ -26,7 +26,45 @@ void main() {
         container.read(settingsPageControllerProvider),
       );
       expect(payload.activeSection, SettingsSection.save);
-      expect(payload.showDesktopTools, isTrue);
+      expect(payload.showDesktopSections, isTrue);
+    });
+
+    test('移动能力下桌面专属分组不可见且当前分组回退到保存', () {
+      final _MemoryConfigRepository repository = _MemoryConfigRepository(
+        ConfigDefaults.current,
+      );
+      final ProviderContainer container = ProviderContainer(
+        overrides: _settingsOverrides(
+          repository,
+          capability: _mobileCapability(),
+        ),
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        _payloadOf(
+          container.read(settingsPageControllerProvider),
+        ).showDesktopSections,
+        isFalse,
+      );
+      container
+          .read(settingsPageControllerProvider.notifier)
+          .setActiveSection(SettingsSection.desktopLyrics);
+      expect(
+        _payloadOf(
+          container.read(settingsPageControllerProvider),
+        ).activeSection,
+        SettingsSection.desktopLyrics,
+      );
+
+      // 重建成状态（等价于依赖/能力变化）时必须回退，否则锚点会指向隐藏分区。
+      container.invalidate(settingsPageControllerProvider);
+      expect(
+        _payloadOf(
+          container.read(settingsPageControllerProvider),
+        ).activeSection,
+        SettingsSection.save,
+      );
     });
 
     test('切换分组并写入设置后，状态与配置同步更新', () async {
@@ -637,6 +675,22 @@ AppCapability _desktopCapability() {
     directoryRecursiveScan: true,
     androidSafTreeAccess: false,
     androidCueTrackResolve: false,
+    webFileSystemAccess: false,
+    webTaglibWasmReady: false,
+  );
+}
+
+AppCapability _mobileCapability() {
+  return const AppCapability(
+    multiWindow: false,
+    desktopPanelDetached: false,
+    desktopPanelEmbedded: false,
+    systemTray: false,
+    globalHotkey: false,
+    audioTagWrite: true,
+    directoryRecursiveScan: true,
+    androidSafTreeAccess: true,
+    androidCueTrackResolve: true,
     webFileSystemAccess: false,
     webTaglibWasmReady: false,
   );
