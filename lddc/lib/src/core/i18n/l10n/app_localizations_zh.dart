@@ -9,6 +9,9 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get commonSelectedFolder => '所选文件夹';
+
+  @override
   String get appTitle => 'LDDC';
 
   @override
@@ -2298,6 +2301,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   AppLocalizationsZhHans() : super('zh_Hans');
 
   @override
+  String get commonSelectedFolder => '所选文件夹';
+
+  @override
   String get appTitle => 'LDDC';
 
   @override
@@ -4585,6 +4591,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get commonSelectedFolder => '所選資料夾';
 
   @override
   String get appTitle => 'LDDC';

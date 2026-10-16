@@ -9,6 +9,9 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get commonSelectedFolder => 'Выбранная папка';
+
+  @override
   String get appTitle => 'НРСД';
 
   @override

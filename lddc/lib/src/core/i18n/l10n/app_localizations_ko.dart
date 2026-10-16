@@ -9,6 +9,9 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
+  String get commonSelectedFolder => '선택한 폴더';
+
+  @override
   String get appTitle => 'LDDC';
 
   @override

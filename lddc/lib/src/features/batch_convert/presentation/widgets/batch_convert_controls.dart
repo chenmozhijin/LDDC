@@ -279,9 +279,13 @@ class _OutputSettings extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 // 安卓端展示 SAF 树显示名、桌面端展示本地目录；两者都不直接暴露
-                // `content://` 这类既长又没有可读信息的 URI。
-                view.saveRoot?.displayLabel ??
-                    l10n.batchConvertSaveDirectoryDefault,
+                // `content://` 这类既长又没有可读信息的 URI。已选树但平台没给显示名时，
+                // 用统一的占位文案（而不是空字符串、更不是 URI）。
+                (view.saveRoot?.displayLabel?.trim().isNotEmpty ?? false)
+                    ? view.saveRoot!.displayLabel!.trim()
+                    : (view.saveRoot == null
+                          ? l10n.batchConvertSaveDirectoryDefault
+                          : l10n.commonSelectedFolder),
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 10),

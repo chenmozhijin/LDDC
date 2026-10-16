@@ -1,4 +1,5 @@
 {
+  "commonSelectedFolder": "所选文件夹",   "@commonSelectedFolder": { "description": "SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）" },
   "@@locale": "zh",
   "appTitle": "LDDC",
   "commonWarning": "警告",

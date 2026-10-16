@@ -85,14 +85,9 @@ class BatchConvertInputPickerImpl implements BatchConvertInputPicker {
       // 授权树会在后续扫描与批量写入中反复使用；进入队列前必须先持久授权，否则应用
       // 重启或系统回收权限后，批量转换会带着已失效的 URI 继续读/写并整批失败。
       await _treePort.persistTreePermission(tree.uri);
-      // 目录选择器偶尔不给显示名，此时退回 URI，保证落点预览永远是完整可读文本
-      // （与本地匹配页的保存树标签处理保持一致）。
-      return (
-        treeUri: tree.uri,
-        treeLabel: tree.displayName?.trim().isNotEmpty == true
-            ? tree.displayName!.trim()
-            : tree.uri,
-      );
+      // 目录选择器偶尔不给显示名：此时**留空**，由展示层用统一的占位文案补齐。
+      // 绝不退回 URI——界面一旦出现 `content://` 就违反了"展示层不出现编码 URI"的硬规则。
+      return (treeUri: tree.uri, treeLabel: tree.displayName?.trim() ?? '');
     } on PlatformException catch (error) {
       // 用户在系统目录选择器里取消是正常操作：用 null 表示"没有选到目录"，
       // 否则控制器会把取消当成失败并弹出错误提示。

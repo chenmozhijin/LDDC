@@ -106,6 +106,12 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// SAF 目录树没有可读显示名时的占位文案（界面绝不显示 content:// ）
+  ///
+  /// In en, this message translates to:
+  /// **'Selected folder'**
+  String get commonSelectedFolder;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:

@@ -111,9 +111,9 @@ class LocalMatchPageController extends Notifier<LocalMatchPageState> {
       selectedLangs: state.selectedLangs,
       saveRootPath: state.saveRootPath,
       androidSongTreeUri: songTree?.uri ?? '',
-      androidSongTreeLabel: songTree?.displayName ?? songTree?.uri ?? '',
+      androidSongTreeLabel: songTree?.displayName ?? '',
       androidSaveTreeUri: saveTree?.uri,
-      androidSaveTreeLabel: saveTree?.displayName ?? saveTree?.uri ?? '',
+      androidSaveTreeLabel: saveTree?.displayName ?? '',
     );
   }
 

@@ -9,6 +9,9 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get commonSelectedFolder => '選択したフォルダー';
+
+  @override
   String get appTitle => 'LDDC';
 
   @override

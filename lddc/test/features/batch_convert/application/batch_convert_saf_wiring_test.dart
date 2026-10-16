@@ -103,7 +103,7 @@ void main() {
       expect(treePort.pickedInitialUris, <String?>[_downloadTreeUri]);
     });
 
-    test('目录选择器不给显示名时标签退回树 URI', () async {
+    test('目录选择器不给显示名时标签留空，绝不退回树 URI', () async {
       final _FakeAndroidSafTreePort treePort = _FakeAndroidSafTreePort(
         pickTreeResult: const AndroidSafTreeToken(
           uri: _musicTreeUri,
@@ -116,7 +116,10 @@ void main() {
       ).pickSaveTree();
 
       expect(picked?.treeUri, _musicTreeUri);
-      expect(picked?.treeLabel, _musicTreeUri);
+      // 界面一旦出现 `content://` 就违反"展示层不出现编码 URI"的硬规则：这里留空，
+      // 由展示层用 `commonSelectedFolder` 占位文案补齐。
+      expect(picked?.treeLabel, isEmpty);
+      expect(picked!.treeLabel.contains('content://'), isFalse);
       expect(treePort.persistedUris, <String>[_musicTreeUri]);
     });
 

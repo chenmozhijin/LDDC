@@ -147,8 +147,9 @@ class AppLocalMatchPageScope extends ConsumerWidget {
                   treeUri: songTree.uri,
                   saveMode: saveMode,
                   saveTreeUri: saveTree?.uri,
-                  treeLabel: songTree.displayName ?? songTree.uri,
-                  saveTreeLabel: saveTree?.displayName ?? saveTree?.uri ?? '',
+                  // 树名缺失时保持为空：展示层用统一占位文案补齐，绝不回退成 URI。
+                  treeLabel: songTree.displayName ?? '',
+                  saveTreeLabel: saveTree?.displayName ?? '',
                 ),
             openInSearch: (songInfo, preferredSources) async {
               ref.read(appShellRouteListenableProvider).value =

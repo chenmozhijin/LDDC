@@ -617,7 +617,8 @@ class BatchConvertPageController extends Notifier<BatchConvertPageState> {
       _rebuildQueue(
         saveRoot: BatchConvertSaveRoot.saf(
           treeUri: treeUri,
-          treeLabel: treeLabel.isEmpty ? treeUri : treeLabel,
+          // 树名缺失时保持为空：界面用统一的占位文案补齐，绝不回退成 content:// URI。
+          treeLabel: treeLabel,
         ),
         targetFormat: state.targetFormat,
       );
