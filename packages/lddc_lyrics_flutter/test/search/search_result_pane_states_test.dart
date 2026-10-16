@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lddc_lyrics_core/lddc_lyrics_core.dart';
 import 'package:lddc_lyrics_flutter/lddc_lyrics_flutter.dart';
@@ -175,12 +176,122 @@ void main() {
     expect(find.text('01:30'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('结果行不再显示序号列，标题按可用宽度单行省略', (WidgetTester tester) async {
+    final SearchWorkflowController controller =
+        createIdleSearchWorkflowController();
+    addTearDown(controller.dispose);
+    final List<SourceAware> rows = <SourceAware>[
+      _song('1', '很长的歌曲标题需要按可用宽度省略而不是换行显示'),
+      _song('2', 'Second Song'),
+      _song('3', 'Third Song'),
+    ];
+    controller.state = controller.state.copyWith(
+      hasSubmittedSearch: true,
+      tableState: AsyncSuccess<List<SourceAware>>(data: rows),
+    );
+
+    await _pumpPane(
+      tester,
+      controller,
+      width: _narrowPaneWidth,
+      bordered: false,
+    );
+
+    // 序号列已删除：01/02/03 不应出现在任何一行里。
+    expect(find.text('01'), findsNothing);
+    expect(find.text('03'), findsNothing);
+    // 时长仍按自然宽度右对齐显示（不再占用固定 88dp 元数据框）。
+    expect(find.text('03:00'), findsNWidgets(rows.length));
+
+    // 窄屏下标题列必须拿到足够宽度：封面 50 + 间距 12 + 行内边距 28 之后，
+    // 标题减去时长与间距仍有 ~200dp（修复前 360dp 屏只剩十几 dp）。
+    final RenderParagraph titleParagraph = tester.renderObject<RenderParagraph>(
+      find.text('很长的歌曲标题需要按可用宽度省略而不是换行显示'),
+    );
+    expect(titleParagraph.size.width, greaterThanOrEqualTo(190));
+    expect(titleParagraph.didExceedMaxLines, isTrue, reason: '超长标题应按单行省略');
+
+    // 常见的艺术家·专辑文案必须完整可读，不能因为被挤压而省略。
+    final RenderParagraph subtitleParagraph = tester
+        .renderObject<RenderParagraph>(find.text('Singer · Album').first);
+    expect(subtitleParagraph.didExceedMaxLines, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('窄屏结果区不包卡片，分栏布局仍保留卡片边界', (WidgetTester tester) async {
+    final SearchWorkflowController controller =
+        createIdleSearchWorkflowController();
+    addTearDown(controller.dispose);
+    controller.state = controller.state.copyWith(
+      hasSubmittedSearch: true,
+      tableState: AsyncSuccess<List<SourceAware>>(
+        data: <SourceAware>[_song('1', 'First Song')],
+      ),
+    );
+
+    await _pumpPane(
+      tester,
+      controller,
+      width: _narrowPaneWidth,
+      bordered: false,
+    );
+    expect(find.byType(Card), findsNothing);
+    expect(find.text('First Song'), findsOneWidget);
+
+    await _pumpPane(tester, controller, bordered: true);
+    expect(find.byType(Card), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('多来源结果行用行内徽标标注来源且不重复来源文案', (WidgetTester tester) async {
+    // 走真实搜索流程拿到多来源结果集，避免手写 ranges 破坏 APIResultList 的取值范围约束。
+    final SearchWorkflowController controller =
+        createIdleSearchWorkflowController(
+          searchSources: const <Source>[Source.qm, Source.kg],
+          lyricsClient: _ScriptedLyricsClient((
+            Source source,
+            _,
+            _,
+            _,
+            _,
+          ) async {
+            return _sourceResult(source, <SourceAware>[
+              _song('1', 'First Song', source: source),
+            ]);
+          }),
+        );
+    addTearDown(controller.dispose);
+    controller.setKeyword('fixture');
+    await controller.search();
+    expect(controller.state.currentPathResult?.sources.length, 2);
+
+    await _pumpPane(
+      tester,
+      controller,
+      width: _narrowPaneWidth,
+      bordered: false,
+    );
+
+    final SearchUiStrings strings = SearchUiStrings.zhHans();
+    // 每行一个来源徽标，且第二行不再重复同一句来源文案。
+    expect(find.text(strings.sourceLabel(Source.qm)), findsOneWidget);
+    expect(find.text(strings.sourceLabel(Source.kg)), findsOneWidget);
+    expect(find.byType(Chip), findsNWidgets(2));
+    expect(find.text('Singer · Album'), findsNWidgets(2));
+    expect(tester.takeException(), isNull);
+  });
 }
+
+/// 窄屏手机（360dp）宽度，用于验证结果行在移动端的可用宽度。
+const double _narrowPaneWidth = 360;
 
 Future<void> _pumpPane(
   WidgetTester tester,
   SearchWorkflowController controller, {
   Future<void> Function(int index)? onDesktopRowTap,
+  double width = 900,
+  bool bordered = true,
 }) async {
   final AsyncViewState<List<SourceAware>> tableState =
       controller.state.tableState;
@@ -193,7 +304,7 @@ Future<void> _pumpPane(
     MaterialApp(
       home: Scaffold(
         body: SizedBox(
-          width: 900,
+          width: width,
           height: 600,
           child: SearchResultPane(
             state: controller.state,
@@ -202,6 +313,7 @@ Future<void> _pumpPane(
             strings: SearchUiStrings.zhHans(),
             readKeywordText: () => controller.state.keyword,
             isExpanded: true,
+            bordered: bordered,
             isDesktopPlatform: true,
             canUseAndroidSafListSave: false,
             selectedRowIndex: null,
@@ -217,14 +329,40 @@ Future<void> _pumpPane(
   await tester.pump();
 }
 
-SongInfo _song(String id, String title) => SongInfo(
-  source: Source.qm,
-  id: id,
-  title: title,
-  artist: SongArtist(<String>['Singer']),
-  album: 'Album',
-  durationMs: 180000,
-);
+SongInfo _song(String id, String title, {Source source = Source.qm}) =>
+    SongInfo(
+      source: source,
+      id: id,
+      title: title,
+      artist: SongArtist(<String>['Singer']),
+      album: 'Album',
+      durationMs: 180000,
+    );
+
+/// 构造指定来源的单来源结果，供多来源搜索脚本客户端使用。
+APIResultList<SourceAware> _sourceResult(
+  Source source,
+  List<SourceAware> rows,
+) {
+  return APIResultList<SourceAware>(
+    rows,
+    info: SearchInfo(
+      source: source,
+      keyword: 'fixture',
+      searchType: SearchType.song,
+      page: 1,
+    ),
+    ranges: rows.isEmpty
+        ? const <Source, SourceRange>{}
+        : <Source, SourceRange>{
+            source: SourceRange(
+              start: 0,
+              end: rows.length - 1,
+              total: rows.length,
+            ),
+          },
+  );
+}
 
 APIResultList<SourceAware> _result(List<SourceAware> rows) {
   return APIResultList<SourceAware>(

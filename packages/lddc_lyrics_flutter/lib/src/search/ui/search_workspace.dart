@@ -665,6 +665,8 @@ class _SearchResultPaneConsumer extends StatelessWidget {
           strings: strings,
           readKeywordText: readKeywordText,
           isExpanded: isExpanded,
+          // 分栏布局用卡片划出"结果/预览"边界；窄屏只有结果区，卡片只会压缩内容宽度。
+          bordered: isExpanded,
           isDesktopPlatform: isDesktopPlatform,
           canUseAndroidSafListSave: canUseAndroidSafListSave,
           selectedRowIndex: selectedRowIndex,

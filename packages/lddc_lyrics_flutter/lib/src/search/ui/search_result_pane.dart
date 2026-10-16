@@ -9,6 +9,24 @@ import '../search_workflow_state.dart';
 import 'search_cover_network_image.dart';
 import 'search_source_failure_dialog.dart';
 
+/// 结果行的横向内边距。与结果区头部保持同一数值，让标题列与头部文字左对齐。
+const double _rowHorizontalPadding = 14;
+
+/// 结果行封面尺寸。直接复用网络封面组件的逻辑尺寸，避免布局与解码尺寸两处漂移。
+const double _rowCoverSize = SearchCoverNetworkImage.logicalSize;
+
+/// 封面与文本列之间的间距。
+const double _rowCoverGap = 12;
+
+const EdgeInsets _rowPadding = EdgeInsets.symmetric(
+  horizontal: _rowHorizontalPadding,
+  vertical: 12,
+);
+
+/// 行分隔线缩进到文本列起点，和行内标题/歌手列对齐。
+const double _rowDividerIndent =
+    _rowHorizontalPadding + _rowCoverSize + _rowCoverGap;
+
 /// 搜索结果区：负责搜索类型切换、结果列表与列表级动作。
 class SearchResultPane extends StatefulWidget {
   const SearchResultPane({
@@ -27,6 +45,7 @@ class SearchResultPane extends StatefulWidget {
     required this.onReturnPath,
     required this.onOpenPreviewSheet,
     this.allowListSaveAction = true,
+    this.bordered = true,
   });
 
   final SearchWorkflowState state;
@@ -38,6 +57,13 @@ class SearchResultPane extends StatefulWidget {
   final bool isDesktopPlatform;
   final bool canUseAndroidSafListSave;
   final int? selectedRowIndex;
+
+  /// 是否把结果区包在卡片里。
+  ///
+  /// 分栏布局需要卡片边界把结果与预览分开；窄屏只有结果区，卡片内外都是同一片
+  /// 背景，只会白白压缩内容宽度（移动端还要再减 32dp 左右内边距），因此由调用方
+  /// 按布局传入 false，直接铺成扁平列表。
+  final bool bordered;
   final Future<void> Function(int rowIndex) onDesktopRowTap;
   final Future<void> Function(SourceAware row, int rowIndex) onMobileRowTap;
   final VoidCallback onReturnPath;
@@ -83,38 +109,39 @@ class _SearchResultPaneState extends State<SearchResultPane> {
         (widget.isDesktopPlatform || widget.canUseAndroidSafListSave) &&
         widget.state.currentPathResult?.info is SongListInfo;
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-            child: _SearchResultHeader(
-              state: widget.state,
-              controller: widget.controller,
-              strings: widget.strings,
-              readKeywordText: widget.readKeywordText,
-              warning: warning,
-              showListSaveAction: showListSaveAction,
-              isExpanded: widget.isExpanded,
-              onReturnPath: widget.onReturnPath,
-              onOpenPreviewSheet: widget.onOpenPreviewSheet,
-            ),
+    final Widget body = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+          child: _SearchResultHeader(
+            state: widget.state,
+            controller: widget.controller,
+            strings: widget.strings,
+            readKeywordText: widget.readKeywordText,
+            warning: warning,
+            showListSaveAction: showListSaveAction,
+            isExpanded: widget.isExpanded,
+            onReturnPath: widget.onReturnPath,
+            onOpenPreviewSheet: widget.onOpenPreviewSheet,
           ),
-          const Divider(height: 1),
-          Expanded(
-            child: _buildResultBody(
-              context,
-              tableState: tableState,
-              rows: widget.rows,
-              canLoadMore: canLoadMore,
-              showSource: showSource,
-            ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: _buildResultBody(
+            context,
+            tableState: tableState,
+            rows: widget.rows,
+            canLoadMore: canLoadMore,
+            showSource: showSource,
           ),
-        ],
-      ),
+        ),
+      ],
     );
+    if (!widget.bordered) {
+      return body;
+    }
+    return Card(clipBehavior: Clip.antiAlias, child: body);
   }
 
   Widget _buildResultBody(
@@ -245,7 +272,8 @@ class _SearchResultPaneState extends State<SearchResultPane> {
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              if (index > 0) const Divider(height: 1),
+              if (index > 0)
+                const Divider(height: 1, indent: _rowDividerIndent),
               _SearchMusicResultRow(
                 row: row,
                 strings: widget.strings,
@@ -779,10 +807,17 @@ class _SearchMusicResultRow extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme colorScheme = theme.colorScheme;
     final String title = _rowTitle(row);
-    final String subtitle = _rowSubtitle(strings, row);
     final String meta = _rowMeta(row);
-    final Widget cover = _SearchRowCover(row: row);
-    final String sourceLabel = strings.sourceLabel(row.source);
+    final String secondary = _rowSecondaryText(
+      strings,
+      row,
+      showSource: showSource,
+    );
+    final Widget? sourceBadge = showSource
+        ? _SearchRowSourceBadge(label: strings.sourceLabel(row.source))
+        : null;
+    // 徽标与副标题都为空时不再渲染第二行，避免出现一条空行把行高撑虚。
+    final bool hasSecondaryLine = sourceBadge != null || secondary.isNotEmpty;
 
     return InkWell(
       key: ValueKey<String>('search_result_row_$index'),
@@ -790,7 +825,7 @@ class _SearchMusicResultRow extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: _rowPadding,
         decoration: BoxDecoration(
           color: selected
               ? colorScheme.secondaryContainer.withValues(alpha: 0.55)
@@ -798,73 +833,96 @@ class _SearchMusicResultRow extends StatelessWidget {
         ),
         child: Row(
           children: <Widget>[
-            SizedBox(
-              width: 34,
-              child: Text(
-                '${index + 1}'.padLeft(2, '0'),
-                textAlign: TextAlign.center,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontFeatures: const <FontFeature>[
-                    FontFeature.tabularFigures(),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            cover,
-            const SizedBox(width: 12),
+            _SearchRowCover(row: row),
+            const SizedBox(width: _rowCoverGap),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Text(
-                    title.isEmpty ? '-' : title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(
+                          title.isEmpty ? '-' : title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (meta.isNotEmpty) ...<Widget>[
+                        const SizedBox(width: 8),
+                        // 时长/发布时间按自然宽度右对齐：同一个结果列表里的元数据
+                        // 格式一致（歌曲都是 mm:ss、歌单都是 yyyy-MM-dd）且使用等宽
+                        // 数字，右边缘天然对齐，不再需要固定宽度留出大片空白。
+                        Text(
+                          meta,
+                          maxLines: 1,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                            fontFeatures: const <FontFeature>[
+                              FontFeature.tabularFigures(),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle.isEmpty ? sourceLabel : subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                  if (hasSecondaryLine) ...<Widget>[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: <Widget>[
+                        if (sourceBadge != null) ...<Widget>[
+                          sourceBadge,
+                          if (secondary.isNotEmpty) const SizedBox(width: 6),
+                        ],
+                        if (secondary.isNotEmpty)
+                          Expanded(
+                            child: Text(
+                              secondary,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            if (showSource)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Chip(
-                  label: Text(sourceLabel),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-            SizedBox(
-              width: 88,
-              child: Text(
-                meta,
-                maxLines: 1,
-                textAlign: TextAlign.right,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontFeatures: const <FontFeature>[
-                    FontFeature.tabularFigures(),
                   ],
-                ),
+                ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 结果行的来源徽标。
+///
+/// 只承担"这条结果来自哪个歌词源"的信息，必须比 Material 默认 Chip 紧凑得多，
+/// 否则第二行的歌手·专辑会被挤到放不下。背景固定用 surface，让它在卡片（分栏）
+/// 与页面底色（窄屏扁平列表）两种底上都能读清。
+class _SearchRowSourceBadge extends StatelessWidget {
+  const _SearchRowSourceBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Chip(
+      label: Text(label, style: theme.textTheme.labelSmall),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      side: BorderSide(color: theme.colorScheme.outlineVariant),
+      backgroundColor: theme.colorScheme.surface,
     );
   }
 }
@@ -913,8 +971,8 @@ class _SearchCoverPlaceholder extends StatelessWidget {
       _ => Icons.music_note_rounded,
     };
     return Container(
-      width: 50,
-      height: 50,
+      width: _rowCoverSize,
+      height: _rowCoverSize,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         gradient: const LinearGradient(
@@ -938,6 +996,22 @@ String _rowTitle(SourceAware row) {
           : (value.id ?? ''),
     _ => '',
   };
+}
+
+/// 结果行第二行的文本。
+///
+/// 副标题（歌手·专辑 / 作者·歌曲数）优先；副标题为空时才退回来源名，而且只在
+/// 没有来源徽标时退回，避免同一行里出现两次「网易云音乐」。
+String _rowSecondaryText(
+  SearchUiStrings strings,
+  SourceAware row, {
+  required bool showSource,
+}) {
+  final String subtitle = _rowSubtitle(strings, row);
+  if (subtitle.isNotEmpty) {
+    return subtitle;
+  }
+  return showSource ? '' : strings.sourceLabel(row.source);
 }
 
 String _rowSubtitle(SearchUiStrings strings, SourceAware row) {
